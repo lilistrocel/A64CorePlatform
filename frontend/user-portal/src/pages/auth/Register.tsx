@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button, Input } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
+import { useThemeStore } from '../../stores/theme.store';
 
 // Validation schema
 const registerSchema = z.object({
@@ -28,6 +29,9 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export function Register() {
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
+  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
+  const { mode } = useThemeStore();
+  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
 
   const {
     register,
@@ -56,7 +60,7 @@ export function Register() {
     <PageWrapper>
       <RegisterContainer>
         <RegisterCard>
-          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+          <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
           <Title>Create Account</Title>
           <Subtitle>Join us to get started with your ERP platform</Subtitle>
 
@@ -155,7 +159,7 @@ const RegisterContainer = styled.div`
 const RegisterCard = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   padding: 1.5rem;
   width: 100%;
   max-width: 480px;
@@ -252,7 +256,7 @@ const LoginPrompt = styled.p`
 `;
 
 const LoginLink = styled(Link)`
-  /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
+  /* WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast on the page ground */
   color: ${({ theme }) => theme.colors.primary[700]};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   text-decoration: none;

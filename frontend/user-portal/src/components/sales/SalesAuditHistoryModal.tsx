@@ -211,7 +211,7 @@ const RetryButton = styled.button`
   margin-top: 12px;
   padding: 8px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -310,20 +310,20 @@ const ActionBadge = styled.span<ActionBadgeProps>`
     }
     if (lc.includes('open') || lc.includes('post')) {
       return `
-        background: #ecfdf5;
-        color: #059669;
+        background: ${theme.colors.successBg};
+        color: ${theme.colors.emerald[600]};
       `;
     }
     if (lc.includes('cancel')) {
       return `
-        background: ${theme.colors.errorBg ?? '#fef2f2'};
-        color: ${theme.colors.error ?? '#dc2626'};
+        background: ${theme.colors.errorBg};
+        color: ${theme.colors.error};
       `;
     }
     if (lc.includes('update') || lc.includes('edit')) {
       return `
-        background: #eff6ff;
-        color: #2563eb;
+        background: ${theme.colors.infoBg};
+        color: ${theme.colors.lapis[600]};
       `;
     }
     // Default — neutral

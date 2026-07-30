@@ -434,7 +434,11 @@ export function MainLayout() {
       {/* Mobile Header */}
       <MobileHeader>
         <Logo>
-          <LogoImg src="/a64logo_dark.png" alt="A64 Core" />
+          {/* Mobile header is 64px tall; LogoImg clamps to a 40px floor there
+              (~116px wide at the ~2.9:1 lockup ratio) — below the brand's
+              120px min lockup width, so this "small chrome" site uses the
+              emblem alone per spec §5 / brand contract §2. */}
+          <MarkImg src="/brand/mark_mono.svg" alt="A20Core" />
         </Logo>
         <MenuButton
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -457,7 +461,14 @@ export function MainLayout() {
         <SidebarScroll>
           <SidebarHeader>
             <Logo>
-              <LogoImg src="/a64logo_dark.png" alt="A64 Core" />
+              {/* Sidebar (280px) has plenty of width for the full lockup, but
+                  the asset ships as separate cream/cosmos-text SVGs, not a
+                  single currentColor file — pick per theme (spec §5) since
+                  Sidebar's background follows theme.colors.surface. */}
+              <LogoImg
+                src={mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg'}
+                alt="A20Core"
+              />
             </Logo>
             <UserCard>
               <UserCardTop>
@@ -647,7 +658,8 @@ const SidebarScroll = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
+  background: rgba(14, 19, 48, 0.5);
   z-index: 45;
 
   @media (min-width: 1024px) {
@@ -683,9 +695,23 @@ const Logo = styled.div`
 
 const LogoImg = styled.img`
   /* Sidebar logo — banner ~2.9:1, sidebar width ~240-280px so cap height
-     at 70px (→ ~200px wide, fits with breathing room). */
-  height: clamp(40px, 5vw, 70px);
+     at 70px (-> ~200px wide, fits with breathing room). Floor raised from
+     40px to 44px (was ~116px wide on narrow viewports where the 5vw term
+     bottoms out) to keep rendered width >= the brand's 120px minimum
+     lockup width at all times (44 * 2.9 ~= 128px) — see spec §5 /
+     brand contract §2. */
+  height: clamp(44px, 5vw, 70px);
   width: auto;
+  display: block;
+  margin: 0 auto;
+`;
+
+const MarkImg = styled.img`
+  /* Mobile header emblem — square-ish mark, not the banner lockup (see
+     usage site: mobile chrome is narrower than the 120px min lockup
+     width). Sized to match the header's 64px height with breathing room. */
+  height: 40px;
+  width: 40px;
   display: block;
   margin: 0 auto;
 `;
@@ -711,7 +737,7 @@ const UserAvatar = styled.div`
   height: 36px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   display: flex;
@@ -820,8 +846,8 @@ const NavItem = styled(NavLink)`
   }
 
   &.active {
-    background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => `${theme.colors.secondary[500]}15`};
+    color: ${({ theme }) => theme.colors.secondary[600]};
   }
 `;
 
@@ -844,7 +870,7 @@ const Badge = styled.span`
   height: 20px;
   padding: 0 ${({ theme }) => theme.spacing.xs};
   background: ${({ theme }) => theme.colors.error};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   border-radius: ${({ theme }) => theme.borderRadius.full};
@@ -1053,12 +1079,15 @@ const FyItemLabel = styled.span`
   white-space: nowrap;
 `;
 
+// keyframes are compiled statically and cannot read the theme via props, so the
+// glow is retinted off emerald[500] (#1B8A5A -> rgb(27, 138, 90)) rather than
+// the old Material green. The steady-state fill below still reads from theme.
 const ledPulse = keyframes`
   0%, 100% {
-    box-shadow: 0 0 4px 1px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 4px 1px rgba(27, 138, 90, 0.4);
   }
   50% {
-    box-shadow: 0 0 8px 3px rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 8px 3px rgba(27, 138, 90, 0.7);
   }
 `;
 
@@ -1067,7 +1096,7 @@ const GreenLed = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #10B981;
+  background: ${({ theme }) => theme.colors.success};
   flex-shrink: 0;
   animation: ${ledPulse} 2s ease-in-out infinite;
 `;
@@ -1151,7 +1180,7 @@ const BackToTopButton = styled.button<{ $visible: boolean }>`
   border-radius: 50%;
   border: none;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 20px;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   cursor: pointer;

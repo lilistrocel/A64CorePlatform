@@ -63,17 +63,17 @@ const FarmingYearBadge = styled.span`
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #1976d2;
-  background: #e3f2fd;
-  border: 1px solid #bbdefb;
+  color: ${({ theme }) => theme.colors.primary[600]};
+  background: ${({ theme }) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[100]};
   border-radius: 16px;
   margin-left: 8px;
 `;
 
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -82,7 +82,7 @@ const CreateButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -107,9 +107,9 @@ const FilterLabel = styled.span`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -117,7 +117,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
   }
 `;
 
@@ -212,9 +212,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: ${({ theme }) => theme.colors.terracotta[100]};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;

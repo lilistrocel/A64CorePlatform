@@ -11,7 +11,8 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import {
   PieChart,
   Pie,
@@ -57,16 +58,23 @@ const TABS: Array<{ key: TabType; label: string; icon: string }> = [
   { key: 'states', label: 'Current State Details', icon: '🔍' },
 ];
 
-const STATE_COLORS: Record<string, string> = {
-  empty: '#6B7280',
-  planned: '#3B82F6',
-  planted: '#10B981',
-  growing: '#10B981',
-  fruiting: '#A855F7',
-  harvesting: '#F59E0B',
-  cleaning: '#F97316',
-  alert: '#EF4444',
-};
+// Themed once per render (not a module constant) because it's consumed by
+// plain-string $color props, not just styled-components callbacks. "fruiting"
+// was purple in the old palette; the brand supplies no purple, so per the
+// spec's §3 "Purples -> judgement call" it takes gold (a genuine milestone
+// highlight, same call made in FarmDashboard.tsx's getStateColors).
+function getStateColors(theme: Theme): Record<string, string> {
+  return {
+    empty: theme.colors.textSecondary,
+    planned: theme.colors.primary[500],
+    planted: theme.colors.success,
+    growing: theme.colors.success,
+    fruiting: theme.colors.secondary[500],
+    harvesting: theme.colors.warning,
+    cleaning: theme.colors.terracotta[400],
+    alert: theme.colors.error,
+  };
+}
 
 const STATE_ICONS: Record<string, string> = {
   empty: '⚪',
@@ -214,20 +222,23 @@ export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName, farmingY
 // ============================================================================
 
 function OverviewTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
+  const stateColors = getStateColors(theme);
+
   if (!analytics || !analytics.aggregatedMetrics) {
     return <TabContent><EmptyText>Loading overview data...</EmptyText></TabContent>;
   }
 
   const performanceScore = analytics.aggregatedMetrics.overallPerformanceScore ?? 0;
   const performanceColor =
-    performanceScore >= 80 ? '#10B981' : performanceScore >= 60 ? '#3B82F6' : performanceScore >= 40 ? '#F59E0B' : '#EF4444';
+    performanceScore >= 80 ? theme.colors.success : performanceScore >= 60 ? theme.colors.primary[500] : performanceScore >= 40 ? theme.colors.warning : theme.colors.error;
 
   // Prepare state breakdown pie chart data
   const stateData = Object.entries(analytics.stateBreakdown)
     .map(([state, info]: [string, any]) => ({
       name: state.charAt(0).toUpperCase() + state.slice(1),
       value: info.count,
-      color: STATE_COLORS[state] || '#6B7280',
+      color: stateColors[state] || theme.colors.textSecondary,
     }))
     .filter((item) => item.value > 0);
 
@@ -367,6 +378,8 @@ function OverviewTab({ analytics }: { analytics: any }) {
 }
 
 function ComparisonTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
+  const stateColors = getStateColors(theme);
   const [sortField, setSortField] = useState<keyof BlockComparisonItem>('performanceScore');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -405,10 +418,10 @@ function ComparisonTab({ analytics }: { analytics: any }) {
   });
 
   const getPerformanceColor = (score: number) => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#3B82F6';
-    if (score >= 40) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 80) return theme.colors.success;
+    if (score >= 60) return theme.colors.primary[500];
+    if (score >= 40) return theme.colors.warning;
+    return theme.colors.error;
   };
 
   return (
@@ -457,7 +470,7 @@ function ComparisonTab({ analytics }: { analytics: any }) {
                   <TableCell $bold>{block.blockCode}</TableCell>
                   <TableCell>{block.name || '-'}</TableCell>
                   <TableCell>
-                    <StateBadge $color={STATE_COLORS[block.state] || '#6B7280'}>
+                    <StateBadge $color={stateColors[block.state] || theme.colors.textSecondary}>
                       {block.state.charAt(0).toUpperCase() + block.state.slice(1)}
                     </StateBadge>
                   </TableCell>
@@ -489,6 +502,7 @@ function ComparisonTab({ analytics }: { analytics: any }) {
 }
 
 function TrendsTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
   if (!analytics || !analytics.historicalTrends) {
     return <TabContent><EmptyText>Loading trend data...</EmptyText></TabContent>;
   }
@@ -516,10 +530,10 @@ function TrendsTab({ analytics }: { analytics: any }) {
 
   const getTrendColor = () => {
     switch (analytics.historicalTrends.performanceTrend) {
-      case 'improving': return '#10B981';
-      case 'stable': return '#3B82F6';
-      case 'declining': return '#EF4444';
-      default: return '#9e9e9e';
+      case 'improving': return theme.colors.success;
+      case 'stable': return theme.colors.primary[500];
+      case 'declining': return theme.colors.error;
+      default: return theme.colors.textDisabled;
     }
   };
 
@@ -573,8 +587,8 @@ function TrendsTab({ analytics }: { analytics: any }) {
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="totalYieldKg" stroke="#10B981" name="Total Yield" strokeWidth={2} />
-                <Line type="monotone" dataKey="harvestCount" stroke="#3B82F6" name="Harvest Count" strokeWidth={2} />
+                <Line type="monotone" dataKey="totalYieldKg" stroke={theme.colors.success} name="Total Yield" strokeWidth={2} />
+                <Line type="monotone" dataKey="harvestCount" stroke={theme.colors.primary[500]} name="Harvest Count" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -609,6 +623,9 @@ function TrendsTab({ analytics }: { analytics: any }) {
 }
 
 function StatesTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
+  const stateColors = getStateColors(theme);
+
   if (!analytics || !analytics.stateBreakdown) {
     return <TabContent><EmptyText>Loading state data...</EmptyText></TabContent>;
   }
@@ -623,7 +640,7 @@ function StatesTab({ analytics }: { analytics: any }) {
 
         const stateLabel = state.charAt(0).toUpperCase() + state.slice(1);
         const stateIcon = STATE_ICONS[state] || '⚪';
-        const stateColor = STATE_COLORS[state] || '#6B7280';
+        const stateColor = stateColors[state] || theme.colors.textSecondary;
 
         return (
           <Section key={state}>
@@ -686,7 +703,7 @@ const ModalContainer = styled.div`
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -772,7 +789,7 @@ const PeriodSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -816,12 +833,12 @@ const Tab = styled.button<{ $active: boolean }>`
   padding: 14px 20px;
   border: none;
   background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   white-space: nowrap;
 
   &:hover {
@@ -852,7 +869,7 @@ const Section = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const SectionTitle = styled.h3`
@@ -928,12 +945,16 @@ const PerformerRank = styled.div<{ $rank: number }>`
   font-size: 18px;
   font-weight: 700;
   background: ${({ $rank, theme }) => {
-    if ($rank === 1) return 'linear-gradient(135deg, #FFD700, #FFA500)';
-    if ($rank === 2) return 'linear-gradient(135deg, #C0C0C0, #A0A0A0)';
-    if ($rank === 3) return 'linear-gradient(135deg, #CD7F32, #8B4513)';
+    // Medal ranks 1-3 use brand ramps that echo the traditional gold/silver/
+    // bronze palette without leaving the token surface: gold (an exact fit
+    // for 1st), neutral (silver-gray for 2nd), terracotta (a warm bronze-like
+    // brown for 3rd).
+    if ($rank === 1) return `linear-gradient(135deg, ${theme.colors.gold[400]}, ${theme.colors.gold[600]})`;
+    if ($rank === 2) return `linear-gradient(135deg, ${theme.colors.neutral[400]}, ${theme.colors.neutral[600]})`;
+    if ($rank === 3) return `linear-gradient(135deg, ${theme.colors.terracotta[400]}, ${theme.colors.terracotta[600]})`;
     return theme.colors.neutral[300];
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   flex-shrink: 0;
 `;
 
@@ -1072,8 +1093,8 @@ const AlertCount = styled.span`
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #fee;
-  color: #c00;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   font-weight: 600;
   font-size: 13px;
 `;
@@ -1125,7 +1146,7 @@ const FrequencyIcon = styled.div`
 const FrequencyValue = styled.div`
   font-size: 48px;
   font-weight: 700;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const FrequencyLabel = styled.div`
@@ -1181,7 +1202,7 @@ const TransitionArrow = styled.span`
 
 const TransitionState = styled.span`
   font-weight: 500;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const StateHeader = styled.div`
@@ -1269,7 +1290,7 @@ const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1318,14 +1339,14 @@ const RetryButton = styled.button`
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 

@@ -133,7 +133,7 @@ const ToggleInput = styled.input<ToggleInputProps>`
     background: ${({ theme }) => theme.colors.background};
     border-radius: ${({ theme }) => theme.borderRadius.full};
     transition: left 150ms ease-in-out;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgba(59, 44, 24, 0.2);
   }
 
   &:focus {

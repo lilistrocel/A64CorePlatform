@@ -23,7 +23,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -137,7 +137,7 @@ const Label = styled.label`
 const Input = styled.input<{ $error?: boolean }>`
   padding: 10px 12px;
   border: 1px solid ${({ $error, theme }) =>
-    $error ? '#dc2626' : theme.colors.neutral[300]};
+    $error ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -145,7 +145,7 @@ const Input = styled.input<{ $error?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? '#dc2626' : theme.colors.primary[500]};
+      $error ? theme.colors.error : theme.colors.primary[500]};
   }
   &:disabled {
     background: ${({ theme }) => theme.colors.neutral[100]};
@@ -170,16 +170,16 @@ const Textarea = styled.textarea`
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const InfoBanner = styled.div`
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 13px;
-  color: #1e40af;
+  color: ${({ theme }) => theme.colors.lapis[700]};
   margin-bottom: 20px;
 `;
 
@@ -222,7 +222,7 @@ const Td = styled.td`
 const LineInput = styled.input<{ $error?: boolean }>`
   padding: 7px 8px;
   border: 1px solid ${({ $error, theme }) =>
-    $error ? '#dc2626' : theme.colors.neutral[300]};
+    $error ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 13px;
   width: 100%;
@@ -231,7 +231,7 @@ const LineInput = styled.input<{ $error?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? '#dc2626' : theme.colors.primary[500]};
+      $error ? theme.colors.error : theme.colors.primary[500]};
   }
   &:disabled {
     background: ${({ theme }) => theme.colors.neutral[50]};
@@ -251,8 +251,8 @@ const DeleteLineBtn = styled.button`
   border-radius: 6px;
   cursor: pointer;
   &:hover {
-    background: #fef2f2;
-    color: #dc2626;
+    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.terracotta[600]};
   }
 `;
 
@@ -266,7 +266,7 @@ const SubmitRow = styled.div`
 const PrimaryButton = styled.button`
   padding: 11px 28px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -295,12 +295,12 @@ const SecondaryButton = styled.button`
 `;
 
 const ErrorBanner = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   margin-bottom: 16px;
 `;
 
@@ -313,6 +313,7 @@ const ErrorBanner = styled.div`
  * - otherwise           → new mode
  */
 export function DeliveryFormPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { soDocEntry, docId } = useParams<{ soDocEntry?: string; docId?: string }>();
   const user = useAuthStore((s) => s.user);
@@ -507,9 +508,9 @@ export function DeliveryFormPage() {
   // ── Loading / error states ────────────────────────────────────────────────
 
   if (isFromSO && soLoading) return <Container>Loading Sales Order...</Container>;
-  if (isFromSO && soError) return <Container style={{ color: '#dc2626' }}>Failed to load Sales Order.</Container>;
+  if (isFromSO && soError) return <Container style={{ color: theme.colors.error }}>Failed to load Sales Order.</Container>;
   if (isEdit && dnLoading) return <Container>Loading Delivery Note...</Container>;
-  if (isEdit && dnError) return <Container style={{ color: '#dc2626' }}>Failed to load Delivery Note.</Container>;
+  if (isEdit && dnError) return <Container style={{ color: theme.colors.error }}>Failed to load Delivery Note.</Container>;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -604,7 +605,7 @@ export function DeliveryFormPage() {
           <LinesHeader>
             <SectionTitle style={{ margin: 0 }}>Lines</SectionTitle>
             {!isFromSO && (
-              <span style={{ fontSize: 13, color: '#6b7280' }}>
+              <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
                 Lines are copied from the source SO in from-SO mode
               </span>
             )}
@@ -636,7 +637,7 @@ export function DeliveryFormPage() {
                   return (
                     <tr key={field.id}>
                       <Td>
-                        <span style={{ fontSize: 13, color: '#6b7280' }}>{idx + 1}</span>
+                        <span style={{ fontSize: 13, color: theme.colors.textDisabled }}>{idx + 1}</span>
                       </Td>
                       <Td>
                         <Controller
@@ -706,7 +707,7 @@ export function DeliveryFormPage() {
                       </Td>
                       {isFromSO && (
                         <Td>
-                          <span style={{ fontSize: 13, color: '#6b7280' }}>
+                          <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
                             {maxQty !== undefined
                               ? Number(maxQty).toFixed(3)
                               : '—'}
@@ -729,7 +730,7 @@ export function DeliveryFormPage() {
                 })}
                 {fields.length === 0 && (
                   <tr>
-                    <td colSpan={isFromSO ? 9 : 8} style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>
+                    <td colSpan={isFromSO ? 9 : 8} style={{ padding: '20px', textAlign: 'center', color: theme.colors.textDisabled, fontSize: 14 }}>
                       {isFromSO
                         ? 'No open lines found on the source Sales Order.'
                         : 'No lines added yet.'}
@@ -746,9 +747,9 @@ export function DeliveryFormPage() {
               style={{
                 marginTop: 12,
                 padding: '8px 14px',
-                border: '1px dashed #6366f1',
-                background: '#eef2ff',
-                color: '#4f46e5',
+                border: `1px dashed ${theme.colors.primary[400]}`,
+                background: theme.colors.primary[50],
+                color: theme.colors.primary[600],
                 borderRadius: 8,
                 fontSize: 13,
                 fontWeight: 500,

@@ -31,7 +31,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -156,7 +156,7 @@ const Label = styled.label`
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 9px 12px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#dc2626' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface};
@@ -183,7 +183,7 @@ const Textarea = styled.textarea`
 
 const ErrorMsg = styled.span`
   font-size: 12px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const LinesTable = styled.table`
@@ -214,7 +214,7 @@ const Td = styled.td`
 const SmallInput = styled.input<{ $hasError?: boolean; $width?: string }>`
   padding: 7px 9px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#dc2626' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.surface};
@@ -235,11 +235,11 @@ const MaxQtyHint = styled.span`
 const RemoveBtn = styled.button`
   background: none;
   border: none;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  &:hover { background: #fee2e2; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
 `;
 
 const AddLineBtn = styled.button`
@@ -264,7 +264,7 @@ const FooterActions = styled.div`
 const SubmitButton = styled.button`
   padding: 10px 28px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -287,20 +287,20 @@ const CancelButton = styled.button`
 
 const ErrorBanner = styled.div`
   padding: 12px 16px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #991b1b;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 16px;
 `;
 
 const InfoBanner = styled.div`
   padding: 12px 16px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
-  color: #1e40af;
+  color: ${({ theme }) => theme.colors.lapis[700]};
   font-size: 14px;
   margin-bottom: 20px;
 `;
@@ -317,6 +317,7 @@ const LockedValue = styled.div`
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ReturnFormPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { rrDocEntry, dnDocEntry, docId } = useParams<{
     rrDocEntry?: string;
@@ -612,17 +613,17 @@ export function ReturnFormPage() {
   const sourceLoading = (isFromRR && rrLoading) || (isFromDN && dnLoading) || (isEdit && rtnLoading);
 
   if (sourceLoading) {
-    return <Container><p style={{ color: '#6b7280' }}>Loading...</p></Container>;
+    return <Container><p style={{ color: theme.colors.textSecondary }}>Loading...</p></Container>;
   }
 
   if (isFromRR && !rr) {
-    return <Container><p style={{ color: '#dc2626' }}>Return Request not found.</p></Container>;
+    return <Container><p style={{ color: theme.colors.error }}>Return Request not found.</p></Container>;
   }
   if (isFromDN && !dn) {
-    return <Container><p style={{ color: '#dc2626' }}>Delivery Note not found.</p></Container>;
+    return <Container><p style={{ color: theme.colors.error }}>Delivery Note not found.</p></Container>;
   }
   if (isEdit && !existingRtn) {
-    return <Container><p style={{ color: '#dc2626' }}>Return Note not found.</p></Container>;
+    return <Container><p style={{ color: theme.colors.error }}>Return Note not found.</p></Container>;
   }
 
   // ─── Derive page title and subtitle ──────────────────────────────────────
@@ -765,7 +766,7 @@ export function ReturnFormPage() {
                 const maxQty = field.maxQty;
                 return (
                   <tr key={field.id}>
-                    <Td style={{ width: 32, color: '#9ca3af' }}>{idx + 1}</Td>
+                    <Td style={{ width: 32, color: theme.colors.textDisabled }}>{idx + 1}</Td>
                     <Td>
                       <Controller
                         name={`lines.${idx}.itemId`}

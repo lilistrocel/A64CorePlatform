@@ -16,7 +16,7 @@ import {
   useMemo,
   useEffect,
 } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Link } from 'react-router-dom';
 import {
   usePrices,
@@ -63,7 +63,7 @@ const PrimaryBtn = styled.button`
   cursor: pointer;
   border: none;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   transition: background 150ms ease;
   white-space: nowrap;
 
@@ -101,7 +101,7 @@ const LinkBtn = styled.button`
 
 const DangerLinkBtn = styled(LinkBtn)`
   color: ${({ theme }) => theme.colors.error};
-  &:hover { color: #b91c1c; }
+  &:hover { color: ${({ theme }) => theme.colors.terracotta[700]}; }
 `;
 
 const Input = styled.input`
@@ -224,6 +224,7 @@ interface ManageSavedListsModalProps {
 const SAVED_LISTS_PAGE_SIZE = 20;
 
 function ManageSavedListsModal({ onClose, onRename, onDelete, onLoad, isWorking }: ManageSavedListsModalProps) {
+  const theme = useTheme();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -308,7 +309,7 @@ function ManageSavedListsModal({ onClose, onRename, onDelete, onLoad, isWorking 
           >
             ← Prev
           </LinkBtn>
-          <span style={{ fontSize: '13px', color: '#666' }}>
+          <span style={{ fontSize: '13px', color: theme.colors.textSecondary }}>
             Page {page} of {totalPages} · {total.toLocaleString('en-US')} list{total !== 1 ? 's' : ''}
           </span>
           <LinkBtn
@@ -1093,6 +1094,7 @@ function aggregatePerInput(result: CalculateResponse): PerInputAgg[] {
 }
 
 function OutputPanel({ result, isStale, yieldInfoByPlant }: OutputPanelProps) {
+  const theme = useTheme();
   const [activeTab, setActiveTab] = useState<'perCrop' | 'perInput'>('perCrop');
   const [openCrops, setOpenCrops] = useState<Set<string>>(new Set());
 
@@ -1174,7 +1176,7 @@ function OutputPanel({ result, isStale, yieldInfoByPlant }: OutputPanelProps) {
             <tbody>
               {perInputRows.length === 0 ? (
                 <tr>
-                  <IngTd colSpan={4} style={{ textAlign: 'center', color: '#888' }}>
+                  <IngTd colSpan={4} style={{ textAlign: 'center', color: theme.colors.textDisabled }}>
                     No ingredients to aggregate.
                   </IngTd>
                 </tr>
@@ -1893,8 +1895,8 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   font-weight: 600;
   text-transform: capitalize;
   ${({ $source, theme }) => {
-    if ($source === 'override') return `background: #dbeafe; color: #1e40af;`;
-    if ($source === 'inventory') return `background: #d1fae5; color: #065f46;`;
+    if ($source === 'override') return `background: ${theme.colors.primary[100]}; color: ${theme.colors.primary[800]};`;
+    if ($source === 'inventory') return `background: ${theme.colors.emerald[100]}; color: ${theme.colors.emerald[800]};`;
     return `background: ${theme.colors.neutral[200]}; color: ${theme.colors.textSecondary};`;
   }}
 `;
@@ -1935,9 +1937,9 @@ const RouterLink = styled(Link)<RouterLinkProps>`
     font-weight: 500;
     text-decoration: none;
     background: ${theme.colors.primary[500]};
-    color: #fff;
+    color: ${theme.colors.onAccent};
     transition: background 150ms ease;
-    &:hover { background: ${theme.colors.primary[700]}; color: #fff; }
+    &:hover { background: ${theme.colors.primary[700]}; color: ${theme.colors.onAccent}; }
   `}
 `;
 
@@ -2065,8 +2067,8 @@ const NoScheduleBadge = styled.span`
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #fef3c7;
-  color: #92400e;
+  background: ${({ theme }) => theme.colors.warningBg};
+  color: ${({ theme }) => theme.colors.gold[800]};
   white-space: nowrap;
   margin-left: 8px;
 `;
@@ -2076,11 +2078,11 @@ const NoScheduleBadge = styled.span`
 const WarningsBanner = styled.div`
   margin-bottom: 16px;
   padding: 12px 16px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 14px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2089,19 +2091,19 @@ const WarningsBanner = styled.div`
 const StaleBanner = styled.div`
   margin: 0 0 16px;
   padding: 10px 16px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 13px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const StaleTag = styled.span`
   margin-left: 8px;
   padding: 2px 8px;
   border-radius: 9999px;
-  background: #f59e0b;
-  color: #fff;
+  background: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 11px;
   font-weight: 700;
   vertical-align: middle;
@@ -2110,11 +2112,11 @@ const StaleTag = styled.span`
 const InfoBanner = styled.div`
   margin-bottom: 16px;
   padding: 12px 16px;
-  background: #dbeafe;
-  border: 1px solid #3b82f6;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.info};
   border-radius: 8px;
   font-size: 14px;
-  color: #1e40af;
+  color: ${({ theme }) => theme.colors.primary[800]};
 `;
 
 const ResultTabs = styled.div`
@@ -2318,7 +2320,8 @@ const PaginationBar = styled.div`
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
+  background: rgba(14, 19, 48, 0.5);
   backdrop-filter: blur(4px);
   z-index: 1100;
   display: flex;
@@ -2522,7 +2525,7 @@ const ModeToggleBtn = styled.button<ModeToggleBtnProps>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? '#fff' : theme.colors.textSecondary};
+    $active ? theme.colors.onAccent : theme.colors.textSecondary};
 
   &:hover:not([aria-pressed='true']) {
     background: ${({ theme }) => theme.colors.neutral[100]};

@@ -39,8 +39,8 @@ const Title = styled.h3`
 
 const AddButton = styled.button`
   padding: 8px 16px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -49,7 +49,7 @@ const AddButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -114,23 +114,23 @@ const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}
@@ -149,7 +149,7 @@ const Modal = styled.div<{ $isOpen: boolean }>`
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${({ theme }) => `${theme.colors.neutral[900]}80`};
   backdrop-filter: blur(4px);
   justify-content: center;
   align-items: center;
@@ -253,11 +253,11 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
-        color: white;
+        background: ${theme.colors.primary[500]};
+        color: ${theme.colors.onAccent};
         border: none;
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[600]};
         }
       `;
     }

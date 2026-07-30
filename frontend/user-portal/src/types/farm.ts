@@ -5,6 +5,10 @@
  * matching the backend API response structures.
  */
 
+import { lightTheme } from '@a64core/shared';
+
+const c = lightTheme.colors;
+
 // ============================================================================
 // ENUMS & CONSTANTS
 // ============================================================================
@@ -1047,15 +1051,17 @@ export interface CSVImportResult {
 // COLOR CONSTANTS (Block State Colors)
 // ============================================================================
 
+// Kept in sync with BLOCK_POLYGON_COLORS in src/config/mapConfig.ts — same
+// lifecycle states, same hex, across badges/legends and the map overlay.
 export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
-  empty: '#6B7280',      // Gray
-  planned: '#3B82F6',    // Blue
-  growing: '#10B981',    // Green
-  fruiting: '#A855F7',   // Purple
-  harvesting: '#F59E0B', // Yellow/Orange
-  cleaning: '#F97316',   // Orange
-  alert: '#EF4444',      // Red
-  partial: '#06B6D4',    // Cyan
+  empty: c.neutral[400],       // was gray
+  planned: c.primary[500],     // lapis (was blue)
+  growing: c.emerald[500],     // (was green)
+  fruiting: c.gold[400],       // was purple — categorical judgement call, spec §3
+  harvesting: c.gold[500],     // warning (was amber)
+  cleaning: c.terracotta[400], // (was orange)
+  alert: c.terracotta[600],    // deepened — danger carries weight, spec §1 (was red)
+  partial: c.primary[400],     // was cyan — art-only hue, spec §3
 };
 
 export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
@@ -1070,10 +1076,10 @@ export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
 };
 
 export const PLANTING_STATUS_COLORS: Record<PlantingStatus, string> = {
-  planned: '#3B82F6',    // Blue
-  planted: '#10B981',    // Green
-  harvesting: '#F59E0B', // Yellow/Orange
-  completed: '#6B7280',  // Gray
+  planned: c.primary[500], // lapis (was blue)
+  planted: c.success,      // emerald (was green)
+  harvesting: c.warning,   // gold (was amber)
+  completed: c.textSecondary, // (was gray)
 };
 
 export const PLANTING_STATUS_LABELS: Record<PlantingStatus, string> = {
@@ -1400,13 +1406,17 @@ export type AQICategory = 'Good' | 'Moderate' | 'Unhealthy for Sensitive Groups'
 /**
  * AQI category colors for UI
  */
+// Sequential severity scale — depth within the terracotta ramp carries the
+// worsening danger for the two most severe tiers (was a purple/maroon jump
+// in the old EPA-style palette; the brand ramp only has terracotta for
+// "danger", so severity is expressed as depth instead, spec §1/§3).
 export const AQI_CATEGORY_COLORS: Record<string, string> = {
-  'Good': '#10B981',                           // Green
-  'Moderate': '#F59E0B',                       // Amber
-  'Unhealthy for Sensitive Groups': '#F97316', // Orange
-  'Unhealthy': '#EF4444',                      // Red
-  'Very Unhealthy': '#7C3AED',                 // Purple
-  'Hazardous': '#7F1D1D',                      // Dark Red
+  'Good': c.success,                              // emerald (was green)
+  'Moderate': c.warning,                          // gold (was amber)
+  'Unhealthy for Sensitive Groups': c.terracotta[400], // (was orange)
+  'Unhealthy': c.error,                           // terracotta (was red)
+  'Very Unhealthy': c.terracotta[700],            // deeper terracotta (was purple)
+  'Hazardous': c.terracotta[900],                 // deepest terracotta (was dark red)
 };
 
 /**
@@ -1530,10 +1540,10 @@ export interface AgriWeatherData {
 
 // Risk level colors for UI
 export const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
-  none: '#10B981',    // Green
-  low: '#84CC16',     // Lime
-  medium: '#F59E0B',  // Amber
-  high: '#EF4444',    // Red
+  none: c.success,      // emerald (was green)
+  low: c.emerald[300],  // lighter emerald (was lime)
+  medium: c.warning,    // gold (was amber)
+  high: c.error,        // terracotta (was red)
 };
 
 export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
@@ -1545,11 +1555,11 @@ export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
 
 // Growing conditions colors
 export const GROWING_CONDITIONS_COLORS: Record<GrowingConditions, string> = {
-  excellent: '#10B981',  // Green
-  good: '#84CC16',       // Lime
-  fair: '#F59E0B',       // Amber
-  poor: '#EF4444',       // Red
-  unknown: '#6B7280',    // Gray
+  excellent: c.success,      // emerald (was green)
+  good: c.emerald[300],      // lighter emerald (was lime)
+  fair: c.warning,           // gold (was amber)
+  poor: c.error,             // terracotta (was red)
+  unknown: c.textSecondary,  // (was gray)
 };
 
 export const GROWING_CONDITIONS_LABELS: Record<GrowingConditions, string> = {

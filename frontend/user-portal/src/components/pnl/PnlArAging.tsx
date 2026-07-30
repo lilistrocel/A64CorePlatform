@@ -6,7 +6,7 @@
  * - Table: Top 10 customers by outstanding balance
  */
 
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import {
   ResponsiveContainer,
   BarChart,
@@ -17,6 +17,7 @@ import {
   CartesianGrid,
   Cell,
 } from 'recharts';
+import type { Theme } from '@a64core/shared';
 import type { ArAgingResponse } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -27,8 +28,13 @@ function formatAed(value: number): string {
   return `${value.toLocaleString()}`;
 }
 
-// Green → Yellow → Orange → Red gradient for aging buckets
-const BUCKET_COLORS = ['#10B981', '#F59E0B', '#F97316', '#EF4444'];
+// Green → Gold → Orange → Red severity ramp for aging buckets
+const bucketColors = (theme: Theme) => [
+  theme.colors.success,
+  theme.colors.warning,
+  theme.colors.terracotta[400],
+  theme.colors.error,
+];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -140,7 +146,7 @@ const ErrorState = styled.div`
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -158,6 +164,7 @@ interface PnlArAgingProps {
 }
 
 export function PnlArAging({ data, isLoading, isError, onRetry }: PnlArAgingProps) {
+  const theme = useTheme();
   return (
     <Section aria-labelledby="ar-aging-title">
       <SectionTitle id="ar-aging-title">Accounts Receivable Aging</SectionTitle>
@@ -184,36 +191,40 @@ export function PnlArAging({ data, isLoading, isError, onRetry }: PnlArAgingProp
                 data={data.buckets}
                 margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.colors.border} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 12, fill: '#616161' }}
+                  tick={{ fontSize: 12, fill: theme.colors.textSecondary }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
                   tickFormatter={formatAed}
-                  tick={{ fontSize: 11, fill: '#616161' }}
+                  tick={{ fontSize: 11, fill: theme.colors.textSecondary }}
                   tickLine={false}
                   axisLine={false}
                   width={60}
                 />
                 <Tooltip
                   formatter={(value: number) => [`${value.toLocaleString()} AED`, 'Outstanding']}
-                  labelStyle={{ fontWeight: 600, fontSize: '13px' }}
+                  labelStyle={{ fontWeight: 600, fontSize: '13px', color: theme.colors.textPrimary }}
                   contentStyle={{
                     borderRadius: '8px',
-                    border: '1px solid #e0e0e0',
+                    border: `1px solid ${theme.colors.border}`,
                     fontSize: '13px',
+                    background: theme.colors.background,
                   }}
                 />
                 <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                  {data.buckets.map((_, index) => (
-                    <Cell
-                      key={`bucket-${index}`}
-                      fill={BUCKET_COLORS[Math.min(index, BUCKET_COLORS.length - 1)]}
-                    />
-                  ))}
+                  {data.buckets.map((_, index) => {
+                    const palette = bucketColors(theme);
+                    return (
+                      <Cell
+                        key={`bucket-${index}`}
+                        fill={palette[Math.min(index, palette.length - 1)]}
+                      />
+                    );
+                  })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

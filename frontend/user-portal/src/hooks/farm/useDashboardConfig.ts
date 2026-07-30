@@ -5,6 +5,14 @@
  */
 
 import { useState, useEffect } from 'react';
+import { lightTheme } from '@a64core/shared';
+
+// NOTE (A20Core sweep, T-900): DEFAULT_CONFIG is a plain object persisted to
+// localStorage, not evaluated in a theme context. It reads lightTheme.colors
+// once at module load for its default hex values (single source of truth),
+// but will not flip in dark mode. See src/config/mapConfig.ts for the same
+// caveat and rationale.
+const c = lightTheme.colors;
 
 export interface DashboardConfig {
   version: string;
@@ -88,32 +96,32 @@ const DEFAULT_CONFIG: DashboardConfig = {
   version: '1.0',
   colorScheme: {
     stateColors: {
-      empty: '#9E9E9E',
-      planned: '#3B82F6',
-      planted: '#10B981',
-      growing: '#34D399',
-      fruiting: '#FCD34D',
-      harvesting: '#F59E0B',
-      cleaning: '#A855F7',
-      alert_critical: '#DC2626',
-      alert_high: '#F97316',
-      alert_medium: '#FCD34D',
-      alert_low: '#FDE68A'
+      empty: c.neutral[500],
+      planned: c.primary[500],
+      planted: c.success,
+      growing: c.emerald[300],
+      fruiting: c.gold[300],
+      harvesting: c.warning,
+      cleaning: c.primary[700], // was purple, decorative-only judgement call, spec §3
+      alert_critical: c.terracotta[600], // deepened — danger carries weight, spec §1
+      alert_high: c.terracotta[400],
+      alert_medium: c.gold[200],
+      alert_low: c.gold[100]
     },
     performanceColors: {
-      exceptional: '#10B981',
-      exceeding: '#34D399',
-      excellent: '#3B82F6',
-      good: '#FCD34D',
-      acceptable: '#F97316',
-      poor: '#DC2626'
+      exceptional: c.success,
+      exceeding: c.emerald[300],
+      excellent: c.primary[500],
+      good: c.gold[300],
+      acceptable: c.terracotta[400],
+      poor: c.terracotta[600]
     },
     timelinessColors: {
-      early: '#3B82F6',
-      onTime: '#10B981',
-      slightlyLate: '#FCD34D',
-      late: '#F97316',
-      veryLate: '#DC2626'
+      early: c.primary[500],
+      onTime: c.success,
+      slightlyLate: c.gold[300],
+      late: c.terracotta[400],
+      veryLate: c.terracotta[600]
     }
   },
   iconSet: 'emoji',

@@ -447,7 +447,7 @@ const ControlsToolbar = styled.div`
   background: ${({ theme }) => theme.colors.background};
   padding: 8px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const ToolbarButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger' }>`
@@ -467,13 +467,13 @@ const ToolbarButton = styled.button<{ $variant: 'primary' | 'secondary' | 'dange
       case 'primary':
         return `
           background: ${theme.colors.primary[500]};
-          color: white;
+          color: ${theme.colors.onAccent};
           &:hover { background: ${theme.colors.primary[700]}; }
         `;
       case 'danger':
         return `
           background: ${theme.colors.errorBg};
-          color: #dc2626;
+          color: ${theme.colors.error};
           &:hover { background: ${theme.colors.errorBg}; filter: brightness(0.92); }
         `;
       default:
@@ -507,13 +507,13 @@ const AreaDisplay = styled.div`
   background: ${({ theme }) => theme.colors.background};
   padding: 8px 12px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const AreaText = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #10b981;
+  color: ${({ theme }) => theme.colors.success};
 `;
 
 export default DrawingControls;

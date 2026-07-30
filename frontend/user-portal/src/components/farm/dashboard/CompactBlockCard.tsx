@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useBlockActions } from '../../../hooks/farm/useBlockActions';
 import { QuickPlanModal } from './QuickPlanModal';
 import { ResolveAlertModal } from './ResolveAlertModal';
@@ -25,6 +25,7 @@ interface CompactBlockCardProps {
 }
 
 export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlockCardProps) {
+  const theme = useTheme();
   const [showActions, setShowActions] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showResolveAlertModal, setShowResolveAlertModal] = useState(false);
@@ -33,7 +34,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   const [planMode, setPlanMode] = useState<'plan' | 'plant'>('plan');
   const { transitionBlock, recordHarvest, transitioning, recordingHarvest } = useBlockActions();
 
-  const stateColor = config.colorScheme.stateColors[block.state] || '#6B7280';
+  const stateColor = config.colorScheme.stateColors[block.state] || theme.colors.textSecondary;
   const stateIcon = config.icons.states[block.state] || '⚫';
 
   /**
@@ -41,7 +42,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
    */
   const getPerformanceColor = () => {
     const category = block.calculated?.performanceCategory || 'good';
-    return config.colorScheme?.performanceColors?.[category] || '#6B7280';
+    return config.colorScheme?.performanceColors?.[category] || theme.colors.textSecondary;
   };
 
   /**
@@ -803,20 +804,23 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
   background: ${(props) => {
     switch (props.$variant) {
       case 'success':
-        return '#10B981';
+        return props.theme.colors.success;
       case 'plan':
-        return '#3B82F6';
+        return props.theme.colors.primary[500];
       case 'plant':
-        return '#10B981';
+        return props.theme.colors.success;
       case 'warning':
-        return '#F59E0B';
+        return props.theme.colors.warning;
       case 'analytics':
-        return '#6366F1';
+        // Deliberately lapis, not gold/secondary: brand spec reserves gold
+        // for the active nav item / one CTA per view / highlight badges, not
+        // ordinary per-card action buttons.
+        return props.theme.colors.primary[700];
       default:
-        return '#3B82F6';
+        return props.theme.colors.primary[500];
     }
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
@@ -829,17 +833,17 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
     background: ${(props) => {
       switch (props.$variant) {
         case 'success':
-          return '#059669';
+          return props.theme.colors.emerald[600];
         case 'plan':
-          return '#1976D2';
+          return props.theme.colors.primary[600];
         case 'plant':
-          return '#059669';
+          return props.theme.colors.emerald[600];
         case 'warning':
-          return '#D97706';
+          return props.theme.colors.gold[600];
         case 'analytics':
-          return '#4F46E5';
+          return props.theme.colors.primary[800];
         default:
-          return '#1976D2';
+          return props.theme.colors.primary[600];
       }
     }};
   }

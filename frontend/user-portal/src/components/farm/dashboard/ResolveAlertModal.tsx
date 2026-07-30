@@ -221,13 +221,13 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #111827;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -235,7 +235,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 28px;
-  color: #9ca3af;
+  color: ${({ theme }) => theme.colors.textDisabled};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -267,11 +267,11 @@ const BlockInfo = styled.div`
 
 const BlockLabel = styled.span`
   font-weight: 600;
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const BlockValue = styled.span`
-  color: #111827;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FormGroup = styled.div`
@@ -282,12 +282,12 @@ const Label = styled.label`
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.neutral[800]};
   margin-bottom: 8px;
 `;
 
 const Required = styled.span`
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const Select = styled.select`
@@ -302,8 +302,8 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1A`};
   }
 `;
 
@@ -313,7 +313,7 @@ const AlertDetails = styled.div`
   align-items: center;
   padding: 16px;
   background: ${({ theme }) => theme.colors.warningBg};
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid ${({ theme }) => theme.colors.warning};
   border-radius: 6px;
   margin-bottom: 20px;
 `;
@@ -344,13 +344,13 @@ const AlertSeverity = styled.span<{ $severity: string }>`
   color: ${(props) => {
     switch (props.$severity) {
       case 'critical':
-        return '#dc2626';
+        return props.theme.colors.terracotta[600];
       case 'high':
-        return '#f59e0b';
+        return props.theme.colors.warning;
       case 'medium':
-        return '#3b82f6';
+        return props.theme.colors.primary[500];
       default:
-        return '#6b7280';
+        return props.theme.colors.textSecondary;
     }
   }};
 `;
@@ -369,8 +369,8 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1A`};
   }
 
   &::placeholder {
@@ -380,7 +380,7 @@ const Textarea = styled.textarea`
 
 const CharCount = styled.div<{ $error?: boolean }>`
   font-size: 12px;
-  color: ${(props) => (props.$error ? '#ef4444' : '#6b7280')};
+  color: ${(props) => (props.$error ? props.theme.colors.error : props.theme.colors.textSecondary)};
   margin-top: 4px;
 `;
 
@@ -399,7 +399,7 @@ const Checkbox = styled.input`
 
 const CheckboxLabel = styled.label`
   font-size: 14px;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.neutral[800]};
   cursor: pointer;
   user-select: none;
 `;
@@ -409,7 +409,7 @@ const InfoNote = styled.div`
   gap: 12px;
   padding: 12px;
   background: ${({ theme }) => theme.colors.infoBg};
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 6px;
   margin-bottom: 20px;
 `;
@@ -421,16 +421,16 @@ const InfoIcon = styled.span`
 const InfoText = styled.p`
   margin: 0;
   font-size: 13px;
-  color: #1e40af;
+  color: ${({ theme }) => theme.colors.primary[800]};
   line-height: 1.5;
 `;
 
 const ErrorMessage = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
-  color: #991b1b;
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   font-size: 14px;
   margin-bottom: 20px;
 `;
@@ -467,15 +467,15 @@ const ResolveButton = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
-  background: #10b981;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: ${({ theme }) => theme.colors.emerald[600]};
   }
 
   &:disabled {

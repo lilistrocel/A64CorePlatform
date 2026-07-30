@@ -7,7 +7,7 @@
  *    items, so they show what is physically in them instead
  */
 
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import type { GrowingRoom, RoomOccupancy } from '../../types/mushroom';
 import {
   PHASE_COLORS,
@@ -38,19 +38,20 @@ export function GrowingRoomCard({
   compact = false,
   occupancy,
 }: GrowingRoomCardProps) {
-  const phaseColor = PHASE_COLORS[room.currentPhase] ?? '#9e9e9e';
+  const theme = useTheme();
+  const phaseColor = PHASE_COLORS[room.currentPhase] ?? theme.colors.neutral[500];
   const phaseLabel = PHASE_LABELS[room.currentPhase] ?? room.currentPhase;
   const batchRoom = isBatchRoom(room.roomType);
-  const phaseTextColor = PHASE_TEXT_COLORS[room.currentPhase] ?? '#fff';
+  const phaseTextColor = PHASE_TEXT_COLORS[room.currentPhase] ?? theme.colors.onAccent;
 
   const bePercent = room.biologicalEfficiency;
   const beColor = bePercent == null
-    ? '#9e9e9e'
+    ? theme.colors.neutral[500]
     : bePercent >= 80
-    ? '#10B981'
+    ? theme.colors.emerald[500]
     : bePercent >= 60
-    ? '#F59E0B'
-    : '#EF4444';
+    ? theme.colors.gold[500]
+    : theme.colors.terracotta[500];
 
   return (
     <CardWrapper

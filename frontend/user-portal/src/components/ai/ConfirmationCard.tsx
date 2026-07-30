@@ -6,13 +6,13 @@
  * and a live countdown to expiry.
  *
  * Risk level colors:
- *   low    → green  (#10B981)
- *   medium → amber  (#F59E0B)
- *   high   → red    (#EF4444)
+ *   low    → success  (emerald)
+ *   medium → warning  (gold)
+ *   high   → error    (terracotta)
  */
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme, type DefaultTheme } from 'styled-components';
 import { Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 import type { PendingAction } from '../../types/aiHub';
 
@@ -30,20 +30,20 @@ export interface ConfirmationCardProps {
 // HELPERS
 // ============================================================================
 
-function getRiskColor(level: string): string {
+function getRiskColor(level: string, theme: DefaultTheme): string {
   switch (level) {
-    case 'low':    return '#10B981';
-    case 'medium': return '#F59E0B';
-    case 'high':   return '#EF4444';
-    default:       return '#6B7280';
+    case 'low':    return theme.colors.success;
+    case 'medium': return theme.colors.warning;
+    case 'high':   return theme.colors.error;
+    default:       return theme.colors.textSecondary;
   }
 }
 
-function getRiskIcon(level: string): React.ReactNode {
+function getRiskIcon(level: string, theme: DefaultTheme): React.ReactNode {
   switch (level) {
-    case 'low':    return <ShieldCheck size={16} color="#10B981" aria-hidden="true" />;
-    case 'medium': return <Shield size={16} color="#F59E0B" aria-hidden="true" />;
-    case 'high':   return <ShieldAlert size={16} color="#EF4444" aria-hidden="true" />;
+    case 'low':    return <ShieldCheck size={16} color={theme.colors.success} aria-hidden="true" />;
+    case 'medium': return <Shield size={16} color={theme.colors.warning} aria-hidden="true" />;
+    case 'high':   return <ShieldAlert size={16} color={theme.colors.error} aria-hidden="true" />;
     default:       return <Shield size={16} aria-hidden="true" />;
   }
 }
@@ -117,7 +117,7 @@ const ExpiryTimer = styled.span`
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-variant-numeric: tabular-nums;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const Description = styled.p`
@@ -133,7 +133,7 @@ const ToolName = styled.span`
   background: ${({ theme }) => theme.colors.surface};
   padding: 1px 6px;
   border-radius: 4px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const ButtonRow = styled.div`
@@ -146,7 +146,7 @@ const ApproveButton = styled.button`
   padding: 8px 16px;
   min-height: 44px;
   background: ${({ theme }) => theme.colors.success};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -155,7 +155,7 @@ const ApproveButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: ${({ theme }) => theme.colors.emerald[600]};
   }
 
   &:focus-visible {
@@ -187,7 +187,7 @@ const DenyButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid #EF4444;
+    outline: 2px solid ${({ theme }) => theme.colors.error};
     outline-offset: 2px;
   }
 
@@ -206,6 +206,7 @@ export function ConfirmationCard({
   onConfirm,
   confirming,
 }: ConfirmationCardProps) {
+  const theme = useTheme();
   const [timeLeft, setTimeLeft] = useState(
     getExpiryRemaining(pendingAction.expires_at)
   );
@@ -218,13 +219,13 @@ export function ConfirmationCard({
     return () => clearInterval(interval);
   }, [pendingAction.expires_at]);
 
-  const riskColor = getRiskColor(pendingAction.risk_level);
+  const riskColor = getRiskColor(pendingAction.risk_level, theme);
   const isExpired = timeLeft === 'Expired';
 
   return (
     <Card $riskColor={riskColor} role="region" aria-label="Action confirmation required">
       <CardHeader>
-        {getRiskIcon(pendingAction.risk_level)}
+        {getRiskIcon(pendingAction.risk_level, theme)}
         <CardTitle>Confirmation Required</CardTitle>
         <RiskBadge $riskColor={riskColor}>
           {getRiskLabel(pendingAction.risk_level)}

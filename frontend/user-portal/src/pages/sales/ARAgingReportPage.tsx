@@ -23,7 +23,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { BarChart3, RefreshCw, Download, AlertTriangle } from 'lucide-react';
 import { useArAging } from '../../hooks/queries/useArAging';
 import { useAuthStore } from '../../stores/auth.store';
@@ -158,7 +158,7 @@ const PrimaryButton = styled.button`
   gap: 6px;
   padding: 9px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -249,16 +249,19 @@ const TotalsGrid = styled.div`
   }
 `;
 
+// Aging-bucket escalation (current/1-30/31-60 are neutral; the report only
+// flags the two most severe buckets): 61-90 → gold (warning), 90+ → terracotta
+// (danger). Chromatic voices per a20core-rebrand-spec.md — severity beats hue.
 const BucketCard = styled.div<{ $warning?: boolean; $danger?: boolean }>`
   background: ${({ $warning, $danger, theme }) =>
     $danger
-      ? '#fef2f2'
+      ? theme.colors.errorBg
       : $warning
-      ? '#fffbeb'
-      : theme.colors.neutral[50] || '#fafafa'};
+      ? theme.colors.gold[50]
+      : theme.colors.neutral[50]};
   border: 1px solid
     ${({ $warning, $danger, theme }) =>
-      $danger ? '#fecaca' : $warning ? '#fde68a' : theme.colors.neutral[200]};
+      $danger ? theme.colors.terracotta[200] : $warning ? theme.colors.gold[200] : theme.colors.neutral[200]};
   border-radius: 10px;
   padding: 14px 16px;
 `;
@@ -268,8 +271,8 @@ const BucketLabel = styled.div<{ $warning?: boolean; $danger?: boolean }>`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ $warning, $danger }) =>
-    $danger ? '#dc2626' : $warning ? '#d97706' : '#6b7280'};
+  color: ${({ $warning, $danger, theme }) =>
+    $danger ? theme.colors.error : $warning ? theme.colors.gold[600] : theme.colors.textSecondary};
   margin-bottom: 8px;
 `;
 
@@ -277,7 +280,7 @@ const BucketAmount = styled.div<{ $warning?: boolean; $danger?: boolean }>`
   font-size: 22px;
   font-weight: 700;
   color: ${({ $warning, $danger, theme }) =>
-    $danger ? '#dc2626' : $warning ? '#d97706' : theme.colors.textPrimary};
+    $danger ? theme.colors.error : $warning ? theme.colors.gold[600] : theme.colors.textPrimary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -324,7 +327,7 @@ const Th = styled.th<{ $sortable?: boolean; $right?: boolean }>`
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50] || '#fafafa'};
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   white-space: nowrap;
   user-select: none;
@@ -332,7 +335,7 @@ const Th = styled.th<{ $sortable?: boolean; $right?: boolean }>`
 
   &:hover {
     ${({ $sortable, theme }) =>
-      $sortable ? `color: ${theme.colors.primary[600] || '#2563eb'};` : ''}
+      $sortable ? `color: ${theme.colors.primary[600]};` : ''}
   }
 `;
 
@@ -343,7 +346,7 @@ const Td = styled.td<{ $right?: boolean; $warn?: boolean; $danger?: boolean }>`
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
   font-variant-numeric: tabular-nums;
   color: ${({ $warn, $danger, theme }) =>
-    $danger ? '#dc2626' : $warn ? '#d97706' : theme.colors.textPrimary};
+    $danger ? theme.colors.error : $warn ? theme.colors.gold[600] : theme.colors.textPrimary};
   font-weight: ${({ $warn, $danger }) => ($warn || $danger ? '600' : '400')};
 `;
 
@@ -351,7 +354,7 @@ const TrClickable = styled.tr`
   cursor: pointer;
   transition: background 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
   &:last-child td {
     border-bottom: none;
@@ -359,7 +362,7 @@ const TrClickable = styled.tr`
 `;
 
 const TrFooter = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50] || '#fafafa'};
+  background: ${({ theme }) => theme.colors.neutral[50]};
   font-weight: 700;
 `;
 
@@ -387,12 +390,12 @@ const StateText = styled.p`
 `;
 
 const ErrorBox = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 10px;
   padding: 16px 20px;
   margin-bottom: 20px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   display: flex;
   align-items: center;
   gap: 10px;
@@ -482,6 +485,7 @@ export function ARAgingReportPage() {
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
   const navigate = useNavigate();
+  const theme = useTheme();
 
   // Filter state
   const [asOfDate, setAsOfDate] = useState<string>(todayIso());
@@ -631,7 +635,7 @@ export function ARAgingReportPage() {
           </TotalsCardHeader>
 
           {isLoading ? (
-            <div style={{ color: '#6b7280', fontSize: 14, padding: '8px 0' }}>Loading…</div>
+            <div style={{ color: theme.colors.textSecondary, fontSize: 14, padding: '8px 0' }}>Loading…</div>
           ) : (
             <TotalsGrid>
               <BucketCard>
@@ -729,7 +733,7 @@ export function ARAgingReportPage() {
                       <span style={{
                         fontSize: 11,
                         fontWeight: 600,
-                        background: '#f3f4f6',
+                        background: theme.colors.neutral[100],
                         borderRadius: 4,
                         padding: '2px 7px',
                       }}>

@@ -16,7 +16,7 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ShoppingCart } from 'lucide-react';
 import { useSalesOrdersV2 } from '../../hooks/queries/useSalesOrders';
 import { useAuthStore } from '../../stores/auth.store';
@@ -117,7 +117,7 @@ const Chip = styled.button<{ $active: boolean }>`
 const NewButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -173,6 +173,17 @@ const ClickableTr = styled.tr`
   }
 `;
 
+// Status badge colours — A20Core document-status canon, shared across all
+// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md). This page
+// previously used a distinct amber for `partly_closed`; converged onto the
+// shared lapis/info treatment used by every other sales list/detail page
+// (matches SalesOrderDetailPage.tsx) — a deliberate visual change from amber
+// to blue, flagged for review.
+//   draft            → neutral   (neutral[100] / textSecondary)
+//   open              → emerald   (successBg / emerald[700])
+//   partly_closed     → lapis     (infoBg / lapis[700])
+//   closed             → neutral (dark) (neutral[200] / neutral[800])
+//   cancelled          → terracotta (errorBg / terracotta[700])
 const StatusBadge = styled.span<{ $status: SalesOrderStatus }>`
   display: inline-flex;
   align-items: center;
@@ -180,24 +191,24 @@ const StatusBadge = styled.span<{ $status: SalesOrderStatus }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'partly_closed': return '#fef9c3';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'partly_closed': return theme.colors.infoBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'open': return '#059669';
-      case 'partly_closed': return '#b45309';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'partly_closed': return theme.colors.lapis[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -218,8 +229,8 @@ const ServiceOpenBadge = styled.span`
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #92400e;
-  background: #fef3c7;
+  color: ${({ theme }) => theme.colors.gold[800]};
+  background: ${({ theme }) => theme.colors.warningBg};
   border-radius: 99px;
   padding: 2px 10px;
 `;
@@ -248,7 +259,7 @@ const PageBtn = styled.button<{ $active?: boolean }>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? '#fff' : theme.colors.textPrimary};
+    $active ? theme.colors.onAccent : theme.colors.textPrimary};
   font-size: 13px;
   cursor: pointer;
   &:disabled {
@@ -282,10 +293,10 @@ const EmptyText = styled.p`
 
 const ErrorBanner = styled.div`
   padding: 16px 20px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 24px;
 `;
@@ -341,6 +352,7 @@ function fulfilmentLabel(item: SalesOrderListItem): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SalesOrdersV2Page() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const orgId = user?.organizationId ?? '';
@@ -503,7 +515,7 @@ export function SalesOrdersV2Page() {
                     onClick={() => handleRowClick(item.docEntry)}
                   >
                     <Td>
-                      <strong style={{ color: '#2196f3' }}>{item.docNumber}</strong>
+                      <strong style={{ color: theme.colors.primary[500] }}>{item.docNumber}</strong>
                     </Td>
                     <Td>{formatDate(item.docDate)}</Td>
                     <Td>{formatDate(item.deliveryDate)}</Td>
@@ -518,7 +530,7 @@ export function SalesOrdersV2Page() {
                           {item.serviceOpenInvoiceQty.toLocaleString()}
                         </ServiceOpenBadge>
                       ) : (
-                        <span style={{ color: '#9ca3af' }}>—</span>
+                        <span style={{ color: theme.colors.textDisabled }}>—</span>
                       )}
                     </Td>
                     <Td>

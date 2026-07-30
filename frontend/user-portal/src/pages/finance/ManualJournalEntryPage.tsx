@@ -37,7 +37,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast, showWarningToast, showErrorToast } from '../../stores/toast.store';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
@@ -174,7 +174,7 @@ const Label = styled.label`
 const StyledInput = styled.input<{ $hasError?: boolean }>`
   padding: 8px 10px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#ef4444' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
@@ -185,16 +185,16 @@ const StyledInput = styled.input<{ $hasError?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? '#ef4444' : theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ $hasError }) =>
-      $hasError ? 'rgba(239,68,68,0.15)' : 'rgba(33,150,243,0.15)'};
+      $hasError ? theme.colors.error : theme.colors.primary[500]};
+    box-shadow: 0 0 0 2px ${({ $hasError, theme }) =>
+      $hasError ? `${theme.colors.error}26` : `${theme.colors.primary[500]}26`};
   }
 `;
 
 const StyledTextarea = styled.textarea<{ $hasError?: boolean }>`
   padding: 8px 10px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#ef4444' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
@@ -207,16 +207,16 @@ const StyledTextarea = styled.textarea<{ $hasError?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? '#ef4444' : theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ $hasError }) =>
-      $hasError ? 'rgba(239,68,68,0.15)' : 'rgba(33,150,243,0.15)'};
+      $hasError ? theme.colors.error : theme.colors.primary[500]};
+    box-shadow: 0 0 0 2px ${({ $hasError, theme }) =>
+      $hasError ? `${theme.colors.error}26` : `${theme.colors.primary[500]}26`};
   }
 `;
 
 const StyledSelect = styled.select<{ $hasError?: boolean }>`
   padding: 8px 10px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#ef4444' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.background};
@@ -226,20 +226,20 @@ const StyledSelect = styled.select<{ $hasError?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? '#ef4444' : theme.colors.primary[500]};
+      $hasError ? theme.colors.error : theme.colors.primary[500]};
   }
 `;
 
 const CharCount = styled.div<{ $warn: boolean }>`
   font-size: 11px;
   text-align: right;
-  color: ${({ $warn }) => ($warn ? '#ef4444' : '#9ca3af')};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.textDisabled)};
   margin-top: 2px;
 `;
 
 const ErrorText = styled.div`
   font-size: 12px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 2px;
 `;
 
@@ -305,10 +305,10 @@ const AmountInput = styled.input<{ $hasError?: boolean }>`
   box-sizing: border-box;
   padding: 8px 8px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#ef4444' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 13px;
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   text-align: right;
@@ -317,9 +317,9 @@ const AmountInput = styled.input<{ $hasError?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? '#ef4444' : theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ $hasError }) =>
-      $hasError ? 'rgba(239,68,68,0.15)' : 'rgba(33,150,243,0.15)'};
+      $hasError ? theme.colors.error : theme.colors.primary[500]};
+    box-shadow: 0 0 0 2px ${({ $hasError, theme }) =>
+      $hasError ? `${theme.colors.error}26` : `${theme.colors.primary[500]}26`};
   }
 
   &:disabled {
@@ -345,8 +345,8 @@ const RemoveButton = styled.button`
   transition: background 150ms ease, color 150ms ease;
 
   &:hover:not(:disabled) {
-    background: #fee2e2;
-    color: #dc2626;
+    background: ${({ theme }) => theme.colors.terracotta[100]};
+    color: ${({ theme }) => theme.colors.error};
   }
 
   &:disabled {
@@ -415,8 +415,8 @@ const BalanceBar = styled.div<{ $balanced: boolean }>`
   margin-top: 16px;
   padding: 12px 16px;
   border-radius: 8px;
-  background: ${({ $balanced }) => ($balanced ? '#f0fdf4' : '#fef2f2')};
-  border: 1px solid ${({ $balanced }) => ($balanced ? '#86efac' : '#fca5a5')};
+  background: ${({ $balanced, theme }) => ($balanced ? theme.colors.successBg : theme.colors.errorBg)};
+  border: 1px solid ${({ $balanced, theme }) => ($balanced ? theme.colors.emerald[300] : theme.colors.terracotta[300])};
   font-size: 13px;
 `;
 
@@ -425,7 +425,7 @@ const BalanceItem = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
   span {
     font-weight: 700;
-    font-family: monospace;
+    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
     color: ${({ theme }) => theme.colors.textPrimary};
     margin-left: 4px;
   }
@@ -433,7 +433,7 @@ const BalanceItem = styled.div`
 
 const BalanceStatus = styled.div<{ $balanced: boolean }>`
   font-weight: 700;
-  color: ${({ $balanced }) => ($balanced ? '#166534' : '#991b1b')};
+  color: ${({ $balanced, theme }) => ($balanced ? theme.colors.emerald[800] : theme.colors.terracotta[800])};
 `;
 
 // ─── Period warning ────────────────────────────────────────────────────────────
@@ -443,11 +443,11 @@ const PeriodWarning = styled.div`
   align-items: flex-start;
   gap: 8px;
   padding: 10px 14px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 13px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   margin-bottom: 20px;
 `;
 
@@ -481,7 +481,7 @@ const CancelButton = styled.button`
 const SubmitButton = styled.button`
   padding: 10px 28px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -517,7 +517,7 @@ const ModalCard = styled.div`
   padding: 28px 32px;
   width: 100%;
   max-width: 520px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 20px 40px rgba(59, 44, 24, 0.18);
 `;
 
 const ModalTitle = styled.h2`
@@ -538,11 +538,11 @@ const ModalWarningList = styled.ul`
   margin: 0 0 20px;
   padding-left: 20px;
   font-size: 13px;
-  color: #92400e;
-  background: #fef3c7;
+  color: ${({ theme }) => theme.colors.gold[800]};
+  background: ${({ theme }) => theme.colors.warningBg};
   border-radius: 8px;
   padding: 12px 12px 12px 28px;
-  border: 1px solid #f59e0b;
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   line-height: 1.6;
 `;
 
@@ -567,14 +567,14 @@ const ModalCancelBtn = styled.button`
 
 const ModalContinueBtn = styled.button`
   padding: 9px 20px;
-  background: #d97706;
-  color: white;
+  background: ${({ theme }) => theme.colors.gold[600]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: #b45309; }
+  &:hover { background: ${({ theme }) => theme.colors.gold[700]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -614,6 +614,7 @@ function extractBackendError(err: unknown): string {
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function ManualJournalEntryPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const unsavedChanges = useContext(UnsavedChangesContext);
@@ -948,7 +949,7 @@ export function ManualJournalEntryPage() {
             <FieldFull>
               <FieldGroup>
                 <Label htmlFor="reason">
-                  Reason <span style={{ fontSize: 11, fontWeight: 400, color: '#6b7280' }}>
+                  Reason <span style={{ fontSize: 11, fontWeight: 400, color: theme.colors.textSecondary }}>
                     (audit memo — required)
                   </span> *
                 </Label>

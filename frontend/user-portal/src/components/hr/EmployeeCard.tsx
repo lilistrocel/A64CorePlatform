@@ -32,11 +32,11 @@ const Card = styled.div<{ $clickable: boolean }>`
   transition: all 150ms ease-in-out;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
 
-  ${({ $clickable }) =>
+  ${({ $clickable, theme }) =>
     $clickable &&
     `
     &:hover {
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: ${theme.shadows.md};
       transform: translateY(-2px);
     }
   `}
@@ -64,7 +64,7 @@ const EmployeeCode = styled.span`
   font-size: 12px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const StatusBadge = styled.span<{ $color: string }>`
@@ -124,23 +124,23 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}

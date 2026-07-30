@@ -182,11 +182,11 @@ const ActionButton = styled.button<{ $variant: 'send' | 'cancel' }>`
   transition: all 150ms ease;
   background: ${({ $variant, theme }) =>
     $variant === 'send' ? theme.colors.primary[500] : theme.colors.error};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 
   &:hover:not(:disabled) {
     background: ${({ $variant, theme }) =>
-      $variant === 'send' ? theme.colors.primary[700] : '#dc2626'};
+      $variant === 'send' ? theme.colors.primary[700] : theme.colors.terracotta[600]};
     transform: scale(1.05);
   }
 
@@ -200,9 +200,9 @@ const ActionButton = styled.button<{ $variant: 'send' | 'cancel' }>`
 const CharCounter = styled.div<{ $isAtLimit: boolean }>`
   font-size: 11px;
   color: ${({ $isAtLimit, theme }) =>
-    $isAtLimit ? theme.colors.error : theme.colors.warning ?? '#f59e0b'};
+    $isAtLimit ? theme.colors.error : theme.colors.warning};
   text-align: right;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const Hint = styled.div`

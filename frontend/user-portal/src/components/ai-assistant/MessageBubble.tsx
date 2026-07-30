@@ -162,7 +162,7 @@ const Avatar = styled.div`
   height: 28px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 9px;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   display: flex;
@@ -212,7 +212,7 @@ const MarkdownText = styled.div`
   }
 
   code {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
     font-size: 12px;
     background: ${({ theme }) => theme.colors.neutral[300]};
     padding: 1px 5px;
@@ -252,7 +252,7 @@ const CostTag = styled.span`
   font-size: 10px;
   color: ${({ theme }) => theme.colors.textDisabled};
   align-self: flex-end;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TypingIndicator = styled.div`

@@ -67,7 +67,7 @@ const Figures = styled.div`
 const Be = styled.span<{ $warm: boolean }>`
   font-size: 14px;
   font-weight: 700;
-  color: ${({ $warm, theme }) => ($warm ? '#92400e' : theme.colors.textPrimary)};
+  color: ${({ $warm, theme }) => ($warm ? theme.colors.gold[800] : theme.colors.textPrimary)};
 `;
 
 const Sub = styled.span`
@@ -83,7 +83,7 @@ const Trend = styled.div<{ $declining: boolean }>`
   line-height: 1.55;
   background: ${({ $declining, theme }) =>
     $declining ? theme.colors.warningBg : theme.colors.successBg};
-  color: ${({ $declining }) => ($declining ? '#92400e' : '#15803d')};
+  color: ${({ $declining, theme }) => ($declining ? theme.colors.gold[800] : theme.colors.emerald[700])};
 `;
 
 interface LineYieldPanelProps {

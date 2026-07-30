@@ -6,6 +6,7 @@
  */
 
 import { apiClient } from './api';
+import { lightTheme } from '@a64core/shared';
 import type {
   Customer,
   CustomerCreate,
@@ -115,17 +116,18 @@ export function formatCustomerAddress(address?: {
  * Get customer status color
  */
 export function getCustomerStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'active':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'inactive':
-      return '#6B7280'; // gray
+      return c.textSecondary;
     case 'lead':
-      return '#3B82F6'; // blue
+      return c.primary[500]; // lapis
     case 'prospect':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 

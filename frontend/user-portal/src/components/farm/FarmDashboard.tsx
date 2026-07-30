@@ -8,7 +8,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import {
   BarChart,
   Bar,
@@ -98,16 +99,25 @@ type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 
 // CONSTANTS
 // ============================================================================
 
-const STATE_COLORS: Record<string, string> = {
-  empty: '#9E9E9E',
-  planned: '#3B82F6',
-  growing: '#10B981',
-  fruiting: '#A855F7',
-  harvesting: '#F59E0B',
-  cleaning: '#8B5CF6',
-  alert: '#EF4444',
-  partial: '#F97316',
-};
+// Themed once per render (not a module constant) because Recharts `fill` props
+// take plain strings, not styled-components callbacks — see rule in the rebrand
+// sweep spec. fruiting/cleaning are both "purple" in the old palette but the
+// brand supplies no purple; per spec §3 "Purples -> judgement call": fruiting
+// (a meaningful, near-harvest milestone) gets secondary/gold, cleaning
+// (an ordinary, non-highlight state) gets primary[700] to keep it distinct
+// from planned's primary[500] without reaching for gold.
+function getStateColors(theme: Theme): Record<string, string> {
+  return {
+    empty: theme.colors.textDisabled,
+    planned: theme.colors.primary[500],
+    growing: theme.colors.success,
+    fruiting: theme.colors.secondary[500],
+    harvesting: theme.colors.warning,
+    cleaning: theme.colors.primary[700],
+    alert: theme.colors.error,
+    partial: theme.colors.terracotta[400],
+  };
+}
 
 const STATE_LABELS: Record<string, string> = {
   empty: 'Empty',
@@ -422,15 +432,15 @@ const ActionBtn = styled.button<{ $variant?: 'primary' | 'secondary' | 'outline'
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.primary[500]};
-        color: #ffffff;
+        color: ${theme.colors.onAccent};
         &:hover { background: ${theme.colors.primary[700]}; }
       `;
     }
     if ($variant === 'secondary') {
       return `
         background: ${theme.colors.success};
-        color: #ffffff;
-        &:hover { background: #059669; }
+        color: ${theme.colors.onAccent};
+        &:hover { background: ${theme.colors.emerald[600]}; }
       `;
     }
     return `
@@ -676,7 +686,7 @@ const FilterActiveCount = styled.span`
   padding: 0 5px;
   border-radius: ${({ theme }) => theme.borderRadius.full};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   line-height: 1;
@@ -694,7 +704,7 @@ const ClearAllBtn = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.08);
+    background: ${({ theme }) => `${theme.colors.error}14`};
   }
 
   &:focus-visible {
@@ -793,7 +803,7 @@ const FilterChip = styled.button<FilterChipStyledProps>`
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
   background: ${({ $color, $selected }) =>
     $selected ? $color : 'transparent'};
-  color: ${({ $color, $selected }) => ($selected ? '#ffffff' : $color)};
+  color: ${({ $color, $selected, theme }) => ($selected ? theme.colors.onAccent : $color)};
 
   &:hover {
     background: ${({ $color, $selected }) =>
@@ -866,13 +876,14 @@ const FilterDateInput = styled.input`
 // ============================================================================
 
 function buildBlockStateChartData(
-  blocksByState: DashboardSummaryResponse['data']['blocksByState']
+  blocksByState: DashboardSummaryResponse['data']['blocksByState'],
+  stateColors: Record<string, string>
 ): Array<{ name: string; value: number; color: string }> {
   return (Object.keys(STATE_LABELS) as Array<keyof typeof STATE_LABELS>)
     .map((key) => ({
       name: STATE_LABELS[key],
       value: blocksByState[key as keyof typeof blocksByState] ?? 0,
-      color: STATE_COLORS[key],
+      color: stateColors[key],
     }))
     .filter((entry) => entry.value > 0);
 }
@@ -925,28 +936,32 @@ interface CustomTooltipProps {
 }
 
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  const theme = useTheme();
   if (!active || !payload || payload.length === 0) return null;
+  // Inverted chip (background/text swapped from the page ground) so the
+  // tooltip stays legible floating over any chart in either theme, rather
+  // than hardcoding a fixed dark chrome.
   return (
     <div
       style={{
-        background: 'rgba(30,30,30,0.92)',
+        background: theme.colors.textPrimary,
         borderRadius: 8,
         padding: '10px 14px',
         fontSize: 13,
-        color: '#f5f5f5',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        color: theme.colors.canvas,
+        boxShadow: theme.shadows.lg,
         maxWidth: 220,
       }}
     >
       {label && (
-        <div style={{ fontWeight: 600, marginBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: 4 }}>
+        <div style={{ fontWeight: 600, marginBottom: 6, borderBottom: `1px solid ${theme.colors.canvas}26`, paddingBottom: 4 }}>
           {label}
         </div>
       )}
       {payload.map((entry) => (
         <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color, flexShrink: 0, display: 'inline-block' }} />
-          <span style={{ color: '#a3a3a3' }}>{entry.name}:</span>
+          <span style={{ color: `${theme.colors.canvas}99` }}>{entry.name}:</span>
           <span style={{ fontWeight: 500 }}>{typeof entry.value === 'number' && entry.name === 'kg' ? `${formatNumber(entry.value)} kg` : formatNumber(entry.value)}</span>
         </div>
       ))}
@@ -959,6 +974,8 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 // ============================================================================
 
 export function FarmDashboard() {
+  const theme = useTheme();
+  const stateColors = getStateColors(theme);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [summary, setSummary] = useState<DashboardSummaryResponse['data'] | null>(null);
@@ -1146,7 +1163,7 @@ export function FarmDashboard() {
 
   const { overview, blocksByState, blocksByFarm, harvestSummary, recentActivity } = summary;
 
-  const stateChartData = buildBlockStateChartData(blocksByState);
+  const stateChartData = buildBlockStateChartData(blocksByState, stateColors);
   const stackedBarData = buildStackedBarData(blocksByFarm);
   const harvestBarData = buildHarvestBarData(harvestSummary.harvestsByFarm);
 
@@ -1236,7 +1253,7 @@ export function FarmDashboard() {
                   <FilterChip
                     key={state}
                     type="button"
-                    $color={STATE_COLORS[state]}
+                    $color={stateColors[state]}
                     $selected={selectedStates.has(state)}
                     onClick={() => handleToggleState(state)}
                     aria-pressed={selectedStates.has(state)}
@@ -1296,43 +1313,43 @@ export function FarmDashboard() {
         <TabContent role="tabpanel" aria-label="Overview">
           {/* KPI Cards */}
           <KpiGrid>
-            <KpiCard $borderColor={STATE_COLORS.planned}>
-              <KpiIndicator $color={STATE_COLORS.planned} aria-hidden="true" />
+            <KpiCard $borderColor={stateColors.planned}>
+              <KpiIndicator $color={stateColors.planned} aria-hidden="true" />
               <KpiLabel>Total Farms</KpiLabel>
               <KpiValue>{formatNumber(overview.totalFarms)}</KpiValue>
               <KpiSubtext>Active locations</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor={STATE_COLORS.growing}>
-              <KpiIndicator $color={STATE_COLORS.growing} aria-hidden="true" />
+            <KpiCard $borderColor={stateColors.growing}>
+              <KpiIndicator $color={stateColors.growing} aria-hidden="true" />
               <KpiLabel>Total Blocks</KpiLabel>
               <KpiValue>{formatNumber(overview.totalBlocks)}</KpiValue>
               <KpiSubtext>Across all farms</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor={STATE_COLORS.fruiting}>
-              <KpiIndicator $color={STATE_COLORS.fruiting} aria-hidden="true" />
+            <KpiCard $borderColor={stateColors.fruiting}>
+              <KpiIndicator $color={stateColors.fruiting} aria-hidden="true" />
               <KpiLabel>Active Plantings</KpiLabel>
               <KpiValue>{formatNumber(overview.activePlantings)}</KpiValue>
               <KpiSubtext>Currently growing</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor={STATE_COLORS.harvesting}>
-              <KpiIndicator $color={STATE_COLORS.harvesting} aria-hidden="true" />
+            <KpiCard $borderColor={stateColors.harvesting}>
+              <KpiIndicator $color={stateColors.harvesting} aria-hidden="true" />
               <KpiLabel>Upcoming Harvests</KpiLabel>
               <KpiValue>{formatNumber(overview.upcomingHarvests)}</KpiValue>
               <KpiSubtext>Blocks ready to harvest</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor="#6366F1">
-              <KpiIndicator $color="#6366F1" aria-hidden="true" />
+            <KpiCard $borderColor={theme.colors.secondary[600]}>
+              <KpiIndicator $color={theme.colors.secondary[600]} aria-hidden="true" />
               <KpiLabel>Total Yield</KpiLabel>
               <KpiValue>{formatNumber(Math.round(harvestSummary.totalHarvestsKg))}</KpiValue>
               <KpiSubtext>kg harvested</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor={STATE_COLORS.alert}>
-              <KpiIndicator $color={STATE_COLORS.alert} aria-hidden="true" />
+            <KpiCard $borderColor={stateColors.alert}>
+              <KpiIndicator $color={stateColors.alert} aria-hidden="true" />
               <KpiLabel>Active Alerts</KpiLabel>
               <KpiValue>{formatNumber(recentActivity.activeAlerts)}</KpiValue>
               <KpiSubtext>Require attention</KpiSubtext>
@@ -1406,12 +1423,12 @@ export function FarmDashboard() {
                 <ChartContainer style={{ height: 320 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stackedBarData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={`${theme.colors.textPrimary}0F`} />
                       <XAxis
                         dataKey="name"
                         tick={{ fontSize: 12 }}
                         tickLine={false}
-                        axisLine={{ stroke: 'rgba(0,0,0,0.12)' }}
+                        axisLine={{ stroke: `${theme.colors.textPrimary}1F` }}
                       />
                       <YAxis
                         tick={{ fontSize: 12 }}
@@ -1431,7 +1448,7 @@ export function FarmDashboard() {
                           dataKey={key}
                           stackId="blocks"
                           name={STATE_LABELS[key]}
-                          fill={STATE_COLORS[key]}
+                          fill={stateColors[key]}
                         />
                       ))}
                     </BarChart>
@@ -1455,7 +1472,7 @@ export function FarmDashboard() {
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        stroke="rgba(0,0,0,0.06)"
+                        stroke={`${theme.colors.textPrimary}0F`}
                         horizontal={false}
                       />
                       <XAxis
@@ -1474,7 +1491,7 @@ export function FarmDashboard() {
                         width={80}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="kg" name="kg" fill="#6366F1" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="kg" name="kg" fill={theme.colors.secondary[600]} radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -1558,19 +1575,19 @@ export function FarmDashboard() {
       {activeTab === 'activity' && (
         <TabContent role="tabpanel" aria-label="Activity and Alerts">
           <ActivityGrid>
-            <ActivityCard $accent={STATE_COLORS.growing}>
+            <ActivityCard $accent={stateColors.growing}>
               <ActivityCardLabel>Recent Harvests</ActivityCardLabel>
               <ActivityCardValue>{formatNumber(recentActivity.recentHarvests)}</ActivityCardValue>
               <ActivityCardNote>Last 7 days</ActivityCardNote>
             </ActivityCard>
 
-            <ActivityCard $accent={STATE_COLORS.alert}>
+            <ActivityCard $accent={stateColors.alert}>
               <ActivityCardLabel>Active Alerts</ActivityCardLabel>
               <ActivityCardValue>{formatNumber(recentActivity.activeAlerts)}</ActivityCardValue>
               <ActivityCardNote>Require attention</ActivityCardNote>
             </ActivityCard>
 
-            <ActivityCard $accent={STATE_COLORS.planned}>
+            <ActivityCard $accent={stateColors.planned}>
               <ActivityCardLabel>Pending Tasks</ActivityCardLabel>
               <ActivityCardValue>{formatNumber(recentActivity.pendingTasks)}</ActivityCardValue>
               <ActivityCardNote>Scheduled actions</ActivityCardNote>

@@ -5,7 +5,7 @@
  * Shows farm type compatibility badges, key stats, and hover actions.
  */
 
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import type { PlantDataEnhanced } from '../../types/farm';
 import { formatFarmType, getFarmTypeColor } from '../../services/plantDataEnhancedApi';
 
@@ -29,14 +29,14 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
   cursor: pointer;
   position: relative;
 
   &:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: ${({ theme }) => theme.shadows.lg};
     transform: translateY(-2px);
   }
 `;
@@ -158,36 +158,36 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
   ${({ $variant, theme }) => {
     if ($variant === 'view') {
       return `
-        background: #3B82F6;
-        color: white;
+        background: ${theme.colors.primary[500]};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[600]};
         }
       `;
     }
     if ($variant === 'edit') {
       return `
-        background: #F59E0B;
-        color: white;
+        background: ${theme.colors.warning};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #D97706;
+          background: ${theme.colors.gold[600]};
         }
       `;
     }
     if ($variant === 'clone') {
       return `
-        background: #10B981;
-        color: white;
+        background: ${theme.colors.success};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #059669;
+          background: ${theme.colors.emerald[600]};
         }
       `;
     }
     if ($variant === 'delete') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
           background: ${theme.colors.errorBg};
         }
@@ -217,8 +217,8 @@ const InactiveBadge = styled.div`
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 500;
-  background: #EF4444;
-  color: white;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 // ============================================================================
@@ -226,6 +226,8 @@ const InactiveBadge = styled.div`
 // ============================================================================
 
 export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: PlantDataCardProps) {
+  const theme = useTheme();
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on action buttons
     const target = e.target as HTMLElement;
@@ -286,7 +288,7 @@ export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: Plan
           </FarmTypeBadge>
         ))}
         {plant.farmTypeCompatibility.length > 3 && (
-          <FarmTypeBadge $color="#6B7280">
+          <FarmTypeBadge $color={theme.colors.textSecondary}>
             +{plant.farmTypeCompatibility.length - 3}
           </FarmTypeBadge>
         )}

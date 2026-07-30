@@ -25,7 +25,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { FinanceReportPage } from '../../components/finance/FinanceReportPage';
 import { useBalanceSheet } from '../../hooks/queries/useFinanceReports';
@@ -194,7 +194,7 @@ const NameCell = styled.td<NameCellProps>`
 const AmountCell = styled.td`
   padding: 10px 16px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
@@ -216,7 +216,7 @@ const SectionTotalAmountCell = styled.td`
   padding: 11px 16px;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
@@ -238,7 +238,7 @@ const PLNameCell = styled.td`
 const PLAmountCell = styled.td`
   padding: 10px 16px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-style: italic;
@@ -251,7 +251,7 @@ interface IdentityRowProps {
 
 const IdentityRow = styled.tr<IdentityRowProps>`
   border-top: 3px double ${({ theme }) => theme.colors.neutral[400]};
-  background: ${({ $imbalanced }) => ($imbalanced ? '#fef2f2' : 'transparent')};
+  background: ${({ $imbalanced, theme }) => ($imbalanced ? theme.colors.errorBg : 'transparent')};
 `;
 
 const IdentityCell = styled.td`
@@ -269,9 +269,9 @@ const IdentityAmountCell = styled.td<IdentityAmountCellProps>`
   padding: 13px 16px;
   font-size: 14px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
-  color: ${({ $imbalanced }) => ($imbalanced ? '#dc2626' : 'inherit')};
+  color: ${({ $imbalanced, theme }) => ($imbalanced ? theme.colors.error : 'inherit')};
   white-space: nowrap;
 `;
 
@@ -279,7 +279,7 @@ const ImbalanceLabel = styled.span`
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 2px;
 `;
 
@@ -300,8 +300,8 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -309,10 +309,10 @@ const ErrorBanner = styled.div`
 
 const WarningBanner = styled.div`
   padding: 12px 16px;
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   font-size: 13px;
   margin-bottom: 16px;
 `;
@@ -368,7 +368,7 @@ const DrillTd = styled.td`
 const DrillTdMono = styled.td`
   padding: 9px 14px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
@@ -404,6 +404,7 @@ function AccountLedgerDrillDown({
   accountName,
   asOfDate,
 }: DrillDownContentProps) {
+  const theme = useTheme();
   const { data, isLoading, isError } = useJournalEntries({
     organizationId,
     companyCode,
@@ -489,7 +490,7 @@ function AccountLedgerDrillDown({
         {lines.map((ln) => (
           <DrillTr key={ln.key}>
             <DrillTd>{ln.jeDate}</DrillTd>
-            <DrillTd style={{ fontFamily: 'monospace', fontSize: 12 }}>
+            <DrillTd style={{ fontFamily: theme.typography.fontFamily.mono, fontSize: 12 }}>
               {ln.jeNumber}
             </DrillTd>
             <DrillTd>{ln.description}</DrillTd>

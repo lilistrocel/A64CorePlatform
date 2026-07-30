@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import { queryKeys } from '../../config/react-query.config';
 import { Breadcrumb } from '@a64core/shared';
@@ -40,8 +40,8 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -50,7 +50,7 @@ const BackButton = styled.button`
   margin-bottom: 24px;
 
   &:hover {
-    background: #e3f2fd;
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
@@ -97,27 +97,27 @@ const StatusBadge = styled.span<{ $status: string }>`
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 500;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
       case 'empty':
-        return '#9E9E9E';
+        return theme.colors.textSecondary;
       case 'planted':
-        return '#4CAF50';
+        return theme.colors.success;
       case 'growing':
-        return '#8BC34A';
+        return theme.colors.emerald[400];
       case 'fruiting':
-        return '#FF9800';
+        return theme.colors.terracotta[400];
       case 'harvesting':
-        return '#FFC107';
+        return theme.colors.warning;
       case 'cleaning':
-        return '#03A9F4';
+        return theme.colors.primary[400];
       case 'alert':
-        return '#F44336';
+        return theme.colors.error;
       default:
-        return '#9E9E9E';
+        return theme.colors.textSecondary;
     }
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   text-transform: capitalize;
 `;
 
@@ -180,9 +180,9 @@ const TabBar = styled.div`
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
   background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3b82f6' : 'inherit')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'inherit')};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -191,7 +191,7 @@ const Tab = styled.button<{ $active: boolean }>`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface};
-    color: #3b82f6;
+    color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -210,7 +210,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -304,7 +304,7 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: linear-gradient(90deg, #3b82f6, #1976d2);
+    background: ${({ theme }) => `linear-gradient(90deg, ${theme.colors.primary[500]}, ${theme.colors.primary[600]})`};
     transition: width 300ms ease-in-out;
   }
 `;
@@ -319,8 +319,8 @@ const AreaBudgetText = styled.div`
 const AddCropButton = styled.button`
   width: 100%;
   padding: 12px;
-  background: #4caf50;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -329,7 +329,7 @@ const AddCropButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #388e3c;
+    background: ${({ theme }) => theme.colors.emerald[600]};
   }
 `;
 
@@ -373,7 +373,7 @@ const VirtualChildCard = styled.div`
 
     &:first-child {
       font-weight: 600;
-      color: #1976d2;
+      color: ${({ theme }) => theme.colors.primary[600]};
     }
   }
 `;
@@ -425,8 +425,8 @@ const StaleBanner = styled.div`
   flex-direction: column;
   gap: 12px;
   padding: 16px 20px;
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.gold[50]};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   margin-bottom: 24px;
 `;
@@ -434,22 +434,22 @@ const StaleBanner = styled.div`
 const StaleBannerText = styled.p`
   margin: 0;
   font-size: 14px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   line-height: 1.5;
 `;
 
 const StaleLockNote = styled.p`
   margin: 0;
   font-size: 13px;
-  color: #b45309;
+  color: ${({ theme }) => theme.colors.gold[700]};
   font-style: italic;
 `;
 
 const UpdatePlantDataButton = styled.button<{ $loading: boolean }>`
   align-self: flex-start;
   padding: 8px 16px;
-  background: ${({ $loading }) => ($loading ? '#d97706' : '#f59e0b')};
-  color: #1c1917;
+  background: ${({ $loading, theme }) => ($loading ? theme.colors.gold[600] : theme.colors.warning)};
+  color: ${({ theme }) => theme.colors.neutral[900]};
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -459,7 +459,7 @@ const UpdatePlantDataButton = styled.button<{ $loading: boolean }>`
   opacity: ${({ $loading }) => ($loading ? 0.7 : 1)};
 
   &:hover:not(:disabled) {
-    background: #d97706;
+    background: ${({ theme }) => theme.colors.gold[600]};
   }
 `;
 
@@ -470,6 +470,7 @@ const UpdatePlantDataButton = styled.button<{ $loading: boolean }>`
 type TabType = 'overview' | 'alerts' | 'automation' | 'harvests' | 'archives';
 
 export function BlockDetail() {
+  const theme = useTheme();
   const { farmId, blockId } = useParams<{ farmId: string; blockId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -634,7 +635,7 @@ export function BlockDetail() {
               {block.targetCropName && (
                 <>
                   <span>•</span>
-                  <span style={{ fontWeight: 600, color: '#4CAF50' }}>🌱 {block.targetCropName}</span>
+                  <span style={{ fontWeight: 600, color: theme.colors.success }}>🌱 {block.targetCropName}</span>
                 </>
               )}
             </BlockMeta>
@@ -713,7 +714,7 @@ export function BlockDetail() {
                         {refreshingPlantData ? 'Updating...' : 'Update to latest version'}
                       </UpdatePlantDataButton>
                       {refreshPlantDataError && (
-                        <StaleLockNote style={{ color: '#dc2626' }}>{refreshPlantDataError}</StaleLockNote>
+                        <StaleLockNote style={{ color: theme.colors.terracotta[600] }}>{refreshPlantDataError}</StaleLockNote>
                       )}
                     </>
                   ) : (
@@ -766,7 +767,7 @@ export function BlockDetail() {
                   <InfoItem>
                     <InfoLabel>Parent Block</InfoLabel>
                     <InfoValue
-                      style={{ color: '#1976d2', cursor: 'pointer' }}
+                      style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
                       onClick={() => block.parentBlockId && navigate(`/farm/farms/${farmId}/blocks/${block.parentBlockId}`)}
                     >
                       {block.parentBlockId ? 'View Parent Block →' : 'Unknown'}
@@ -844,7 +845,7 @@ export function BlockDetail() {
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>Yield Efficiency</InfoLabel>
-                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? '#4CAF50' : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? '#FF9800' : '#F44336' }}>
+                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? theme.colors.success : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? theme.colors.warning : theme.colors.error }}>
                       {formatPercentage(summary.yieldEfficiencyPercent ?? 0, 1)}
                     </InfoValue>
                   </InfoItem>

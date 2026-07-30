@@ -71,9 +71,9 @@ const FilterBar = styled.div`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -81,14 +81,14 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
   }
 `;
 
 const CreateButton = styled.button`
   padding: 10px 20px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -100,7 +100,7 @@ const CreateButton = styled.button`
   gap: 8px;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 
   &:disabled {

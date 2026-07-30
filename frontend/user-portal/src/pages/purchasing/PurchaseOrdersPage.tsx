@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { usePurchaseOrders } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import type { POStatus } from '../../services/purchasingApi';
@@ -68,9 +68,9 @@ const Chip = styled.button<{ $active: boolean }>`
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.primary[50] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] || '#1d4ed8' : theme.colors.textSecondary};
+    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
@@ -80,7 +80,7 @@ const Chip = styled.button<{ $active: boolean }>`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -145,30 +145,30 @@ const StatusBadge = styled.span<{ $status: POStatus }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'Draft': return '#f3f4f6';
-      case 'Pending Approval': return '#fef3c7';
-      case 'Open': return '#dbeafe';
-      case 'Sent': return '#d1fae5';
-      case 'Partially Received': return '#e0e7ff';
-      case 'Received': return '#ecfdf5';
-      case 'Closed': return '#ede9fe';
-      case 'Cancelled': return '#f3f4f6';
-      default: return '#f3f4f6';
+      case 'Draft': return theme.colors.neutral[100];
+      case 'Pending Approval': return theme.colors.warningBg;
+      case 'Open': return theme.colors.primary[100];
+      case 'Sent': return theme.colors.emerald[100];
+      case 'Partially Received': return theme.colors.primary[100];
+      case 'Received': return theme.colors.successBg;
+      case 'Closed': return theme.colors.secondary[50];
+      case 'Cancelled': return theme.colors.neutral[100];
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'Draft': return '#6b7280';
-      case 'Pending Approval': return '#92400e';
-      case 'Open': return '#1d4ed8';
-      case 'Sent': return '#065f46';
-      case 'Partially Received': return '#3730a3';
-      case 'Received': return '#065f46';
-      case 'Closed': return '#5b21b6';
-      case 'Cancelled': return '#9ca3af';
-      default: return '#6b7280';
+      case 'Draft': return theme.colors.textSecondary;
+      case 'Pending Approval': return theme.colors.gold[800];
+      case 'Open': return theme.colors.primary[700];
+      case 'Sent': return theme.colors.emerald[700];
+      case 'Partially Received': return theme.colors.secondary[700];
+      case 'Received': return theme.colors.emerald[700];
+      case 'Closed': return theme.colors.secondary[700];
+      case 'Cancelled': return theme.colors.textDisabled;
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -224,6 +224,7 @@ function formatDate(dateStr: string): string {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function PurchaseOrdersPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const organizationId = user?.organizationId ?? '';
@@ -305,7 +306,7 @@ export function PurchaseOrdersPage() {
                   <Td>
                     {po.baseDocId ? (
                       <span
-                        style={{ color: '#2563eb', cursor: 'pointer', fontSize: 12 }}
+                        style={{ color: theme.colors.primary[600], cursor: 'pointer', fontSize: 12 }}
                         onClick={(e) => { e.stopPropagation(); navigate(`/purchasing/pr/${po.baseDocId}`); }}
                       >
                         From PR

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'styled-components';
+import { ThemeProvider, useTheme } from 'styled-components';
 import { Suspense, lazy } from 'react';
 import { lightTheme, darkTheme, GlobalStyles } from '@a64core/shared';
 import { queryClient } from './config/react-query.config';
@@ -13,20 +13,23 @@ import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { UnsavedChangesDialog } from './components/common/UnsavedChangesDialog';
 import { ToastContainer } from './components/common/ToastContainer';
 
-// Loading component for suspense fallback
-// Note: inline style color is a neutral gray; theme is not available outside ThemeProvider at this point
-const PageLoader = () => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    fontSize: '1.2rem',
-    color: '#616161'
-  }}>
-    Loading...
-  </div>
-);
+// Loading component for suspense fallback.
+// Rendered inside <ThemeProvider> (see below), so useTheme() resolves correctly.
+const PageLoader = () => {
+  const theme = useTheme();
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      fontSize: '1.2rem',
+      color: theme.colors.textSecondary,
+    }}>
+      Loading...
+    </div>
+  );
+};
 
 // Lazy load all page components for code splitting
 // Auth pages (small, load immediately for login)

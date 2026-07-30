@@ -9,7 +9,8 @@
  */
 
 import { useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import {
   ResponsiveContainer,
   BarChart,
@@ -34,8 +35,22 @@ function formatTooltipValue(value: number): string {
   return `${value.toLocaleString()} AED`;
 }
 
-const FARM_COLORS = ['#2196f3', '#42a5f5', '#64b5f6', '#90caf9', '#bbdefb'];
-const CROP_COLORS = ['#10B981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'];
+// Bar-shade ramps for the per-item Cell fills — one brand voice per chart,
+// stepping from full saturation down to a tint (spec: categorical ramps).
+const farmColors = (theme: Theme) => [
+  theme.colors.primary[500],
+  theme.colors.primary[400],
+  theme.colors.primary[300],
+  theme.colors.primary[200],
+  theme.colors.primary[100],
+];
+const cropColors = (theme: Theme) => [
+  theme.colors.emerald[500],
+  theme.colors.emerald[400],
+  theme.colors.emerald[300],
+  theme.colors.emerald[200],
+  theme.colors.emerald[100],
+];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -121,7 +136,7 @@ const ErrorState = styled.div`
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -170,20 +185,21 @@ function BarTooltip({
   payload?: Array<{ value: number }>;
   label?: string;
 }) {
+  const theme = useTheme();
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div
       style={{
-        background: 'white',
-        border: '1px solid #e0e0e0',
+        background: theme.colors.background,
+        border: `1px solid ${theme.colors.border}`,
         borderRadius: '8px',
         padding: '10px 14px',
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        boxShadow: theme.shadows.md,
         fontSize: '13px',
       }}
     >
-      <div style={{ fontWeight: 600, marginBottom: '4px' }}>{label}</div>
-      <div style={{ color: '#616161' }}>{formatTooltipValue(payload[0].value)}</div>
+      <div style={{ fontWeight: 600, marginBottom: '4px', color: theme.colors.textPrimary }}>{label}</div>
+      <div style={{ color: theme.colors.textSecondary }}>{formatTooltipValue(payload[0].value)}</div>
     </div>
   );
 }
@@ -221,6 +237,7 @@ export function PnlBreakdownCharts({
   cropHeader,
   cropFooter,
 }: PnlBreakdownChartsProps) {
+  const theme = useTheme();
   const [farmsExpanded, setFarmsExpanded] = useState(false);
   const allFarmsSorted = farms ? [...farms].sort((a, b) => b.revenue - a.revenue) : [];
   const topFarms = farmsExpanded ? allFarmsSorted : allFarmsSorted.slice(0, FARM_DEFAULT_VISIBLE);
@@ -254,11 +271,11 @@ export function PnlBreakdownCharts({
                 data={topFarms}
                 margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.colors.border} />
                 <XAxis
                   type="number"
                   tickFormatter={formatAed}
-                  tick={{ fontSize: 11, fill: '#616161' }}
+                  tick={{ fontSize: 11, fill: theme.colors.textSecondary }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -266,7 +283,7 @@ export function PnlBreakdownCharts({
                   type="category"
                   dataKey="farmName"
                   width={120}
-                  tick={{ fontSize: 11, fill: '#424242' }}
+                  tick={{ fontSize: 11, fill: theme.colors.textPrimary }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -277,12 +294,15 @@ export function PnlBreakdownCharts({
                   cursor={onFarmClick ? 'pointer' : 'default'}
                   onClick={onFarmClick ? (data: PnlFarmDataPoint) => onFarmClick(data.farmId) : undefined}
                 >
-                  {topFarms.map((_, index) => (
-                    <Cell
-                      key={`farm-cell-${index}`}
-                      fill={FARM_COLORS[index % FARM_COLORS.length]}
-                    />
-                  ))}
+                  {topFarms.map((_, index) => {
+                    const farmPalette = farmColors(theme);
+                    return (
+                      <Cell
+                        key={`farm-cell-${index}`}
+                        fill={farmPalette[index % farmPalette.length]}
+                      />
+                    );
+                  })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -322,11 +342,11 @@ export function PnlBreakdownCharts({
                   data={topCrops}
                   margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.colors.border} />
                   <XAxis
                     type="number"
                     tickFormatter={formatAed}
-                    tick={{ fontSize: 11, fill: '#616161' }}
+                    tick={{ fontSize: 11, fill: theme.colors.textSecondary }}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -334,7 +354,7 @@ export function PnlBreakdownCharts({
                     type="category"
                     dataKey="cropName"
                     width={120}
-                    tick={{ fontSize: 11, fill: '#424242' }}
+                    tick={{ fontSize: 11, fill: theme.colors.textPrimary }}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -346,12 +366,15 @@ export function PnlBreakdownCharts({
                     onClick={(data: PnlCropDataPoint) => onCropClick(data.cropName)}
                     aria-label="Click to filter by this crop"
                   >
-                    {topCrops.map((_, index) => (
-                      <Cell
-                        key={`crop-cell-${index}`}
-                        fill={CROP_COLORS[index % CROP_COLORS.length]}
-                      />
-                    ))}
+                    {topCrops.map((_, index) => {
+                      const cropPalette = cropColors(theme);
+                      return (
+                        <Cell
+                          key={`crop-cell-${index}`}
+                          fill={cropPalette[index % cropPalette.length]}
+                        />
+                      );
+                    })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>

@@ -10,7 +10,7 @@
  */
 
 import { useSearchParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { type DefaultTheme } from 'styled-components';
 import { HarvestInventoryList, type HarvestStockStatus } from '../inventory/HarvestInventoryList';
 import WasteInventoryList from '../inventory/WasteInventoryList';
 import { ReturnedInventoryList } from '../inventory/ReturnedInventoryList';
@@ -77,11 +77,11 @@ const TabButton = styled.button<TabButtonProps>`
     ${({ theme, $active }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   background: ${({ theme, $active }) =>
     $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.textSecondary)};
+  color: ${({ theme, $active }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
 
   &:hover:not(:disabled) {
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.primary[500])};
+    color: ${({ theme, $active }) => ($active ? theme.colors.onAccent : theme.colors.primary[500])};
   }
 
   &:focus-visible {
@@ -102,12 +102,14 @@ interface StatusChipProps {
   $status: HarvestStockStatus;
 }
 
-function getStatusAccent(status: HarvestStockStatus): string {
+// Stock lot status vocabulary (available/reserved/sold/expired) — distinct from
+// the document-status canon used elsewhere in sales; mapped by semantics here.
+function getStatusAccent(status: HarvestStockStatus, theme: DefaultTheme): string {
   switch (status) {
-    case 'available': return '#10B981';
-    case 'reserved': return '#3B82F6';
-    case 'sold': return '#6B7280';
-    case 'expired': return '#EF4444';
+    case 'available': return theme.colors.success;
+    case 'reserved': return theme.colors.info;
+    case 'sold': return theme.colors.textSecondary;
+    case 'expired': return theme.colors.error;
   }
 }
 
@@ -119,20 +121,20 @@ const StatusChip = styled.button<StatusChipProps>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: 1px solid
-    ${({ $active, $status }) => ($active ? getStatusAccent($status) : 'transparent')};
-  background: ${({ $active, $status }) =>
-    $active ? getStatusAccent($status) + '20' : 'transparent'};
+    ${({ $active, $status, theme }) => ($active ? getStatusAccent($status, theme) : 'transparent')};
+  background: ${({ $active, $status, theme }) =>
+    $active ? getStatusAccent($status, theme) + '20' : 'transparent'};
   color: ${({ $active, $status, theme }) =>
-    $active ? getStatusAccent($status) : theme.colors.textSecondary};
+    $active ? getStatusAccent($status, theme) : theme.colors.textSecondary};
 
   &:hover {
-    border-color: ${({ $status }) => getStatusAccent($status)};
-    color: ${({ $status }) => getStatusAccent($status)};
-    background: ${({ $status }) => getStatusAccent($status) + '10'};
+    border-color: ${({ $status, theme }) => getStatusAccent($status, theme)};
+    color: ${({ $status, theme }) => getStatusAccent($status, theme)};
+    background: ${({ $status, theme }) => getStatusAccent($status, theme) + '10'};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ $status }) => getStatusAccent($status)};
+    outline: 2px solid ${({ $status, theme }) => getStatusAccent($status, theme)};
     outline-offset: 2px;
   }
 `;

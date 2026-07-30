@@ -6,6 +6,7 @@
  */
 
 import styled, { css } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import type { AccessionStatus, OrganismKind, ReproductionMode } from '../../types/genetics';
 
 // ============================================================================
@@ -116,12 +117,12 @@ export const Button = styled.button<{ $variant?: 'primary' | 'ghost' | 'danger' 
     if ($variant === 'danger') {
       return css`
         background: ${theme.colors.error};
-        color: #fff;
+        color: ${theme.colors.onAccent};
       `;
     }
     return css`
       background: ${theme.colors.primary[600]};
-      color: #fff;
+      color: ${theme.colors.onAccent};
     `;
   }}
 `;
@@ -229,13 +230,13 @@ export const GenerationBadge = styled.span<{ $clone: number; $filial?: number }>
     if ($clone >= 7) {
       return css`
         background: ${theme.colors.errorBg};
-        color: #b91c1c;
+        color: ${theme.colors.terracotta[700]};
       `;
     }
     if ($clone >= 5) {
       return css`
         background: ${theme.colors.warningBg};
-        color: #92400e;
+        color: ${theme.colors.gold[800]};
       `;
     }
     return css`
@@ -245,14 +246,16 @@ export const GenerationBadge = styled.span<{ $clone: number; $filial?: number }>
   }}
 `;
 
-const STATUS_STYLES: Record<AccessionStatus, { bg: string; fg: string }> = {
-  active: { bg: '#f0fdf4', fg: '#15803d' },
-  contaminated: { bg: '#fee2e2', fg: '#b91c1c' },
-  senescent: { bg: '#fef3c7', fg: '#92400e' },
-  consumed: { bg: '#eeeeee', fg: '#616161' },
-  archived: { bg: '#eeeeee', fg: '#616161' },
-  discarded: { bg: '#eeeeee', fg: '#9e9e9e' },
-};
+function getStatusStyles(theme: Theme): Record<AccessionStatus, { bg: string; fg: string }> {
+  return {
+    active: { bg: theme.colors.successBg, fg: theme.colors.emerald[700] },
+    contaminated: { bg: theme.colors.errorBg, fg: theme.colors.terracotta[700] },
+    senescent: { bg: theme.colors.warningBg, fg: theme.colors.gold[800] },
+    consumed: { bg: theme.colors.neutral[100], fg: theme.colors.neutral[700] },
+    archived: { bg: theme.colors.neutral[100], fg: theme.colors.neutral[700] },
+    discarded: { bg: theme.colors.neutral[100], fg: theme.colors.textDisabled },
+  };
+}
 
 export const StatusBadge = styled.span<{ $status: AccessionStatus }>`
   display: inline-flex;
@@ -261,16 +264,23 @@ export const StatusBadge = styled.span<{ $status: AccessionStatus }>`
   border-radius: ${({ theme }) => theme.borderRadius.full};
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => STATUS_STYLES[$status].bg};
-  color: ${({ $status }) => STATUS_STYLES[$status].fg};
+  background: ${({ $status, theme }) => getStatusStyles(theme)[$status].bg};
+  color: ${({ $status, theme }) => getStatusStyles(theme)[$status].fg};
 `;
 
-const KIND_STYLES: Record<OrganismKind, { bg: string; fg: string }> = {
-  plant: { bg: '#f0fdf4', fg: '#15803d' },
-  fungus: { bg: '#f3e5f5', fg: '#7b1fa2' },
-  animal: { bg: '#fff7ed', fg: '#c2410c' },
-  other: { bg: '#eeeeee', fg: '#616161' },
-};
+// The brand supplies exactly four chromatic voices (spec §1); organism kind
+// is a four-way categorical split, so it maps onto them one-to-one rather
+// than reaching for the reserved gold: plant→emerald (life/growth), fungus→
+// lapis, animal→terracotta (earth/humanity — the old palette's orange was
+// already adjacent to this ramp), other→neutral.
+function getKindStyles(theme: Theme): Record<OrganismKind, { bg: string; fg: string }> {
+  return {
+    plant: { bg: theme.colors.successBg, fg: theme.colors.emerald[700] },
+    fungus: { bg: theme.colors.primary[50], fg: theme.colors.primary[700] },
+    animal: { bg: theme.colors.terracotta[50], fg: theme.colors.terracotta[700] },
+    other: { bg: theme.colors.neutral[100], fg: theme.colors.neutral[700] },
+  };
+}
 
 export const KindBadge = styled.span<{ $kind: OrganismKind }>`
   display: inline-flex;
@@ -280,8 +290,8 @@ export const KindBadge = styled.span<{ $kind: OrganismKind }>`
   border-radius: ${({ theme }) => theme.borderRadius.full};
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $kind }) => KIND_STYLES[$kind].bg};
-  color: ${({ $kind }) => KIND_STYLES[$kind].fg};
+  background: ${({ $kind, theme }) => getKindStyles(theme)[$kind].bg};
+  color: ${({ $kind, theme }) => getKindStyles(theme)[$kind].fg};
 `;
 
 /** Asexual vs sexual — the axis that decides which generation counter moves. */
@@ -294,8 +304,8 @@ export const ModeBadge = styled.span<{ $mode: ReproductionMode }>`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  background: ${({ $mode }) => ($mode === 'sexual' ? '#fef3c7' : '#e0f2fe')};
-  color: ${({ $mode }) => ($mode === 'sexual' ? '#92400e' : '#075985')};
+  background: ${({ $mode, theme }) => ($mode === 'sexual' ? theme.colors.warningBg : theme.colors.primary[50])};
+  color: ${({ $mode, theme }) => ($mode === 'sexual' ? theme.colors.gold[800] : theme.colors.primary[700])};
 `;
 
 export const CodeChip = styled.span`
@@ -379,18 +389,18 @@ export const Banner = styled.div<{ $tone?: 'info' | 'warning' | 'error' }>`
     if ($tone === 'warning') {
       return css`
         background: ${theme.colors.warningBg};
-        color: #92400e;
+        color: ${theme.colors.gold[800]};
       `;
     }
     if ($tone === 'error') {
       return css`
         background: ${theme.colors.errorBg};
-        color: #b91c1c;
+        color: ${theme.colors.terracotta[700]};
       `;
     }
     return css`
       background: ${theme.colors.infoBg};
-      color: #075985;
+      color: ${theme.colors.primary[700]};
     `;
   }}
 `;

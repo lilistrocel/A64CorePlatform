@@ -32,7 +32,7 @@ import {
   useRef,
   useMemo,
 } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   useSaleItemFinanceExtList,
@@ -64,13 +64,13 @@ const PageHeader = styled.div`
 const Title = styled.h1`
   font-size: 1.5rem;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#1a1a1a'};
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#666'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 4px 0 0;
 `;
 
@@ -78,9 +78,9 @@ const HeaderText = styled.div``;
 
 const TableWrapper = styled.div`
   overflow-x: auto;
-  border: 1px solid ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const Table = styled.table`
@@ -92,18 +92,18 @@ const Table = styled.table`
 const Th = styled.th`
   text-align: left;
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f9fafb'};
-  border-bottom: 1px solid ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   font-weight: 600;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#666'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
 `;
 
 const Td = styled.td`
   padding: 10px 14px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   vertical-align: middle;
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#1a1a1a'};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Tr = styled.tr`
@@ -111,15 +111,15 @@ const Tr = styled.tr`
     border-bottom: none;
   }
   &:hover td {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f9fafb'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 
 const ItemCodeBadge = styled.span`
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 0.8rem;
-  background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f3f4f6'};
-  border: 1px solid ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
   padding: 2px 6px;
   white-space: nowrap;
@@ -130,14 +130,14 @@ const AccountLabel = styled.span`
 `;
 
 const AccountNumber = styled.span`
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 0.8rem;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#888'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-right: 6px;
 `;
 
 const UnconfiguredBadge = styled.span`
-  color: ${({ theme }) => theme.colors?.warning ?? '#b45309'};
+  color: ${({ theme }) => theme.colors.warning};
   font-size: 0.8rem;
   font-style: italic;
 `;
@@ -148,8 +148,8 @@ const TaxCodePill = styled.span`
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors?.primary?.light ?? '#eff6ff'};
-  color: ${({ theme }) => theme.colors?.primary?.main ?? '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const SellableChip = styled.span<{ $active: boolean }>`
@@ -160,12 +160,12 @@ const SellableChip = styled.span<{ $active: boolean }>`
   font-weight: 600;
   background: ${({ $active, theme }) =>
     $active
-      ? (theme.colors?.success?.light ?? '#dcfce7')
-      : (theme.colors?.surfaceSecondary ?? '#f3f4f6')};
+      ? theme.colors.successBg
+      : (theme.colors.neutral[100])};
   color: ${({ $active, theme }) =>
     $active
-      ? (theme.colors?.success?.dark ?? '#15803d')
-      : (theme.colors?.text?.secondary ?? '#6b7280')};
+      ? theme.colors.emerald[700]
+      : theme.colors.textSecondary};
 `;
 
 /**
@@ -181,12 +181,12 @@ const TypeChip = styled.span<{ $isStock: boolean }>`
   font-weight: 600;
   background: ${({ $isStock, theme }) =>
     $isStock
-      ? (theme.colors?.primary?.light ?? '#eff6ff')
-      : '#fef3c7'};
+      ? (theme.colors.primary[50])
+      : theme.colors.warningBg};
   color: ${({ $isStock, theme }) =>
     $isStock
-      ? (theme.colors?.primary?.main ?? '#1d4ed8')
-      : '#92400e'};
+      ? (theme.colors.primary[500])
+      : theme.colors.gold[800]};
 `;
 
 const ActionBtn = styled.button`
@@ -197,34 +197,34 @@ const ActionBtn = styled.button`
   border-radius: 6px;
   font-size: 0.8125rem;
   font-weight: 500;
-  border: 1px solid ${({ theme }) => theme.colors?.border ?? '#d1d5db'};
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#374151'};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: background 0.15s;
   &:hover {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f3f4f6'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#666'};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#888'};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ErrorState = styled.div`
   padding: 16px;
   border-radius: 8px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   font-size: 0.875rem;
 `;
 
@@ -242,7 +242,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 12px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 560px;
@@ -262,7 +262,7 @@ const ModalTitle = styled.h2`
   font-size: 1.125rem;
   font-weight: 700;
   margin: 0;
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#111827'};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const ModalClose = styled.button`
@@ -270,12 +270,12 @@ const ModalClose = styled.button`
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#6b7280'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px;
   border-radius: 4px;
   line-height: 1;
   &:hover {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f3f4f6'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 
@@ -291,7 +291,7 @@ const ModalFooter = styled.div`
   justify-content: flex-end;
   gap: 10px;
   padding: 12px 24px 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const FormField = styled.div`
@@ -303,27 +303,27 @@ const FormField = styled.div`
 const FormLabel = styled.label`
   font-size: 0.875rem;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#374151'};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FormHint = styled.span`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#9ca3af'};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const FormSelect = styled.select`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors?.border ?? '#d1d5db'};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#111827'};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors?.primary?.main ?? '#2563eb'};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors?.primary?.light ?? '#bfdbfe'};
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
   }
 `;
 
@@ -337,7 +337,7 @@ const ToggleInput = styled.input`
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: ${({ theme }) => theme.colors?.primary?.main ?? '#2563eb'};
+  accent-color: ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const SaveButton = styled.button<{ $loading?: boolean }>`
@@ -346,13 +346,13 @@ const SaveButton = styled.button<{ $loading?: boolean }>`
   font-size: 0.875rem;
   font-weight: 600;
   border: none;
-  background: ${({ theme }) => theme.colors?.primary?.main ?? '#2563eb'};
-  color: #fff;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
   opacity: ${({ $loading }) => ($loading ? 0.7 : 1)};
   transition: opacity 0.15s;
   &:hover:not([disabled]) {
-    background: ${({ theme }) => theme.colors?.primary?.dark ?? '#1d4ed8'};
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 `;
 
@@ -361,21 +361,21 @@ const CancelButton = styled.button`
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid ${({ theme }) => theme.colors?.border ?? '#d1d5db'};
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#374151'};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f3f4f6'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 
 const ErrorBanner = styled.div`
   padding: 10px 14px;
   border-radius: 6px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   font-size: 0.8125rem;
 `;
 
@@ -424,6 +424,7 @@ interface EditModalProps {
 }
 
 function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps) {
+  const theme = useTheme();
   const updateMutation = useUpdateSaleItemFinanceExt(orgId);
   const { data: taxCodes = [] } = useTaxCodes(orgId);
 
@@ -499,7 +500,7 @@ function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps
           {/* Item info (read-only) */}
           <FormField>
             <FormLabel>Item</FormLabel>
-            <div style={{ fontSize: '0.875rem', color: '#374151' }}>
+            <div style={{ fontSize: '0.875rem', color: theme.colors.textPrimary }}>
               <ItemCodeBadge>{ext.itemCode ?? '—'}</ItemCodeBadge>
               {ext.itemName && (
                 <span style={{ marginLeft: 8 }}>{ext.itemName}</span>
@@ -637,7 +638,7 @@ function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps
               style={{
                 width: '100%',
                 padding: '8px 12px',
-                border: '1px solid #d1d5db',
+                border: `1px solid ${theme.colors.border}`,
                 borderRadius: '6px',
                 fontSize: '0.875rem',
                 resize: 'vertical',

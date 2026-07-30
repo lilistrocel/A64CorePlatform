@@ -37,12 +37,12 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #4caf50;
+  box-shadow: ${({ theme }) => theme.shadows.md};
+  border-left: 4px solid ${({ theme }) => theme.colors.success};
   transition: all 150ms ease-in-out;
 
   &:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: ${({ theme }) => theme.shadows.lg};
     transform: translateY(-2px);
   }
 `;
@@ -72,7 +72,7 @@ const BlockName = styled.h3`
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: #3b82f6;
+    color: ${({ theme }) => theme.colors.primary[500]};
     text-decoration: underline;
   }
 `;
@@ -95,8 +95,8 @@ const PlantingCountBadge = styled.div<{ $count: number }>`
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $count, theme }) => ($count > 0 ? '#e8f5e9' : theme.colors.surface)};
-  color: ${({ $count, theme }) => ($count > 0 ? '#2e7d32' : theme.colors.textDisabled)};
+  background: ${({ $count, theme }) => ($count > 0 ? theme.colors.successBg : theme.colors.surface)};
+  color: ${({ $count, theme }) => ($count > 0 ? theme.colors.emerald[600] : theme.colors.textDisabled)};
   white-space: nowrap;
 `;
 
@@ -174,7 +174,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.success};
-        color: white;
+        color: ${theme.colors.onAccent};
         &:hover {
           background: ${theme.colors.success};
           filter: brightness(0.85);
@@ -184,8 +184,8 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #dc2626;
-        border: 1px solid #dc2626;
+        color: ${theme.colors.terracotta[600]};
+        border: 1px solid ${theme.colors.terracotta[600]};
         &:hover {
           background: ${theme.colors.errorBg};
         }
@@ -217,7 +217,7 @@ const AddNewPlantingButton = styled.button`
   transition: all 150ms ease-in-out;
   border: none;
   background: ${({ theme }) => theme.colors.success};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,18 +266,21 @@ const PlantingState = styled.div<{ $state: string }>`
         return theme.colors.surface;
     }
   }};
-  color: ${({ $state }) => {
+  color: ${({ $state, theme }) => {
     switch ($state) {
       case 'planned':
-        return '#1565c0';
+        return theme.colors.primary[700];
       case 'growing':
-        return '#2e7d32';
+        return theme.colors.emerald[600];
       case 'fruiting':
-        return '#e65100';
+        return theme.colors.terracotta[600];
+      // No brand token matches the original magenta exactly (not in the migration
+      // table); terracotta[800] keeps it in the errorBg-paired family while staying
+      // visually distinct (darker) from the fruiting terracotta[600] above.
       case 'harvesting':
-        return '#c2185b';
+        return theme.colors.terracotta[800];
       default:
-        return '#616161';
+        return theme.colors.neutral[700];
     }
   }};
 `;

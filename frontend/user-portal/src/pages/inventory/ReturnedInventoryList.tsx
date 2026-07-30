@@ -248,7 +248,7 @@ const AvailableQty = styled.span<AvailableQtyProps>`
 // ---- Source order link ----
 
 const OrderLink = styled.a`
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono ?? 'monospace'};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   color: ${({ theme }) => theme.colors.primary[600]};
   text-decoration: none;
@@ -325,7 +325,7 @@ const ErrorText = styled.p`
 const RetryButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -376,7 +376,7 @@ const PageButton = styled.button<PageButtonProps>`
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   background: ${({ theme, $active }) =>
     $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.textPrimary)};
+  color: ${({ theme, $active }) => ($active ? theme.colors.onAccent : theme.colors.textPrimary)};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
   transition: all 0.15s ease;
@@ -557,7 +557,7 @@ const CancelBtn = styled.button`
 const ConfirmBtn = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
   background: ${({ theme }) => theme.colors.error};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};

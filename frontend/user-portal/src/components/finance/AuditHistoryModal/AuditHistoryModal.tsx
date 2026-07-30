@@ -108,7 +108,7 @@ const ModalBackdrop = styled.div`
 const ModalBox = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(59, 44, 24, 0.2);
   width: 100%;
   max-width: 680px;
   padding: 28px 28px 24px;
@@ -212,7 +212,7 @@ const RetryButton = styled.button`
   margin-top: 12px;
   padding: 8px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -288,7 +288,7 @@ const Td = styled.td`
 const TdMuted = styled(Td)`
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TdReason = styled(Td)`
@@ -305,8 +305,9 @@ const TdReason = styled(Td)`
  *   REOPEN  → red (matches the "reopen" warning colour)
  *   Others  → neutral
  *
- * These are implemented with hardcoded fallbacks so the badge remains
- * readable even if the theme does not define all semantic colour sets.
+ * Uses the theme's warningBg/warning and errorBg/error tokens directly —
+ * the full A20Core theme surface always defines these, so no hex fallback
+ * is needed.
  */
 interface ActionBadgeProps {
   $action: string;
@@ -324,13 +325,13 @@ const ActionBadge = styled.span<ActionBadgeProps>`
     switch ($action.toUpperCase()) {
       case 'CLOSE':
         return `
-          background: ${theme.colors.warning?.light ?? '#fef9c3'};
-          color: ${theme.colors.warning?.dark ?? '#a16207'};
+          background: ${theme.colors.warningBg};
+          color: ${theme.colors.warning};
         `;
       case 'REOPEN':
         return `
-          background: ${theme.colors.errorBg ?? '#fef2f2'};
-          color: ${theme.colors.error ?? '#dc2626'};
+          background: ${theme.colors.errorBg};
+          color: ${theme.colors.error};
         `;
       default:
         return `

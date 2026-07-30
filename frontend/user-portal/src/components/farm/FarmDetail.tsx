@@ -194,8 +194,8 @@ const StatusBadge = styled.span<{ $isActive: boolean }>`
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 500;
-  background: ${({ $isActive }) => ($isActive ? '#10B981' : '#6B7280')};
-  color: white;
+  background: ${({ $isActive, theme }) => ($isActive ? theme.colors.success : theme.colors.textSecondary)};
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const HeaderActions = styled.div`
@@ -210,7 +210,7 @@ const EditButton = styled.button`
   gap: 8px;
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -475,12 +475,12 @@ const FloatingMapButton = styled.button`
     right: 24px;
     padding: 14px 20px;
     background: ${({ theme }) => theme.colors.primary[500]};
-    color: white;
+    color: ${({ theme }) => theme.colors.onAccent};
     border: none;
     border-radius: 28px;
     font-size: 14px;
     font-weight: 500;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    box-shadow: ${({ theme }) => `0 4px 12px ${theme.colors.primary[500]}66`};
     cursor: pointer;
     z-index: 100;
     transition: all 150ms ease-in-out;

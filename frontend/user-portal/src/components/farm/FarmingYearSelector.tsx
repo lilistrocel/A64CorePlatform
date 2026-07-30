@@ -217,14 +217,14 @@ const Select = styled.select<{ $compact?: boolean }>`
   padding: ${(props) => (props.$compact ? '8px 32px 8px 36px' : '12px 32px 12px 40px')};
 
   &:hover:not(:disabled) {
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
     background-color: ${({ theme }) => theme.colors.infoBg};
   }
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}26`};
   }
 
   &:disabled {
@@ -257,8 +257,8 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}26`};
   }
 
   @media (max-width: 768px) {
@@ -267,8 +267,8 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 `;
 
 const EmptySelect = styled(Select)`
-  color: #ef4444;
-  border-color: #fecaca;
+  color: ${({ theme }) => theme.colors.error};
+  border-color: ${({ theme }) => theme.colors.terracotta[200]};
   background-color: ${({ theme }) => theme.colors.errorBg};
 `;
 
@@ -278,7 +278,7 @@ const LoadingSpinner = styled.div`
   width: 14px;
   height: 14px;
   border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
 `;
@@ -309,32 +309,32 @@ const YearBadge = styled.span<{
   border-radius: 6px;
   transition: all 150ms ease-in-out;
 
-  /* Current year styling - primary blue */
+  /* Current year styling - primary lapis; next year - secondary gold */
   background: ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
-      ? '#e3f2fd'
+      ? theme.colors.primary[50]
       : $isNext
-        ? '#fef3c7'
+        ? theme.colors.gold[100]
         : theme.colors.surface};
   color: ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
-      ? '#1976d2'
+      ? theme.colors.primary[600]
       : $isNext
-        ? '#d97706'
+        ? theme.colors.gold[600]
         : theme.colors.textSecondary};
   border: 1px solid ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
-      ? '#bbdefb'
+      ? theme.colors.primary[100]
       : $isNext
-        ? '#fde68a'
+        ? theme.colors.gold[200]
         : theme.colors.neutral[300]};
 
   &:hover {
     background: ${({ $isCurrent, $isNext, theme }) =>
       $isCurrent
-        ? '#bbdefb'
+        ? theme.colors.primary[100]
         : $isNext
-          ? '#fde68a'
+          ? theme.colors.gold[200]
           : theme.colors.neutral[200]};
   }
 
@@ -354,7 +354,7 @@ const DataIndicator = styled.span`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
+  background: ${({ theme }) => theme.colors.success};
   margin-left: 2px;
 `;
 

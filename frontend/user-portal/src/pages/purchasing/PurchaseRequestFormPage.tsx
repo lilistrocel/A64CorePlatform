@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   useCreatePurchaseRequest,
   useUpdatePurchaseRequest,
@@ -160,7 +160,7 @@ const ButtonGroup = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -185,30 +185,30 @@ const GhostButton = styled.button`
 const DangerIconButton = styled.button`
   padding: 6px 10px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
 `;
 
 const AddLineButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[600] || '#2563eb'};
-  border: 1px dashed ${({ theme }) => theme.colors.primary[400] || '#60a5fa'};
+  color: ${({ theme }) => theme.colors.primary[600]};
+  border: 1px dashed ${({ theme }) => theme.colors.primary[400]};
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   width: 100%;
   margin-top: 8px;
-  &:hover { background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'}; }
+  &:hover { background: ${({ theme }) => theme.colors.primary[50]}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -223,17 +223,17 @@ const UrgencyChips = styled.div`
 const UrgencyChip = styled.button<{ $active: boolean; $urgency: UrgencyLevel }>`
   padding: 7px 14px;
   border-radius: 99px;
-  border: 1px solid ${({ $active, $urgency }) => {
-    if (!$active) return '#d1d5db';
-    return $urgency === 'high' ? '#ef4444' : $urgency === 'normal' ? '#f59e0b' : '#6b7280';
+  border: 1px solid ${({ $active, $urgency, theme }) => {
+    if (!$active) return theme.colors.border;
+    return $urgency === 'high' ? theme.colors.error : $urgency === 'normal' ? theme.colors.warning : theme.colors.textSecondary;
   }};
-  background: ${({ $active, $urgency }) => {
+  background: ${({ $active, $urgency, theme }) => {
     if (!$active) return 'transparent';
-    return $urgency === 'high' ? '#fef2f2' : $urgency === 'normal' ? '#fef3c7' : '#f9fafb';
+    return $urgency === 'high' ? theme.colors.errorBg : $urgency === 'normal' ? theme.colors.warningBg : theme.colors.neutral[100];
   }};
-  color: ${({ $active, $urgency }) => {
-    if (!$active) return '#6b7280';
-    return $urgency === 'high' ? '#dc2626' : $urgency === 'normal' ? '#92400e' : '#374151';
+  color: ${({ $active, $urgency, theme }) => {
+    if (!$active) return theme.colors.textSecondary;
+    return $urgency === 'high' ? theme.colors.terracotta[600] : $urgency === 'normal' ? theme.colors.gold[800] : theme.colors.neutral[800];
   }};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
@@ -272,6 +272,7 @@ export function PurchaseRequestFormPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
+  const theme = useTheme();
 
   // Fetch existing PR for edit
   const { data: existingPR } = usePurchaseRequest(isEdit ? docId : undefined, orgId);
@@ -416,8 +417,8 @@ export function PurchaseRequestFormPage() {
       <FinanceUnreachableBanner />
 
       {isReadOnly && (
-        <Card style={{ borderLeft: '4px solid #f59e0b', padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, color: '#92400e', fontSize: 14 }}>
+        <Card style={{ borderLeft: `4px solid ${theme.colors.warning}`, padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, color: theme.colors.gold[800], fontSize: 14 }}>
             This PR is in <strong>{existingPR?.status}</strong> status and cannot be edited.
           </p>
         </Card>

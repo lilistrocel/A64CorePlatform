@@ -14,7 +14,7 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Plus } from 'lucide-react';
 import { useReturns } from '../../hooks/queries/useReturns';
 import { useAuthStore } from '../../stores/auth.store';
@@ -58,7 +58,7 @@ const NewButton = styled.button`
   gap: 8px;
   padding: 10px 22px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -150,6 +150,11 @@ const Td = styled.td`
   vertical-align: middle;
 `;
 
+// Status badge colours — A20Core document-status canon, shared across all
+// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md):
+//   draft     → neutral   (neutral[100] / textSecondary)
+//   open      → emerald   (successBg / emerald[700])
+//   cancelled → terracotta (errorBg / terracotta[700])
 interface StatusBadgeProps { $status: ReturnNoteStatus }
 const StatusBadge = styled.span<StatusBadgeProps>`
   display: inline-flex;
@@ -158,24 +163,26 @@ const StatusBadge = styled.span<StatusBadgeProps>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#374151';
-      case 'open': return '#065f46';
-      case 'cancelled': return '#991b1b';
-      default: return '#374151';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
 
+// Source-type tag — categorical (which doc this Return Note was raised from),
+// not a status. rr → lapis, dn → gold, other → neutral.
 const SourceTag = styled.span<{ $type: 'rr' | 'dn' | 'other' }>`
   display: inline-flex;
   align-items: center;
@@ -183,8 +190,10 @@ const SourceTag = styled.span<{ $type: 'rr' | 'dn' | 'other' }>`
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  background: ${({ $type }) => $type === 'rr' ? '#dbeafe' : $type === 'dn' ? '#fef9c3' : '#f3f4f6'};
-  color: ${({ $type }) => $type === 'rr' ? '#1e40af' : $type === 'dn' ? '#713f12' : '#374151'};
+  background: ${({ $type, theme }) =>
+    $type === 'rr' ? theme.colors.primary[100] : $type === 'dn' ? theme.colors.gold[50] : theme.colors.neutral[100]};
+  color: ${({ $type, theme }) =>
+    $type === 'rr' ? theme.colors.primary[800] : $type === 'dn' ? theme.colors.gold[800] : theme.colors.neutral[800]};
   margin-right: 6px;
 `;
 
@@ -223,11 +232,11 @@ const PageButton = styled.button<{ $disabled?: boolean }>`
 
 const ErrorBanner = styled.div`
   padding: 14px 20px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   margin-bottom: 16px;
-  color: #991b1b;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
 `;
 
@@ -289,6 +298,7 @@ function sourceLabel(rtn: ReturnNoteListItem): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ReturnsV2Page() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const orgId = user?.organizationId ?? '';
@@ -425,7 +435,7 @@ export function ReturnsV2Page() {
                       {srcNum !== '—' && stLabel && (
                         <SourceTag $type={st}>{stLabel}</SourceTag>
                       )}
-                      <span style={{ color: srcNum === '—' ? '#9ca3af' : undefined }}>
+                      <span style={{ color: srcNum === '—' ? theme.colors.textDisabled : undefined }}>
                         {srcNum}
                       </span>
                     </Td>

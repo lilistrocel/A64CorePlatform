@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme, type DefaultTheme } from 'styled-components';
 import { LogOut, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth.store';
 import { AIHubTabBar } from '../../components/ai/AIHubTabBar';
@@ -28,12 +28,20 @@ import type { AIHubSection } from '../../types/aiHub';
 // CONSTANTS
 // ============================================================================
 
-const SECTION_ACCENT_COLORS: Record<AIHubSection, string> = {
-  control: '#F59E0B',
-  monitor: '#3B82F6',
-  report:  '#8B5CF6',
-  advise:  '#10B981',
-};
+/**
+ * Same 4-section identity colours as AIHubChat's SECTION_BADGE / AIHubTabBar's
+ * TABS — keep all three in sync. `report` was purple; kept distinct from
+ * `monitor`'s blue via a darker lapis shade rather than gold, since `control`
+ * already owns `warning` (== gold[500] at the token level).
+ */
+function getSectionAccentColors(theme: DefaultTheme): Record<AIHubSection, string> {
+  return {
+    control: theme.colors.warning,
+    monitor: theme.colors.info,
+    report:  theme.colors.primary[700],
+    advise:  theme.colors.success,
+  };
+}
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -89,7 +97,7 @@ const HeaderButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -129,11 +137,11 @@ const Divider = styled.div`
 `;
 
 const LogoutButton = styled(HeaderButton)`
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
 
   &:hover {
-    background: #FEF2F2;
-    color: #DC2626;
+    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.terracotta[600]};
   }
 `;
 
@@ -175,6 +183,7 @@ const AccessDeniedText = styled.p`
 // ============================================================================
 
 export function AIHub() {
+  const theme = useTheme();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [section, setSection] = useState<AIHubSection>('monitor');
@@ -240,7 +249,7 @@ export function AIHub() {
     );
   }
 
-  const accentColor = SECTION_ACCENT_COLORS[section];
+  const accentColor = getSectionAccentColors(theme)[section];
 
   return (
     <FullScreen>

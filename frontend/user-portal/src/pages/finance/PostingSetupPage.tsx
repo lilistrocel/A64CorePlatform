@@ -251,9 +251,9 @@ const StatusPill = styled.span<StatusPillProps>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $complete, theme }) =>
-    $complete ? theme.colors.successBg || '#ecfdf5' : theme.colors.warningBg || '#fffbeb'};
+    $complete ? theme.colors.successBg : theme.colors.warningBg};
   color: ${({ $complete, theme }) =>
-    $complete ? theme.colors.success || '#10b981' : theme.colors.warning || '#92400e'};
+    $complete ? theme.colors.success : theme.colors.warning};
 `;
 
 const LastUpdatedText = styled.p`
@@ -284,19 +284,19 @@ const BannerError = styled(BannerBase)`
 `;
 
 const BannerSuccess = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.success || '#065f46'};
+  background: ${({ theme }) => theme.colors.successBg};
+  color: ${({ theme }) => theme.colors.success};
 `;
 
 const BannerWarning = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.warningBg || '#fffbeb'};
-  color: ${({ theme }) => theme.colors.warning || '#92400e'};
+  background: ${({ theme }) => theme.colors.warningBg};
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 const UnconfiguredHint = styled.div`
   padding: 16px 20px;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.info};
   border-radius: 10px;
   font-size: 13px;
   line-height: 1.55;
@@ -359,7 +359,7 @@ const FooterRow = styled.div`
 const SaveButton = styled.button`
   padding: 10px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;

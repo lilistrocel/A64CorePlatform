@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { logisticsApi } from '../../services/logisticsService';
 import { formatNumber } from '../../utils/formatNumber';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
@@ -133,7 +133,7 @@ const ShipmentCode = styled.span`
   font-size: 14px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const ShipmentDate = styled.span`
@@ -150,8 +150,8 @@ const QuickActions = styled.div`
 
 const ActionButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -160,7 +160,7 @@ const ActionButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -174,9 +174,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: ${({ theme }) => theme.colors.terracotta[100]};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -195,9 +195,9 @@ const FarmingYearBadge = styled.span`
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #1976d2;
-  background: #e3f2fd;
-  border: 1px solid #bbdefb;
+  color: ${({ theme }) => theme.colors.primary[600]};
+  background: ${({ theme }) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[100]};
   border-radius: 16px;
   margin-left: 8px;
 `;
@@ -208,6 +208,7 @@ const FarmingYearBadge = styled.span`
 
 export function LogisticsDashboardPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [stats, setStats] = useState<LogisticsDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,17 +284,17 @@ export function LogisticsDashboardPage() {
 
         <StatCard>
           <StatLabel>Available</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.availableVehicles)}</StatValue>
+          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.availableVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Use</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.inUseVehicles)}</StatValue>
+          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.inUseVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Maintenance</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
+          <StatValue style={{ color: theme.colors.warning }}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -305,17 +306,17 @@ export function LogisticsDashboardPage() {
 
         <StatCard>
           <StatLabel>Scheduled</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.scheduledShipments)}</StatValue>
+          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.scheduledShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Transit</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.inTransitShipments)}</StatValue>
+          <StatValue style={{ color: theme.colors.warning }}>{formatNumber(stats.inTransitShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.deliveredShipments)}</StatValue>
+          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.deliveredShipments)}</StatValue>
         </StatCard>
       </StatsGrid>
 

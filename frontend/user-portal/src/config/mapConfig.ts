@@ -5,6 +5,18 @@
  */
 
 import type { StyleSpecification } from 'maplibre-gl';
+import { lightTheme } from '@a64core/shared';
+
+// NOTE (A20Core sweep, T-900): these MapLibre paint specs are built once at
+// module load with no theme context, and every consumer (FarmMapView,
+// MapContainer, DrawingControls — all in src/components/) reads these as
+// plain exported constants, not a function of theme. Making this
+// theme-reactive would require changing the export shape and updating those
+// three call sites, which sit outside this shard's file set. So: these
+// reference lightTheme.colors directly (single source of truth, no
+// duplicated hex) but will NOT flip in dark mode. Flagged for a follow-up
+// shard that owns src/components/map + src/components/farm.
+const c = lightTheme.colors;
 
 /**
  * ESRI World Imagery satellite map style
@@ -98,43 +110,45 @@ export const MAP_CONTROLS = {
  */
 export const FARM_POLYGON_STYLE = {
   fill: {
-    color: '#10B981', // Green
+    color: c.emerald[500], // Emerald (was green)
     opacity: 0.2,
   },
   stroke: {
-    color: '#059669', // Darker green
+    color: c.emerald[600], // Darker emerald
     width: 3,
   },
 };
 
 /**
- * Polygon styling for blocks by status
+ * Polygon styling for blocks by status.
+ * Kept in sync with BLOCK_STATE_COLORS in src/types/farm.ts — same lifecycle
+ * states, same hex per state, across the map overlay and badges/legends.
  */
 export const BLOCK_POLYGON_COLORS: Record<string, { fill: string; stroke: string }> = {
-  empty: { fill: '#9CA3AF', stroke: '#6B7280' },      // Gray
-  planned: { fill: '#3B82F6', stroke: '#2563EB' },    // Blue
-  growing: { fill: '#10B981', stroke: '#059669' },    // Green
-  fruiting: { fill: '#A855F7', stroke: '#9333EA' },   // Purple
-  harvesting: { fill: '#F59E0B', stroke: '#D97706' }, // Yellow/Orange
-  cleaning: { fill: '#F97316', stroke: '#EA580C' },   // Orange
-  alert: { fill: '#EF4444', stroke: '#DC2626' },      // Red
-  partial: { fill: '#06B6D4', stroke: '#0891B2' },    // Cyan
+  empty: { fill: c.neutral[400], stroke: c.neutral[600] },       // Neutral (was gray)
+  planned: { fill: c.primary[500], stroke: c.primary[600] },     // Lapis (was blue)
+  growing: { fill: c.emerald[500], stroke: c.emerald[600] },     // Emerald (was green)
+  fruiting: { fill: c.gold[400], stroke: c.gold[700] },          // Gold (was purple — categorical judgement call, spec §3)
+  harvesting: { fill: c.gold[500], stroke: c.gold[600] },        // Gold/warning (was amber)
+  cleaning: { fill: c.terracotta[400], stroke: c.terracotta[600] }, // Terracotta (was orange)
+  alert: { fill: c.terracotta[600], stroke: c.terracotta[700] }, // Terracotta, deepened — danger carries weight (spec §1)
+  partial: { fill: c.primary[400], stroke: c.primary[700] },     // Lapis (was cyan — art-only hue, spec §3)
 };
 
 /**
  * Color scheme for different boundary types
  */
 export const BOUNDARY_COLORS = {
-  // Farm boundaries - Orange/Amber for clear distinction
+  // Farm boundaries - Gold/warning for clear distinction
   farm: {
-    fill: '#F59E0B',      // Amber
-    stroke: '#D97706',    // Darker amber
+    fill: c.gold[500],      // Gold (was amber)
+    stroke: c.gold[600],    // Darker gold
     fillOpacity: 0.15,
   },
-  // Block boundaries - Blue for active drawing
+  // Block boundaries - Lapis for active drawing
   block: {
-    fill: '#3B82F6',      // Blue
-    stroke: '#2563EB',    // Darker blue
+    fill: c.primary[500],   // Lapis (was blue)
+    stroke: c.primary[600], // Darker lapis
     fillOpacity: 0.25,
   },
 };
@@ -190,7 +204,7 @@ export const DRAW_STYLES = [
     filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
     paint: {
       'circle-radius': 6,
-      'circle-color': '#FFFFFF',
+      'circle-color': c.onAccent, // Cream (was pure white — brand never uses pure white, spec §2)
       'circle-stroke-width': 2,
       'circle-stroke-color': BOUNDARY_COLORS.block.fill,
     },
@@ -208,7 +222,7 @@ export const DRAW_STYLES = [
 ];
 
 /**
- * Drawing control styling for FARM boundaries (orange/amber)
+ * Drawing control styling for FARM boundaries (gold)
  */
 export const DRAW_STYLES_FARM = [
   // Polygon fill
@@ -258,7 +272,7 @@ export const DRAW_STYLES_FARM = [
     filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
     paint: {
       'circle-radius': 6,
-      'circle-color': '#FFFFFF',
+      'circle-color': c.onAccent, // Cream (was pure white — brand never uses pure white, spec §2)
       'circle-stroke-width': 2,
       'circle-stroke-color': BOUNDARY_COLORS.farm.fill,
     },

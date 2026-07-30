@@ -5,7 +5,8 @@
  * difficulty badge, yield info, and max flushes.
  */
 
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import type { MushroomStrain, MushroomDifficulty } from '../../types/mushroom';
 import {
   DIFFICULTY_LABELS,
@@ -26,12 +27,16 @@ interface StrainCardProps {
   onOpenGeneticLines?: (strain: MushroomStrain) => void;
 }
 
-const DIFFICULTY_BG: Record<MushroomDifficulty, string> = {
-  beginner: '#D1FAE5',
-  intermediate: '#DBEAFE',
-  advanced: '#FEF3C7',
-  expert: '#FEE2E2',
-};
+// Difficulty runs easy → hard, mirrored onto the semantic success → warning →
+// error progression (safe green through to risk red).
+function getDifficultyBg(theme: Theme): Record<MushroomDifficulty, string> {
+  return {
+    beginner: theme.colors.emerald[100],
+    intermediate: theme.colors.primary[100],
+    advanced: theme.colors.warningBg,
+    expert: theme.colors.terracotta[100],
+  };
+}
 
 export function StrainCard({
   strain,
@@ -40,6 +45,8 @@ export function StrainCard({
   geneticLineCount,
   onOpenGeneticLines,
 }: StrainCardProps) {
+  const theme = useTheme();
+  const difficultyBg = getDifficultyBg(theme);
   return (
     <CardWrapper
       $selected={selected}
@@ -65,7 +72,7 @@ export function StrainCard({
         </TitleBlock>
         <DifficultyBadge
           $color={DIFFICULTY_COLORS[strain.difficulty]}
-          $bg={DIFFICULTY_BG[strain.difficulty]}
+          $bg={difficultyBg[strain.difficulty]}
         >
           {DIFFICULTY_LABELS[strain.difficulty]}
         </DifficultyBadge>
@@ -167,7 +174,7 @@ const CardWrapper = styled.div<CardWrapperProps>`
   border: 2px solid ${({ $selected, theme }) => ($selected ? theme.colors.primary[500] : theme.colors.neutral[300])};
   padding: 16px;
   box-shadow: ${({ $selected, theme }) =>
-    $selected ? '0 0 0 3px rgba(33,150,243,0.18)' : theme.shadows.sm};
+    $selected ? `0 0 0 3px ${theme.colors.primary[500]}2e` : theme.shadows.sm};
   transition: all 150ms ease-in-out;
   overflow: hidden;
 
@@ -296,7 +303,7 @@ const InactiveBanner = styled.div`
   left: 0;
   right: 0;
   background: rgba(0, 0, 0, 0.06);
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 11px;
   font-weight: 600;
   text-align: center;

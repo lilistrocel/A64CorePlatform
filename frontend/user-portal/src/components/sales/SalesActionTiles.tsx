@@ -7,7 +7,7 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Receipt, Package } from 'lucide-react';
 
 // ============================================================================
@@ -20,19 +20,26 @@ export interface SalesActionTilesProps {
   activeKey?: SalesActionKey;
 }
 
+// Categorical ramp each tile draws its accent from — resolved against the
+// theme at render time (module-scope config can't call useTheme()).
+type AccentRamp = 'emerald' | 'gold';
+
 interface TileConfig {
   key: SalesActionKey;
   label: string;
   subtitle: string;
   icon: React.ElementType;
-  accent: string;
-  accentHover: string;
+  accentRamp: AccentRamp;
   route: string;
 }
 
 // ============================================================================
 // TILE CONFIG
 // ============================================================================
+// "Sales Orders" keeps its original success-green accent (emerald — order
+// fulfilment reads as a positive/growth action). "Stock" keeps its original
+// amber accent (gold — inventory/harvest is a highlight, not a semantic
+// success/error state).
 
 const TILES: TileConfig[] = [
   {
@@ -40,8 +47,7 @@ const TILES: TileConfig[] = [
     label: 'Sales Orders',
     subtitle: 'Create, track & fulfill customer orders',
     icon: Receipt,
-    accent: '#10B981',
-    accentHover: '#059669',
+    accentRamp: 'emerald',
     route: '/sales/orders',
   },
   {
@@ -49,8 +55,7 @@ const TILES: TileConfig[] = [
     label: 'Stock',
     subtitle: 'Sellable harvest & waste',
     icon: Package,
-    accent: '#F59E0B',
-    accentHover: '#D97706',
+    accentRamp: 'gold',
     route: '/sales/stock',
   },
 ];
@@ -144,12 +149,12 @@ const TileIconBadge = styled.div<IconBadgeProps>`
     color: ${$accent};
   `}
 
-  /* Active: semi-transparent white background + white icon */
-  ${({ $active }) =>
+  /* Active: semi-transparent onAccent background + onAccent icon */
+  ${({ $active, theme }) =>
     $active &&
     `
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: ${theme.colors.onAccent}33;
+    color: ${theme.colors.onAccent};
   `}
 `;
 
@@ -166,7 +171,7 @@ const TileLabel = styled.p<TileTextProps>`
   font-size: 16px;
   font-weight: 600;
   margin: 0;
-  color: ${({ $active, theme }) => ($active ? '#fff' : theme.colors.textPrimary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textPrimary)};
 `;
 
 const TileSubtitle = styled.p<TileTextProps>`
@@ -174,7 +179,7 @@ const TileSubtitle = styled.p<TileTextProps>`
   margin: 4px 0 0 0;
   line-height: 1.4;
   color: ${({ $active, theme }) =>
-    $active ? 'rgba(255, 255, 255, 0.85)' : theme.colors.textSecondary};
+    $active ? `${theme.colors.onAccent}D9` : theme.colors.textSecondary};
 `;
 
 // ============================================================================
@@ -183,23 +188,26 @@ const TileSubtitle = styled.p<TileTextProps>`
 
 export function SalesActionTiles({ activeKey }: SalesActionTilesProps) {
   const navigate = useNavigate();
+  const theme = useTheme();
 
   return (
     <TilesGrid>
       {TILES.map((tile) => {
         const isActive = tile.key === activeKey;
         const Icon = tile.icon;
+        const accent = theme.colors[tile.accentRamp][500];
+        const accentHover = theme.colors[tile.accentRamp][600];
 
         return (
           <ActionTile
             key={tile.key}
-            $accent={tile.accent}
-            $accentHover={tile.accentHover}
+            $accent={accent}
+            $accentHover={accentHover}
             $active={isActive}
             onClick={() => navigate(tile.route)}
             aria-current={isActive ? 'page' : undefined}
           >
-            <TileIconBadge $accent={tile.accent} $active={isActive}>
+            <TileIconBadge $accent={accent} $active={isActive}>
               <Icon size={24} />
             </TileIconBadge>
             <TileTextColumn>

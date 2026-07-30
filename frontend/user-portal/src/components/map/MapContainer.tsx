@@ -352,7 +352,7 @@ const LoadingOverlay = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
+  background: ${({ theme }) => theme.colors.background}E6;
   z-index: 10;
 `;
 
@@ -360,7 +360,7 @@ const LoadingSpinner = styled.div`
   width: 40px;
   height: 40px;
   border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -392,7 +392,7 @@ const ErrorIcon = styled.div`
   height: 48px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.errorBg};
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
   font-size: 24px;
   font-weight: bold;
   display: flex;
@@ -402,15 +402,15 @@ const ErrorIcon = styled.div`
 `;
 
 const ErrorText = styled.p`
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
   margin: 0 0 16px 0;
   font-size: 14px;
 `;
 
 const RetryButton = styled.button`
   padding: 8px 16px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -418,7 +418,7 @@ const RetryButton = styled.button`
   transition: background 0.2s;
 
   &:hover {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -434,7 +434,7 @@ const StyleToggleButton = styled.button`
   background: ${({ theme }) => theme.colors.background};
   border: none;
   border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   font-size: 13px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -443,7 +443,7 @@ const StyleToggleButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface};
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: ${({ theme }) => theme.shadows.lg};
   }
 
   &:active {

@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   usePurchaseOrder,
   useSubmitPurchaseOrder,
@@ -65,7 +65,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -77,13 +77,13 @@ const PrimaryButton = styled.button`
 `;
 
 const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
-  &:hover { background: #059669; }
+  background: ${({ theme }) => theme.colors.success};
+  &:hover { background: ${({ theme }) => theme.colors.emerald[600]}; }
 `;
 
 const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.error || '#ef4444'};
-  &:hover { background: #dc2626; }
+  background: ${({ theme }) => theme.colors.error};
+  &:hover { background: ${({ theme }) => theme.colors.terracotta[600]}; }
 `;
 
 const GhostButton = styled.button`
@@ -236,7 +236,7 @@ const Textarea = styled.textarea`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -260,6 +260,7 @@ export function PurchaseOrderDetailPage() {
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const { data: po, isLoading, isError } = usePurchaseOrder(docId, user?.organizationId);
 
@@ -302,11 +303,11 @@ export function PurchaseOrderDetailPage() {
       <TitleRow>
         <div>
           <Title>{po.docNumber}</Title>
-          <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 }}>
             Vendor: {po.vendorName ?? po.vendorCode ?? '—'} •{' '}
             {po.baseDocId && (
               <span
-                style={{ color: '#2563eb', cursor: 'pointer' }}
+                style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
                 onClick={() => navigate(`/purchasing/pr/${po.baseDocId}`)}
               >
                 Based on PR
@@ -418,7 +419,7 @@ export function PurchaseOrderDetailPage() {
                 <Td>{line.lineNumber}</Td>
                 <Td>
                   <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{line.itemName}</div>
+                  <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>{line.itemName}</div>
                 </Td>
                 <Td>{line.uom}</Td>
                 <Td>{line.quantity}</Td>
@@ -453,7 +454,7 @@ export function PurchaseOrderDetailPage() {
               <CloseButton onClick={() => { setShowRejectModal(false); setRejectComment(''); }}>✕</CloseButton>
             </ModalHeader>
             <ModalBody>
-              <p style={{ fontSize: 14, color: '#6b7280', marginTop: 0 }}>
+              <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 0 }}>
                 Please provide a reason for rejecting {po.docNumber}.
               </p>
               <Textarea

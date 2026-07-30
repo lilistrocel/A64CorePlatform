@@ -142,15 +142,15 @@ const TruncatedCell = styled.td`
     left: 0;
     top: 100%;
     z-index: 1000;
-    background: #333;
-    color: white;
+    background: ${({ theme }) => theme.colors.neutral[800]};
+    color: ${({ theme }) => theme.colors.onAccent};
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 12px;
     max-width: 400px;
     white-space: normal;
     word-wrap: break-word;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: ${({ theme }) => theme.shadows.lg};
   }
 `;
 
@@ -191,33 +191,33 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
-        color: white;
+        background: ${theme.colors.primary[500]};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[600]};
         }
       `;
     }
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     /* Secondary/view button - uses brand blue, not a neutral color, so kept as-is */
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}

@@ -9,7 +9,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { getBlockHarvestSummary, getBlockHarvests } from '../../services/farmApi';
 import { farmApi } from '../../services/farmApi';
 import type { DashboardBlock, BlockHarvest } from '../../types/farm';
@@ -17,11 +18,16 @@ import { BlockAutomationTab } from './BlockAutomationTab';
 
 type QualityGrade = 'A' | 'B' | 'C';
 
-const HARVEST_GRADE_COLORS: Record<QualityGrade, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
-};
+// Theme-aware — called with `theme` from useTheme() rather than a static
+// object, since some resolved tokens can differ between light/dark.
+function getHarvestGradeColor(theme: Theme, grade: QualityGrade): string {
+  const map: Record<QualityGrade, string> = {
+    A: theme.colors.success,
+    B: theme.colors.primary[500],
+    C: theme.colors.warning,
+  };
+  return map[grade];
+}
 
 const HARVEST_GRADE_LABELS: Record<QualityGrade, string> = {
   A: 'Premium',
@@ -51,6 +57,7 @@ interface BlockDetailsModalProps {
 type TabType = 'overview' | 'timeline' | 'harvests' | 'automation';
 
 export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetailsModalProps) {
+  const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [harvestSummary, setHarvestSummary] = useState<BlockHarvestSummary | null>(null);
   const [harvests, setHarvests] = useState<BlockHarvest[]>([]);
@@ -96,15 +103,15 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
 
   const getStatusColor = () => {
     const colors: Record<string, string> = {
-      empty: '#6B7280',
-      planned: '#3B82F6',
-      planted: '#10B981',
-      growing: '#10B981',
-      fruiting: '#A855F7',
-      harvesting: '#F59E0B',
-      cleaning: '#F97316',
+      empty: theme.colors.textSecondary,
+      planned: theme.colors.primary[500],
+      planted: theme.colors.success,
+      growing: theme.colors.success,
+      fruiting: theme.colors.secondary[500],
+      harvesting: theme.colors.warning,
+      cleaning: theme.colors.terracotta[400],
     };
-    return colors[block.state] || '#6B7280';
+    return colors[block.state] || theme.colors.textSecondary;
   };
 
   const renderGrowthTimeline = () => {
@@ -267,7 +274,7 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
                     const percentage = (quantity / harvestSummary.totalQuantityKg) * 100;
 
                     return (
-                      <GradeCard key={grade} $color={HARVEST_GRADE_COLORS[grade]}>
+                      <GradeCard key={grade} $color={getHarvestGradeColor(theme, grade)}>
                         <GradeHeader>
                           <GradeBadge>{grade}</GradeBadge>
                           <GradeLabel>{HARVEST_GRADE_LABELS[grade]}</GradeLabel>
@@ -553,9 +560,9 @@ const TabBar = styled.div`
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
   background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -564,7 +571,7 @@ const Tab = styled.button<{ $active: boolean }>`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface};
-    color: #3b82f6;
+    color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -910,7 +917,7 @@ const YieldBarBackground = styled.div`
 const YieldBarFill = styled.div<{ $percent: number; $overTarget: boolean }>`
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: ${({ $overTarget }) => ($overTarget ? '#10B981' : '#3B82F6')};
+  background: ${({ $overTarget, theme }) => ($overTarget ? theme.colors.success : theme.colors.primary[500])};
   border-radius: 5px;
   transition: width 0.5s ease-in-out;
 `;
@@ -924,7 +931,7 @@ const YieldFooter = styled.div`
 const YieldPercent = styled.span<{ $overTarget: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ $overTarget }) => ($overTarget ? '#10B981' : '#3B82F6')};
+  color: ${({ $overTarget, theme }) => ($overTarget ? theme.colors.success : theme.colors.primary[500])};
 `;
 
 const YieldHarvestCount = styled.span`
@@ -1064,17 +1071,17 @@ const HarvestQualityBadge = styled.span<{ $grade: QualityGrade }>`
   border-radius: 9999px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: white;
-  background: ${({ $grade }) => {
+  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ $grade, theme }) => {
     switch ($grade) {
       case 'A':
-        return '#10b981';
+        return theme.colors.success;
       case 'B':
-        return '#eab308';
+        return theme.colors.warning;
       case 'C':
-        return '#f97316';
+        return theme.colors.terracotta[400];
       default:
-        return '#9e9e9e';
+        return theme.colors.textDisabled;
     }
   }};
 `;

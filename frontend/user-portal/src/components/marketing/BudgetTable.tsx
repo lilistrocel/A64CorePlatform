@@ -13,11 +13,11 @@ const Td = styled.td`padding: 16px; font-size: 14px; color: ${({ theme }) => the
 interface BadgeProps { $color: string; }
 const Badge = styled.span<BadgeProps>`padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${({ $color }) => $color}20; color: ${({ $color }) => $color};`;
 const ActionButton = styled.button`padding: 6px 12px; margin-right: 8px; background: transparent; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: ${({ theme }) => theme.colors.surface}; }`;
-const DeleteButton = styled(ActionButton)`color: #EF4444; border-color: #EF4444; &:hover { background: #FEE2E2; }`;
+const DeleteButton = styled(ActionButton)`color: ${({ theme }) => theme.colors.error}; border-color: ${({ theme }) => theme.colors.error}; &:hover { background: ${({ theme }) => theme.colors.errorBg}; }`;
 const EmptyText = styled.div`text-align: center; padding: 48px 24px; color: ${({ theme }) => theme.colors.textDisabled};`;
 const ProgressBar = styled.div`width: 100px; height: 8px; background: ${({ theme }) => theme.colors.neutral[300]}; border-radius: 4px; overflow: hidden;`;
 interface ProgressFillProps { $percentage: number; }
-const ProgressFill = styled.div<ProgressFillProps>`height: 100%; background: ${({ $percentage }) => $percentage >= 90 ? '#EF4444' : $percentage >= 75 ? '#F59E0B' : '#10B981'}; width: ${({ $percentage }) => Math.min($percentage, 100)}%;`;
+const ProgressFill = styled.div<ProgressFillProps>`height: 100%; background: ${({ $percentage, theme }) => $percentage >= 90 ? theme.colors.error : $percentage >= 75 ? theme.colors.warning : theme.colors.success}; width: ${({ $percentage }) => Math.min($percentage, 100)}%;`;
 
 export function BudgetTable({ budgets, onEdit, onDelete, loading }: BudgetTableProps) {
   if (loading) return <EmptyText>Loading...</EmptyText>;

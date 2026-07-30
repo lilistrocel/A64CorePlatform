@@ -581,8 +581,8 @@ const ActiveBadge = styled.span`
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
-  background: #d1fae5;
-  color: #065f46;
+  background: ${({ theme }) => theme.colors.emerald[100]};
+  color: ${({ theme }) => theme.colors.emerald[800]};
 `;
 
 const ArchivedBadge = styled.span`
@@ -629,7 +629,7 @@ const PrimaryBtn = styled.button`
   cursor: pointer;
   border: none;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   transition: background 150ms ease;
 
   &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primary[700]}; }
@@ -652,8 +652,8 @@ const OutlineBtn = styled.button`
 `;
 
 const DangerBtn = styled(PrimaryBtn)`
-  background: ${({ theme }) => theme.colors.error};
-  &:hover:not(:disabled) { background: #b91c1c; }
+  background: ${({ theme }) => theme.colors.terracotta[600]};
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.terracotta[700]}; }
 `;
 
 const LinkBtn = styled.button`
@@ -672,7 +672,7 @@ const LinkBtn = styled.button`
 
 const DangerLinkBtn = styled(LinkBtn)`
   color: ${({ theme }) => theme.colors.error};
-  &:hover { color: #b91c1c; }
+  &:hover { color: ${({ theme }) => theme.colors.terracotta[700]}; }
 `;
 
 const SmallBtn = styled.button`
@@ -695,7 +695,8 @@ const SmallBtn = styled.button`
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
+  background: rgba(14, 19, 48, 0.5);
   backdrop-filter: blur(4px);
   z-index: 1100;
   display: flex;
@@ -876,11 +877,11 @@ const ErrorText = styled.p`
 
 const WarningBanner = styled.div`
   padding: 12px 16px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 14px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const DependentList = styled.ul`

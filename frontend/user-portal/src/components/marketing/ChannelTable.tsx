@@ -12,9 +12,9 @@ const Tr = styled.tr`border-bottom: 1px solid ${({ theme }) => theme.colors.neut
 const Td = styled.td`padding: 16px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary};`;
 interface BadgeProps { $color: string; }
 const Badge = styled.span<BadgeProps>`padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${({ $color }) => $color}20; color: ${({ $color }) => $color};`;
-const ActiveBadge = styled.span<{ $active: boolean }>`padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${({ $active }) => $active ? '#10B98120' : '#6B728020'}; color: ${({ $active }) => $active ? '#10B981' : '#6B7280'};`;
+const ActiveBadge = styled.span<{ $active: boolean }>`padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${({ $active, theme }) => $active ? `${theme.colors.success}20` : `${theme.colors.textSecondary}20`}; color: ${({ $active, theme }) => $active ? theme.colors.success : theme.colors.textSecondary};`;
 const ActionButton = styled.button`padding: 6px 12px; margin-right: 8px; background: transparent; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: ${({ theme }) => theme.colors.surface}; }`;
-const DeleteButton = styled(ActionButton)`color: #EF4444; border-color: #EF4444; &:hover { background: #FEE2E2; }`;
+const DeleteButton = styled(ActionButton)`color: ${({ theme }) => theme.colors.error}; border-color: ${({ theme }) => theme.colors.error}; &:hover { background: ${({ theme }) => theme.colors.errorBg}; }`;
 const EmptyText = styled.div`text-align: center; padding: 48px 24px; color: ${({ theme }) => theme.colors.textDisabled};`;
 
 export function ChannelTable({ channels, onEdit, onDelete, loading }: ChannelTableProps) {

@@ -67,7 +67,7 @@ const DataSourceBadge = styled.div`
   gap: 6px;
   padding: 4px 12px;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.info};
   border-radius: 16px;
   font-size: 12px;
   font-weight: 500;
@@ -105,7 +105,7 @@ const Spinner = styled.div`
   width: 40px;
   height: 40px;
   border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3B82F6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -125,20 +125,20 @@ const LoadingText = styled.p`
 const ErrorContainer = styled.div`
   padding: 24px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid #EF4444;
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 12px;
   text-align: center;
 `;
 
 const ErrorTitle = styled.h3`
-  color: #B91C1C;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 8px 0;
 `;
 
 const ErrorMessage = styled.p`
-  color: #7F1D1D;
+  color: ${({ theme }) => theme.colors.terracotta[900]};
   font-size: 14px;
   margin: 0;
 `;

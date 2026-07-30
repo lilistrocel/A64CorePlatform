@@ -33,7 +33,7 @@ const SearchInput = styled.input`
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
 `;
 const PrimaryButton = styled.button`
-  padding: 10px 20px; background: ${({ theme }) => theme.colors.primary[500]}; color: white;
+  padding: 10px 20px; background: ${({ theme }) => theme.colors.primary[500]}; color: ${({ theme }) => theme.colors.onAccent};
   border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
   &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -62,10 +62,10 @@ const Td = styled.td`padding: 14px 16px; font-size: 14px; color: ${({ theme }) =
 const Tr = styled.tr`cursor: pointer; transition: background 100ms ease; &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; } &:last-child td { border-bottom: none; }`;
 const Badge = styled.span<{ $active: boolean }>`
   display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600;
-  background: ${({ $active, theme }) => $active ? theme.colors.successBg || '#ecfdf5' : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) => $active ? theme.colors.success || '#10b981' : theme.colors.textDisabled};
+  background: ${({ $active, theme }) => $active ? theme.colors.successBg : theme.colors.neutral[100]};
+  color: ${({ $active, theme }) => $active ? theme.colors.success : theme.colors.textDisabled};
 `;
-const TypeBadge = styled.span`display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'}; color: ${({ theme }) => theme.colors.info || '#3b82f6'};`;
+const TypeBadge = styled.span`display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${({ theme }) => theme.colors.infoBg}; color: ${({ theme }) => theme.colors.info};`;
 const EmptyState = styled.div`text-align: center; padding: 64px 32px; color: ${({ theme }) => theme.colors.textSecondary}; font-size: 15px;`;
 const Pagination = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 16px 0; font-size: 14px; color: ${({ theme }) => theme.colors.textSecondary};`;
 const PageButtons = styled.div`display: flex; gap: 8px;`;

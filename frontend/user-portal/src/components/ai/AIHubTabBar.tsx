@@ -7,7 +7,7 @@
  * Horizontally scrollable on small screens.
  */
 
-import styled from 'styled-components';
+import styled, { useTheme, type DefaultTheme } from 'styled-components';
 import type { AIHubSection } from '../../types/aiHub';
 
 // ============================================================================
@@ -31,12 +31,20 @@ interface TabDefinition {
 // CONSTANTS
 // ============================================================================
 
-const TABS: TabDefinition[] = [
-  { section: 'control', label: 'Control', subtitle: 'Execute & Manage', icon: '⚙️', color: '#F59E0B' },
-  { section: 'monitor', label: 'Monitor', subtitle: 'Live Data',         icon: '📡', color: '#3B82F6' },
-  { section: 'report',  label: 'Report',  subtitle: 'Generate & Export', icon: '📊', color: '#8B5CF6' },
-  { section: 'advise',  label: 'Advise',  subtitle: 'Expert Guidance',   icon: '💡', color: '#10B981' },
-];
+/**
+ * Same 4-section identity colours as AIHubChat's SECTION_BADGE — keep the
+ * two in sync. `report` was purple; it stays visually distinct from
+ * `monitor`'s blue via a darker lapis shade (primary[700]) rather than gold,
+ * since `control` already owns `warning` (== gold[500] at the token level).
+ */
+function getTabs(theme: DefaultTheme): TabDefinition[] {
+  return [
+    { section: 'control', label: 'Control', subtitle: 'Execute & Manage', icon: '⚙️', color: theme.colors.warning },
+    { section: 'monitor', label: 'Monitor', subtitle: 'Live Data',         icon: '📡', color: theme.colors.info },
+    { section: 'report',  label: 'Report',  subtitle: 'Generate & Export', icon: '📊', color: theme.colors.primary[700] },
+    { section: 'advise',  label: 'Advise',  subtitle: 'Expert Guidance',   icon: '💡', color: theme.colors.success },
+  ];
+}
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -130,6 +138,8 @@ const TabSubtitle = styled.span`
 // ============================================================================
 
 export function AIHubTabBar({ activeSection, onSectionChange }: AIHubTabBarProps) {
+  const theme = useTheme();
+  const TABS = getTabs(theme);
   return (
     <TabBarContainer role="tablist" aria-label="AI Hub sections">
       {TABS.map((tab) => (

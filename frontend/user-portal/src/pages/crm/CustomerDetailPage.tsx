@@ -43,8 +43,8 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: #3B82F6;
-  border: 1px solid #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -52,7 +52,7 @@ const BackButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e3f2fd;
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
@@ -70,22 +70,22 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
-      background: #3B82F6;
-      color: white;
+      background: ${theme.colors.primary[500]};
+      color: ${theme.colors.onAccent};
       &:hover {
-        background: #1976d2;
+        background: ${theme.colors.primary[600]};
       }
     `;
   }}
@@ -106,9 +106,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -226,8 +226,8 @@ const TagsContainer = styled.div`
 const Tag = styled.span`
   display: inline-block;
   padding: 6px 12px;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[600]};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;

@@ -1,9 +1,20 @@
 // Shared design tokens (non-color values are identical across themes)
+//
+// A20Core — "A New Renaissance" rebrand (2026-07-30).
+// Source of truth: Docs/2-Working-Progress/a20core-rebrand-spec.md
+// Brand contract: Brand_Engineering/Brand/A20Core_BRAND.md
+//
+// Token *shape* is preserved from the pre-rebrand theme so the ~7,000 existing
+// `theme.colors.*` call sites across the app keep compiling. Only values
+// change, plus the additive NEW tokens called out in the spec §2.
 const sharedTokens = {
   typography: {
     fontFamily: {
-      primary: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
-      mono: "'JetBrains Mono', 'Courier New', monospace",
+      primary: "'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      mono: "'Space Mono', ui-monospace, 'Courier New', monospace",
+      // NEW — Fraunces, editorial accent ONLY (login/auth tagline). Never on
+      // body, labels, table text or controls — see brand contract §4.
+      display: "'Fraunces', Georgia, serif",
     },
     fontSize: {
       xs: '0.75rem',    // 12px
@@ -66,132 +77,203 @@ const sharedTokens = {
   },
 };
 
-// Primary palette (Blue) — same in both themes
-const primaryPalette = {
-  50: '#e3f2fd',
-  100: '#bbdefb',
-  200: '#90caf9',
-  300: '#64b5f6',
-  400: '#42a5f5',
-  500: '#2196f3',  // Main brand color
-  600: '#1e88e5',
-  700: '#1976d2',
-  800: '#1565c0',
-  900: '#0d47a1',
+// ─── Categorical ramps (spec §2) ───────────────────────────────────────────
+// Same values in both themes — these are the brand's chromatic voices, not
+// ground tokens, so they do not invert for dark mode.
+
+// Lapis — primary / info. "Wisdom/cosmic" per brand contract §3.
+const lapisPalette = {
+  50: '#EDF1FB',
+  100: '#D6DFF5',
+  200: '#AEC0EB',
+  300: '#7E9BDC',
+  400: '#4E72C4',
+  500: '#20419A',
+  600: '#1B3785',
+  700: '#162C6B',
+  800: '#112252',
+  900: '#0C1839',
 };
 
-// Secondary palette (Purple) — same in both themes
-const secondaryPalette = {
-  50: '#f3e5f5',
-  100: '#e1bee7',
-  500: '#9c27b0',
-  700: '#7b1fa2',
-  900: '#4a148c',
+// Renaissance Gold — secondary / warning. Rare and meaningful (brand §1.4) —
+// reserve for the active nav item, one primary CTA per view, genuine
+// highlight badges. Ordinary interactive colour is `primary` (lapis).
+const goldPalette = {
+  50: '#FBF4E2',
+  100: '#F5E7BF',
+  200: '#EBD494',
+  300: '#DCB94F', // gold-hi
+  400: '#CFA83F',
+  500: '#C29A33',
+  600: '#A6822A',
+  700: '#856820',
+  800: '#634D18',
+  900: '#42330F',
 };
 
-// Semantic colors — same in both themes
+// Emerald — success. "Life/growth" per brand contract §3.
+const emeraldPalette = {
+  50: '#E8F5EE',
+  100: '#C7E7D6',
+  200: '#92CFAF',
+  300: '#5AB486',
+  400: '#2F9C68',
+  500: '#1B8A5A',
+  600: '#16744B',
+  700: '#125C3C',
+  800: '#0D452D',
+  900: '#092E1E',
+};
+
+// Terracotta — error. "Earth/humanity" per brand contract §3. Warm
+// red-orange, not fire-engine red — destructive UI should reach for
+// [600]/[700], not [500], so "Delete" still carries weight.
+const terracottaPalette = {
+  50: '#FBF0EA',
+  100: '#F5DACB',
+  200: '#E9B296',
+  300: '#D98A63',
+  400: '#CD6D3E',
+  500: '#C15A2C',
+  600: '#A44A24',
+  700: '#833A1C',
+  800: '#622C15',
+  900: '#411D0E',
+};
+
+// Semantic colors — same in both themes.
+// success→emerald, error→terracotta, warning→gold, info→lapis (spec §1).
+// primary and info are both Lapis, deliberately (mirrors the old blue theme,
+// which had primary and info both Material blue).
 const semanticColors = {
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  info: '#3B82F6',
+  success: emeraldPalette[500],
+  warning: goldPalette[500],
+  error: terracottaPalette[500],
+  info: lapisPalette[500],
 };
 
-// ─── Light Theme ─────────────────────────────────────────────────────────────
+// ─── Light Theme (Fresco Cream) ─────────────────────────────────────────────
+
+const neutralLight = {
+  50: '#FAF3E2',
+  100: '#F1E6CC',
+  200: '#E6D9BC',
+  300: '#D4C6A6',
+  400: '#B3A98F',
+  500: '#8C8471',
+  600: '#6E6858',
+  700: '#5C564A', // slate
+  800: '#3A362C',
+  900: '#1B1A14', // ink
+};
 
 export const lightTheme = {
   ...sharedTokens,
   colors: {
-    primary: primaryPalette,
-    secondary: secondaryPalette,
+    primary: lapisPalette,
+    secondary: goldPalette,
+    neutral: neutralLight,
 
-    // Neutral palette — light grays
-    neutral: {
-      50: '#fafafa',
-      100: '#f5f5f5',
-      200: '#eeeeee',
-      300: '#e0e0e0',
-      400: '#bdbdbd',
-      500: '#9e9e9e',
-      600: '#757575',
-      700: '#616161',
-      800: '#424242',
-      900: '#212121',
-    },
+    // NEW — standalone categorical ramps for non-semantic use (badges,
+    // charts, category dots) that don't map to a success/warning/error/info
+    // state. Values identical to the semantic ramps above.
+    lapis: lapisPalette,
+    gold: goldPalette,
+    emerald: emeraldPalette,
+    terracotta: terracottaPalette,
 
     ...semanticColors,
 
-    // Background & surface
-    background: '#ffffff',
-    surface: '#f5f5f5',
+    // Ground tokens (spec §2 table)
+    canvas: '#F1E6CC',     // NEW — page ground, Fresco Cream. Dominant ~65% surface.
+    background: '#FAF3E2', // raised panel/card ground — Cream Hi
+    surface: '#EDE0C2',    // recessed ground
 
     // Semantic status background tints
-    warningBg: '#fef3c7',
-    errorBg: '#fee2e2',
-    successBg: '#f0fdf4',
-    infoBg: '#e0f2fe',
+    successBg: '#E8F5EE',
+    warningBg: '#FBF4E2',
+    errorBg: '#FBF0EA',
+    infoBg: '#EDF1FB',
 
     // Text
-    textPrimary: '#212121',
-    textSecondary: '#616161',
-    textDisabled: '#9e9e9e',
+    textPrimary: '#1B1A14',   // Ink
+    textSecondary: '#5C564A', // Slate
+    textDisabled: '#8C8471',
+
+    // NEW
+    onAccent: '#FAF3E2', // text/icon on primary/secondary/error fills — never pure white
+    border: '#D4C6A6',   // hairline — neutral[300]
   },
 
+  // Warm (brown-tinted, not pure black) shadows — keys unchanged.
   shadows: {
     none: 'none',
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    sm: '0 1px 2px 0 rgba(59, 44, 24, 0.08)',
+    md: '0 4px 6px -1px rgba(59, 44, 24, 0.14)',
+    lg: '0 10px 15px -3px rgba(59, 44, 24, 0.16)',
+    xl: '0 20px 25px -5px rgba(59, 44, 24, 0.18)',
   },
 };
 
-// ─── Dark Theme ──────────────────────────────────────────────────────────────
+// ─── Dark Theme (Cosmos Ink) ────────────────────────────────────────────────
+
+const neutralDark = {
+  50: '#0E1330',
+  100: '#161C42',
+  200: '#1E2650',
+  300: '#2A3363',
+  400: '#3D4776',
+  500: '#7C7A86',
+  600: '#9A9689',
+  700: '#BDB49C',
+  800: '#DCD2B8',
+  900: '#F1E6CC',
+};
 
 export const darkTheme = {
   ...sharedTokens,
   colors: {
-    primary: primaryPalette,
-    secondary: secondaryPalette,
+    primary: lapisPalette,
+    secondary: goldPalette,
+    neutral: neutralDark,
 
-    // Neutral palette — dark grays (inverted scale for dark mode)
-    neutral: {
-      50: '#1a1a1a',   // Darkest surface (was lightest)
-      100: '#242424',
-      200: '#2e2e2e',
-      300: '#3a3a3a',
-      400: '#4a4a4a',
-      500: '#6b6b6b',
-      600: '#8a8a8a',
-      700: '#a3a3a3',
-      800: '#d4d4d4',
-      900: '#f5f5f5',  // Lightest text (was darkest)
-    },
+    // NEW — standalone categorical ramps (identical values to light theme;
+    // these are brand chromatic voices, not grounds, so they don't invert).
+    lapis: lapisPalette,
+    gold: goldPalette,
+    emerald: emeraldPalette,
+    terracotta: terracottaPalette,
 
     ...semanticColors,
 
-    // Background & surface
-    background: '#121212',
-    surface: '#1e1e1e',
+    // Ground tokens (spec §2 table)
+    canvas: '#0E1330',     // NEW — page ground, Cosmos Ink
+    background: '#161C42', // raised panel/card ground
+    surface: '#1E2650',    // recessed ground
 
     // Semantic status background tints
-    warningBg: '#422006',
-    errorBg: '#450a0a',
-    successBg: '#052e16',
-    infoBg: '#082f49',
+    successBg: '#0D452D',
+    warningBg: '#634D18',
+    errorBg: '#622C15',
+    infoBg: '#112252',
 
     // Text
-    textPrimary: '#f5f5f5',
-    textSecondary: '#a3a3a3',
-    textDisabled: '#6b6b6b',
+    textPrimary: '#F1E6CC',   // Cream
+    textSecondary: '#A8A08C', // warm muted
+    textDisabled: '#6E6A5C',
+
+    // NEW
+    onAccent: '#FAF3E2', // text/icon on primary/secondary/error fills — never pure white
+    border: '#2A3363',   // hairline
   },
 
+  // Warm (brown-tinted, not pure black) shadows — keys unchanged.
   shadows: {
     none: 'none',
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.4)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.6)',
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.35)',
+    md: '0 4px 6px -1px rgba(0, 0, 0, 0.45)',
+    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.55)',
+    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.65)',
   },
 };
 

@@ -5,6 +5,10 @@
  * matching the backend API response structures.
  */
 
+import { lightTheme } from '@a64core/shared';
+
+const c = lightTheme.colors;
+
 // ============================================================================
 // ENUMS & CONSTANTS
 // ============================================================================
@@ -247,13 +251,13 @@ export interface HarvestEntryFormData {
 // ============================================================================
 
 export const TASK_TYPE_COLORS: Record<TaskType, string> = {
-  planting: '#10B981',        // Green
-  fruiting_check: '#A855F7',  // Purple
-  harvest_readiness: '#F59E0B', // Orange
-  daily_harvest: '#F59E0B',   // Orange
-  harvest_completion: '#3B82F6', // Blue
-  cleaning: '#EF4444',        // Red
-  custom: '#6B7280',          // Gray
+  planting: c.success,              // emerald (was green)
+  fruiting_check: c.secondary[600], // gold — was purple, categorical judgement call, spec §3
+  harvest_readiness: c.warning,     // gold (was orange)
+  daily_harvest: c.warning,         // gold — matches harvest_readiness, as the original hex did
+  harvest_completion: c.primary[500], // lapis (was blue)
+  cleaning: c.error,                // terracotta (was red)
+  custom: c.textSecondary,          // (was gray)
 };
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
@@ -267,10 +271,10 @@ export const TASK_TYPE_LABELS: Record<TaskType, string> = {
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  pending: '#6B7280',         // Gray
-  in_progress: '#3B82F6',     // Blue
-  completed: '#10B981',       // Green
-  cancelled: '#EF4444',       // Red
+  pending: c.textSecondary,     // (was gray)
+  in_progress: c.primary[500],  // lapis (was blue)
+  completed: c.success,         // emerald (was green)
+  cancelled: c.error,           // terracotta (was red)
 };
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
@@ -281,11 +285,11 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 export const HARVEST_GRADE_COLORS: Record<HarvestGrade, string> = {
-  A: '#10B981',    // Green - Best
-  B: '#3B82F6',    // Blue - Good
-  C: '#F59E0B',    // Orange - Fair
-  D: '#EF4444',    // Red - Poor
-  Waste: '#6B7280', // Gray - Waste
+  A: c.success,          // emerald - Best
+  B: c.primary[500],     // lapis - Good
+  C: c.warning,          // gold - Fair
+  D: c.error,            // terracotta - Poor
+  Waste: c.textSecondary, // - Waste
 };
 
 export const HARVEST_GRADE_LABELS: Record<HarvestGrade, string> = {

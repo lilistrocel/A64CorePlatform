@@ -27,7 +27,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -151,7 +151,7 @@ const Label = styled.label`
 const Input = styled.input<{ $error?: boolean }>`
   padding: 10px 12px;
   border: 1px solid ${({ $error, theme }) =>
-    $error ? '#dc2626' : theme.colors.neutral[300]};
+    $error ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -159,7 +159,7 @@ const Input = styled.input<{ $error?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? '#dc2626' : theme.colors.primary[500]};
+      $error ? theme.colors.error : theme.colors.primary[500]};
   }
 `;
 
@@ -180,7 +180,7 @@ const Textarea = styled.textarea`
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const LinesHeader = styled.div`
@@ -258,15 +258,15 @@ const DeleteLineBtn = styled.button`
   height: 32px;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   background: ${({ theme }) => theme.colors.background};
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   border-radius: 6px;
   cursor: pointer;
   padding: 0;
   font-size: 16px;
   line-height: 1;
   &:hover {
-    background: #fef2f2;
-    border-color: #dc2626;
+    background: ${({ theme }) => theme.colors.errorBg};
+    border-color: ${({ theme }) => theme.colors.terracotta[600]};
   }
   &:disabled {
     opacity: 0.4;
@@ -312,20 +312,20 @@ const TotalsGross = styled.div`
 
 const CreditErrorBanner = styled.div`
   padding: 14px 18px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 16px;
 `;
 
 const FromQuoteBanner = styled.div`
   padding: 12px 18px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
-  color: #1d4ed8;
+  color: ${({ theme }) => theme.colors.lapis[700]};
   font-size: 13px;
   margin-bottom: 20px;
 `;
@@ -340,7 +340,7 @@ const ActionRow = styled.div`
 const SubmitBtn = styled.button`
   padding: 12px 28px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -363,10 +363,10 @@ const CancelBtn = styled.button`
 
 const ErrorBanner = styled.div`
   padding: 16px 20px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 24px;
 `;
@@ -384,12 +384,12 @@ const TypeChip = styled.span<{ $isStock: boolean }>`
   font-weight: 600;
   background: ${({ $isStock, theme }) =>
     $isStock
-      ? (theme.colors?.primary?.light ?? '#eff6ff')
-      : '#fef3c7'};
+      ? theme.colors.primary[50]
+      : theme.colors.warningBg};
   color: ${({ $isStock, theme }) =>
     $isStock
-      ? (theme.colors?.primary?.main ?? '#1d4ed8')
-      : '#92400e'};
+      ? theme.colors.primary[500]
+      : theme.colors.gold[800]};
 `;
 
 /** T-201.10 — Small subtitle below the page title indicating Service-Only mode. */
@@ -428,6 +428,7 @@ const DEFAULT_LINE = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SalesOrderFormPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId, quoteDocEntry } = useParams<{ docId?: string; quoteDocEntry?: string }>();
   const user = useAuthStore((s) => s.user);
@@ -718,7 +719,7 @@ export function SalesOrderFormPage() {
         <BackLink onClick={() => navigate('/sales/orders-v2')}>← Sales Orders</BackLink>
         <PageTitle>{pageTitle}</PageTitle>
         <Card>
-          <p style={{ color: '#6b7280' }}>Loading…</p>
+          <p style={{ color: theme.colors.textSecondary }}>Loading…</p>
         </Card>
       </Container>
     );

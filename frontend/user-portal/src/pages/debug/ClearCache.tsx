@@ -10,7 +10,7 @@ import styled from 'styled-components';
 
 const Container = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,7 +23,7 @@ const Card = styled.div`
   padding: 48px;
   max-width: 600px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const Title = styled.h1`
@@ -96,10 +96,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   ${props => {
     if (props.$variant === 'danger') {
       return `
-        background: #f44336;
-        color: white;
+        background: ${props.theme.colors.terracotta[600]};
+        color: ${props.theme.colors.onAccent};
         &:hover {
-          background: #d32f2f;
+          background: ${props.theme.colors.terracotta[700]};
         }
       `;
     }
@@ -108,15 +108,15 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
         background: ${props.theme.colors.neutral[300]};
         color: ${props.theme.colors.textPrimary};
         &:hover {
-          background: #d0d0d0;
+          background: ${props.theme.colors.neutral[400]};
         }
       `;
     }
     return `
-      background: #667eea;
-      color: white;
+      background: ${props.theme.colors.primary[500]};
+      color: ${props.theme.colors.onAccent};
       &:hover {
-        background: #5568d3;
+        background: ${props.theme.colors.primary[600]};
       }
     `;
   }}
@@ -138,21 +138,21 @@ const Message = styled.div<{ $type: 'success' | 'error' | 'info' }>`
     if ($type === 'success') {
       return `
         background: ${theme.colors.successBg};
-        color: #2e7d32;
-        border: 1px solid #4caf50;
+        color: ${theme.colors.emerald[700]};
+        border: 1px solid ${theme.colors.success};
       `;
     }
     if ($type === 'error') {
       return `
         background: ${theme.colors.errorBg};
-        color: #c62828;
-        border: 1px solid #f44336;
+        color: ${theme.colors.terracotta[700]};
+        border: 1px solid ${theme.colors.error};
       `;
     }
     return `
       background: ${theme.colors.infoBg};
-      color: #1565c0;
-      border: 1px solid #2196f3;
+      color: ${theme.colors.primary[700]};
+      border: 1px solid ${theme.colors.info};
     `;
   }}
 `;

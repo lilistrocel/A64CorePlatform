@@ -120,19 +120,19 @@ const TrashButton = styled.button`
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   z-index: 2;
 
   &:hover {
-    background: rgba(220, 38, 38, 0.1);
-    border-color: #dc2626;
+    background: ${({ theme }) => `${theme.colors.terracotta[600]}1A`};
+    border-color: ${({ theme }) => theme.colors.terracotta[600]};
   }
 
   &:focus-visible {
-    outline: 2px solid #dc2626;
+    outline: 2px solid ${({ theme }) => theme.colors.terracotta[600]};
     outline-offset: 2px;
   }
 `;

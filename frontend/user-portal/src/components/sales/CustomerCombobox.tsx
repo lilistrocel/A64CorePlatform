@@ -67,7 +67,7 @@ const Wrapper = styled.div`
 const ComboInput = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -82,10 +82,10 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
     box-shadow: 0 0 0 3px
-      ${({ $hasError }) =>
-        $hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'};
+      ${({ $hasError, theme }) =>
+        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
   }
 
   &:disabled {
@@ -104,7 +104,7 @@ const SelectedChip = styled.div<{ $hasError?: boolean }>`
   gap: 12px;
   padding: 12px 12px 12px 16px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface};
   font-size: 14px;
@@ -139,12 +139,12 @@ const ClearButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #EF4444;
+    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.error};
   }
 
   &:focus-visible {
-    outline: 2px solid #EF4444;
+    outline: 2px solid ${({ theme }) => theme.colors.error};
     outline-offset: 2px;
   }
 
@@ -221,7 +221,7 @@ const DropdownState = styled.li`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const BrokenLinkWarning = styled.div`
@@ -229,9 +229,9 @@ const BrokenLinkWarning = styled.div`
   align-items: flex-start;
   gap: 6px;
   font-size: 12px;
-  color: #92400e; /* amber-800 */
-  background: #fef3c7; /* amber-100 */
-  border: 1px solid #fcd34d; /* amber-300 */
+  color: ${({ theme }) => theme.colors.gold[800]};
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.gold[300]};
   border-radius: 6px;
   padding: 6px 10px;
   margin-top: 2px;
@@ -242,7 +242,7 @@ const Spinner = styled.span`
   width: 14px;
   height: 14px;
   border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   vertical-align: middle;

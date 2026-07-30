@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes, css, useTheme } from 'styled-components';
 import { Mic, MicOff, Volume2, VolumeX, AlertCircle, Loader } from 'lucide-react';
 import type { UseVoiceReturn } from '../../hooks/ai/useVoice';
 
@@ -51,9 +51,12 @@ const pulseRing = keyframes`
   100% { transform: scale(1.4); opacity: 0; }
 `;
 
-const pulseGlow = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-  50%      { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+// A function returning keyframes (not a module constant) so the glow colour
+// follows each pill's own $activeColor (lapis for mic, gold for TTS) instead
+// of always rendering blue regardless of which control is active.
+const pulseGlow = (color: string) => keyframes`
+  0%, 100% { box-shadow: 0 0 0 0 ${color}66; }
+  50%      { box-shadow: 0 0 0 6px ${color}00; }
 `;
 
 const spin = keyframes`
@@ -98,17 +101,17 @@ const PillButton = styled.button<PillButtonProps>`
   padding: 0 14px 0 10px;
   border-radius: 18px;
   border: 1.5px solid ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
-    if ($hasError) return '#EF4444';
+    if ($hasError) return theme.colors.error;
     if ($isDisabled) return theme.colors.neutral[300];
     return $isActive ? $activeColor : `${$activeColor}40`;
   }};
   background: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
-    if ($hasError) return '#FEF2F2';
+    if ($hasError) return theme.colors.errorBg;
     if ($isDisabled) return theme.colors.surface;
     return $isActive ? `${$activeColor}15` : theme.colors.neutral[50];
   }};
   color: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
-    if ($hasError) return '#EF4444';
+    if ($hasError) return theme.colors.error;
     if ($isDisabled) return theme.colors.textDisabled;
     return $isActive ? $activeColor : theme.colors.textSecondary;
   }};
@@ -122,18 +125,18 @@ const PillButton = styled.button<PillButtonProps>`
   ${({ $isActive, $activeColor }) =>
     $isActive &&
     css`
-      animation: ${pulseGlow} 1.5s infinite ease-in-out;
+      animation: ${pulseGlow($activeColor)} 1.5s infinite ease-in-out;
       font-weight: 600;
       border-color: ${$activeColor};
     `}
 
   &:hover:not(:disabled) {
-    background: ${({ $activeColor, $hasError }) =>
-      $hasError ? '#FEE2E2' : `${$activeColor}12`};
-    border-color: ${({ $activeColor, $hasError }) =>
-      $hasError ? '#EF4444' : `${$activeColor}80`};
-    color: ${({ $activeColor, $hasError }) =>
-      $hasError ? '#DC2626' : $activeColor};
+    background: ${({ $activeColor, $hasError, theme }) =>
+      $hasError ? theme.colors.terracotta[100] : `${$activeColor}12`};
+    border-color: ${({ $activeColor, $hasError, theme }) =>
+      $hasError ? theme.colors.error : `${$activeColor}80`};
+    color: ${({ $activeColor, $hasError, theme }) =>
+      $hasError ? theme.colors.terracotta[600] : $activeColor};
   }
 
   &:active:not(:disabled) {
@@ -217,6 +220,7 @@ export function VoiceControls({
   ttsSupported,
   onTranscript,
 }: VoiceControlsProps) {
+  const theme = useTheme();
   const wasListeningRef = useRef(false);
   const [showError, setShowError] = useState(false);
 
@@ -249,8 +253,12 @@ export function VoiceControls({
     }
   };
 
-  const PTT_COLOR = '#3B82F6';
-  const TTS_COLOR = '#8B5CF6';
+  // TTS needs to read as visually distinct from the adjacent Mic pill, so it
+  // takes the gold ramp (secondary) per spec §3's purple judgment call —
+  // this is exactly the "distinguishes a category from an adjacent blue
+  // element" case, not decorative purple.
+  const PTT_COLOR = theme.colors.primary[500];
+  const TTS_COLOR = theme.colors.secondary[500];
 
   const micLabel = !sttSupported
     ? 'Unavailable'

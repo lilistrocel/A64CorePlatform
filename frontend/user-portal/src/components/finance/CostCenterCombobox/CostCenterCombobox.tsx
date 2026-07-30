@@ -44,7 +44,7 @@ const ComboInput = styled.input`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.15);
+    box-shadow: 0 0 0 2px ${({ theme }) => `${theme.colors.primary[500]}26`};
   }
 
   &:disabled {
@@ -63,7 +63,7 @@ const Dropdown = styled.ul`
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(59, 44, 24, 0.12);
   max-height: 220px;
   overflow-y: auto;
   margin: 0;
@@ -75,14 +75,14 @@ const DropdownItem = styled.li<{ $highlighted: boolean; $isNone?: boolean }>`
   padding: 8px 12px;
   cursor: pointer;
   background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.primary[50] ?? '#e3f2fd' : 'transparent'};
+    $highlighted ? theme.colors.primary[50] : 'transparent'};
   color: ${({ $isNone, theme }) =>
     $isNone ? theme.colors.textSecondary : theme.colors.textPrimary};
   font-size: 13px;
   font-style: ${({ $isNone }) => ($isNone ? 'italic' : 'normal')};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50] ?? '#e3f2fd'};
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 

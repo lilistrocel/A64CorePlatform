@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useDivisionStore, type Division } from '../../stores/division.store';
+import { useThemeStore } from '../../stores/theme.store';
 import { Spinner } from '@a64core/shared';
 
 // Industry type display helpers
@@ -26,6 +27,9 @@ export function DivisionSelector() {
     loadDivisions,
     setCurrentDivision,
   } = useDivisionStore();
+  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
+  const { mode } = useThemeStore();
+  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
 
   // Load available divisions on mount, exactly once.
   // Gated on hasFetchedOnce (not length === 0) so a legitimate [] response
@@ -77,7 +81,7 @@ export function DivisionSelector() {
     <PageContainer>
       <CenteredContent>
         <LogoWrapper>
-          <LogoImg src="/a64logo_dark.png" alt="A64 Core Platform" />
+          <LogoImg src={logoSrc} alt="A20Core" />
         </LogoWrapper>
 
         <Heading>Select Your Division</Heading>

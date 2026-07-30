@@ -7,6 +7,7 @@
 
 import { apiClient } from './api';
 import { formatNumber } from '../utils/formatNumber';
+import { lightTheme } from '@a64core/shared';
 import type {
   Vehicle,
   VehicleCreate,
@@ -263,17 +264,18 @@ export async function getAvailableFarmingYears(): Promise<LogisticsFarmingYearsR
  * Get vehicle status color
  */
 export function getVehicleStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'available':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'in_use':
-      return '#3B82F6'; // blue
+      return c.primary[500]; // lapis
     case 'maintenance':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     case 'retired':
-      return '#6B7280'; // gray
+      return c.textSecondary;
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 
@@ -281,17 +283,18 @@ export function getVehicleStatusColor(status: string): string {
  * Get shipment status color
  */
 export function getShipmentStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'scheduled':
-      return '#3B82F6'; // blue
+      return c.primary[500]; // lapis
     case 'in_transit':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     case 'delivered':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'cancelled':
-      return '#EF4444'; // red
+      return c.error; // terracotta
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 

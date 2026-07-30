@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   useVendors,
   useCreateVendor,
@@ -78,7 +78,7 @@ const Select = styled.select`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -155,9 +155,9 @@ const Badge = styled.span<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg || '#ecfdf5' : theme.colors.neutral[100]};
+    $active ? theme.colors.successBg : theme.colors.neutral[100]};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.success || '#10b981' : theme.colors.textDisabled};
+    $active ? theme.colors.success : theme.colors.textDisabled};
 `;
 
 const BlockedBadge = styled.span`
@@ -393,6 +393,7 @@ function VendorFormModal({
   const createMutation = useCreateVendor();
   const updateMutation = useUpdateVendor();
   const isEdit = !!vendor;
+  const theme = useTheme();
 
   const [form, setForm] = useState({
     vendorCode: vendor?.vendorCode ?? '',
@@ -581,7 +582,7 @@ function VendorFormModal({
                 id="vf-paymentTerms"
                 value={form.paymentTermsCode}
                 onChange={set('paymentTermsCode')}
-                style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ padding: '10px 14px', borderRadius: 8, border: `1px solid ${theme.colors.border}`, fontSize: 14 }}
               >
                 <option value="">— Select —</option>
                 {paymentTermsList.map((t) => (
@@ -682,7 +683,7 @@ function VendorFormModal({
           </FormRow>
 
           <details>
-            <summary style={{ cursor: 'pointer', fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 13, color: theme.colors.textSecondary, marginBottom: 8 }}>
               Bank Details (optional)
             </summary>
             <FormRow>

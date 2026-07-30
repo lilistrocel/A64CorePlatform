@@ -397,7 +397,7 @@ const PillToggleButton = styled.button<PillToggleButtonProps>`
 const CreateButton = styled.button`
   padding: 10px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -456,7 +456,8 @@ interface TrProps {
 
 const Tr = styled.tr<TrProps>`
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
-  border-left: ${({ $current }) => ($current ? '3px solid #3b82f6' : '3px solid transparent')};
+  border-left: ${({ $current, theme }) =>
+    $current ? `3px solid ${theme.colors.primary[500]}` : '3px solid transparent'};
   opacity: ${({ $muted }) => ($muted ? 0.7 : 1)};
   &:hover {
     background: ${({ theme }) => theme.colors.neutral[50]};
@@ -496,18 +497,18 @@ const statusBadgeStyles = css<StatusBadgeProps>`
     switch ($status) {
       case 'open':
         return css`
-          background: ${theme.colors.success?.light ?? '#dcfce7'};
-          color: ${theme.colors.success?.dark ?? '#15803d'};
+          background: ${theme.colors.successBg};
+          color: ${theme.colors.success};
         `;
       case 'closed':
         return css`
-          background: ${theme.colors.warning?.light ?? '#fef9c3'};
-          color: ${theme.colors.warning?.dark ?? '#a16207'};
+          background: ${theme.colors.warningBg};
+          color: ${theme.colors.warning};
         `;
       case 'locked':
         return css`
-          background: ${theme.colors.errorBg ?? '#fef2f2'};
-          color: ${theme.colors.error ?? '#dc2626'};
+          background: ${theme.colors.errorBg};
+          color: ${theme.colors.error};
         `;
       default:
         return css`
@@ -540,8 +541,8 @@ const CurrentBadge = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[700]};
   margin-left: 6px;
 `;
 
@@ -555,9 +556,9 @@ const StatusDot = styled.span<{ $status: PeriodStatus }>`
   flex-shrink: 0;
   background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'open':   return theme.colors.success?.main ?? '#16a34a';
-      case 'closed': return theme.colors.warning?.main ?? '#ca8a04';
-      case 'locked': return theme.colors.error ?? '#dc2626';
+      case 'open':   return theme.colors.success;
+      case 'closed': return theme.colors.warning;
+      case 'locked': return theme.colors.error;
       default:       return theme.colors.neutral[400];
     }
   }};
@@ -570,14 +571,14 @@ const CloseActionButton = styled.button`
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
-  border: 1px solid ${({ theme }) => theme.colors.error || '#dc2626'};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.error};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
+    background: ${({ theme }) => theme.colors.errorBg};
   }
   &:disabled {
     opacity: 0.4;
@@ -662,8 +663,8 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -690,7 +691,7 @@ const ModalBackdrop = styled.div`
 const ModalBox = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(59, 44, 24, 0.2);
   width: 100%;
   max-width: 520px;
   padding: 28px 28px 24px;
@@ -758,8 +759,8 @@ const CancelButton = styled.button`
 
 const DangerConfirmButton = styled.button`
   padding: 9px 18px;
-  background: #dc2626;
-  color: white;
+  background: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -768,7 +769,7 @@ const DangerConfirmButton = styled.button`
   cursor: pointer;
   transition: background 150ms ease;
   &:hover:not(:disabled) {
-    background: #b91c1c;
+    background: ${({ theme }) => theme.colors.terracotta[700]};
   }
   &:disabled {
     opacity: 0.5;
@@ -779,7 +780,7 @@ const DangerConfirmButton = styled.button`
 const ConfirmButton = styled.button`
   padding: 9px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -805,17 +806,11 @@ const InfoPanel = styled.div<{ $variant: 'info' | 'warning' }>`
   font-size: 13px;
   line-height: 1.65;
   background: ${({ $variant, theme }) =>
-    $variant === 'warning'
-      ? (theme.colors.warning?.light ?? '#fef9c3')
-      : '#eff6ff'};
+    $variant === 'warning' ? theme.colors.warningBg : theme.colors.infoBg};
   color: ${({ $variant, theme }) =>
-    $variant === 'warning'
-      ? (theme.colors.warning?.dark ?? '#78350f')
-      : '#1e40af'};
+    $variant === 'warning' ? theme.colors.warning : theme.colors.info};
   border-left: 3px solid ${({ $variant, theme }) =>
-    $variant === 'warning'
-      ? (theme.colors.warning?.main ?? '#ca8a04')
-      : '#3b82f6'};
+    $variant === 'warning' ? theme.colors.warning : theme.colors.info};
 `;
 
 const InfoPanelTitle = styled.p`
@@ -886,6 +881,7 @@ const PreviewTd = styled.td`
   &:nth-child(5) {
     text-align: right;
     font-variant-numeric: tabular-nums;
+    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   }
 `;
 
@@ -900,8 +896,8 @@ const ImbalanceWarningTd = styled.td.attrs({ colSpan: 5 })`
   padding: 6px 10px;
   font-size: 11px;
   font-weight: 700;
-  color: #dc2626;
-  background: #fef2f2;
+  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.errorBg};
   text-align: center;
 `;
 
@@ -927,13 +923,13 @@ const ModalLoadingState = styled.div`
 /** Inline error state inside the modal (dry-run failed) */
 const ModalErrorBanner = styled.div`
   padding: 14px 16px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 10px;
   font-size: 13px;
   line-height: 1.6;
   margin-bottom: 8px;
-  border-left: 3px solid ${({ theme }) => theme.colors.error || '#dc2626'};
+  border-left: 3px solid ${({ theme }) => theme.colors.error};
 `;
 
 const PreviewSectionTitle = styled.p`
@@ -958,7 +954,7 @@ const FieldLabel = styled.label`
 `;
 
 const RequiredMark = styled.span`
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.error};
   margin-left: 2px;
 `;
 
@@ -978,7 +974,7 @@ const Textarea = styled.textarea`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100] ?? '#dbeafe'};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
   }
   &::placeholder {
     color: ${({ theme }) => theme.colors.textSecondary};
@@ -990,20 +986,20 @@ const CharCount = styled.p<{ $warn: boolean }>`
   font-size: 11px;
   text-align: right;
   margin: 4px 0 0;
-  color: ${({ $warn, theme }) => ($warn ? theme.colors.error || '#dc2626' : theme.colors.textSecondary)};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.textSecondary)};
 `;
 
 // ─── Reopen warning box ────────────────────────────────────────────────────────
 
 const WarningBox = styled.div`
   padding: 14px 16px;
-  background: ${({ theme }) => theme.colors.warning?.light ?? '#fef9c3'};
+  background: ${({ theme }) => theme.colors.warningBg};
   border-radius: 10px;
   margin-bottom: 20px;
   font-size: 13px;
   line-height: 1.65;
-  color: ${({ theme }) => theme.colors.warning?.dark ?? '#78350f'};
-  border-left: 3px solid ${({ theme }) => theme.colors.warning?.main ?? '#ca8a04'};
+  color: ${({ theme }) => theme.colors.warning};
+  border-left: 3px solid ${({ theme }) => theme.colors.warning};
 `;
 
 // ─── Wizard-specific styled components ────────────────────────────────────────
@@ -1076,7 +1072,7 @@ const RadioLabel = styled.label`
 
 const WizardErrorText = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.error};
   margin: 4px 0 0;
 `;
 

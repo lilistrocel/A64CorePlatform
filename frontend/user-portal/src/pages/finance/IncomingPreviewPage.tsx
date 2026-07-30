@@ -23,7 +23,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   useIncomingPRs,
@@ -178,9 +178,9 @@ const PendingBadge = styled.span`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.warningBg ?? '#fffbeb'};
-  color: ${({ theme }) => theme.colors.warning ?? '#92400e'};
-  border: 1px solid ${({ theme }) => theme.colors.warning ?? '#fde68a'};
+  background: ${({ theme }) => theme.colors.warningBg};
+  color: ${({ theme }) => theme.colors.warning};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   white-space: nowrap;
   align-self: center;
 `;
@@ -220,7 +220,7 @@ const PillButton = styled.button<PillButtonProps>`
     $active ? theme.colors.surface : 'transparent'};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.textPrimary : theme.colors.textSecondary};
-  box-shadow: ${({ $active }) => ($active ? '0 1px 3px rgba(0,0,0,0.12)' : 'none')};
+  box-shadow: ${({ $active }) => ($active ? '0 1px 3px rgba(59, 44, 24, 0.12)' : 'none')};
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
@@ -354,9 +354,9 @@ const PRPill = styled.span`
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.infoBg ?? '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info ?? '#2196f3'};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.info};
 `;
 
 const POPill = styled.span`
@@ -366,9 +366,9 @@ const POPill = styled.span`
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.successBg ?? '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.success ?? '#10b981'};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  background: ${({ theme }) => theme.colors.successBg};
+  color: ${({ theme }) => theme.colors.success};
 `;
 
 const UrgentPill = styled.span`
@@ -378,8 +378,8 @@ const UrgentPill = styled.span`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.errorBg ?? '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   margin-left: 6px;
 `;
 
@@ -601,6 +601,7 @@ interface ExpansionProps {
 }
 
 function RowExpansion({ row, organizationId }: ExpansionProps) {
+  const theme = useTheme();
   const isPR = row.docType === 'PR';
 
   const prDetail = useIncomingPRDetail(
@@ -664,7 +665,7 @@ function RowExpansion({ row, organizationId }: ExpansionProps) {
                 {lines.map((line) => (
                   <tr key={line.lineId}>
                     <LinesTd>{line.lineNumber}</LinesTd>
-                    <LinesTd style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <LinesTd style={{ fontFamily: theme.typography.fontFamily.mono }}>
                       {line.itemCode}
                     </LinesTd>
                     <LinesTd>{line.itemName}</LinesTd>
@@ -736,6 +737,7 @@ function RowExpansion({ row, organizationId }: ExpansionProps) {
 // ─── Main Page Component ───────────────────────────────────────────────────────
 
 export function IncomingPreviewPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
 
   // Resolve org ID from user runtime shape (memory note: uses userId not id)
@@ -987,7 +989,7 @@ export function IncomingPreviewPage() {
                               border: 'none',
                               padding: 0,
                               cursor: 'pointer',
-                              fontFamily: "'JetBrains Mono', monospace",
+                              fontFamily: theme.typography.fontFamily.mono,
                               fontSize: 13,
                               fontWeight: 600,
                               color: 'inherit',

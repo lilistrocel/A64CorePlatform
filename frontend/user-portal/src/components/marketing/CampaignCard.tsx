@@ -24,7 +24,7 @@ const Card = styled.div`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: ${({ theme }) => theme.shadows.md};
     transform: translateY(-2px);
   }
 `;
@@ -53,9 +53,9 @@ const Badge = styled.span<BadgeProps>`
 `;
 
 const Code = styled.div`
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 13px;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   margin-bottom: 8px;
 `;
 
@@ -99,8 +99,8 @@ const TagsContainer = styled.div`
 
 const Tag = styled.span`
   padding: 4px 10px;
-  background: #E0F2FE;
-  color: #0369A1;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[700]};
   border-radius: 12px;
   font-size: 12px;
 `;

@@ -59,7 +59,7 @@ const Wrapper = styled.div`
 const ComboInput = styled.input<{ $hasError?: boolean }>`
   padding: 7px 8px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.background};
@@ -74,10 +74,10 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
     box-shadow: 0 0 0 2px
-      ${({ $hasError }) =>
-        $hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'};
+      ${({ $hasError, theme }) =>
+        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
   }
 
   &:disabled {
@@ -95,10 +95,10 @@ const SelectedChip = styled.div<{ $hasError?: boolean; $disabled?: boolean }>`
   gap: 8px;
   padding: 6px 8px 6px 10px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 6px;
   background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.surface : (theme.colors.primary as Record<string, string>)['50'] ?? '#EFF6FF'};
+    $disabled ? theme.colors.surface : (theme.colors.primary as Record<string, string>)['50'] ?? theme.colors.primary[50]};
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
@@ -133,12 +133,12 @@ const ClearButton = styled.button`
   transition: background 120ms ease-in-out, color 120ms ease-in-out;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: ${({ theme }) => `${theme.colors.error}1A`};
+    color: ${({ theme }) => theme.colors.error};
   }
 
   &:focus-visible {
-    outline: 2px solid #ef4444;
+    outline: 2px solid ${({ theme }) => theme.colors.error};
     outline-offset: 2px;
   }
 `;

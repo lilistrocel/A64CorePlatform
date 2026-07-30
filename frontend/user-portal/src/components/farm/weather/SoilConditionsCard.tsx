@@ -12,7 +12,7 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -80,12 +80,13 @@ const DepthIndicator = styled.div<{ $depth: number }>`
   min-height: 32px;
   border-radius: 2px;
   margin-right: 12px;
-  background: ${({ $depth }) => {
-    // Color gradient from light to dark based on depth
-    if ($depth === 0) return '#A5D6A7';  // Light green - surface
-    if ($depth === 1) return '#66BB6A';  // Medium green
-    if ($depth === 2) return '#43A047';  // Darker green
-    return '#2E7D32';                     // Dark green - deep
+  background: ${({ $depth, theme }) => {
+    // Color gradient from light to dark based on depth — sequential emerald
+    // ramp, ordering preserved (shallow = light, deep = dark).
+    if ($depth === 0) return theme.colors.emerald[200];  // surface
+    if ($depth === 1) return theme.colors.emerald[400];  // shallow-mid
+    if ($depth === 2) return theme.colors.emerald[600];  // deep-mid
+    return theme.colors.emerald[800];                     // deep
   }};
 `;
 

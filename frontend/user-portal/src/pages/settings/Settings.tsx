@@ -1038,7 +1038,7 @@ const ModifiedBadge = styled.span`
   padding: 4px 8px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
-  color: #b45309;
+  color: ${({ theme }: any) => theme.colors.gold[700]};
   background: ${({ theme }: any) => theme.colors.warningBg};
   border-radius: 4px;
 `;
@@ -1048,7 +1048,7 @@ const DefaultBadge = styled.span`
   padding: 4px 8px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
-  color: #059669;
+  color: ${({ theme }: any) => theme.colors.emerald[700]};
   background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 4px;
 `;
@@ -1075,17 +1075,17 @@ const LoadingText = styled.div`
 `;
 
 const ErrorText = styled.div`
-  color: ${({ theme }: any) => theme.colors.error[500]};
+  color: ${({ theme }: any) => theme.colors.error};
   padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.error[50]};
+  background: ${({ theme }: any) => theme.colors.errorBg};
   border-radius: 6px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
 `;
 
 const SuccessText = styled.div`
-  color: ${({ theme }: any) => theme.colors.success[700]};
+  color: ${({ theme }: any) => theme.colors.emerald[700]};
   padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.success[50]};
+  background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 6px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
 `;
@@ -1147,7 +1147,7 @@ const BaseButton = styled.button`
 
 const PrimaryButton = styled(BaseButton)`
   background: ${({ theme }: any) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }: any) => theme.colors.onAccent};
   border: none;
 
   &:hover:not(:disabled) {
@@ -1168,12 +1168,12 @@ const SecondaryButton = styled(BaseButton)`
 
 const DangerButton = styled(BaseButton)`
   background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.error[600]};
-  border: 1px solid ${({ theme }: any) => theme.colors.error[300]};
+  color: ${({ theme }: any) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }: any) => theme.colors.terracotta[300]};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.error[50]};
-    border-color: ${({ theme }: any) => theme.colors.error[500]};
+    background: ${({ theme }: any) => theme.colors.errorBg};
+    border-color: ${({ theme }: any) => theme.colors.error};
   }
 `;
 
@@ -1253,7 +1253,7 @@ const FarmingYearExample = styled.div`
 
 const ConfirmationBox = styled.div`
   background: ${({ theme }: any) => theme.colors.warningBg};
-  border: 1px solid #f59e0b;
+  border: 1px solid ${({ theme }: any) => theme.colors.warning};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.lg};
   margin-top: ${({ theme }: any) => theme.spacing.md};
@@ -1262,13 +1262,13 @@ const ConfirmationBox = styled.div`
 const ConfirmationTitle = styled.h4`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: #92400e;
+  color: ${({ theme }: any) => theme.colors.gold[800]};
   margin: 0 0 ${({ theme }: any) => theme.spacing.sm} 0;
 `;
 
 const ConfirmationText = styled.p`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: #92400e;
+  color: ${({ theme }: any) => theme.colors.gold[800]};
   margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
   line-height: 1.5;
 `;
@@ -1279,7 +1279,7 @@ const MfaEnabledBadge = styled.span`
   padding: 4px 12px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: #059669;
+  color: ${({ theme }: any) => theme.colors.emerald[700]};
   background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 4px;
 `;
@@ -1289,14 +1289,14 @@ const MfaPendingBadge = styled.span`
   padding: 4px 12px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: #b45309;
+  color: ${({ theme }: any) => theme.colors.gold[700]};
   background: ${({ theme }: any) => theme.colors.warningBg};
   border-radius: 4px;
 `;
 
 const MfaWarning = styled.div`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.error[600]};
+  color: ${({ theme }: any) => theme.colors.terracotta[600]};
   margin-top: ${({ theme }: any) => theme.spacing.xs};
 `;
 
@@ -1313,7 +1313,8 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
+  background: rgba(14, 19, 48, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1329,7 +1330,7 @@ const ModalContent = styled.div`
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: ${({ theme }: any) => theme.shadows.xl};
 `;
 
 const ModalTitle = styled.h2`
@@ -1348,21 +1349,21 @@ const ModalDescription = styled.p`
 
 const ModalWarning = styled.div`
   background: ${({ theme }: any) => theme.colors.warningBg};
-  border: 1px solid #f59e0b;
+  border: 1px solid ${({ theme }: any) => theme.colors.warning};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.md};
   margin-bottom: ${({ theme }: any) => theme.spacing.lg};
-  color: #92400e;
+  color: ${({ theme }: any) => theme.colors.gold[800]};
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
 `;
 
 const ModalError = styled.div`
-  background: ${({ theme }: any) => theme.colors.error[50]};
-  border: 1px solid ${({ theme }: any) => theme.colors.error[300]};
+  background: ${({ theme }: any) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }: any) => theme.colors.terracotta[300]};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.md};
   margin-bottom: ${({ theme }: any) => theme.spacing.lg};
-  color: ${({ theme }: any) => theme.colors.error[600]};
+  color: ${({ theme }: any) => theme.colors.terracotta[600]};
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
 `;
 

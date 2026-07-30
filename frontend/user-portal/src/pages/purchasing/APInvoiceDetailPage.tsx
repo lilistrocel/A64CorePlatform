@@ -20,7 +20,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   useAPInvoice,
   useSubmitAPInvoice,
@@ -75,7 +75,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -87,13 +87,13 @@ const PrimaryButton = styled.button`
 `;
 
 const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
-  &:hover { background: #059669; }
+  background: ${({ theme }) => theme.colors.success};
+  &:hover { background: ${({ theme }) => theme.colors.emerald[600]}; }
 `;
 
 const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.error || '#ef4444'};
-  &:hover { background: #dc2626; }
+  background: ${({ theme }) => theme.colors.error};
+  &:hover { background: ${({ theme }) => theme.colors.terracotta[600]}; }
 `;
 
 const GhostButton = styled.button`
@@ -172,7 +172,7 @@ const Td = styled.td`
 
 /** Line row is amber-tinted when variance exists */
 const LineRow = styled.tr<{ $hasVariance: boolean }>`
-  background: ${({ $hasVariance }) => ($hasVariance ? '#fffbeb' : 'transparent')};
+  background: ${({ $hasVariance, theme }) => ($hasVariance ? theme.colors.gold[50] : 'transparent')};
   transition: background 100ms ease;
   &:last-child td { border-bottom: none; }
 `;
@@ -184,22 +184,22 @@ const StatusBadge = styled.span<{ $status: string }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'Draft':            return '#f3f4f6';
-      case 'Pending Approval': return '#fef3c7';
-      case 'Approved':         return '#d1fae5';
-      case 'Rejected':         return '#fee2e2';
-      default:                 return '#f3f4f6';
+      case 'Draft':            return theme.colors.neutral[100];
+      case 'Pending Approval': return theme.colors.warningBg;
+      case 'Approved':         return theme.colors.emerald[100];
+      case 'Rejected':         return theme.colors.terracotta[100];
+      default:                 return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'Draft':            return '#6b7280';
-      case 'Pending Approval': return '#92400e';
-      case 'Approved':         return '#065f46';
-      case 'Rejected':         return '#991b1b';
-      default:                 return '#6b7280';
+      case 'Draft':            return theme.colors.textSecondary;
+      case 'Pending Approval': return theme.colors.gold[800];
+      case 'Approved':         return theme.colors.emerald[700];
+      case 'Rejected':         return theme.colors.terracotta[800];
+      default:                 return theme.colors.textSecondary;
     }
   }};
 `;
@@ -208,15 +208,15 @@ const StatusBadge = styled.span<{ $status: string }>`
 const VarianceValue = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
   font-weight: ${({ $sign }) => ($sign === 'zero' ? '400' : '600')};
   font-size: 13px;
-  color: ${({ $sign }) => {
-    if ($sign === 'positive') return '#dc2626';
-    if ($sign === 'negative') return '#059669';
-    return '#9ca3af';
+  color: ${({ $sign, theme }) => {
+    if ($sign === 'positive') return theme.colors.terracotta[600];
+    if ($sign === 'negative') return theme.colors.emerald[600];
+    return theme.colors.textDisabled;
   }};
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -257,8 +257,8 @@ const JELinkBanner = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ecfdf5;
-  border: 1px solid #6ee7b7;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
   border-radius: 8px;
   padding: 14px 18px;
   margin-bottom: 20px;
@@ -268,20 +268,20 @@ const JELinkBanner = styled.div`
 
 const JELinkText = styled.span`
   font-size: 14px;
-  color: #065f46;
+  color: ${({ theme }) => theme.colors.emerald[700]};
   font-weight: 500;
 `;
 
 const JELinkButton = styled.a`
   font-size: 13px;
-  color: #059669;
+  color: ${({ theme }) => theme.colors.emerald[600]};
   font-weight: 600;
   text-decoration: none;
-  border: 1px solid #6ee7b7;
+  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
   border-radius: 6px;
   padding: 6px 14px;
   cursor: pointer;
-  &:hover { background: #d1fae5; }
+  &:hover { background: ${({ theme }) => theme.colors.emerald[100]}; }
 `;
 
 /** Variance tooltip trigger — "?" badge with title hover */
@@ -422,6 +422,7 @@ export function APInvoiceDetailPage() {
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const orgId = user?.organizationId ?? '';
   const userRole = (user as { role?: string })?.role ?? '';
@@ -532,14 +533,14 @@ export function APInvoiceDetailPage() {
       <TitleRow>
         <div>
           <Title>{ap.docNumber}</Title>
-          <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 }}>
             {ap.vendorName ?? ap.vendorCode ?? 'No vendor'} &bull;{' '}
             Vendor Invoice: <strong>{ap.invoiceNumber}</strong>
             {ap.grDocNumber && (
               <>
                 {' '}&bull;{' '}
                 <span
-                  style={{ color: '#2563eb', cursor: 'pointer' }}
+                  style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
                   onClick={() => navigate(`/purchasing/gr/${ap.grDocId}`)}
                 >
                   GR: {ap.grDocNumber}
@@ -550,7 +551,7 @@ export function APInvoiceDetailPage() {
               <>
                 {' '}&bull;{' '}
                 <span
-                  style={{ color: '#2563eb', cursor: 'pointer' }}
+                  style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
                   onClick={() => navigate(`/purchasing/po/${ap.poDocId}`)}
                 >
                   PO: {ap.poDocNumber}
@@ -600,9 +601,9 @@ export function APInvoiceDetailPage() {
 
           {(isApproved || isRejected) && (
             <span style={{
-              fontSize: 13, color: '#6b7280',
+              fontSize: 13, color: theme.colors.textSecondary,
               padding: '8px 12px',
-              background: '#f3f4f6',
+              background: theme.colors.neutral[100],
               borderRadius: 8,
             }}>
               Read-only ({ap.status})
@@ -633,7 +634,7 @@ export function APInvoiceDetailPage() {
             <InfoLabel>Source GR</InfoLabel>
             <InfoValue>
               <span
-                style={{ color: '#2563eb', cursor: 'pointer' }}
+                style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
                 onClick={() => navigate(`/purchasing/gr/${ap.grDocId}`)}
               >
                 {ap.grDocNumber ?? ap.grDocId}
@@ -645,7 +646,7 @@ export function APInvoiceDetailPage() {
               <InfoLabel>Source PO</InfoLabel>
               <InfoValue>
                 <span
-                  style={{ color: '#2563eb', cursor: 'pointer' }}
+                  style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
                   onClick={() => navigate(`/purchasing/po/${ap.poDocId}`)}
                 >
                   {ap.poDocNumber ?? ap.poDocId}
@@ -691,7 +692,7 @@ export function APInvoiceDetailPage() {
                 <strong>{totalVarianceLabel}</strong>
               </VarianceValue>
               {totalVarianceSign !== 'zero' && (
-                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: theme.colors.textDisabled, marginTop: 2 }}>
                   {totalVarianceSign === 'positive'
                     ? 'Vendor invoiced more than agreed.'
                     : 'Vendor invoiced less than agreed.'}
@@ -719,7 +720,7 @@ export function APInvoiceDetailPage() {
               {ap.rejectionComment && (
                 <InfoItem style={{ gridColumn: '1/-1' }}>
                   <InfoLabel>Rejection Reason</InfoLabel>
-                  <InfoValue style={{ color: '#991b1b' }}>{ap.rejectionComment}</InfoValue>
+                  <InfoValue style={{ color: theme.colors.terracotta[800] }}>{ap.rejectionComment}</InfoValue>
                 </InfoItem>
               )}
             </>
@@ -766,11 +767,11 @@ export function APInvoiceDetailPage() {
                       <Td>{line.lineNumber}</Td>
                       <Td>
                         <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>{line.itemName}</div>
+                        <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>{line.itemName}</div>
                       </Td>
                       <Td>{line.quantity}</Td>
                       <Td>{line.uom}</Td>
-                      <Td style={{ color: '#6b7280' }}>{formatAmount(line.poUnitPrice, currency)}</Td>
+                      <Td style={{ color: theme.colors.textSecondary }}>{formatAmount(line.poUnitPrice, currency)}</Td>
                       <Td><strong>{formatAmount(line.invoiceUnitPrice, currency)}</strong></Td>
                       <Td>
                         <VarianceValue $sign={lineVarianceSign}>

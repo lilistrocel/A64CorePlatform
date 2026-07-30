@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   usePendingApprovals,
   useApprovalHistory,
@@ -54,7 +54,7 @@ const Tab = styled.button<{ $active: boolean }>`
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '700' : '400')};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[600] || '#2563eb' : theme.colors.textSecondary};
+    $active ? theme.colors.primary[600] : theme.colors.textSecondary};
   border-bottom: 2px solid ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : 'transparent'};
   margin-bottom: -2px;
@@ -102,17 +102,17 @@ const DocTypeBadge = styled.span<{ $type: string }>`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
-  background: ${({ $type }) => {
-    if ($type === 'PR') return '#dbeafe';
-    if ($type === 'PO') return '#d1fae5';
-    if ($type === 'AP') return '#fef3c7';  // amber for AP invoices
-    return '#f3f4f6';
+  background: ${({ $type, theme }) => {
+    if ($type === 'PR') return theme.colors.primary[100];
+    if ($type === 'PO') return theme.colors.emerald[100];
+    if ($type === 'AP') return theme.colors.warningBg;  // gold for AP invoices
+    return theme.colors.neutral[100];
   }};
-  color: ${({ $type }) => {
-    if ($type === 'PR') return '#1d4ed8';
-    if ($type === 'PO') return '#065f46';
-    if ($type === 'AP') return '#92400e';  // amber-dark for AP invoices
-    return '#6b7280';
+  color: ${({ $type, theme }) => {
+    if ($type === 'PR') return theme.colors.primary[700];
+    if ($type === 'PO') return theme.colors.emerald[700];
+    if ($type === 'AP') return theme.colors.gold[800];  // gold-dark for AP invoices
+    return theme.colors.textSecondary;
   }};
   margin-right: 6px;
 `;
@@ -125,8 +125,8 @@ const ActionCell = styled.td`
 
 const SuccessButton = styled.button`
   padding: 6px 14px;
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -134,20 +134,20 @@ const SuccessButton = styled.button`
   cursor: pointer;
   margin-right: 8px;
   transition: background 120ms ease;
-  &:hover { background: #059669; }
+  &:hover { background: ${({ theme }) => theme.colors.emerald[600]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const DangerButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   transition: all 120ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -243,7 +243,7 @@ const Textarea = styled.textarea`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -271,6 +271,7 @@ function RejectModal({ item, onClose, onConfirm }: RejectModalProps) {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const theme = useTheme();
 
   return (
     <Overlay>
@@ -281,7 +282,7 @@ function RejectModal({ item, onClose, onConfirm }: RejectModalProps) {
           <CloseButton onClick={onClose}>✕</CloseButton>
         </ModalHeader>
         <ModalBody>
-          <p style={{ fontSize: 14, color: '#6b7280', marginTop: 0 }}>
+          <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 0 }}>
             Please provide a reason for rejection.
           </p>
           <Textarea
@@ -322,6 +323,7 @@ export function ApprovalInboxPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const orgId = user?.organizationId ?? '';
+  const theme = useTheme();
 
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
   const [rejectingItem, setRejectingItem] = useState<PendingApprovalItem | null>(null);
@@ -475,7 +477,7 @@ export function ApprovalInboxPage() {
                     </Td>
                     <Td>
                       <span style={{
-                        color: item.finalState === 'Approved' ? '#059669' : '#dc2626',
+                        color: item.finalState === 'Approved' ? theme.colors.emerald[600] : theme.colors.terracotta[600],
                         fontWeight: 600,
                       }}>
                         {item.finalState}

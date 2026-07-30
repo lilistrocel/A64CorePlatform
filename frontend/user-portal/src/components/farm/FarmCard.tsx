@@ -14,7 +14,8 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import type { Farm, FarmSummary } from '../../types/farm';
 import { formatNumber } from '../../utils';
 
@@ -34,21 +35,14 @@ export interface FarmCardProps {
 // YIELD ACHIEVEMENT HELPERS
 // ============================================================================
 
-/** Band thresholds and their accent colors (fixed, not theme tokens) */
-const YIELD_COLORS = {
-  onTrack: '#10B981',  // emerald — >= 90%
-  warning: '#F59E0B',  // amber  — 70–89%
-  behind:  '#EF4444',  // red    — < 70%
-  neutral: '#9CA3AF',  // grey   — no data
-} as const;
+/** Band thresholds mapped to theme tokens (brand semantic colors, not fixed hexes) */
+type YieldColor = string;
 
-type YieldColor = typeof YIELD_COLORS[keyof typeof YIELD_COLORS];
-
-function getYieldColor(ratio: number, hasData: boolean): YieldColor {
-  if (!hasData) return YIELD_COLORS.neutral;
-  if (ratio >= 0.9) return YIELD_COLORS.onTrack;
-  if (ratio >= 0.7) return YIELD_COLORS.warning;
-  return YIELD_COLORS.behind;
+function getYieldColor(ratio: number, hasData: boolean, theme: Theme): YieldColor {
+  if (!hasData) return theme.colors.textDisabled;   // grey   — no data
+  if (ratio >= 0.9) return theme.colors.success;     // emerald — >= 90%
+  if (ratio >= 0.7) return theme.colors.warning;     // gold    — 70–89%
+  return theme.colors.error;                          // terracotta — < 70%
 }
 
 // ============================================================================
@@ -65,14 +59,17 @@ interface StatePillDef {
  * Ordered list of states to always render in the pill row.
  * Maps the FarmSummary.blocksByState keys to display info.
  * Note: FarmSummary uses "growing" for what the UI calls "Planted".
+ * A function (not a module-level constant) because it needs the runtime theme.
  */
-const STATE_PILL_DEFS: StatePillDef[] = [
-  { key: 'empty',      label: 'Empty',      color: '#6B7280' },
-  { key: 'planned',    label: 'Planned',    color: '#3B82F6' },
-  { key: 'growing',    label: 'Planted',    color: '#10B981' },
-  { key: 'harvesting', label: 'Harvesting', color: '#F59E0B' },
-  { key: 'alert',      label: 'Alert',      color: '#EF4444' },
-];
+function getStatePillDefs(theme: Theme): StatePillDef[] {
+  return [
+    { key: 'empty',      label: 'Empty',      color: theme.colors.textSecondary },
+    { key: 'planned',    label: 'Planned',    color: theme.colors.primary[500] },
+    { key: 'growing',    label: 'Planted',    color: theme.colors.success },
+    { key: 'harvesting', label: 'Harvesting', color: theme.colors.warning },
+    { key: 'alert',      label: 'Alert',      color: theme.colors.error },
+  ];
+}
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -82,7 +79,7 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
   cursor: pointer;
@@ -92,7 +89,7 @@ const Card = styled.div`
   gap: 16px;
 
   &:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: ${({ theme }) => theme.shadows.lg};
     transform: translateY(-2px);
   }
 
@@ -204,8 +201,8 @@ const StatusBadge = styled.span<{ $isActive: boolean }>`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $isActive }) => ($isActive ? '#10B981' : '#6B7280')};
-  color: white;
+  background: ${({ $isActive, theme }) => ($isActive ? theme.colors.success : theme.colors.textSecondary)};
+  color: ${({ theme }) => theme.colors.onAccent};
   flex-shrink: 0;
   white-space: nowrap;
   align-self: flex-start;
@@ -395,15 +392,15 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.primary[500]};
-        color: white;
+        color: ${theme.colors.onAccent};
         &:hover { background: ${theme.colors.primary[700]}; }
       `;
     }
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover { background: ${theme.colors.errorBg}; }
       `;
     }
@@ -443,6 +440,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 
 export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: FarmCardProps) {
   const navigate = useNavigate();
+  const theme = useTheme();
 
   // --- Event handlers (stopPropagation keeps button clicks from triggering card nav) ---
 
@@ -497,7 +495,7 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
   const cappedPercent = Math.min(100, ratio * 100);
   const displayPercent = Math.round(ratio * 100);
   const overflowPercent = ratio > 1 ? Math.round((ratio - 1) * 100) : 0;
-  const yieldColor = getYieldColor(ratio, hasYieldData);
+  const yieldColor = getYieldColor(ratio, hasYieldData, theme);
 
   // --- Block counts ---
   const physicalCount = summary?.physicalBlocks ?? summary?.totalBlocks;
@@ -594,7 +592,7 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
       {/* 4. Block state pill row — always rendered, greyed when count is 0 */}
       {summary && (
         <StatePillRow role="list" aria-label="Blocks by state">
-          {STATE_PILL_DEFS.map(({ key, label, color }) => {
+          {getStatePillDefs(theme).map(({ key, label, color }) => {
             const count = summary.blocksByState[key] ?? 0;
             const active = count > 0;
             return (

@@ -23,7 +23,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -151,7 +151,7 @@ const Label = styled.label`
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 9px 12px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#dc2626' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface};
@@ -163,7 +163,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 9px 12px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#dc2626' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface};
@@ -187,7 +187,7 @@ const Textarea = styled.textarea`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const LockedValue = styled.div`
@@ -228,17 +228,17 @@ const Td = styled.td`
 const TdInput = styled.input<{ $hasError?: boolean }>`
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#dc2626' : '#e5e7eb')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.border)};
   border-radius: 6px;
   font-size: 13px;
-  background: #fff;
-  &:focus { outline: none; border-color: #3b82f6; }
-  &:disabled { background: #f9fafb; color: #6b7280; }
+  background: ${({ theme }) => theme.colors.background};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:disabled { background: ${({ theme }) => theme.colors.neutral[100]}; color: ${({ theme }) => theme.colors.textSecondary}; }
 `;
 
 const MaxQtyHint = styled.span`
   font-size: 11px;
-  color: #9ca3af;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 2px;
   display: block;
 `;
@@ -246,11 +246,11 @@ const MaxQtyHint = styled.span`
 const DeleteLineButton = styled.button`
   padding: 5px 8px;
   background: none;
-  border: 1px solid #fecaca;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 6px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   cursor: pointer;
-  &:hover { background: #fef2f2; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
@@ -264,7 +264,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 28px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -287,10 +287,10 @@ const SecondaryButton = styled.button`
 
 const SubmitError = styled.div`
   padding: 12px 16px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #991b1b;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 16px;
 `;
@@ -343,6 +343,7 @@ function thirtyDaysLater(): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ReturnRequestFormPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId, dnDocEntry } = useParams<{ docId?: string; dnDocEntry?: string }>();
   const user = useAuthStore((s) => s.user);
@@ -749,7 +750,7 @@ export function ReturnRequestFormPage() {
               <tbody>
                 {fields.length === 0 ? (
                   <tr>
-                    <Td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: '#9ca3af' }}>
+                    <Td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: theme.colors.textDisabled }}>
                       No lines yet.
                       {isFromDelivery && ' (Loading from Delivery...)'}
                     </Td>
@@ -759,7 +760,7 @@ export function ReturnRequestFormPage() {
                     const maxQty = watchedLines?.[idx]?.maxQty;
                     return (
                       <tr key={field.id}>
-                        <Td style={{ color: '#9ca3af', fontWeight: 600 }}>{idx + 1}</Td>
+                        <Td style={{ color: theme.colors.textDisabled, fontWeight: 600 }}>{idx + 1}</Td>
 
                         {/* Item picker — disabled in from-delivery mode (locked to source) */}
                         <Td>
@@ -817,7 +818,7 @@ export function ReturnRequestFormPage() {
                             <MaxQtyHint>Max: {maxQty}</MaxQtyHint>
                           )}
                           {errors.lines?.[idx]?.requestedQty && (
-                            <MaxQtyHint style={{ color: '#dc2626' }}>
+                            <MaxQtyHint style={{ color: theme.colors.error }}>
                               {errors.lines[idx]?.requestedQty?.message}
                             </MaxQtyHint>
                           )}

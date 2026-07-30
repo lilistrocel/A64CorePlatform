@@ -316,7 +316,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -355,7 +355,7 @@ const Section = styled.div`
 const SectionTitle = styled.h3`
   font-size: 14px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.neutral[700]};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 12px 0;
@@ -374,7 +374,7 @@ const Setting = styled.div`
 
 const SettingLabel = styled.label`
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   flex: 1;
   display: flex;
   align-items: center;
@@ -394,7 +394,7 @@ const RangeInput = styled.input`
 const SettingValue = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   min-width: 30px;
   text-align: right;
 `;
@@ -411,7 +411,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -423,15 +423,15 @@ const IconSetGrid = styled.div`
 
 const IconSetOption = styled.div<{ $isSelected: boolean }>`
   padding: 16px;
-  border: 2px solid ${(props) => (props.$isSelected ? '#3B82F6' : '#E0E0E0')};
+  border: 2px solid ${(props) => (props.$isSelected ? props.theme.colors.primary[500] : props.theme.colors.border)};
   border-radius: 8px;
-  background: ${(props) => (props.$isSelected ? '#E3F2FD' : 'white')};
+  background: ${(props) => (props.$isSelected ? props.theme.colors.infoBg : props.theme.colors.background)};
   cursor: pointer;
   text-align: center;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
     background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
@@ -439,7 +439,7 @@ const IconSetOption = styled.div<{ $isSelected: boolean }>`
 const IconSetName = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
@@ -458,7 +458,7 @@ const ColorGroup = styled.div``;
 const ColorGroupTitle = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 8px;
 `;
 
@@ -492,10 +492,10 @@ const Footer = styled.div`
 
 const ResetButton = styled.button`
   padding: 10px 20px;
-  border: 2px solid #f44336;
+  border: 2px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.background};
-  color: #f44336;
+  color: ${({ theme }) => theme.colors.error};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -510,14 +510,14 @@ const SaveButton = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;

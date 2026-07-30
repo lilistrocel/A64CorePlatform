@@ -32,7 +32,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import axios from 'axios';
 import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -181,7 +181,7 @@ const Label = styled.label`
 const Input = styled.input<{ $error?: boolean }>`
   padding: 9px 12px;
   border: 1px solid ${({ $error, theme }) =>
-    $error ? (theme.colors.error || '#dc2626') : theme.colors.neutral[300]};
+    $error ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -201,7 +201,7 @@ const Input = styled.input<{ $error?: boolean }>`
 const Select = styled.select<{ $error?: boolean }>`
   padding: 9px 12px;
   border: 1px solid ${({ $error, theme }) =>
-    $error ? (theme.colors.error || '#dc2626') : theme.colors.neutral[300]};
+    $error ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -229,7 +229,7 @@ const Textarea = styled.textarea`
 
 const ErrorMsg = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const Table = styled.table`
@@ -280,9 +280,9 @@ const IconButton = styled.button`
   align-items: center;
   justify-content: center;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-    color: ${({ theme }) => theme.colors.error || '#dc2626'};
-    border-color: ${({ theme }) => theme.colors.error || '#dc2626'};
+    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.terracotta[600]};
+    border-color: ${({ theme }) => theme.colors.terracotta[600]};
   }
 `;
 
@@ -350,7 +350,7 @@ const FormActions = styled.div`
 const PrimaryButton = styled.button`
   padding: 11px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -372,9 +372,9 @@ const SecondaryButton = styled.button`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -389,9 +389,9 @@ const LoadingState = styled.div`
 `;
 
 const InfoBanner = styled.div`
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.lapis[700]};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -403,9 +403,9 @@ const InfoBanner = styled.div`
  * Inlined within the Card (no bottom margin needed — card padding provides spacing).
  */
 const DirectCreateNote = styled.div`
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.lapis[700]};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 16px;
@@ -437,6 +437,7 @@ function calcLineTotals(line: {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ArCreditNoteFormPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { rtnDocEntry, ariDocEntry, docId } = useParams<{
     rtnDocEntry?: string;
@@ -1068,7 +1069,7 @@ export function ArCreditNoteFormPage() {
 
                   return (
                     <tr key={field.id}>
-                      <Td style={{ color: '#9ca3af', fontSize: 12 }}>{idx + 1}</Td>
+                      <Td style={{ color: theme.colors.textDisabled, fontSize: 12 }}>{idx + 1}</Td>
                       <Td>
                         <Controller
                           name={`lines.${idx}.itemId`}
@@ -1204,7 +1205,7 @@ export function ArCreditNoteFormPage() {
         {/* ── Allocations Card ── */}
         <Card>
           <CardTitle>Invoice Allocations</CardTitle>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 0, marginBottom: 16 }}>
             The sum of all allocation amounts must equal the credit note gross total ({totals.gross.toFixed(2)}).
           </p>
 
@@ -1227,7 +1228,7 @@ export function ArCreditNoteFormPage() {
             <tbody>
               {allocFields.map((field, idx) => (
                 <tr key={field.id}>
-                  <Td style={{ color: '#9ca3af', fontSize: 12 }}>{idx + 1}</Td>
+                  <Td style={{ color: theme.colors.textDisabled, fontSize: 12 }}>{idx + 1}</Td>
                   <Td>
                     <SmallInput
                       {...register(`allocations.${idx}.arInvoiceDocEntry`)}

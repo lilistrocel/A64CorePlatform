@@ -153,7 +153,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
   padding: 10px 12px;
   border: 1px solid
     ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error || '#ef4444' : theme.colors.neutral[300]};
+      $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -186,7 +186,7 @@ const Textarea = styled.textarea`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const LinesTable = styled.table`
@@ -267,7 +267,7 @@ const IconButton = styled.button`
   display: flex;
   align-items: center;
   &:hover {
-    color: ${({ theme }) => theme.colors.error || '#ef4444'};
+    color: ${({ theme }) => theme.colors.terracotta[600]};
     background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
@@ -286,7 +286,7 @@ const AddLineButton = styled.button`
   align-items: center;
   gap: 6px;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
@@ -336,7 +336,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -358,9 +358,9 @@ const SecondaryButton = styled.button`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -368,9 +368,9 @@ const ErrorBanner = styled.div`
 `;
 
 const InfoBanner = styled.div`
-  background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.primary[700] || '#1d4ed8'};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200] || '#bfdbfe'};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.lapis[700]};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -382,9 +382,9 @@ const InfoBanner = styled.div`
  * Reuses the InfoBanner palette but is inlined within the Card (no bottom margin).
  */
 const DirectCreateNote = styled.div`
-  background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.primary[700] || '#1d4ed8'};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200] || '#bfdbfe'};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.lapis[700]};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 16px;

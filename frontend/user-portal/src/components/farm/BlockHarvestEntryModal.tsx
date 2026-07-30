@@ -9,7 +9,8 @@
  */
 
 import { useState, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { recordBlockHarvest, recordBlockWaste } from '../../services/farmApi';
 import { positiveNumberInputProps } from '../../utils';
 
@@ -39,15 +40,17 @@ type QualityGrade = 'A' | 'B' | 'C' | 'Waste';
 
 const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C', 'Waste'];
 
-const GRADE_COLORS: Record<QualityGrade, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
-  Waste: '#9CA3AF',
-};
-
-/** Accent used for the Waste chip border/dot — subtle red to signal rejected. */
-const WASTE_ACCENT = '#EF4444';
+// Theme-aware — called with `theme` from useTheme() since some resolved
+// tokens (textDisabled) differ between light/dark.
+function getGradeColor(theme: Theme, grade: QualityGrade): string {
+  const map: Record<QualityGrade, string> = {
+    A: theme.colors.success,
+    B: theme.colors.primary[500],
+    C: theme.colors.warning,
+    Waste: theme.colors.textDisabled,
+  };
+  return map[grade];
+}
 
 const GRADE_LABELS: Record<QualityGrade, string> = {
   A: 'Premium',
@@ -77,6 +80,7 @@ export function BlockHarvestEntryModal({
   onClose,
   onComplete,
 }: BlockHarvestEntryModalProps) {
+  const theme = useTheme();
   const [quantityKg, setQuantityKg] = useState('');
   const [qualityGrade, setQualityGrade] = useState<QualityGrade>('A');
   const [notes, setNotes] = useState('');
@@ -258,12 +262,12 @@ export function BlockHarvestEntryModal({
                     key={grade}
                     type="button"
                     $selected={qualityGrade === grade}
-                    $color={grade === 'Waste' ? WASTE_ACCENT : GRADE_COLORS[grade]}
+                    $color={grade === 'Waste' ? theme.colors.error : getGradeColor(theme, grade)}
                     $isWaste={grade === 'Waste'}
                     onClick={() => handleGradeChange(grade)}
                     aria-pressed={qualityGrade === grade}
                   >
-                    <GradeIcon $color={grade === 'Waste' && qualityGrade !== 'Waste' ? GRADE_COLORS.Waste : undefined}>
+                    <GradeIcon $color={grade === 'Waste' && qualityGrade !== 'Waste' ? getGradeColor(theme, 'Waste') : undefined}>
                       {grade}
                     </GradeIcon>
                     <GradeLabel>{GRADE_LABELS[grade]}</GradeLabel>
@@ -407,7 +411,7 @@ const BlockInfo = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border-left: 4px solid #10B981; /* grade-A green: consistent with Operations harvest modal */
+  border-left: 4px solid ${({ theme }) => theme.colors.success}; /* grade-A green: consistent with Operations harvest modal */
 `;
 
 const BlockLine = styled.div`
@@ -458,9 +462,9 @@ const Chip = styled.span<{ $variant?: 'progress' }>`
   align-items: center;
   padding: 2px ${({ theme }) => theme.spacing.xs};
   background: ${({ theme, $variant }) =>
-    $variant === 'progress' ? 'rgba(16, 185, 129, 0.1)' : theme.colors.neutral[100]};
+    $variant === 'progress' ? `${theme.colors.success}1A` : theme.colors.neutral[100]};
   color: ${({ theme, $variant }) =>
-    $variant === 'progress' ? '#047857' : theme.colors.textSecondary};
+    $variant === 'progress' ? theme.colors.emerald[700] : theme.colors.textSecondary};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
 `;
@@ -525,10 +529,10 @@ const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste
         ? theme.colors.neutral[300] /* muted when not selected */
         : theme.colors.neutral[300]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ $selected, $color, $isWaste }) =>
+  background: ${({ $selected, $color, $isWaste, theme }) =>
     $selected
       ? $isWaste
-        ? 'rgba(239, 68, 68, 0.08)' /* subtle rose tint for Waste */
+        ? `${theme.colors.error}14` /* subtle rose tint for Waste */
         : `${$color}15`
       : 'transparent'};
   cursor: pointer;
@@ -536,8 +540,8 @@ const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste
 
   &:hover {
     border-color: ${({ $color }) => $color};
-    background: ${({ $color, $isWaste }) =>
-      $isWaste ? 'rgba(239, 68, 68, 0.06)' : `${$color}10`};
+    background: ${({ $color, $isWaste, theme }) =>
+      $isWaste ? `${theme.colors.error}0F` : `${$color}10`};
   }
 `;
 
@@ -556,7 +560,7 @@ const GradeLabel = styled.div`
 
 const GradeNote = styled.div<{ $warn?: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ $warn, theme }) => ($warn ? '#B91C1C' : theme.colors.textSecondary)};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.terracotta[700] : theme.colors.textSecondary)};
   font-style: italic;
   text-align: center;
 `;
@@ -626,8 +630,8 @@ const CancelButton = styled.button`
 const SubmitButton = styled.button<{ $isWaste: boolean }>`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ $isWaste, theme }) => ($isWaste ? '#9CA3AF' : theme.colors.warning)};
-  color: white;
+  background: ${({ $isWaste, theme }) => ($isWaste ? theme.colors.textDisabled : theme.colors.warning)};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};

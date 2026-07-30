@@ -15,12 +15,22 @@
  *   - Target links (Customer Receipts, Credit Notes allocated against this ARI)
  *
  * Modals do NOT close on overlay click — X button only (project rule).
+ *
+ * Status badge colours (A20Core tokens — shared vocabulary across all
+ * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
+ *   draft             → neutral      (neutral[100] / textSecondary)
+ *   pending_approval  → gold         (warningBg / gold[700])
+ *   open              → emerald      (successBg / emerald[700])
+ *   partly_closed     → lapis        (infoBg / lapis[700])
+ *   closed            → neutral (dark) (neutral[200] / neutral[800])
+ *   cancelled         → terracotta   (errorBg / terracotta[700])
+ *
  * Route: /sales/ar-invoices/:docId
  */
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Link2, ExternalLink } from 'lucide-react';
 import { useArInvoice, useTransitionArInvoice, useDeleteArInvoice } from '../../hooks/queries/useArInvoices';
 import { useAuthStore } from '../../stores/auth.store';
@@ -77,26 +87,26 @@ const StatusBadge = styled.span<{ $status: ARInvoiceStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'pending_approval': return '#fef3c7';
-      case 'open': return '#ecfdf5';
-      case 'partly_closed': return '#eff6ff';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'pending_approval': return theme.colors.warningBg;
+      case 'open': return theme.colors.successBg;
+      case 'partly_closed': return theme.colors.infoBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'pending_approval': return '#92400e';
-      case 'open': return '#059669';
-      case 'partly_closed': return '#2563eb';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'pending_approval': return theme.colors.gold[700];
+      case 'open': return theme.colors.emerald[700];
+      case 'partly_closed': return theme.colors.lapis[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -110,7 +120,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -136,13 +146,13 @@ const SecondaryButton = styled.button`
 const DangerButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
+    background: ${({ theme }) => theme.colors.errorBg};
   }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
@@ -316,9 +326,9 @@ const EmptyState = styled.div`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -339,7 +349,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 28px;
   max-width: 460px;
@@ -424,6 +434,7 @@ function docTypeRoute(docType: string, docEntry: string): string {
 
 export function ARInvoiceDetailPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
@@ -656,7 +667,7 @@ export function ARInvoiceDetailPage() {
           </InfoItem>
           <InfoItem>
             <InfoLabel>Open Amount</InfoLabel>
-            <InfoValueBold style={{ color: invoice.totals.openAmount > 0 ? '#059669' : undefined }}>
+            <InfoValueBold style={{ color: invoice.totals.openAmount > 0 ? theme.colors.emerald[600] : undefined }}>
               {formatAmount(invoice.totals.openAmount, invoice.currency)}
             </InfoValueBold>
           </InfoItem>
@@ -718,7 +729,7 @@ export function ARInvoiceDetailPage() {
                       style={{
                         display: 'block',
                         fontSize: '11px',
-                        color: '#9ca3af',
+                        color: theme.colors.textDisabled,
                         marginTop: '2px',
                       }}
                     >

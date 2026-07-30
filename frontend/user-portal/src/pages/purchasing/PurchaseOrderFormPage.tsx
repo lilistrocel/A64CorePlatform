@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   useCreatePurchaseOrder,
   useUpdatePurchaseOrder,
@@ -159,7 +159,7 @@ const FooterRow = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -184,29 +184,29 @@ const GhostButton = styled.button`
 const DangerIconButton = styled.button`
   padding: 6px 10px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
 `;
 
 const AddLineButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[600] || '#2563eb'};
-  border: 1px dashed ${({ theme }) => theme.colors.primary[400] || '#60a5fa'};
+  color: ${({ theme }) => theme.colors.primary[600]};
+  border: 1px dashed ${({ theme }) => theme.colors.primary[400]};
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   width: 100%;
   margin-top: 8px;
-  &:hover { background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'}; }
+  &:hover { background: ${({ theme }) => theme.colors.primary[50]}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -247,6 +247,7 @@ export function PurchaseOrderFormPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
+  const theme = useTheme();
 
   // Fetch existing PO for edit
   const { data: existingPO } = usePurchaseOrder(isEdit ? docId : undefined, orgId);
@@ -448,8 +449,8 @@ export function PurchaseOrderFormPage() {
       <FinanceUnreachableBanner />
 
       {isReadOnly && (
-        <Card style={{ borderLeft: '4px solid #f59e0b', padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, color: '#92400e', fontSize: 14 }}>
+        <Card style={{ borderLeft: `4px solid ${theme.colors.warning}`, padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, color: theme.colors.gold[800], fontSize: 14 }}>
             This PO is in <strong>{existingPO?.status}</strong> status and cannot be edited.
           </p>
         </Card>
@@ -680,8 +681,8 @@ export function PurchaseOrderFormPage() {
       )}
 
       {isFromPR && sourcePR && (
-        <Card style={{ borderLeft: '4px solid #2563eb' }}>
-          <p style={{ margin: 0, fontSize: 14, color: '#1d4ed8' }}>
+        <Card style={{ borderLeft: `4px solid ${theme.colors.primary[600]}` }}>
+          <p style={{ margin: 0, fontSize: 14, color: theme.colors.primary[700] }}>
             Lines will be copied from <strong>{sourcePR.docNumber}</strong>{' '}
             ({sourcePR.lines.length} lines, total{' '}
             {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(sourcePR.totalGross)}).

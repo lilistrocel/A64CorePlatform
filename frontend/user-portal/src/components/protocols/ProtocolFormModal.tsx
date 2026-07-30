@@ -62,7 +62,7 @@ const CriticalToggle = styled.button<{ $on: boolean }>`
   border: 1px solid
     ${({ $on, theme }) => ($on ? theme.colors.warning : theme.colors.neutral[300])};
   background: ${({ $on, theme }) => ($on ? theme.colors.warningBg : 'transparent')};
-  color: ${({ $on, theme }) => ($on ? '#92400e' : theme.colors.textSecondary)};
+  color: ${({ $on, theme }) => ($on ? theme.colors.gold[800] : theme.colors.textSecondary)};
 `;
 
 const RemoveBtn = styled.button`
@@ -76,7 +76,7 @@ const RemoveBtn = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
-    color: #b91c1c;
+    color: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 

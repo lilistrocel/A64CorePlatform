@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   usePurchaseRequest,
   useSubmitPurchaseRequest,
@@ -64,7 +64,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -76,13 +76,13 @@ const PrimaryButton = styled.button`
 `;
 
 const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
-  &:hover { background: #059669; }
+  background: ${({ theme }) => theme.colors.success};
+  &:hover { background: ${({ theme }) => theme.colors.emerald[600]}; }
 `;
 
 const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.error || '#ef4444'};
-  &:hover { background: #dc2626; }
+  background: ${({ theme }) => theme.colors.error};
+  &:hover { background: ${({ theme }) => theme.colors.terracotta[600]}; }
 `;
 
 const GhostButton = styled.button`
@@ -166,7 +166,7 @@ const StatusBadge = styled.span<{ color?: string }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ color }) => color || '#f3f4f6'};
+  background: ${({ color, theme }) => color || theme.colors.neutral[100]};
 `;
 
 const ApprovalCard = styled(Card)`
@@ -269,6 +269,7 @@ export function PurchaseRequestDetailPage() {
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const { data: pr, isLoading, isError } = usePurchaseRequest(docId, user?.organizationId);
 
@@ -312,7 +313,7 @@ export function PurchaseRequestDetailPage() {
       <TitleRow>
         <div>
           <Title>{pr.docNumber}</Title>
-          <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 }}>
             {pr.department && `${pr.department} • `}Urgency: {pr.urgency} • Created {formatDate(pr.docDate)}
           </div>
         </div>
@@ -424,7 +425,7 @@ export function PurchaseRequestDetailPage() {
                 <Td>{line.lineNumber}</Td>
                 <Td>
                   <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{line.itemName}</div>
+                  <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>{line.itemName}</div>
                 </Td>
                 <Td>{line.description ?? '—'}</Td>
                 <Td>{line.uom}</Td>
@@ -459,7 +460,7 @@ export function PurchaseRequestDetailPage() {
               <CloseButton onClick={() => { setShowRejectModal(false); setRejectComment(''); }}>✕</CloseButton>
             </ModalHeader>
             <ModalBody>
-              <p style={{ fontSize: 14, color: '#6b7280', marginTop: 0 }}>
+              <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 0 }}>
                 Please provide a reason for rejecting {pr.docNumber}.
               </p>
               <Textarea

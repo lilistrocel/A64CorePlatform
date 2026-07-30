@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { hrApi, formatDate } from '../../services/hrService';
 import type { PerformanceReview, PerformanceReviewCreate, PerformanceReviewUpdate } from '../../types/hr';
 
@@ -39,8 +39,8 @@ const Title = styled.h3`
 
 const AddButton = styled.button`
   padding: 8px 16px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -49,7 +49,7 @@ const AddButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -87,7 +87,7 @@ const RatingContainer = styled.div`
 
 const RatingStars = styled.div`
   font-size: 18px;
-  color: #F59E0B;
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 const RatingText = styled.span`
@@ -132,10 +132,10 @@ const HappinessBar = styled.div<{ $score: number }>`
     top: 0;
     height: 100%;
     width: ${({ $score }) => ($score / 10) * 100}%;
-    background: ${({ $score }) => {
-      if ($score >= 8) return '#10B981';
-      if ($score >= 5) return '#F59E0B';
-      return '#EF4444';
+    background: ${({ $score, theme }) => {
+      if ($score >= 8) return theme.colors.success;
+      if ($score >= 5) return theme.colors.warning;
+      return theme.colors.error;
     }};
     border-radius: 4px;
   }
@@ -153,8 +153,8 @@ const Tag = styled.span<{ $color?: string }>`
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $color }) => $color || '#e3f2fd'};
-  color: ${({ $color }) => ($color ? '#fff' : '#1976d2')};
+  background: ${({ $color, theme }) => $color || theme.colors.primary[50]};
+  color: ${({ $color, theme }) => ($color ? theme.colors.onAccent : theme.colors.primary[600])};
 `;
 
 const Actions = styled.div`
@@ -172,23 +172,23 @@ const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}
@@ -207,7 +207,7 @@ const Modal = styled.div<{ $isOpen: boolean }>`
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${({ theme }) => `${theme.colors.neutral[900]}80`};
   backdrop-filter: blur(4px);
   justify-content: center;
   align-items: center;
@@ -317,11 +317,11 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
-        color: white;
+        background: ${theme.colors.primary[500]};
+        color: ${theme.colors.onAccent};
         border: none;
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[600]};
         }
       `;
     }
@@ -367,6 +367,7 @@ function renderStars(rating: number): string {
 // ============================================================================
 
 export function PerformanceTab({ employeeId }: PerformanceTabProps) {
+  const theme = useTheme();
   const [reviews, setReviews] = useState<PerformanceReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -513,7 +514,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Strengths:</DetailLabel>
                     <TagList>
                       {review.strengths.map((strength, idx) => (
-                        <Tag key={idx} $color="#10B981">
+                        <Tag key={idx} $color={theme.colors.success}>
                           {strength}
                         </Tag>
                       ))}
@@ -525,7 +526,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Areas for Improvement:</DetailLabel>
                     <TagList>
                       {review.areasForImprovement.map((area, idx) => (
-                        <Tag key={idx} $color="#F59E0B">
+                        <Tag key={idx} $color={theme.colors.warning}>
                           {area}
                         </Tag>
                       ))}
@@ -537,7 +538,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Goals:</DetailLabel>
                     <TagList>
                       {review.goals.map((goal, idx) => (
-                        <Tag key={idx} $color="#3B82F6">
+                        <Tag key={idx} $color={theme.colors.primary[500]}>
                           {goal}
                         </Tag>
                       ))}

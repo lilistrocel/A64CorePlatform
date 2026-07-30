@@ -55,18 +55,18 @@ const BreadcrumbLink = styled(Link)`
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   text-decoration: none;
   font-weight: 500;
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: #1976D2;
+    color: ${({ theme }) => theme.colors.primary[700]};
     text-decoration: underline;
   }
 
   &:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -76,12 +76,12 @@ const BreadcrumbCurrent = styled.span`
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
 `;
 
 const Separator = styled.span`
-  color: #9E9E9E;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-size: 12px;
 `;
 

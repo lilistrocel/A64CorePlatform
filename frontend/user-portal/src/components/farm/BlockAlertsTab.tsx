@@ -45,18 +45,18 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     switch ($variant) {
       case 'primary':
         return `
-          background: #3b82f6;
-          color: white;
+          background: ${theme.colors.primary[500]};
+          color: ${theme.colors.onAccent};
           &:hover:not(:disabled) {
-            background: #2563eb;
+            background: ${theme.colors.primary[600]};
           }
         `;
       case 'danger':
         return `
-          background: #ef4444;
-          color: white;
+          background: ${theme.colors.error};
+          color: ${theme.colors.onAccent};
           &:hover:not(:disabled) {
-            background: #dc2626;
+            background: ${theme.colors.terracotta[600]};
           }
         `;
       default:
@@ -86,18 +86,18 @@ const AlertsList = styled.div`
 const AlertCard = styled.div<{ $severity: AlertSeverity; $status: string }>`
   background: ${({ theme }) => theme.colors.background};
   border: 2px solid
-    ${({ $severity }) => {
+    ${({ $severity, theme }) => {
       switch ($severity) {
         case 'critical':
-          return '#ef4444';
+          return theme.colors.error;
         case 'high':
-          return '#f97316';
+          return theme.colors.terracotta[400];
         case 'medium':
-          return '#eab308';
+          return theme.colors.warning;
         case 'low':
-          return '#3b82f6';
+          return theme.colors.primary[500];
         default:
-          return '#e0e0e0';
+          return theme.colors.border;
       }
     }};
   border-radius: 8px;
@@ -129,18 +129,18 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
   background: ${({ $severity, theme }) => {
     switch ($severity) {
       case 'critical':
-        return '#ef4444';
+        return theme.colors.error;
       case 'high':
-        return '#f97316';
+        return theme.colors.terracotta[400];
       case 'medium':
-        return '#eab308';
+        return theme.colors.warning;
       case 'low':
-        return '#3b82f6';
+        return theme.colors.primary[500];
       default:
         return theme.colors.textDisabled;
     }
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const AlertDescription = styled.p`
@@ -239,7 +239,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -261,7 +261,7 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -276,7 +276,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 

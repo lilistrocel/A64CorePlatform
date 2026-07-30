@@ -38,7 +38,7 @@ const ModalContent = styled.div`
 const ModalTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #c62828;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -59,7 +59,7 @@ const ModalWarning = styled.div`
   padding: 12px;
   margin: 16px 0;
   font-size: 13px;
-  color: #e65100;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const ModalButtons = styled.div`
@@ -87,8 +87,8 @@ const CancelButton = styled.button`
 
 const DeleteConfirmButton = styled.button`
   padding: 10px 20px;
-  background: #c62828;
-  color: white;
+  background: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -97,11 +97,11 @@ const DeleteConfirmButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #b71c1c;
+    background: ${({ theme }) => theme.colors.terracotta[700]};
   }
 
   &:disabled {
-    background: #ef9a9a;
+    background: ${({ theme }) => theme.colors.terracotta[200]};
     cursor: not-allowed;
   }
 `;
@@ -210,13 +210,13 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 600;
-  background: ${({ $efficiency }) => {
-    if ($efficiency >= 90) return '#10b981';
-    if ($efficiency >= 75) return '#8bc34a';
-    if ($efficiency >= 60) return '#eab308';
-    return '#f97316';
+  background: ${({ $efficiency, theme }) => {
+    if ($efficiency >= 90) return theme.colors.success;
+    if ($efficiency >= 75) return theme.colors.emerald[400];
+    if ($efficiency >= 60) return theme.colors.warning;
+    return theme.colors.terracotta[400];
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const ArchiveStats = styled.div`
@@ -274,8 +274,8 @@ const DeleteButton = styled.button`
   gap: 6px;
   padding: 8px 16px;
   background: ${({ theme }) => theme.colors.errorBg};
-  color: #c62828;
-  border: 1px solid #ef5350;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -283,8 +283,8 @@ const DeleteButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #ffcdd2;
-    border-color: #c62828;
+    background: ${({ theme }) => theme.colors.terracotta[100]};
+    border-color: ${({ theme }) => theme.colors.terracotta[600]};
   }
 `;
 

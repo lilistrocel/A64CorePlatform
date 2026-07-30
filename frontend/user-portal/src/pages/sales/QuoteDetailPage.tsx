@@ -23,7 +23,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ExternalLink } from 'lucide-react';
 import {
   useQuote,
@@ -84,22 +84,22 @@ const StatusBadge = styled.span<{ $status: QuoteStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'open': return '#059669';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -114,7 +114,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -149,12 +149,12 @@ const GhostButton = styled.button`
 const DangerButton = styled.button`
   padding: 10px 16px;
   background: transparent;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: #fef2f2; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -163,15 +163,15 @@ const ConvertButton = styled.button`
   align-items: center;
   gap: 6px;
   padding: 10px 18px;
-  background: #059669;
-  color: #fff;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   position: relative;
-  &:hover { background: #047857; }
+  &:hover { background: ${({ theme }) => theme.colors.emerald[700]}; }
 
   /* Tooltip */
   .tooltip {
@@ -180,8 +180,8 @@ const ConvertButton = styled.button`
     position: absolute;
     bottom: calc(100% + 8px);
     right: 0;
-    background: #1f2937;
-    color: #fff;
+    background: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.background};
     font-size: 12px;
     font-weight: 400;
     white-space: nowrap;
@@ -340,10 +340,10 @@ const DocChainLink = styled.button`
 
 const ErrorBanner = styled.div`
   padding: 16px 20px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 20px;
 `;
@@ -434,6 +434,7 @@ function statusLabel(status: QuoteStatus): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function QuoteDetailPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId } = useParams<{ docId: string }>();
 
@@ -505,7 +506,7 @@ export function QuoteDetailPage() {
     return (
       <Container>
         <BackLink onClick={() => navigate('/sales/quotes')}>← Back to Quotes</BackLink>
-        <p style={{ color: '#6b7280' }}>Loading quote…</p>
+        <p style={{ color: theme.colors.textSecondary }}>Loading quote…</p>
       </Container>
     );
   }
@@ -667,7 +668,7 @@ export function QuoteDetailPage() {
                   <Td style={{ textAlign: 'left' }}>
                     <strong>{line.itemCode}</strong>
                     <br />
-                    <span style={{ color: '#6b7280', fontSize: 12 }}>{line.itemName}</span>
+                    <span style={{ color: theme.colors.textSecondary, fontSize: 12 }}>{line.itemName}</span>
                   </Td>
                   <Td style={{ textAlign: 'left' }}>{line.description || '—'}</Td>
                   <Td>{line.quantity.toLocaleString('en-AE', { minimumFractionDigits: 2 })}</Td>
@@ -723,7 +724,7 @@ export function QuoteDetailPage() {
         <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
           <DocChainCard style={{ flex: 1, minWidth: 200 }}>
             <DocChainTitle>Based On</DocChainTitle>
-            <span style={{ fontSize: 14, color: '#6b7280' }}>
+            <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>
               Origin document — no base
             </span>
           </DocChainCard>
@@ -731,7 +732,7 @@ export function QuoteDetailPage() {
           <DocChainCard style={{ flex: 1, minWidth: 200 }}>
             <DocChainTitle>Resulting Sales Orders</DocChainTitle>
             {quote.targetDocRefs.length === 0 ? (
-              <span style={{ fontSize: 14, color: '#6b7280' }}>
+              <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>
                 No Sales Orders created yet
               </span>
             ) : (

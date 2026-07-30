@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { farmApi, getAvailableFarmingYears, type FarmingYearItem } from '../../services/farmApi';
 import { FarmingYearSelector } from './FarmingYearSelector';
 import type { BlockHarvest, BlockHarvestSummary, QualityGrade } from '../../types/farm';
@@ -45,7 +45,7 @@ const Title = styled.h2`
 
 const FarmingYearContext = styled.span`
   font-size: 13px;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   font-weight: 500;
 `;
 
@@ -74,10 +74,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
-    background: #3b82f6;
-    color: white;
+    background: ${theme.colors.primary[500]};
+    color: ${theme.colors.onAccent};
     &:hover:not(:disabled) {
-      background: #2563eb;
+      background: ${theme.colors.primary[600]};
     }
   `
       : `
@@ -170,19 +170,19 @@ const QualityBadge = styled.span<{ $grade: QualityGrade }>`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $grade }) => {
+  background: ${({ $grade, theme }) => {
     switch ($grade) {
       case 'A':
-        return '#10b981';
+        return theme.colors.success;
       case 'B':
-        return '#eab308';
+        return theme.colors.warning;
       case 'C':
-        return '#f97316';
+        return theme.colors.terracotta[400];
       default:
-        return '#9e9e9e';
+        return theme.colors.textDisabled;
     }
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const EmptyState = styled.div`
@@ -285,11 +285,11 @@ const DangerButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: none;
-  background: #ef4444;
-  color: white;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.onAccent};
 
   &:hover:not(:disabled) {
-    background: #dc2626;
+    background: ${({ theme }) => theme.colors.terracotta[600]};
   }
 
   &:disabled {
@@ -372,6 +372,7 @@ interface BlockHarvestsTabProps {
 }
 
 export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId, plantedDate, onRefresh, onNavigateToBlock }: BlockHarvestsTabProps) {
+  const theme = useTheme();
   const isVirtualBlock = blockCategory === 'virtual';
   const [harvests, setHarvests] = useState<BlockHarvest[]>([]);
   const [summary, setSummary] = useState<BlockHarvestSummary | null>(null);
@@ -495,7 +496,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
           <PhysicalBannerTitle>
             <span>&#x1F4CA;</span> Complete Harvest History
           </PhysicalBannerTitle>
-          <BannerText style={{ color: '#047857' }}>
+          <BannerText style={{ color: theme.colors.emerald[700] }}>
             This physical block displays all historical harvests across all crop cycles and virtual blocks.
           </BannerText>
         </PhysicalBlockBanner>
@@ -571,7 +572,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
               <HarvestInfo>
                 <HarvestDate>
                   {farmApi.formatDateForDisplay(harvest.harvestDate)}
-                  {harvest.metadata?.crop && <span style={{ fontWeight: 400, marginLeft: 8, color: '#4caf50' }}>({harvest.metadata.crop})</span>}
+                  {harvest.metadata?.crop && <span style={{ fontWeight: 400, marginLeft: 8, color: theme.colors.success }}>({harvest.metadata.crop})</span>}
                 </HarvestDate>
                 <HarvestMeta>
                   <span>{formatNumber(harvest.quantityKg, { decimals: 1 })} kg</span>

@@ -31,7 +31,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { FinanceReportPage } from '../../components/finance/FinanceReportPage';
 import { useIncomeStatement } from '../../hooks/queries/useFinanceReports';
@@ -269,7 +269,7 @@ const NameCell = styled.td<NameCellProps>`
 const AmountCell = styled.td`
   padding: 10px 16px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
@@ -291,7 +291,7 @@ const SectionTotalAmountCell = styled.td`
   padding: 11px 16px;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
@@ -315,7 +315,7 @@ const SubtotalAmountCell = styled.td`
   padding: 11px 16px;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.primary[700] || theme.colors.textPrimary};
   white-space: nowrap;
@@ -361,7 +361,7 @@ const NetIncomeAmountCell = styled.td`
   padding: 14px 16px;
   font-size: 15px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
@@ -384,8 +384,8 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -393,10 +393,10 @@ const ErrorBanner = styled.div`
 
 const WarningBanner = styled.div`
   padding: 12px 16px;
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   font-size: 13px;
   margin-bottom: 16px;
 `;
@@ -452,7 +452,7 @@ const DrillTd = styled.td`
 const DrillTdMono = styled.td`
   padding: 9px 14px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
@@ -490,6 +490,7 @@ function AccountLedgerDrillDown({
   periodStart,
   periodEnd,
 }: DrillDownContentProps) {
+  const theme = useTheme();
   const { data, isLoading, isError } = useJournalEntries({
     organizationId,
     companyCode,
@@ -577,7 +578,7 @@ function AccountLedgerDrillDown({
         {lines.map((ln) => (
           <DrillTr key={ln.key}>
             <DrillTd>{ln.jeDate}</DrillTd>
-            <DrillTd style={{ fontFamily: 'monospace', fontSize: 12 }}>
+            <DrillTd style={{ fontFamily: theme.typography.fontFamily.mono, fontSize: 12 }}>
               {ln.jeNumber}
             </DrillTd>
             <DrillTd>{ln.description}</DrillTd>

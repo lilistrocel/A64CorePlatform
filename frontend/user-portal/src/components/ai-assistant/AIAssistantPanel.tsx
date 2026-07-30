@@ -167,7 +167,9 @@ const slideOut = keyframes`
 const Backdrop = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.15);
+  /* Dimming scrim retinted off lapis[900] (theme-invariant, always dark)
+     rather than pure black, per spec's warm-shadow direction. */
+  background: ${({ theme }) => theme.colors.primary[900]}26;
   z-index: 890;
   pointer-events: none;
   opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};

@@ -21,7 +21,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   useCreateGRFromPO,
   useUpdateGoodsReceipt,
@@ -161,7 +161,7 @@ const FooterRow = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -184,14 +184,14 @@ const GhostButton = styled.button`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 13px;
   margin: 8px 0 0;
 `;
 
 const ValidationHint = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 // ─── PO Picker (shown at /purchasing/gr/new before a PO is selected) ──────────
@@ -204,6 +204,7 @@ function POPickerCard({
   onSelect: (poDocId: string) => void;
 }) {
   const navigate = useNavigate();
+  const theme = useTheme();
   // Only show Open/Sent POs (ones that have openQuantity)
   const { data, isLoading } = usePurchaseOrders({
     organizationId,
@@ -220,13 +221,13 @@ function POPickerCard({
   const sentPos = sentData?.data ?? [];
   const allReceivable = [...openPos, ...sentPos];
 
-  if (isLoading) return <Card><p style={{ fontSize: 14, color: '#6b7280' }}>Loading open POs...</p></Card>;
+  if (isLoading) return <Card><p style={{ fontSize: 14, color: theme.colors.textSecondary }}>Loading open POs...</p></Card>;
 
   if (allReceivable.length === 0) {
     return (
       <Card>
         <CardTitle>Select Source PO</CardTitle>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>
+        <p style={{ fontSize: 14, color: theme.colors.textSecondary }}>
           No open or sent POs available. A PO must be in Open or Sent status to create a GR.
         </p>
         <GhostButton onClick={() => navigate('/purchasing/po')}>View Purchase Orders</GhostButton>
@@ -237,7 +238,7 @@ function POPickerCard({
   return (
     <Card>
       <CardTitle>Select Source PO</CardTitle>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>
+      <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 16 }}>
         Choose the Purchase Order you are receiving goods against.
       </p>
       <Table>
@@ -257,8 +258,8 @@ function POPickerCard({
               <Td>{po.vendorName ?? po.vendorCode ?? '—'}</Td>
               <Td>
                 <span style={{
-                  background: po.status === 'Open' ? '#dbeafe' : '#d1fae5',
-                  color: po.status === 'Open' ? '#1d4ed8' : '#065f46',
+                  background: po.status === 'Open' ? theme.colors.primary[100] : theme.colors.emerald[100],
+                  color: po.status === 'Open' ? theme.colors.primary[700] : theme.colors.emerald[700],
                   padding: '2px 8px',
                   borderRadius: 99,
                   fontSize: 12,
@@ -309,6 +310,7 @@ interface GRLineFormState {
 export function GoodsReceiptFormPage() {
   const params = useParams<{ docId?: string; poDocId?: string }>();
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
 
@@ -495,8 +497,8 @@ export function GoodsReceiptFormPage() {
       <FinanceUnreachableBanner />
 
       {sourcePO && !isEdit && (
-        <Card style={{ borderLeft: '4px solid #2563eb', padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, fontSize: 14, color: '#1d4ed8' }}>
+        <Card style={{ borderLeft: `4px solid ${theme.colors.primary[600]}`, padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, fontSize: 14, color: theme.colors.primary[700] }}>
             Receiving against <strong>{sourcePO.docNumber}</strong>{' '}
             from vendor <strong>{sourcePO.vendorName ?? sourcePO.vendorCode ?? '—'}</strong>
           </p>
@@ -561,10 +563,10 @@ export function GoodsReceiptFormPage() {
                   <tr key={line.baseLineId}>
                     <Td>
                       <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
-                      <div style={{ fontSize: 12, color: '#6b7280' }}>{line.itemName}</div>
+                      <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>{line.itemName}</div>
                     </Td>
                     <Td>{line.uom}</Td>
-                    <Td style={{ color: '#6b7280' }}>{line.maxQuantity}</Td>
+                    <Td style={{ color: theme.colors.textSecondary }}>{line.maxQuantity}</Td>
                     <Td>
                       <Input
                         type="number"
@@ -574,7 +576,7 @@ export function GoodsReceiptFormPage() {
                         value={line.quantity}
                         style={{
                           width: '100px',
-                          borderColor: isOver || isZero ? '#ef4444' : undefined,
+                          borderColor: isOver || isZero ? theme.colors.error : undefined,
                         }}
                         onChange={(e) =>
                           setLineQty(line.baseLineId, parseFloat(e.target.value) || 0)
@@ -585,11 +587,11 @@ export function GoodsReceiptFormPage() {
                         <ValidationHint> Max {line.maxQuantity}</ValidationHint>
                       )}
                     </Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                    <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
                       {line.discountPercent ? `${line.discountPercent}%` : '—'}
                     </Td>
                     {financeOn && (
-                      <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                      <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
                         {line.costCenterId ?? '—'}
                       </Td>
                     )}
@@ -602,7 +604,7 @@ export function GoodsReceiptFormPage() {
       ) : (
         effectivePoDocId && (
           <Card>
-            <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center' }}>
               Loading PO lines...
             </p>
           </Card>

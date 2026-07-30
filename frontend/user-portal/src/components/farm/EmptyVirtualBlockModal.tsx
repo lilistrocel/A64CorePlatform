@@ -122,13 +122,13 @@ const SummaryItem = styled.div<{ $warning?: boolean }>`
   padding: 12px;
   background: ${({ $warning, theme }) => ($warning ? theme.colors.warningBg : theme.colors.successBg)};
   border-radius: 8px;
-  border-left: 4px solid ${({ $warning }) => ($warning ? '#f59e0b' : '#4caf50')};
+  border-left: 4px solid ${({ $warning, theme }) => ($warning ? theme.colors.warning : theme.colors.success)};
 `;
 
 const Icon = styled.div<{ $warning?: boolean }>`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ $warning }) => ($warning ? '#f59e0b' : '#4caf50')};
+  color: ${({ $warning, theme }) => ($warning ? theme.colors.warning : theme.colors.success)};
   flex-shrink: 0;
   margin-top: 2px;
 `;
@@ -236,9 +236,9 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
       case 'danger':
         return `
           background: ${theme.colors.error};
-          color: white;
+          color: ${theme.colors.onAccent};
           &:hover:not(:disabled) {
-            background: #dc2626;
+            background: ${theme.colors.terracotta[600]};
           }
         `;
       default:

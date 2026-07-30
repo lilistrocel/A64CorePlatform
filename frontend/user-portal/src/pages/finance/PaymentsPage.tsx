@@ -14,7 +14,8 @@
 
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { usePayments } from '../../hooks/queries/usePayments';
 import { useVendors } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
@@ -51,11 +52,12 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
 };
 
-const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
-  bank_transfer: { bg: '#dbeafe', text: '#1e40af' },
-  cheque: { bg: '#fef9c3', text: '#854d0e' },
-  cash: { bg: '#dcfce7', text: '#166534' },
-};
+// Payment method is categorical, not a status — one brand voice per method.
+const methodColors = (theme: Theme): Record<PaymentMethod, { bg: string; text: string }> => ({
+  bank_transfer: { bg: theme.colors.primary[100], text: theme.colors.primary[800] },
+  cheque: { bg: theme.colors.gold[100], text: theme.colors.gold[800] },
+  cash: { bg: theme.colors.emerald[100], text: theme.colors.emerald[800] },
+});
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -133,7 +135,7 @@ const DateLabel = styled.span`
 const NewButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -211,9 +213,9 @@ const ReversedBadge = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: ${({ theme }) => theme.colors.terracotta[100]};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
   margin-left: 8px;
 `;
 
@@ -227,11 +229,11 @@ const JeLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.primary[600]};
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 600;
   &:hover { opacity: 0.75; }
 `;
@@ -301,8 +303,8 @@ const Tooltip = styled.span`
     top: calc(100% + 4px);
     left: 0;
     z-index: 1050;
-    background: #1f2937;
-    color: white;
+    background: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.canvas};
     border-radius: 6px;
     padding: 6px 10px;
     font-size: 12px;
@@ -316,6 +318,7 @@ const Tooltip = styled.span`
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function PaymentsPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [searchParams] = useSearchParams();
@@ -455,9 +458,9 @@ export function PaymentsPage() {
             <tbody>
               {items.map((payment) => {
                 const methodLabel = METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod;
-                const methodColor = METHOD_COLORS[payment.paymentMethod] ?? {
-                  bg: '#f3f4f6',
-                  text: '#374151',
+                const methodColor = methodColors(theme)[payment.paymentMethod] ?? {
+                  bg: theme.colors.neutral[100],
+                  text: theme.colors.neutral[800],
                 };
                 const isReversed = Boolean(payment.je?.reversedByJeNumber);
                 const RowComponent = isReversed ? ReversedRow : ClickableRow;
@@ -504,16 +507,16 @@ export function PaymentsPage() {
                     </Td>
                     <Td>
                       {payment.referenceNumber ?? (
-                        <span style={{ color: '#9ca3af' }}>—</span>
+                        <span style={{ color: theme.colors.textDisabled }}>—</span>
                       )}
                     </Td>
                     <Td
                       style={{
                         textAlign: 'right',
-                        fontFamily: 'monospace',
+                        fontFamily: theme.typography.fontFamily.mono,
                         fontWeight: 600,
                         textDecoration: isReversed ? 'line-through' : 'none',
-                        color: isReversed ? '#9ca3af' : undefined,
+                        color: isReversed ? theme.colors.textDisabled : undefined,
                       }}
                     >
                       {formatCurrency(payment.totalAmount, payment.currencyCode)}
@@ -529,10 +532,10 @@ export function PaymentsPage() {
                           View JE
                         </JeLink>
                       ) : (
-                        <span style={{ color: '#9ca3af', fontSize: 13 }}>—</span>
+                        <span style={{ color: theme.colors.textDisabled, fontSize: 13 }}>—</span>
                       )}
                     </Td>
-                    <Td style={{ fontSize: 13, color: '#6b7280' }}>
+                    <Td style={{ fontSize: 13, color: theme.colors.textSecondary }}>
                       {payment.createdBy}
                     </Td>
                   </RowComponent>

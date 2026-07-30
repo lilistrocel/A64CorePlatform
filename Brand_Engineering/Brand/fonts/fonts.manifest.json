@@ -1,0 +1,119 @@
+{
+  "$schema_note": "Pinned upstream sources for A20Core's self-hosted OFL fonts (sovereign builds). Consumed by vendor-fonts.sh. See README.md.",
+  "standard": "A20Core_BRAND.md §4 (Latin) + §9.3 (Arabic/RTL) — self-host the full type system (Hanken Grotesk, Fraunces, Cairo, Amiri, Space Mono) so every render — Latin or Arabic — stays inside the data-sovereignty boundary.",
+  "task": "T-2026-0143 (Latin stack) extends T-2026-0111 (Arabic + shared metadata)",
+  "upstream": {
+    "repo": "https://github.com/google/fonts",
+    "license_family": "OFL-1.1",
+    "ref": "877f8918ee661764418e085766dc0b073260a3ef",
+    "ref_note": "Pinned to commit 877f8918ee661764418e085766dc0b073260a3ef (2026-06-11; google/fonts HEAD). Ensures reproducible sovereign builds — fixed commit guarantees byte-for-byte identical downloads across all builds until explicitly updated (T-2026-0299).",
+    "raw_base": "https://raw.githubusercontent.com/google/fonts/{ref}"
+  },
+  "checksum_policy": "sha256 fields are null until first vendor. Run 'vendor-fonts.sh --update-checksums' to populate from a pinned ref, commit the result, and all later runs verify against these values (trust-on-first-vendor, then pinned).",
+  "fonts": [
+    {
+      "family": "Hanken Grotesk",
+      "role": "Latin display / headlines / body / UI — primary face (§4)",
+      "license_src": "ofl/hankengrotesk/OFL.txt",
+      "license_dest": "licenses/OFL-HankenGrotesk.txt",
+      "files": [
+        {
+          "src": "ofl/hankengrotesk/HankenGrotesk%5Bwght%5D.ttf",
+          "dest": "ttf/HankenGrotesk-Variable.ttf",
+          "axes": "wght (variable)",
+          "brand_weights": "400 800",
+          "sha256": "813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f"
+        }
+      ]
+    },
+    {
+      "family": "Fraunces",
+      "role": "Latin editorial accent — covers / pull-quotes only; italic for warmth (§4)",
+      "license_src": "ofl/fraunces/OFL.txt",
+      "license_dest": "licenses/OFL-Fraunces.txt",
+      "files": [
+        {
+          "src": "ofl/fraunces/Fraunces%5BSOFT%2CWONK%2Copsz%2Cwght%5D.ttf",
+          "dest": "ttf/Fraunces-Variable.ttf",
+          "axes": "SOFT, WONK, opsz, wght (variable)",
+          "brand_weights": "400 600 normal",
+          "sha256": "177ff6c0f14e5550a3c624247cd1189611d4eb65d000b14944c63d967958abbb"
+        },
+        {
+          "src": "ofl/fraunces/Fraunces-Italic%5BSOFT%2CWONK%2Copsz%2Cwght%5D.ttf",
+          "dest": "ttf/Fraunces-Italic-Variable.ttf",
+          "axes": "SOFT, WONK, opsz, wght (variable)",
+          "brand_weights": "400 italic",
+          "sha256": "b24448c43702fac4ee856781d461a0dfba8d8e594b6e8e190234b75fed2c0e01"
+        }
+      ]
+    },
+    {
+      "family": "Cairo",
+      "role": "Arabic body / UI / headings — Hanken Grotesk companion (§9.1)",
+      "license_src": "ofl/cairo/OFL.txt",
+      "license_dest": "licenses/OFL-Cairo.txt",
+      "files": [
+        {
+          "src": "ofl/cairo/Cairo%5Bslnt%2Cwght%5D.ttf",
+          "dest": "ttf/Cairo-Variable.ttf",
+          "axes": "slnt, wght (variable)",
+          "brand_weights": "400 800",
+          "sha256": "667c987182391c91f4e57a2f455b1794fb5e3ee6ca4ef3383e86bb690fa9c964"
+        }
+      ]
+    },
+    {
+      "family": "Amiri",
+      "role": "Arabic editorial accent — Fraunces companion; covers/pull-quotes/tagline only (§9.1)",
+      "license_src": "ofl/amiri/OFL.txt",
+      "license_dest": "licenses/OFL-Amiri.txt",
+      "files": [
+        {
+          "src": "ofl/amiri/Amiri-Regular.ttf",
+          "dest": "ttf/Amiri-Regular.ttf",
+          "brand_weights": "400 normal",
+          "sha256": "ab391c4147d054c48976e98322ad0eefe1427aa0e0502a12a4c75d80a70cfcd7"
+        },
+        {
+          "src": "ofl/amiri/Amiri-Bold.ttf",
+          "dest": "ttf/Amiri-Bold.ttf",
+          "brand_weights": "700 normal",
+          "sha256": "cfccb794268e7d573d857e6d6a67f89cf8a053e8ffd85dfa0c8ec1bb36fc4827"
+        },
+        {
+          "src": "ofl/amiri/Amiri-Italic.ttf",
+          "dest": "ttf/Amiri-Italic.ttf",
+          "brand_weights": "400 italic",
+          "sha256": "770e4da44d0459c0ddd6484483d475b95f2d088dd27ce472427624081eb68c70"
+        }
+      ]
+    },
+    {
+      "family": "Space Mono",
+      "role": "Metadata / labels / codes / timestamps — shared Latin + Arabic-doc metadata (§4, §9.1)",
+      "license_src": "ofl/spacemono/OFL.txt",
+      "license_dest": "licenses/OFL-SpaceMono.txt",
+      "files": [
+        {
+          "src": "ofl/spacemono/SpaceMono-Regular.ttf",
+          "dest": "ttf/SpaceMono-Regular.ttf",
+          "brand_weights": "400 normal",
+          "sha256": "95837e182baeeada83368f7748db28357f0a1b75c6b84ff7065b5edf933c8e18"
+        },
+        {
+          "src": "ofl/spacemono/SpaceMono-Bold.ttf",
+          "dest": "ttf/SpaceMono-Bold.ttf",
+          "brand_weights": "700 normal",
+          "sha256": "405e73d41afb7e5906efce206a326af5c956f38e255f35421c260e861e599c59"
+        },
+        {
+          "src": "ofl/spacemono/SpaceMono-Italic.ttf",
+          "dest": "ttf/SpaceMono-Italic.ttf",
+          "brand_weights": "400 italic",
+          "sha256": "eca264c8690a91fe837d19a6badf2d88961610c4c8aafcb196526192a9f258c5"
+        }
+      ]
+    }
+  ]
+}

@@ -150,7 +150,7 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -159,7 +159,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -167,7 +167,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 28px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -200,11 +200,11 @@ const BlockInfo = styled.div`
 
 const InfoLabel = styled.span`
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.neutral[700]};
 `;
 
 const InfoValue = styled.span`
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FormGroup = styled.div`
@@ -215,7 +215,7 @@ const Label = styled.label`
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
@@ -231,7 +231,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 
   &:disabled {
@@ -251,7 +251,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -285,15 +285,15 @@ const ConfirmButton = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #1976D2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 
   &:disabled {

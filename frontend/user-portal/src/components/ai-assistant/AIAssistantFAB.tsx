@@ -37,10 +37,14 @@ export function AIAssistantFAB() {
 // Styled components
 // ---------------------------------------------------------------------------
 
-const pulse = keyframes`
-  0%   { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4); }
-  70%  { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+// A function returning keyframes, not a module-level constant — keyframes
+// can't read theme context directly, so the pulse ring colour (lapis) is
+// threaded through at render time via the `css` helper below. Lapis is
+// theme-invariant (identical hex in light/dark) so the value is stable.
+const pulse = (color: string) => keyframes`
+  0%   { box-shadow: 0 0 0 0 ${color}66; }
+  70%  { box-shadow: 0 0 0 10px ${color}00; }
+  100% { box-shadow: 0 0 0 0 ${color}00; }
 `;
 
 const FAB = styled.button<{ $isOpen: boolean }>`
@@ -61,7 +65,7 @@ const FAB = styled.button<{ $isOpen: boolean }>`
 
   background: ${({ $isOpen, theme }) =>
     $isOpen ? theme.colors.primary[700] : theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 
   /* Rotate icon slightly when panel is open for visual feedback */
   svg {
@@ -84,10 +88,10 @@ const FAB = styled.button<{ $isOpen: boolean }>`
   }
 
   /* Subtle pulse animation when panel is closed to draw attention */
-  ${({ $isOpen }) =>
+  ${({ $isOpen, theme }) =>
     !$isOpen &&
     css`
-      animation: ${pulse} 3s ease-out infinite;
+      animation: ${pulse(theme.colors.primary[500])} 3s ease-out infinite;
     `}
 
   @media (max-width: 640px) {

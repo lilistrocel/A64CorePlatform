@@ -33,8 +33,8 @@ const Title = styled.h1`
 
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -43,7 +43,7 @@ const CreateButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -107,9 +107,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: ${({ theme }) => theme.colors.terracotta[100]};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;

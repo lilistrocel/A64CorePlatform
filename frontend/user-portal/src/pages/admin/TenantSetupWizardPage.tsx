@@ -28,7 +28,7 @@
  */
 
 import React, { useReducer } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
 import { useOrganizations, useCreateOrganization, useAssignUserOrg } from '../../hooks/queries/useOrganizations';
@@ -134,7 +134,7 @@ const WizardCard = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   width: 100%;
   max-width: 600px;
   padding: 36px 36px 28px;
@@ -178,13 +178,13 @@ const StepDot = styled.div<{ $state: 'done' | 'active' | 'upcoming' }>`
 
   ${({ $state, theme }) => {
     if ($state === 'done') return `
-      background: ${theme.colors.success || '#22c55e'};
-      color: white;
-      border: 2px solid ${theme.colors.success || '#22c55e'};
+      background: ${theme.colors.success};
+      color: ${theme.colors.onAccent};
+      border: 2px solid ${theme.colors.success};
     `;
     if ($state === 'active') return `
       background: ${theme.colors.primary[500]};
-      color: white;
+      color: ${theme.colors.onAccent};
       border: 2px solid ${theme.colors.primary[500]};
     `;
     return `
@@ -199,7 +199,7 @@ const StepConnector = styled.div<{ $done: boolean }>`
   flex: 1;
   height: 2px;
   background: ${({ $done, theme }) =>
-    $done ? (theme.colors.success || '#22c55e') : theme.colors.neutral[200]};
+    $done ? theme.colors.success : theme.colors.neutral[200]};
   transition: background 200ms;
   min-width: 8px;
 `;
@@ -292,8 +292,8 @@ const FieldHint = styled.p`
 
 const ErrorText = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
+  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.errorBg};
   border-radius: 8px;
   padding: 10px 14px;
   margin: 0 0 16px;
@@ -312,7 +312,7 @@ const ButtonRow = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 22px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -363,8 +363,8 @@ const StatusCell = styled.div<{ $ok: boolean }>`
   padding: 14px 16px;
   border-radius: 10px;
   border: 1px solid ${({ $ok, theme }) =>
-    $ok ? (theme.colors.success || '#22c55e') + '44' : theme.colors.neutral[200]};
-  background: ${({ $ok }) => ($ok ? '#f0fdf4' : 'transparent')};
+    $ok ? `${theme.colors.success}44` : theme.colors.neutral[200]};
+  background: ${({ $ok, theme }) => ($ok ? theme.colors.successBg : 'transparent')};
 `;
 
 const StatusCellTitle = styled.p`
@@ -380,20 +380,20 @@ const StatusCellValue = styled.p<{ $ok: boolean }>`
   font-size: 13px;
   font-weight: 600;
   color: ${({ $ok, theme }) =>
-    $ok ? (theme.colors.success || '#22c55e') : theme.colors.textSecondary};
+    $ok ? theme.colors.success : theme.colors.textSecondary};
   margin: 0;
 `;
 
 // ─── Confirmation panel (step 3 success) ─────────────────────────────────────
 
 const SeedPanel = styled.div`
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
   border-radius: 10px;
   padding: 14px 16px;
   margin-bottom: 20px;
   font-size: 13px;
-  color: #166534;
+  color: ${({ theme }) => theme.colors.emerald[800]};
   line-height: 1.6;
 `;
 
@@ -440,6 +440,7 @@ function Step0Welcome({
   hasPeriod,
   onBegin,
 }: Step0Props) {
+  const theme = useTheme();
   const orgName = orgs.find((o) => o.organizationId === userOrgId)?.name ?? null;
   const hasOrg = orgs.length > 0;
   const isAssigned = !!userOrgId;
@@ -468,7 +469,7 @@ function Step0Welcome({
       </WizardSubtitle>
 
       {orgsLoading ? (
-        <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 24 }}>
+        <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 24 }}>
           Checking current state…
         </p>
       ) : (
@@ -518,6 +519,7 @@ interface Step1Props {
 }
 
 function Step1Organization({ orgs, onOrgSelected, onBack }: Step1Props) {
+  const theme = useTheme();
   const { addToast } = useToastStore();
   const createOrgMutation = useCreateOrganization();
 
@@ -594,8 +596,8 @@ function Step1Organization({ orgs, onOrgSelected, onBack }: Step1Props) {
             type="button"
             style={{
               background: mode === 'pick' ? 'transparent' : undefined,
-              borderColor: mode === 'pick' ? '#3b82f6' : undefined,
-              color: mode === 'pick' ? '#3b82f6' : undefined,
+              borderColor: mode === 'pick' ? theme.colors.primary[500] : undefined,
+              color: mode === 'pick' ? theme.colors.primary[500] : undefined,
             }}
             onClick={() => setMode('pick')}
           >
@@ -604,8 +606,8 @@ function Step1Organization({ orgs, onOrgSelected, onBack }: Step1Props) {
           <SecondaryButton
             type="button"
             style={{
-              borderColor: mode === 'create' ? '#3b82f6' : undefined,
-              color: mode === 'create' ? '#3b82f6' : undefined,
+              borderColor: mode === 'create' ? theme.colors.primary[500] : undefined,
+              color: mode === 'create' ? theme.colors.primary[500] : undefined,
             }}
             onClick={() => setMode('create')}
           >
@@ -730,6 +732,7 @@ interface Step2Props {
 }
 
 function Step2SelfAssign({ userId, orgId, orgName, onAssigned, onBack, onRefreshUser }: Step2Props) {
+  const theme = useTheme();
   const { addToast } = useToastStore();
   const assignMutation = useAssignUserOrg();
   const [error, setError] = React.useState('');
@@ -762,13 +765,13 @@ function Step2SelfAssign({ userId, orgId, orgName, onAssigned, onBack, onRefresh
 
       <div
         style={{
-          background: '#eff6ff',
-          border: '1px solid #bfdbfe',
+          background: theme.colors.infoBg,
+          border: `1px solid ${theme.colors.primary[200]}`,
           borderRadius: 10,
           padding: '14px 16px',
           marginBottom: 20,
           fontSize: 14,
-          color: '#1e40af',
+          color: theme.colors.primary[800],
           lineHeight: 1.65,
         }}
       >
@@ -1159,6 +1162,7 @@ interface Step5Props {
 }
 
 function Step5Done({ orgName, companyCode, seedMessage, periodCode, onDone }: Step5Props) {
+  const theme = useTheme();
   return (
     <>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -1166,24 +1170,24 @@ function Step5Done({ orgName, companyCode, seedMessage, periodCode, onDone }: St
         <p style={{ fontSize: 16, fontWeight: 600, marginTop: 12 }}>
           Platform setup complete!
         </p>
-        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+        <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 }}>
           Your tenant is ready. Here is a summary of what was created:
         </p>
       </div>
 
       <div
         style={{
-          background: '#f0fdf4',
-          border: '1px solid #bbf7d0',
+          background: theme.colors.successBg,
+          border: `1px solid ${theme.colors.emerald[200]}`,
           borderRadius: 10,
           padding: '16px 20px',
           marginBottom: 24,
         }}
       >
-        <p style={{ fontSize: 13, margin: '0 0 8px', fontWeight: 700, color: '#15803d' }}>
+        <p style={{ fontSize: 13, margin: '0 0 8px', fontWeight: 700, color: theme.colors.emerald[700] }}>
           Created successfully:
         </p>
-        <ul style={{ margin: 0, padding: '0 0 0 20px', fontSize: 14, color: '#166534', lineHeight: 1.8 }}>
+        <ul style={{ margin: 0, padding: '0 0 0 20px', fontSize: 14, color: theme.colors.emerald[800], lineHeight: 1.8 }}>
           {orgName && <li>Organization: <strong>{orgName}</strong></li>}
           {companyCode && (
             <li>Finance Company Code: <strong>{companyCode}</strong></li>
@@ -1197,7 +1201,7 @@ function Step5Done({ orgName, companyCode, seedMessage, periodCode, onDone }: St
         </ul>
       </div>
 
-      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 13, color: theme.colors.textSecondary, marginBottom: 24, lineHeight: 1.6 }}>
         You can re-run this wizard at any time from <strong>Admin &rarr; Tenant Setup</strong>
         to create additional company codes or fiscal periods.
       </p>

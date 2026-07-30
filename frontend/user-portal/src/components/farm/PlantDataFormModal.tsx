@@ -162,7 +162,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 const Modal = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   max-width: 900px;
   width: 100%;
   max-height: 90vh;
@@ -200,7 +200,7 @@ const VersionBadge = styled.div`
   gap: 6px;
   padding: 4px 12px;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: #1976d2;
+  color: ${({ theme }) => theme.colors.primary[600]};
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
@@ -257,8 +257,8 @@ const RequiredBadge = styled.span`
   font-weight: 500;
   padding: 4px 8px;
   border-radius: 9999px;
-  background: #EF4444;
-  color: white;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.onAccent};
   text-transform: uppercase;
 `;
 
@@ -268,7 +268,7 @@ const OptionalBadge = styled.span`
   padding: 4px 8px;
   border-radius: 9999px;
   background: ${({ theme }) => theme.colors.textDisabled};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   text-transform: uppercase;
 `;
 
@@ -286,7 +286,7 @@ const Label = styled.label`
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -299,8 +299,8 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
-    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
   }
 
   &:disabled {
@@ -317,7 +317,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -327,8 +327,8 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
-    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
   }
 
   &:disabled {
@@ -339,7 +339,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   resize: vertical;
@@ -355,8 +355,8 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
-    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
   }
 
   &:disabled {
@@ -367,7 +367,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const HelpText = styled.span`
@@ -428,7 +428,7 @@ const ExpandButton = styled.button<{ $expanded: boolean }>`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.background};
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -469,7 +469,7 @@ const StatusSwitch = styled.label`
     height: 0;
 
     &:checked + span {
-      background-color: #10B981;
+      background-color: ${({ theme }) => theme.colors.success};
     }
 
     &:checked + span:before {
@@ -495,7 +495,7 @@ const StatusSwitch = styled.label`
       width: 18px;
       left: 3px;
       bottom: 3px;
-      background-color: white;
+      background-color: ${({ theme }) => theme.colors.onAccent};
       transition: 0.3s;
       border-radius: 50%;
     }
@@ -517,7 +517,7 @@ const ModalFooter = styled.div`
 const SuccessMessage = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.successBg};
-  color: #059669;
+  color: ${({ theme }) => theme.colors.emerald[600]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -526,7 +526,7 @@ const SuccessMessage = styled.div`
 const ErrorMessage = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.errorBg};
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -550,7 +550,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.primary[500]};
-        color: white;
+        color: ${theme.colors.onAccent};
         &:hover:not(:disabled) {
           background: ${theme.colors.primary[700]};
         }
@@ -612,7 +612,7 @@ const DensityUnitButton = styled.button<{ $active: boolean }>`
   white-space: nowrap;
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ $active }) => ($active ? '#fff' : 'inherit')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : 'inherit')};
 
   &:hover:not([disabled]) {
     background: ${({ $active, theme }) =>

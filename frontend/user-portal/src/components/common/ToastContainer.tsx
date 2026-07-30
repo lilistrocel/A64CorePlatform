@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useToastStore } from '../../stores/toast.store';
 import type { Toast, ToastType } from '../../stores/toast.store';
+import type { Theme } from '@a64core/shared';
 
 const slideIn = keyframes`
   from {
@@ -45,16 +46,36 @@ const Container = styled.div`
   }
 `;
 
-const getToastColors = (type: ToastType) => {
+const getToastColors = (type: ToastType, theme: Theme) => {
   switch (type) {
     case 'success':
-      return { bg: '#f0fdf4', border: '#22c55e', text: '#15803d', icon: '#22c55e' };
+      return {
+        bg: theme.colors.successBg,
+        border: theme.colors.success,
+        text: theme.colors.emerald[700],
+        icon: theme.colors.success,
+      };
     case 'error':
-      return { bg: '#fef2f2', border: '#ef4444', text: '#b91c1c', icon: '#ef4444' };
+      return {
+        bg: theme.colors.errorBg,
+        border: theme.colors.error,
+        text: theme.colors.terracotta[700],
+        icon: theme.colors.error,
+      };
     case 'warning':
-      return { bg: '#fffbeb', border: '#f59e0b', text: '#b45309', icon: '#f59e0b' };
+      return {
+        bg: theme.colors.warningBg,
+        border: theme.colors.warning,
+        text: theme.colors.gold[700],
+        icon: theme.colors.warning,
+      };
     case 'info':
-      return { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8', icon: '#3b82f6' };
+      return {
+        bg: theme.colors.infoBg,
+        border: theme.colors.info,
+        text: theme.colors.primary[700],
+        icon: theme.colors.info,
+      };
   }
 };
 
@@ -64,10 +85,10 @@ const ToastItem = styled.div<{ $type: ToastType; $exiting: boolean }>`
   gap: 10px;
   padding: 12px 16px;
   border-radius: 8px;
-  border-left: 4px solid ${props => getToastColors(props.$type).border};
-  background: ${props => getToastColors(props.$type).bg};
-  color: ${props => getToastColors(props.$type).text};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-left: 4px solid ${props => getToastColors(props.$type, props.theme).border};
+  background: ${props => getToastColors(props.$type, props.theme).bg};
+  color: ${props => getToastColors(props.$type, props.theme).text};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   pointer-events: auto;
   cursor: default;
   animation: ${props => props.$exiting
@@ -83,7 +104,7 @@ const ToastIcon = styled.span<{ $type: ToastType }>`
   flex-shrink: 0;
   font-size: 18px;
   margin-top: 1px;
-  color: ${props => getToastColors(props.$type).icon};
+  color: ${props => getToastColors(props.$type, props.theme).icon};
 `;
 
 const ToastMessage = styled.div`
@@ -100,7 +121,7 @@ const CloseButton = styled.button<{ $type: ToastType }>`
   line-height: 1;
   padding: 0;
   margin-top: -2px;
-  color: ${props => getToastColors(props.$type).text};
+  color: ${props => getToastColors(props.$type, props.theme).text};
   opacity: 0.6;
   transition: opacity 0.2s;
 

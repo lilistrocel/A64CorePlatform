@@ -6,7 +6,8 @@
  */
 
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import type { DashboardBlockStatus, PerformanceCategory } from '../../../types/farm';
 import type { SortOption, SortDirection } from '../../../hooks/farm/useDashboardFilters';
 
@@ -37,15 +38,19 @@ interface DashboardFiltersProps {
   filteredCount: number;
 }
 
-const STATE_OPTIONS: { value: DashboardBlockStatus; label: string; icon: string; color: string }[] = [
-  { value: 'empty', label: 'Empty', icon: '⚪', color: '#9E9E9E' },
-  { value: 'planned', label: 'Planned', icon: '🔵', color: '#3B82F6' },
-  { value: 'planted', label: 'Planted', icon: '🟢', color: '#10B981' },
-  { value: 'growing', label: 'Growing', icon: '🌿', color: '#84CC16' },
-  { value: 'fruiting', label: 'Fruiting', icon: '🍇', color: '#FBBF24' },
-  { value: 'harvesting', label: 'Harvesting', icon: '🧺', color: '#F59E0B' },
-  { value: 'cleaning', label: 'Cleaning', icon: '🧹', color: '#8B5CF6' },
-];
+// Theme-aware — built inside the component via getStateOptions(theme) since
+// 'empty' resolves to textSecondary, which differs between light/dark.
+function getStateOptions(theme: Theme): { value: DashboardBlockStatus; label: string; icon: string; color: string }[] {
+  return [
+    { value: 'empty', label: 'Empty', icon: '⚪', color: theme.colors.textSecondary },
+    { value: 'planned', label: 'Planned', icon: '🔵', color: theme.colors.primary[500] },
+    { value: 'planted', label: 'Planted', icon: '🟢', color: theme.colors.success },
+    { value: 'growing', label: 'Growing', icon: '🌿', color: theme.colors.emerald[400] },
+    { value: 'fruiting', label: 'Fruiting', icon: '🍇', color: theme.colors.gold[300] },
+    { value: 'harvesting', label: 'Harvesting', icon: '🧺', color: theme.colors.warning },
+    { value: 'cleaning', label: 'Cleaning', icon: '🧹', color: theme.colors.secondary[500] },
+  ];
+}
 
 const PERFORMANCE_OPTIONS: { value: PerformanceCategory; label: string; icon: string }[] = [
   { value: 'exceptional', label: 'Exceptional', icon: '🏆' },
@@ -86,6 +91,8 @@ export function DashboardFilters({
   totalBlocks,
   filteredCount,
 }: DashboardFiltersProps) {
+  const theme = useTheme();
+  const STATE_OPTIONS = getStateOptions(theme);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasActiveFilters =
@@ -239,7 +246,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 
   &::placeholder {
@@ -285,7 +292,7 @@ const SortSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -304,17 +311,17 @@ const SortDirectionButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
     background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
 
 const ExpandButton = styled.button`
   padding: 8px 16px;
-  border: 2px solid #3b82f6;
+  border: 2px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.background};
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -333,7 +340,7 @@ const ActiveIndicator = styled.div`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #f44336;
+  background: ${({ theme }) => theme.colors.error};
   position: absolute;
   top: -2px;
   right: -2px;
@@ -343,15 +350,15 @@ const ClearButton = styled.button`
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
-  background: #f44336;
-  color: white;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #d32f2f;
+    background: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 
@@ -408,14 +415,14 @@ const PerformanceChip = styled.button<{ $isSelected: boolean }>`
   gap: 6px;
   padding: 6px 12px;
   border-radius: 20px;
-  border: 2px solid ${(props) => (props.$isSelected ? '#3b82f6' : props.theme.colors.neutral[300])};
+  border: 2px solid ${(props) => (props.$isSelected ? props.theme.colors.primary[500] : props.theme.colors.neutral[300])};
   background: ${(props) => (props.$isSelected ? props.theme.colors.infoBg : 'transparent')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   font-size: 13px;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
     background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
@@ -439,17 +446,17 @@ const ToggleGrid = styled.div`
 const ToggleChip = styled.button<{ $isActive: boolean }>`
   padding: 8px 16px;
   border-radius: 6px;
-  border: 2px solid ${(props) => (props.$isActive ? '#3b82f6' : props.theme.colors.neutral[300])};
-  background: ${(props) => (props.$isActive ? '#3b82f6' : 'transparent')};
-  color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.textPrimary)};
+  border: 2px solid ${(props) => (props.$isActive ? props.theme.colors.primary[500] : props.theme.colors.neutral[300])};
+  background: ${(props) => (props.$isActive ? props.theme.colors.primary[500] : 'transparent')};
+  color: ${(props) => (props.$isActive ? props.theme.colors.onAccent : props.theme.colors.textPrimary)};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
     background: ${(props) => (props.$isActive ? props.theme.colors.primary[700] : props.theme.colors.infoBg)};
-    color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.textPrimary)};
+    color: ${(props) => (props.$isActive ? props.theme.colors.onAccent : props.theme.colors.textPrimary)};
   }
 `;

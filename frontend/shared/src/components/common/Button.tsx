@@ -44,10 +44,10 @@ const StyledButton = styled.button<StyledButtonProps>`
   /* Variant styles */
   ${({ theme, $variant }) => {
     if ($variant === 'primary') {
-      // WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white text
+      // WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast for onAccent text
       return `
         background: ${theme.colors.primary[700]};
-        color: white;
+        color: ${theme.colors.onAccent};
 
         &:hover:not(:disabled) {
           background: ${theme.colors.primary[800]};
@@ -65,7 +65,7 @@ const StyledButton = styled.button<StyledButtonProps>`
       `;
     }
     if ($variant === 'outline') {
-      // WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background
+      // WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast on the page ground
       return `
         background: transparent;
         color: ${theme.colors.primary[700]};

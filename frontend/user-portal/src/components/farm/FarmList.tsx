@@ -94,8 +94,8 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1A`};
   }
 
   &::placeholder {
@@ -110,8 +110,8 @@ const SearchInput = styled.input`
 
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -126,7 +126,7 @@ const CreateButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 
   &:active {
@@ -161,9 +161,9 @@ const slideDown = keyframes`
 const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
   display: none;
   padding: 12px 16px;
-  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#EBF5FF' : theme.colors.surface)};
-  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.primary[50] : theme.colors.surface)};
+  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -196,8 +196,8 @@ const FilterToggleText = styled.span`
 `;
 
 const ActiveFilterBadge = styled.span`
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -230,9 +230,9 @@ const FilterBar = styled.div<{ $isCollapsed?: boolean }>`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 12px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -244,7 +244,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   justify-content: center;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
   }
 
   &:active {
@@ -260,8 +260,8 @@ const FilterButton = styled.button<{ $active: boolean }>`
 const ResetFiltersButton = styled.button`
   padding: 12px 16px;
   background: transparent;
-  color: #EF4444;
-  border: 1px solid #EF4444;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -275,7 +275,7 @@ const ResetFiltersButton = styled.button`
   gap: 6px;
 
   &:hover {
-    background: #FEE2E2;
+    background: ${({ theme }) => theme.colors.terracotta[100]};
   }
 
   &:active {
@@ -322,7 +322,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3B82F6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -335,10 +335,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
+  background: ${({ theme }) => theme.colors.terracotta[100]};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
   text-align: center;
 `;
 
@@ -381,9 +381,9 @@ const Pagination = styled.div`
 
 const PageButton = styled.button<{ $active?: boolean }>`
   padding: 12px 16px;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
@@ -394,7 +394,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
   }
 
   &:active:not(:disabled) {
@@ -444,8 +444,8 @@ const PageSizeSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1A`};
   }
 
   &:hover {

@@ -100,7 +100,7 @@ const AdditiveChip = styled.button<{ $active: boolean }>`
     ${({ $active, theme }) => ($active ? theme.colors.warning : theme.colors.neutral[300])};
   background: ${({ $active, theme }) =>
     $active ? theme.colors.warningBg : theme.colors.background};
-  color: ${({ $active, theme }) => ($active ? '#92400e' : theme.colors.textSecondary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.gold[800] : theme.colors.textSecondary)};
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.warning};

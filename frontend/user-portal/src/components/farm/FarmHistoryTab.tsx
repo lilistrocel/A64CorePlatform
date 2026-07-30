@@ -97,7 +97,7 @@ const ArchiveCard = styled.div`
   cursor: pointer;
 
   &:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: ${({ theme }) => theme.shadows.md};
     transform: translateY(-2px);
   }
 `;
@@ -170,13 +170,13 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 600;
-  background: ${({ $efficiency }) => {
-    if ($efficiency >= 90) return '#10b981';
-    if ($efficiency >= 75) return '#8bc34a';
-    if ($efficiency >= 60) return '#eab308';
-    return '#f97316';
+  background: ${({ $efficiency, theme }) => {
+    if ($efficiency >= 90) return theme.colors.success;
+    if ($efficiency >= 75) return theme.colors.emerald[300];
+    if ($efficiency >= 60) return theme.colors.warning;
+    return theme.colors.terracotta[400];
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const ArchiveStats = styled.div`
@@ -231,7 +231,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3B82F6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -273,7 +273,7 @@ const PaginationContainer = styled.div`
 const PaginationButton = styled.button<{ $disabled?: boolean }>`
   padding: 8px 16px;
   background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : theme.colors.primary[500])};
-  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : 'white')};
+  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : theme.colors.onAccent)};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -282,7 +282,7 @@ const PaginationButton = styled.button<{ $disabled?: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : '#2563eb')};
+    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : theme.colors.primary[600])};
   }
 `;
 
@@ -317,7 +317,7 @@ const ModalContent = styled.div`
   padding: 32px;
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   animation: slideIn 300ms ease-in-out;
 
   @keyframes slideIn {
@@ -370,7 +370,7 @@ const ModalBody = styled.div`
 
 const WarningText = styled.p`
   font-size: 14px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   font-weight: 500;
   margin: 0 0 16px 0;
 `;
@@ -425,7 +425,7 @@ const CancelButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #bdbdbd;
+    background: ${({ theme }) => theme.colors.neutral[400]};
   }
 
   &:disabled {
@@ -436,8 +436,8 @@ const CancelButton = styled.button`
 
 const ConfirmDeleteButton = styled.button`
   padding: 10px 20px;
-  background: #ef4444;
-  color: white;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -449,7 +449,7 @@ const ConfirmDeleteButton = styled.button`
   gap: 8px;
 
   &:hover {
-    background: #dc2626;
+    background: ${({ theme }) => theme.colors.terracotta[600]};
   }
 
   &:disabled {
@@ -463,11 +463,11 @@ const Toast = styled.div<{ $show: boolean; $type: 'success' | 'error' }>`
   position: fixed;
   top: 24px;
   right: 24px;
-  background: ${({ $type }) => ($type === 'success' ? '#10b981' : '#ef4444')};
-  color: white;
+  background: ${({ $type, theme }) => ($type === 'success' ? theme.colors.success : theme.colors.error)};
+  color: ${({ theme }) => theme.colors.onAccent};
   padding: 16px 24px;
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.lg};
   z-index: 1400;
   align-items: center;
   gap: 12px;
@@ -493,8 +493,8 @@ const ToastMessage = styled.span`
 const ButtonSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2px solid ${({ theme }) => `${theme.colors.onAccent}4D`};
+  border-top-color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 
@@ -538,7 +538,7 @@ const DetailModalContent = styled.div`
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   animation: slideIn 300ms ease-in-out;
 
   @keyframes slideIn {
@@ -648,15 +648,15 @@ const TimelineItem = styled.div`
   padding: 16px;
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
-  border-left: 4px solid #3B82F6;
+  border-left: 4px solid ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const TimelineIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -694,25 +694,28 @@ const PerformanceBadge = styled.span<{ $category: string }>`
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 600;
-  background: ${({ $category }) => {
+  background: ${({ $category, theme }) => {
     switch ($category) {
+      // "Exceptional" (>=200%) is the rarest, most meaningful tier — the one
+      // case in this scale that reaches for gold rather than staying in the
+      // green/blue/orange progression (brand has no purple to reuse here).
       case 'exceptional':
-        return '#9c27b0';
+        return theme.colors.secondary[500];
       case 'exceeding':
-        return '#10b981';
+        return theme.colors.success;
       case 'excellent':
-        return '#8bc34a';
+        return theme.colors.emerald[300];
       case 'good':
-        return '#2196f3';
+        return theme.colors.primary[500];
       case 'acceptable':
-        return '#eab308';
+        return theme.colors.gold[300];
       case 'poor':
-        return '#f97316';
+        return theme.colors.terracotta[400];
       default:
-        return '#9e9e9e';
+        return theme.colors.textDisabled;
     }
   }};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const QualityGrid = styled.div`
@@ -722,29 +725,29 @@ const QualityGrid = styled.div`
 `;
 
 const QualityCard = styled.div<{ $grade: string }>`
-  background: ${({ $grade }) => {
+  background: ${({ $grade, theme }) => {
     switch ($grade) {
       case 'A':
-        return '#e8f5e9';
+        return theme.colors.successBg;
       case 'B':
-        return '#fff3e0';
+        return theme.colors.warningBg;
       case 'C':
-        return '#ffebee';
+        return theme.colors.errorBg;
       default:
-        return '#f5f5f5';
+        return theme.colors.neutral[100];
     }
   }};
   border: 2px solid
-    ${({ $grade }) => {
+    ${({ $grade, theme }) => {
       switch ($grade) {
         case 'A':
-          return '#4caf50';
+          return theme.colors.success;
         case 'B':
-          return '#ff9800';
+          return theme.colors.warning;
         case 'C':
-          return '#f44336';
+          return theme.colors.error;
         default:
-          return '#9e9e9e';
+          return theme.colors.textDisabled;
       }
     }};
   border-radius: 8px;

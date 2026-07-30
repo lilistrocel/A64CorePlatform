@@ -5,7 +5,7 @@
  * Uses Recharts (already in the stack).
  */
 
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -107,7 +107,7 @@ const ErrorState = styled.div`
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -134,19 +134,20 @@ function CustomTooltip({
   payload?: Array<{ name: string; value: number; color: string }>;
   label?: string;
 }) {
+  const theme = useTheme();
   if (!active || !payload || payload.length === 0) return null;
 
   return (
     <div
       style={{
-        background: 'white',
-        border: '1px solid #e0e0e0',
+        background: theme.colors.background,
+        border: `1px solid ${theme.colors.border}`,
         borderRadius: '8px',
         padding: '12px',
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        boxShadow: theme.shadows.md,
       }}
     >
-      <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>
+      <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: theme.colors.textPrimary }}>
         {label}
       </div>
       {payload.map((entry) => (
@@ -176,6 +177,7 @@ export function PnlRevenueTrendChart({
   isError,
   onRetry,
 }: PnlRevenueTrendChartProps) {
+  const theme = useTheme();
   return (
     <Section aria-labelledby="trend-chart-title">
       <SectionTitle id="trend-chart-title">Revenue Trend</SectionTitle>
@@ -205,24 +207,24 @@ export function PnlRevenueTrendChart({
             >
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                  <stop offset="5%" stopColor={theme.colors.success} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={theme.colors.success} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorNetProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2196f3" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#2196f3" stopOpacity={0} />
+                  <stop offset="5%" stopColor={theme.colors.primary[500]} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={theme.colors.primary[500]} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
               <XAxis
                 dataKey="yearMonth"
-                tick={{ fontSize: 12, fill: '#616161' }}
+                tick={{ fontSize: 12, fill: theme.colors.textSecondary }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 tickFormatter={formatYAxis}
-                tick={{ fontSize: 12, fill: '#616161' }}
+                tick={{ fontSize: 12, fill: theme.colors.textSecondary }}
                 tickLine={false}
                 axisLine={false}
                 width={55}
@@ -235,7 +237,7 @@ export function PnlRevenueTrendChart({
                 type="monotone"
                 dataKey="revenue"
                 name="Revenue"
-                stroke="#10B981"
+                stroke={theme.colors.success}
                 strokeWidth={2}
                 fill="url(#colorRevenue)"
                 dot={false}
@@ -245,7 +247,7 @@ export function PnlRevenueTrendChart({
                 type="monotone"
                 dataKey="netProfit"
                 name="Net Profit"
-                stroke="#2196f3"
+                stroke={theme.colors.primary[500]}
                 strokeWidth={2}
                 fill="url(#colorNetProfit)"
                 dot={false}

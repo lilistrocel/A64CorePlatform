@@ -477,7 +477,7 @@ const PrimaryButton = styled.button`
   padding: 8px 16px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: white;
+  color: ${({ theme }: any) => theme.colors.onAccent};
   background: ${({ theme }: any) => theme.colors.primary[500]};
   border: none;
   border-radius: 6px;
@@ -503,8 +503,8 @@ const ResultBox = styled.div<{ success: boolean }>`
   padding: ${({ theme }: any) => theme.spacing.md};
   border-radius: 6px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  background: ${({ success, theme }: any) => success ? theme.colors.success[50] : theme.colors.error[50]};
-  color: ${({ success, theme }: any) => success ? theme.colors.success[700] : theme.colors.error[700]};
+  background: ${({ success, theme }: any) => success ? theme.colors.successBg : theme.colors.errorBg};
+  color: ${({ success, theme }: any) => success ? theme.colors.emerald[700] : theme.colors.terracotta[700]};
 `;
 
 const StatusBar = styled.div`
@@ -516,9 +516,9 @@ const StatusBar = styled.div`
 `;
 
 const ErrorText = styled.div`
-  color: ${({ theme }: any) => theme.colors.error[500]};
+  color: ${({ theme }: any) => theme.colors.error};
   padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.error[50]};
+  background: ${({ theme }: any) => theme.colors.errorBg};
   border-radius: 6px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
 `;
@@ -551,11 +551,20 @@ const HistoryItem = styled.div`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
 `;
 
-const severityColors: Record<string, string> = {
-  low: '#6b7280',
-  medium: '#d97706',
-  high: '#dc2626',
-  critical: '#7c3aed',
+// Heat scale across the brand's warm ramps — deepens with severity so
+// "critical" reads darkest without reaching for gold (reserved for nav/CTA).
+const getSeverityColor = (severity: string, theme: any): string => {
+  switch (severity) {
+    case 'medium':
+      return theme.colors.gold[600];
+    case 'high':
+      return theme.colors.terracotta[600];
+    case 'critical':
+      return theme.colors.terracotta[800];
+    case 'low':
+    default:
+      return theme.colors.neutral[500];
+  }
 };
 
 const HistorySeverity = styled.span<{ severity: string }>`
@@ -563,8 +572,8 @@ const HistorySeverity = styled.span<{ severity: string }>`
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 3px;
-  color: white;
-  background: ${({ severity }) => severityColors[severity] || '#6b7280'};
+  color: ${({ theme }: any) => theme.colors.onAccent};
+  background: ${({ severity, theme }) => getSeverityColor(severity, theme)};
   min-width: 60px;
   text-align: center;
 `;

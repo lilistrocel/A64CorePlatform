@@ -80,7 +80,7 @@ const TriggerButton = styled.button<{ $hasError?: boolean; $disabled?: boolean }
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? '#EF4444' : theme.colors.neutral[300]};
+    $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ $disabled, theme }) =>
@@ -94,10 +94,10 @@ const TriggerButton = styled.button<{ $hasError?: boolean; $disabled?: boolean }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
     box-shadow: 0 0 0 2px
-      ${({ $hasError }) =>
-        $hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'};
+      ${({ $hasError, theme }) =>
+        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
   }
 `;
 
@@ -200,8 +200,8 @@ const BaseBadge = styled.span`
   letter-spacing: 0.3px;
   padding: 1px 6px;
   border-radius: 10px;
-  background: ${({ theme }) => theme.colors.primary[100] ?? '#DBEAFE'};
-  color: ${({ theme }) => theme.colors.primary[700] ?? '#1D4ED8'};
+  background: ${({ theme }) => theme.colors.primary[100]};
+  color: ${({ theme }) => theme.colors.primary[700]};
   flex-shrink: 0;
 `;
 

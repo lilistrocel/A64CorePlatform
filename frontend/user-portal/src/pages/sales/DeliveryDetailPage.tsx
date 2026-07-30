@@ -25,7 +25,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ExternalLink, FileText } from 'lucide-react';
 import {
   useDelivery,
@@ -86,20 +86,20 @@ const StatusBadge = styled.span<{ $status: DeliveryStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#374151';
-      case 'open': return '#065f46';
-      case 'cancelled': return '#991b1b';
-      default: return '#374151';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -117,7 +117,7 @@ const PrimaryButton = styled.button`
   gap: 7px;
   padding: 9px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -142,13 +142,13 @@ const SecondaryButton = styled.button`
 const DangerButton = styled.button`
   padding: 9px 18px;
   background: transparent;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: #fef2f2; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.errorBg}; }
 `;
 
 const GhostButton = styled.button`
@@ -232,8 +232,8 @@ const ReturnedBadge = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: #fef9c3;
-  color: #854d0e;
+  background: ${({ theme }) => theme.colors.gold[50]};
+  color: ${({ theme }) => theme.colors.gold[700]};
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
@@ -248,12 +248,12 @@ const InvoicedBadge = styled.span<{ $zero: boolean }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: ${({ $zero }) => ($zero ? 'transparent' : '#f0f4ff')};
-  color: ${({ $zero }) => ($zero ? '#d1d5db' : '#3730a3')};
+  background: ${({ $zero, theme }) => ($zero ? 'transparent' : theme.colors.primary[50])};
+  color: ${({ $zero, theme }) => ($zero ? theme.colors.border : theme.colors.primary[700])};
   border-radius: 99px;
   font-size: 11px;
   font-weight: ${({ $zero }) => ($zero ? 400 : 600)};
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 /**
@@ -264,24 +264,24 @@ const OpenInvoiceBadge = styled.span<{ $state: 'full' | 'partial' | 'zero' }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: ${({ $state }) => {
+  background: ${({ $state, theme }) => {
     switch ($state) {
-      case 'full':    return '#d1fae5';
-      case 'partial': return '#fef3c7';
+      case 'full':    return theme.colors.emerald[100];
+      case 'partial': return theme.colors.warningBg;
       case 'zero':    return 'transparent';
     }
   }};
-  color: ${({ $state }) => {
+  color: ${({ $state, theme }) => {
     switch ($state) {
-      case 'full':    return '#065f46';
-      case 'partial': return '#92400e';
-      case 'zero':    return '#d1d5db';
+      case 'full':    return theme.colors.emerald[700];
+      case 'partial': return theme.colors.gold[800];
+      case 'zero':    return theme.colors.border;
     }
   }};
   border-radius: 99px;
   font-size: 11px;
   font-weight: ${({ $state }) => ($state === 'zero' ? 400 : 600)};
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 /** Muted chip shown in the action bar when all lines are fully invoiced. */
@@ -289,9 +289,9 @@ const FullyInvoicedChip = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 8px 16px;
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -420,6 +420,7 @@ function docTypeRoute(ref: DocumentLinkRef): string | null {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DeliveryDetailPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId } = useParams<{ docId: string }>();
   const user = useAuthStore((s) => s.user);
@@ -478,7 +479,7 @@ export function DeliveryDetailPage() {
   // ── Loading / error states ────────────────────────────────────────────────
 
   if (isLoading) return <Container>Loading...</Container>;
-  if (error || !dn) return <Container style={{ color: '#dc2626' }}>Delivery Note not found.</Container>;
+  if (error || !dn) return <Container style={{ color: theme.colors.error }}>Delivery Note not found.</Container>;
 
   const totalLines = dn.lines.length;
   const totalQty = dn.lines.reduce((sum, l) => sum + Number(l.quantity), 0);
@@ -553,12 +554,12 @@ export function DeliveryDetailPage() {
 
       {actionError && (
         <div style={{
-          background: '#fef2f2',
-          border: '1px solid #fecaca',
+          background: theme.colors.errorBg,
+          border: `1px solid ${theme.colors.terracotta[200]}`,
           borderRadius: 8,
           padding: '12px 16px',
           fontSize: 14,
-          color: '#dc2626',
+          color: theme.colors.terracotta[700],
           marginBottom: 16,
         }}>
           {actionError}
@@ -656,12 +657,12 @@ export function DeliveryDetailPage() {
                   <tr key={line.lineId}>
                     <Td>{line.lineNumber}</Td>
                     <Td>
-                      <strong style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                      <strong style={{ fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                         {line.itemCode}
                       </strong>
                     </Td>
                     <Td>{line.itemName}</Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>{line.description}</Td>
+                    <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>{line.description}</Td>
                     <Td style={{ textAlign: 'right' }}>
                       {qty.toLocaleString('en-AE', { maximumFractionDigits: 3 })}
                     </Td>
@@ -678,7 +679,7 @@ export function DeliveryDetailPage() {
                       </OpenInvoiceBadge>
                     </Td>
                     <Td>{line.uom}</Td>
-                    <Td style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>
+                    <Td style={{ fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.mono }}>
                       {line.warehouseId}
                     </Td>
                     <Td style={{ textAlign: 'right' }}>
@@ -687,13 +688,13 @@ export function DeliveryDetailPage() {
                           {returnedQty.toFixed(3)} of {qty.toFixed(3)}
                         </ReturnedBadge>
                       ) : (
-                        <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>
+                        <span style={{ color: theme.colors.border, fontSize: 12 }}>—</span>
                       )}
                     </Td>
-                    <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13 }}>
+                    <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                       {Number(line.unitCost).toFixed(4)}
                     </Td>
-                    <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>
+                    <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13, fontWeight: 600 }}>
                       {Number(line.lineCogs).toLocaleString('en-AE', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -751,7 +752,7 @@ export function DeliveryDetailPage() {
         )}
 
         {!dn.baseDocRef && (!dn.targetDocRefs || dn.targetDocRefs.length === 0) && (
-          <span style={{ color: '#9ca3af', fontSize: 14 }}>No linked documents.</span>
+          <span style={{ color: theme.colors.textDisabled, fontSize: 14 }}>No linked documents.</span>
         )}
       </Card>
 

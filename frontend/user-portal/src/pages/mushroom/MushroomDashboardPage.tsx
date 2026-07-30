@@ -10,7 +10,8 @@
  */
 
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { useMushroomDashboard } from '../../hooks/mushroom/useMushroomDashboard';
 import { useFacilities } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms } from '../../hooks/mushroom/useRoomData';
@@ -24,6 +25,7 @@ export function MushroomDashboardPage() {
   const [selectedRoom, setSelectedRoom] = useState<GrowingRoom | null>(null);
   const [phaseFilter, setPhaseFilter] = useState<RoomPhase | null>(null);
 
+  const theme = useTheme();
   const { data: dashboardData, isLoading: dashLoading, refetch } = useMushroomDashboard();
   const { data: facilities = [] } = useFacilities();
   const { data: rooms = [], isLoading: roomsLoading } = useFacilityRooms(
@@ -67,28 +69,31 @@ export function MushroomDashboardPage() {
 
       {/* Summary Stat Cards */}
       <StatCardsRow>
-        <StatCard $accent="#3B82F6">
+        <StatCard $accent={theme.colors.info}>
           <StatIcon>🏭</StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.totalFacilities ?? '—'}</StatNumber>
             <StatLabel>Facilities</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent="#8B5CF6">
+        {/* Purple was decorative variety, not a category vs. an adjacent blue
+            element — gold is reserved (brand §1.4), so this falls back to a
+            deeper lapis per the spec's purple judgement call. */}
+        <StatCard $accent={theme.colors.primary[700]}>
           <StatIcon>🏠</StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.totalRooms ?? '—'}</StatNumber>
             <StatLabel>Total Rooms</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent="#10B981">
+        <StatCard $accent={theme.colors.success}>
           <StatIcon>🍄</StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.activeRooms ?? '—'}</StatNumber>
             <StatLabel>Active Rooms</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent={activeAlerts.length > 0 ? '#EF4444' : '#9E9E9E'}>
+        <StatCard $accent={activeAlerts.length > 0 ? theme.colors.error : theme.colors.neutral[500]}>
           <StatIcon>⚠️</StatIcon>
           <StatInfo>
             <StatNumber $alert={activeAlerts.length > 0}>
@@ -98,7 +103,7 @@ export function MushroomDashboardPage() {
           </StatInfo>
         </StatCard>
         {dashboardData?.totalHarvestThisMonth != null && (
-          <StatCard $accent="#F59E0B">
+          <StatCard $accent={theme.colors.warning}>
             <StatIcon>⚖️</StatIcon>
             <StatInfo>
               <StatNumber>
@@ -308,7 +313,7 @@ const PageTitle = styled.h1`
 
 const PageSubtitle = styled.p`
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -326,8 +331,8 @@ const RefreshBtn = styled.button<RefreshBtnProps>`
   padding: 9px 16px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -338,14 +343,14 @@ const RefreshBtn = styled.button<RefreshBtnProps>`
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -401,7 +406,7 @@ interface StatNumberProps {
 const StatNumber = styled.div<StatNumberProps>`
   font-size: 24px;
   font-weight: 700;
-  color: ${({ $alert, theme }) => ($alert ? '#EF4444' : theme.colors.textPrimary)};
+  color: ${({ $alert, theme }) => ($alert ? theme.colors.error : theme.colors.textPrimary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
@@ -447,8 +452,8 @@ const Select = styled.select`
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -469,7 +474,7 @@ const ClearFilterBtn = styled.button`
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -504,7 +509,7 @@ const LoadingDot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.primary[500]};
   display: inline-block;
   animation: pulse 1s infinite;
 
@@ -531,7 +536,7 @@ const Spinner = styled.div`
   width: 36px;
   height: 36px;
   border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -609,7 +614,7 @@ const EmptyState = styled.div`
 `;
 
 const GreenCheck = styled.span`
-  color: #10B981;
+  color: ${({ theme }) => theme.colors.success};
   font-size: 16px;
   margin-right: 6px;
 `;
@@ -625,22 +630,28 @@ interface AlertItemProps {
   $severity: string;
 }
 
-const ALERT_SEVERITY_BG: Record<string, string> = {
-  low: '#f0fdf4',
-  medium: '#fffbeb',
-  high: '#fff5f5',
-  critical: '#fef2f2',
-};
+// Alert severity is a data encoding — walk the emerald→gold→terracotta arc
+// (calm to urgent) rather than mixing unrelated hues, so low/medium/high/
+// critical read as an ordered scale, matching RoomDetailsModal's severity
+// treatment.
+function getAlertSeverityBg(theme: Theme): Record<string, string> {
+  return {
+    low: theme.colors.successBg,
+    medium: theme.colors.warningBg,
+    high: theme.colors.errorBg,
+    critical: theme.colors.errorBg,
+  };
+}
 
 const AlertItem = styled.div<AlertItemProps>`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: ${({ $severity }) => ALERT_SEVERITY_BG[$severity] ?? '#fff5f5'};
+  background: ${({ $severity, theme }) => getAlertSeverityBg(theme)[$severity] ?? theme.colors.errorBg};
   border-radius: 8px;
-  border: 1px solid ${({ $severity }) =>
-    $severity === 'critical' ? '#fecaca' : '#f0f0f0'};
+  border: 1px solid ${({ $severity, theme }) =>
+    $severity === 'critical' ? theme.colors.terracotta[200] : theme.colors.neutral[200]};
 `;
 
 const AlertRoom = styled.span`
@@ -657,12 +668,14 @@ const AlertType = styled.span`
   text-transform: capitalize;
 `;
 
-const SEVERITY_BADGE_COLORS: Record<string, string> = {
-  low: '#10B981',
-  medium: '#F59E0B',
-  high: '#EF4444',
-  critical: '#7F1D1D',
-};
+function getSeverityBadgeColor(theme: Theme): Record<string, string> {
+  return {
+    low: theme.colors.success,
+    medium: theme.colors.warning,
+    high: theme.colors.error,
+    critical: theme.colors.terracotta[900],
+  };
+}
 
 interface AlertSeverityBadgeProps {
   $severity: string;
@@ -671,8 +684,8 @@ interface AlertSeverityBadgeProps {
 const AlertSeverityBadge = styled.span<AlertSeverityBadgeProps>`
   font-size: 10px;
   font-weight: 700;
-  color: white;
-  background: ${({ $severity }) => SEVERITY_BADGE_COLORS[$severity] ?? '#9e9e9e'};
+  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ $severity, theme }) => getSeverityBadgeColor(theme)[$severity] ?? theme.colors.neutral[500]};
   border-radius: 20px;
   padding: 2px 7px;
   text-transform: uppercase;
@@ -682,8 +695,8 @@ const AlertSeverityBadge = styled.span<AlertSeverityBadgeProps>`
 const AlertCount = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: #EF4444;
-  background: #FEE2E2;
+  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.terracotta[100]};
   border-radius: 20px;
   padding: 2px 8px;
 `;

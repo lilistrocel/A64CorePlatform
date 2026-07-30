@@ -16,7 +16,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme, type DefaultTheme } from 'styled-components';
 import { Send, Loader, Trash2 } from 'lucide-react';
 import { useAIHub } from '../../hooks/ai/useAIHub';
 import { ConfirmationCard } from './ConfirmationCard';
@@ -114,12 +114,22 @@ interface SectionBadgeConfig {
   color: string;
 }
 
-const SECTION_BADGE: Record<AIHubSection, SectionBadgeConfig> = {
-  control: { icon: '⚡', label: 'Write Access', color: '#F59E0B' },
-  monitor: { icon: '👁️', label: 'Read Only',    color: '#3B82F6' },
-  report:  { icon: '📄', label: 'Exportable',   color: '#8B5CF6' },
-  advise:  { icon: '🧠', label: 'Expert Mode',  color: '#10B981' },
-};
+/**
+ * Section identity colours, resolved against the live theme (not a module
+ * constant) so dark mode stays correct. `report` was purple — it needs to
+ * stay visually distinct from `monitor`'s blue, but `control` already owns
+ * `warning` (== `secondary`/gold at the token level), so `report` takes
+ * `primary[700]` (decorative-only per spec §3) rather than colliding with
+ * control's gold on the value it shares with `warning`.
+ */
+function getSectionBadge(theme: DefaultTheme): Record<AIHubSection, SectionBadgeConfig> {
+  return {
+    control: { icon: '⚡', label: 'Write Access', color: theme.colors.warning },
+    monitor: { icon: '👁️', label: 'Read Only',    color: theme.colors.info },
+    report:  { icon: '📄', label: 'Exportable',   color: theme.colors.primary[700] },
+    advise:  { icon: '🧠', label: 'Expert Mode',  color: theme.colors.success },
+  };
+}
 
 const SECTION_PLACEHOLDER: Record<AIHubSection, string> = {
   control: 'Ask me to control something...',
@@ -351,7 +361,7 @@ const MessageBubble = styled.div<BubbleProps>`
     $isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};
   background: ${({ $isUser, $accentColor, theme }) =>
     $isUser ? $accentColor : theme.colors.neutral[200]};
-  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.textPrimary)};
+  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onAccent : theme.colors.textPrimary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -443,7 +453,7 @@ const ExportButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary?.[500] ?? '#2196f3'};
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 
@@ -517,7 +527,7 @@ const TextareaInput = styled.textarea`
   min-height: 56px;
   max-height: 160px;
   padding: 16px 18px;
-  border: 1.5px solid #d4d4d4;
+  border: 1.5px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
   font-size: 18px;
   line-height: 1.4;
@@ -529,8 +539,8 @@ const TextareaInput = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.12);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1F;
     background: ${({ theme }) => theme.colors.background};
   }
 
@@ -554,7 +564,7 @@ const SendButton = styled.button<SendButtonProps>`
   min-width: 52px;
   border-radius: 50%;
   background: ${({ $accentColor }) => $accentColor};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   cursor: pointer;
   display: flex;
@@ -594,6 +604,8 @@ export function AIHubChat({
   voiceTranscript,
   onVoiceTranscriptConsumed,
 }: AIHubChatProps) {
+  const theme = useTheme();
+  const SECTION_BADGE = getSectionBadge(theme);
   const [inputValue, setInputValue] = useState('');
   // Tracks which message+format is currently being exported, e.g. "msg-123-pdf"
   const [exportingKey, setExportingKey] = useState<string | null>(null);

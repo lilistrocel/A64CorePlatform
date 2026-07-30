@@ -1,0 +1,129 @@
+/* ===================================================================
+   A20Core — A New Renaissance · Self-hosted OFL fonts
+   Sovereign / offline render layer for Arabic + shared metadata.
+   Pairs with A20Core_BRAND.md §9.3. Order, born from many.
+
+   USAGE
+   -----
+   Sovereign / offline builds:  link THIS file. No external requests
+   are made — every glyph renders inside the data-sovereignty
+   boundary from ./ttf/ (vendored by ./vendor-fonts.sh).
+
+       <link rel="stylesheet" href="/Brand/fonts/fonts.css">
+
+   Online builds may continue to use the Google CDN <link> from
+   A20Core_BRAND.md §9.3. Do NOT load both — pick one per build.
+
+   SCOPE (this file): the full A20Core type system, self-hosted —
+   Latin (Hanken Grotesk, Fraunces) per §4, Arabic (Cairo, Amiri) per
+   §9.1, and Space Mono shared metadata. One stylesheet covers both
+   LTR and RTL sovereign renders. (Latin added by T-2026-0143,
+   extending the Arabic + metadata pack from T-2026-0111.)
+
+   Filenames below are the URL-safe names produced by vendor-fonts.sh
+   (upstream ships e.g. "Cairo[slnt,wght].ttf"; the script normalizes).
+   =================================================================== */
+
+/* --- Hanken Grotesk · Latin display / headlines / body / UI (§4) ---
+   Variable font; brand uses the 400–800 weight range. Wordmark is
+   set in the outlined-SVG lockup, so it is font-independent here. */
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("./ttf/HankenGrotesk-Variable.ttf") format("truetype-variations");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Fraunces · Latin editorial accent (§4) ---
+   Covers and pull-quotes only — not for UI/body. Variable across
+   opsz/wght (+ SOFT/WONK); italic carries the warmth. */
+@font-face {
+  font-family: "Fraunces";
+  src: url("./ttf/Fraunces-Variable.ttf") format("truetype-variations");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("./ttf/Fraunces-Italic-Variable.ttf") format("truetype-variations");
+  font-weight: 400 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* --- Cairo · Arabic body / UI / headings (Hanken Grotesk companion) ---
+   Variable font; brand uses the 400–800 weight range (§9.1). */
+@font-face {
+  font-family: "Cairo";
+  src: url("./ttf/Cairo-Variable.ttf") format("truetype-variations");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Amiri · Arabic editorial accent (Fraunces companion, §9.1) ---
+   Covers, pull-quotes, tagline lockup only. Static weights/styles. */
+@font-face {
+  font-family: "Amiri";
+  src: url("./ttf/Amiri-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Amiri";
+  src: url("./ttf/Amiri-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Amiri";
+  src: url("./ttf/Amiri-Italic.ttf") format("truetype");
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+
+/* --- Space Mono · metadata / labels / codes / timestamps (§4, §9.1) ---
+   Latin runs stay LTR in this face inside RTL documents. */
+@font-face {
+  font-family: "Space Mono";
+  src: url("./ttf/SpaceMono-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Space Mono";
+  src: url("./ttf/SpaceMono-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Space Mono";
+  src: url("./ttf/SpaceMono-Italic.ttf") format("truetype");
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+
+/* -------------------------------------------------------------------
+   Latin (LTR) role bindings — mirrors A20Core_BRAND.md §4 so a
+   sovereign build that links this file alone gets the default stack.
+   Bound at the document root, not on `body`, so the more-specific RTL
+   attribute selectors below override cleanly for Arabic pages.
+   ------------------------------------------------------------------- */
+html {
+  font-family: "Hanken Grotesk", system-ui, sans-serif;   /* display / body / UI */
+  font-optical-sizing: auto;
+}
+.tagline, blockquote { font-family: "Fraunces", Georgia, serif; }   /* editorial accent only */
+.meta, code, time, kbd, samp, pre { font-family: "Space Mono", monospace; }  /* metadata / data */
+
+/* -------------------------------------------------------------------
+   RTL role bindings — mirrors A20Core_BRAND.md §9.3 so a sovereign
+   build that links this file alone gets correct Arabic rendering.
+   The [dir="rtl"]/[lang="ar"] attribute selectors outrank the Latin
+   `html`/class rules above, so Arabic pages render Cairo/Amiri.
+   ------------------------------------------------------------------- */
+[dir="rtl"], [lang="ar"] {
+  font-family: "Cairo", system-ui, sans-serif;   /* Arabic body / UI / headings */
+  line-height: 1.8;
+  text-align: right;
+}
+[lang="ar"] h1, [lang="ar"] h2, [lang="ar"] h3 { font-weight: 700; line-height: 1.3; }
+[lang="ar"] .tagline, [lang="ar"] blockquote { font-family: "Amiri", serif; }      /* editorial accent */
+[lang="ar"] .meta, [lang="ar"] code, [lang="ar"] time { font-family: "Space Mono", monospace; }  /* metadata stays LTR */
+[lang="ar"] bdi, [lang="ar"] [dir="ltr"] { unicode-bidi: isolate; }

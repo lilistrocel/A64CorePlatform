@@ -26,9 +26,18 @@ export const GlobalStyles = createGlobalStyle`
     font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
     line-height: ${({ theme }) => theme.typography.lineHeight.normal};
     color: ${({ theme }) => theme.colors.textPrimary};
-    background-color: ${({ theme }) => theme.colors.background};
+    /* colors.canvas (not colors.background) — this is what makes Fresco
+       Cream / Cosmos Ink the dominant ~65% page ground per brand contract
+       §3. colors.background is reserved for raised panels/cards sitting
+       above the canvas. */
+    background-color: ${({ theme }) => theme.colors.canvas};
     width: 100%;
     min-height: 100vh;
+  }
+
+  /* Metadata / data — Space Mono, per brand contract §4. */
+  code, pre, kbd, samp, time {
+    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   }
 
   #root {

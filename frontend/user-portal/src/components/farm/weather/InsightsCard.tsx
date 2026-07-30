@@ -17,7 +17,7 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -141,7 +141,7 @@ const AlertItem = styled.div`
   padding: 10px 12px;
   background: ${({ theme }) => theme.colors.errorBg};
   border-radius: 8px;
-  border-left: 4px solid #EF4444;
+  border-left: 4px solid ${({ theme }) => theme.colors.error};
 
   .icon {
     font-size: 16px;
@@ -150,7 +150,7 @@ const AlertItem = styled.div`
 
   .text {
     font-size: 13px;
-    color: #7F1D1D;
+    color: ${({ theme }) => theme.colors.terracotta[900]};
     line-height: 1.4;
   }
 `;
@@ -172,12 +172,12 @@ const RecommendationItem = styled.div`
   .icon {
     font-size: 14px;
     flex-shrink: 0;
-    color: #16A34A;
+    color: ${({ theme }) => theme.colors.emerald[600]};
   }
 
   .text {
     font-size: 13px;
-    color: #166534;
+    color: ${({ theme }) => theme.colors.emerald[800]};
     line-height: 1.4;
   }
 `;

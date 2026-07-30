@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A20Core — Brand Book · A New Renaissance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F1E6CC; --cream-hi:#FAF3E2; --cream-2:#E8DAB9; --paper:#FBF6EA;
+  --ink:#1B1A14; --slate:#5C564A; --tert:#8A8472; --line:#D9CDB0;
+  --cosmos:#0E1330; --cosmos-2:#141B3B; --cosmos-line:#2A3358;
+  --gold:#C29A33; --gold-hi:#DCB94F; --lapis:#20419A; --lapis-hi:#3B6EE0;
+  --emerald:#1B8A5A; --emerald-hi:#2BAE7F; --terra:#C15A2C; --coral:#E8654A; --teal:#1FA39C;
+  --sans:'Hanken Grotesk',system-ui,sans-serif; --disp:'Fraunces',Georgia,serif; --mono:'Space Mono',monospace;
+}
+*{box-sizing:border-box;} html,body{margin:0;padding:0;}
+body{ font-family:var(--sans); color:var(--ink); background:var(--paper); -webkit-font-smoothing:antialiased; }
+section{ padding:92px 7vw; position:relative; }
+.cosmos{ background:var(--cosmos); color:var(--cream); }
+.cream{ background:var(--cream); }
+.paper{ background:var(--paper); }
+.kicker{ font-family:var(--mono); font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); margin:0 0 14px;}
+.cosmos .kicker{ color:var(--gold-hi);}
+h2{ font-family:var(--disp); font-weight:500; font-size:clamp(30px,4vw,46px); line-height:1.05; letter-spacing:-.01em; margin:0 0 8px;}
+h3{ font-family:var(--sans); font-weight:700; font-size:19px; margin:0 0 6px;}
+p{ font-size:16px; line-height:1.6; color:inherit; max-width:64ch;}
+.cosmos p{ color:#cfd3e6;} .muted{ color:var(--slate);} .cosmos .muted{ color:#9aa3c2;}
+.rule{ height:4px; border-radius:3px; background:linear-gradient(90deg,var(--lapis),var(--gold-hi),var(--terra),var(--emerald),var(--coral),var(--teal)); }
+.divider{ height:1px; background:linear-gradient(90deg,var(--gold) 0%, transparent 70%); margin:10px 0 28px;}
+.cosmos .divider{ background:linear-gradient(90deg,var(--gold-hi) 0%, transparent 70%);}
+
+/* COVER */
+.cover{ min-height:100vh; display:flex; flex-direction:column; justify-content:space-between; padding:6vh 7vw; background:
+  radial-gradient(120% 80% at 50% 0%, #18204a 0%, var(--cosmos) 55%, #080b1f 100%); color:var(--cream);}
+.cover .top{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#9aa3c2;}
+.cover .center{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:26px;}
+.cover canvas{ filter:drop-shadow(0 10px 50px rgba(220,180,90,.25)); }
+.cover h1{ font-family:var(--disp); font-weight:500; font-size:clamp(40px,7vw,86px); line-height:1; margin:0;}
+.cover h1 .it{ font-style:italic; color:var(--gold-hi);}
+.cover .tag{ font-family:var(--mono); font-size:13px; letter-spacing:.32em; text-transform:uppercase; color:var(--gold-hi);}
+.cover .foot{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:#7e88a8; border-top:1px solid var(--cosmos-line); padding-top:18px;}
+
+/* idea */
+.pull{ font-family:var(--disp); font-style:italic; font-weight:400; font-size:clamp(24px,3.4vw,38px); line-height:1.28; color:var(--ink); max-width:24ch; margin:18px 0;}
+.cosmos .pull{ color:var(--cream);}
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:46px; align-items:start;}
+@media(max-width:760px){ .two{ grid-template-columns:1fr;} }
+
+/* logo */
+.logobox{ border-radius:16px; overflow:hidden; border:1px solid var(--line); }
+.logobox img{ display:block; width:100%; }
+.logobox.dark{ border-color:var(--cosmos-line);}
+.grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+.grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+@media(max-width:760px){ .grid3,.grid4{ grid-template-columns:1fr 1fr;} }
+.chip{ border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:26px; min-height:150px;}
+.chip.d{ background:var(--cosmos);} .chip.l{ background:var(--cream); border:1px solid var(--line);}
+.cap{ font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--slate);} .chip.d .cap{ color:#7e88a8;}
+
+/* palette */
+.pal{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+@media(max-width:760px){ .pal{ grid-template-columns:1fr 1fr;} }
+.sw{ border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#fff;}
+.sw .c{ height:96px;} .sw .m{ padding:11px 13px;}
+.sw .nm{ font-weight:700; font-size:14px;} .sw .hx{ font-family:var(--mono); font-size:11px; color:var(--slate);} .sw .ro{ font-size:11px; color:var(--tert); margin-top:3px;}
+
+/* type */
+.specimen{ border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+.specimen .r{ padding:22px 26px; border-bottom:1px solid var(--line);} .specimen .r:last-child{ border-bottom:none;}
+.specimen .l{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--slate); margin-bottom:10px;}
+.huge{ font-family:var(--sans); font-weight:800; font-size:clamp(34px,6vw,64px); line-height:.95; letter-spacing:-.02em;}
+.fr{ font-family:var(--disp); font-weight:500; font-size:clamp(26px,4vw,42px); line-height:1.1;} .fr .it{ font-style:italic; color:var(--lapis);}
+.scale{ display:flex; flex-wrap:wrap; gap:18px; align-items:baseline;}
+.scale span{ font-weight:700;}
+
+/* imagery */
+.hero{ border-radius:16px; overflow:hidden; border:1px solid var(--line); background:var(--cosmos); aspect-ratio:16/9; position:relative; display:flex; align-items:center; justify-content:center;}
+.hero img{ width:100%; height:100%; object-fit:cover; display:block;}
+.hero .ph{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; padding:20px;
+  background:radial-gradient(120% 120% at 50% 30%, #1b2350, #0c1129); color:#9aa3c2;}
+.hero .ph .t{ font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase;}
+.hero .ph .f{ font-family:var(--disp); font-style:italic; color:var(--gold-hi); font-size:18px;}
+.imgrow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;} @media(max-width:860px){ .imgrow{ grid-template-columns:1fr;} }
+
+/* applications */
+.apps{ display:grid; grid-template-columns:1fr 1fr; gap:20px;} @media(max-width:760px){ .apps{ grid-template-columns:1fr;} }
+.card{ border-radius:14px; overflow:hidden; border:1px solid var(--cosmos-line); background:var(--cosmos); color:var(--cream); padding:26px; min-height:190px; display:flex; flex-direction:column; justify-content:space-between;}
+.card.l{ background:var(--cream); color:var(--ink); border-color:var(--line);}
+.card .nm{ font-weight:800; font-size:18px;} .card .ti{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#9aa3c2;} .card.l .ti{ color:var(--slate);}
+.slide{ aspect-ratio:16/9; border-radius:14px; background:radial-gradient(120% 90% at 20% 0%, #18204a, var(--cosmos)); color:var(--cream); padding:34px; display:flex; flex-direction:column; justify-content:space-between; border:1px solid var(--cosmos-line);}
+.slide .big{ font-family:var(--disp); font-weight:500; font-size:clamp(22px,3vw,34px); line-height:1.1; max-width:18ch;} .slide .big .it{ font-style:italic; color:var(--gold-hi);}
+.login{ border-radius:14px; overflow:hidden; border:1px solid var(--line); display:grid; grid-template-columns:1fr 1fr; min-height:230px;}
+.login .l{ background:var(--cream); padding:26px; display:flex; flex-direction:column; justify-content:center; gap:12px;}
+.login .r{ background:var(--cosmos); display:flex; align-items:center; justify-content:center;}
+.field{ height:40px; border-radius:6px; background:#fff; border:1px solid var(--line);}
+.btn{ height:42px; border-radius:6px; background:var(--emerald); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;}
+.lbl{ font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--slate);}
+
+.dodont{ display:grid; grid-template-columns:1fr 1fr; gap:24px;} @media(max-width:760px){ .dodont{ grid-template-columns:1fr;} }
+.dodont ul{ margin:8px 0 0; padding-left:0; list-style:none;}
+.dodont li{ font-size:14px; padding:7px 0; border-bottom:1px solid var(--line); display:flex; gap:10px;}
+.dodont .h{ font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;}
+.do .h{ color:var(--emerald);} .dont .h{ color:var(--terra);}
+.tick{ color:var(--emerald); font-weight:700;} .cross{ color:var(--terra); font-weight:700;}
+.endplate{ text-align:center; padding:80px 7vw;}
+.endplate .wm{ font-family:var(--disp); font-size:30px; font-weight:600;} .endplate .wm b{ color:var(--terra); font-weight:600;}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="cover">
+  <div class="top"><span>A20CORE</span><span>BRAND BOOK · V1.0 · 2026</span></div>
+  <div class="center">
+    <canvas id="coverMark" width="150" height="150"></canvas>
+    <h1>A New <span class="it">Renaissance</span></h1>
+    <div class="tag">Order, born from many</div>
+  </div>
+  <div class="foot"><span>Abu Dhabi · Sovereign Infrastructure Intelligence</span><span>The look &amp; feel of A20Core</span></div>
+</section>
+
+<!-- IDEA -->
+<section class="paper">
+  <div class="kicker">01 — The Idea</div>
+  <h2>We help the world organize itself.</h2>
+  <div class="divider"></div>
+  <div class="two">
+    <div>
+      <p>A20Core is a sovereign intelligence that coordinates a nation's critical infrastructure — energy, industry, production, and the systems that feed and power a people — as one living organism. Not a controller barking orders from the top, but countless intelligences acting together, the way a murmuration moves without a leader.</p>
+      <p class="muted" style="margin-top:14px">Our brand carries that idea in everything: warmth over coldness, light over gloom, the human and the intelligent as collaborators, and beauty as a sign of confidence.</p>
+    </div>
+    <div>
+      <div class="pull">“No bird leads the murmuration. Order is not imposed from above — it emerges from below.”</div>
+      <p class="muted">This is a renaissance: the belief that the future can be beautiful, and that humanity, working as one and reaching past the known, is the most powerful instrument ever assembled.</p>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO -->
+<section class="cream">
+  <div class="kicker">02 — The Logo</div>
+  <h2>One mark, one name, one world.</h2>
+  <div class="divider"></div>
+  <p class="muted" style="margin-bottom:26px">The zero is the world — a slightly imperfect Earth holding two crossing currents (motion, orchestration, the many). Emblem and wordmark lock together as a single unit: emblem · gold divider · <b>A2</b>0<b>Core</b>, with “A20” leading and “Core” as the descriptor, set in Hanken Grotesk.</p>
+  <div class="two">
+    <div class="logobox dark"><img src="lockup/lockup_cosmos.svg" alt="A20Core lockup, Night Ops"></div>
+    <div class="logobox"><img src="lockup/lockup_cream.svg" alt="A20Core lockup, Fresco"></div>
+  </div>
+  <div style="height:18px"></div>
+  <div class="grid4">
+    <div class="chip d"><img src="a20core_mark_cosmos.svg" width="86" height="86" alt="mark"><span class="cap">Emblem · cosmos</span></div>
+    <div class="chip l"><img src="a20core_mark_cream.svg" width="86" height="86" alt="mark"><span class="cap">Emblem · cream</span></div>
+    <div class="chip d"><img src="icons/apple-touch-180.png" width="74" height="74" style="border-radius:16px" alt="app"><span class="cap">App icon</span></div>
+    <div class="chip d" style="gap:14px"><img src="icons/favicon-32.png" width="32" height="32" alt="fav"><img src="icons/favicon-16.png" width="16" height="16" alt="fav"><span class="cap">Favicon 32 / 16</span></div>
+  </div>
+  <p class="muted" style="margin-top:22px; font-size:13px">Clear space ≥ the emblem's inner-ring diameter on all sides. Minimum lockup width ~120px; below that, use the emblem alone. Never stretch, recolor the ring off-palette, rotate, or place on a busy/low-contrast ground.</p>
+</section>
+
+<!-- COLOR -->
+<section class="cosmos">
+  <div class="kicker">03 — Color</div>
+  <h2 style="color:var(--cream)">Fresco light, cosmic depth, gilded accents.</h2>
+  <div class="divider"></div>
+  <p style="margin-bottom:26px">Two grounds — warm <b>Fresco Cream</b> for the hopeful, human surface; deep <b>Cosmos Ink</b> for depth and operator screens. <b>Renaissance Gold</b> is the signature; lapis, emerald, and terracotta are the chromatic voices; coral and teal are expressive accents reserved for art.</p>
+  <div class="pal">
+    <div class="sw"><div class="c" style="background:#F1E6CC"></div><div class="m"><div class="nm">Fresco Cream</div><div class="hx">#F1E6CC</div><div class="ro">Primary light ground</div></div></div>
+    <div class="sw"><div class="c" style="background:#0E1330"></div><div class="m"><div class="nm">Cosmos Ink</div><div class="hx">#0E1330</div><div class="ro">Depth · night surfaces</div></div></div>
+    <div class="sw"><div class="c" style="background:linear-gradient(120deg,#C29A33,#DCB94F)"></div><div class="m"><div class="nm">Renaissance Gold</div><div class="hx">#C29A33 / #DCB94F</div><div class="ro">Signature accent</div></div></div>
+    <div class="sw"><div class="c" style="background:#20419A"></div><div class="m"><div class="nm">Lapis Blue</div><div class="hx">#20419A</div><div class="ro">Wisdom · the cosmic</div></div></div>
+    <div class="sw"><div class="c" style="background:#1B8A5A"></div><div class="m"><div class="nm">Emerald</div><div class="hx">#1B8A5A</div><div class="ro">Life · growth</div></div></div>
+    <div class="sw"><div class="c" style="background:#C15A2C"></div><div class="m"><div class="nm">Terracotta</div><div class="hx">#C15A2C</div><div class="ro">Earth · humanity</div></div></div>
+    <div class="sw"><div class="c" style="background:#E8654A"></div><div class="m"><div class="nm">Coral <span style="color:var(--tert)">·art</span></div><div class="hx">#E8654A</div><div class="ro">Expressive accent</div></div></div>
+    <div class="sw"><div class="c" style="background:#1FA39C"></div><div class="m"><div class="nm">Teal <span style="color:var(--tert)">·art</span></div><div class="hx">#1FA39C</div><div class="ro">Expressive accent</div></div></div>
+  </div>
+</section>
+
+<!-- TYPE -->
+<section class="paper">
+  <div class="kicker">04 — Typography</div>
+  <h2>Human, credible, technical.</h2>
+  <div class="divider"></div>
+  <p class="muted" style="margin-bottom:24px"><b>Hanken Grotesk</b> — humanist, warm, highly legible — carries the logo, headlines, body, and UI. <b>Space Mono</b> handles metadata, labels, and data. <b>Fraunces</b> (humanist serif) is an optional editorial voice for covers and pull-quotes.</p>
+  <div class="specimen">
+    <div class="r"><div class="l">Display / Headline — Hanken Grotesk 800</div><div class="huge">A20Core</div></div>
+    <div class="r"><div class="l">Editorial accent — Fraunces (italic)</div><div class="fr">A New <span class="it">Renaissance</span> of capability.</div></div>
+    <div class="r"><div class="l">Body — Hanken Grotesk 400/500</div><p style="max-width:70ch">We are not here to control the world. We are here to help it organize itself — and to reach, together, for the stars. Each part unique; each part the whole, seen from one more point of view.</p></div>
+    <div class="r"><div class="l">Metadata — Space Mono</div><div style="font-family:var(--mono); font-size:13px; letter-spacing:.06em">ABU DHABI · 2026 · SOVEREIGN INFRASTRUCTURE INTELLIGENCE</div></div>
+    <div class="r"><div class="l">Scale — Hanken Grotesk</div><div class="scale"><span style="font-size:46px">Aa</span><span style="font-size:34px">Aa</span><span style="font-size:26px">Aa</span><span style="font-size:20px">Aa</span><span style="font-size:15px">Aa</span></div></div>
+  </div>
+</section>
+
+<!-- IMAGERY -->
+<section class="cream">
+  <div class="kicker">05 — Imagery &amp; Art Direction</div>
+  <h2>Painted, hopeful, humanist.</h2>
+  <div class="divider"></div>
+  <p class="muted" style="margin-bottom:26px">Imagery is painterly — Renaissance fresco meets retrofuture optimism. Humans and intelligence as collaborators; sacred geometry and the golden ratio; orbits, constellations, domes, and the imperfect Earth. Warm light from within; gold leaf. Never cold, sterile, or dystopian.</p>
+  <div class="imgrow">
+    <div class="hero"><img src="imagery/hero_object.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="ph" style="display:none"><div class="t">Material / Texture</div><div class="f">the spirit object</div><div class="t" style="color:#7e88a8">drop: imagery/hero_object.png</div></div></div>
+    <div class="hero"><img src="imagery/hero_fresco.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="ph" style="display:none"><div class="t">Humanist + AI</div><div class="f">the renaissance hall</div><div class="t" style="color:#7e88a8">drop: imagery/hero_fresco.png</div></div></div>
+    <div class="hero"><img src="imagery/hero_frontier.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="ph" style="display:none"><div class="t">Optimism / Frontier</div><div class="f">the reach for the stars</div><div class="t" style="color:#7e88a8">drop: imagery/hero_frontier.png</div></div></div>
+  </div>
+</section>
+
+<!-- VOICE -->
+<section class="cosmos">
+  <div class="kicker">06 — Voice</div>
+  <h2 style="color:var(--cream)">Declarative. Warm. Specific.</h2>
+  <div class="divider"></div>
+  <div class="two">
+    <div>
+      <p>We speak with quiet confidence — the register of a sovereign institution that is also profoundly human. Declarative, not hype. Specific numbers, not vague claims. Hopeful, never fearful. We describe a future worth building.</p>
+      <div class="pull" style="color:var(--cream); margin-top:20px">We don't sell control. We offer order — born from many.</div>
+    </div>
+    <div class="dodont">
+      <div class="do"><div class="h">We say</div><ul>
+        <li><span class="tick">✓</span> “Coordinates the systems a nation depends on.”</li>
+        <li><span class="tick">✓</span> “Order emerges; we steward it.”</li>
+        <li><span class="tick">✓</span> “A future that is beautiful and humane.”</li>
+      </ul></div>
+      <div class="dont"><div class="h">We avoid</div><ul>
+        <li><span class="cross">✗</span> “Total control of everything.”</li>
+        <li><span class="cross">✗</span> Hype, fear, buzzwords.</li>
+        <li><span class="cross">✗</span> Cold, dystopian, “Big Brother” framing.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="paper">
+  <div class="kicker">07 — Applications</div>
+  <h2>The system, applied.</h2>
+  <div class="divider"></div>
+  <div class="apps">
+    <div class="slide">
+      <div style="display:flex; justify-content:space-between; align-items:center"><span class="ti" style="color:#9aa3c2">A20CORE</span><canvas class="appMark" width="34" height="34"></canvas></div>
+      <div class="big">Sovereign infrastructure, <span class="it">orchestrated.</span></div>
+      <div class="ti" style="color:#9aa3c2">Deck title slide</div>
+    </div>
+    <div class="login">
+      <div class="l"><div class="lbl">Email</div><div class="field"></div><div class="lbl">Password</div><div class="field"></div><div class="btn">Continue</div></div>
+      <div class="r"><canvas class="appMark" width="92" height="92"></canvas></div>
+    </div>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start"><div><div class="nm">AD</div><div class="ti">Founder · MD/CTO</div></div><canvas class="appMark" width="40" height="40"></canvas></div>
+      <div class="ti">ad@a20core · Abu Dhabi · Business card</div>
+    </div>
+    <div class="card l">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start"><canvas class="appMark" width="40" height="40" data-light="1"></canvas><span class="ti">Social</span></div>
+      <div style="font-family:var(--disp); font-style:italic; font-size:22px; color:var(--ink)">Order, born from many.</div>
+    </div>
+  </div>
+</section>
+
+<!-- DO / DONT -->
+<section class="cream">
+  <div class="kicker">08 — In short</div>
+  <h2>Hold the line.</h2>
+  <div class="divider"></div>
+  <div class="dodont">
+    <div class="do"><div class="h">Do</div><ul>
+      <li><span class="tick">✓</span> Default to warm cream light; use cosmos for depth.</li>
+      <li><span class="tick">✓</span> Let gold be rare and meaningful.</li>
+      <li><span class="tick">✓</span> Keep imagery painterly, hopeful, humanist.</li>
+      <li><span class="tick">✓</span> Give the logo clear space and one centerline.</li>
+    </ul></div>
+    <div class="dont"><div class="h">Don't</div><ul>
+      <li><span class="cross">✗</span> Sterile white, neon, or pure-black gloom.</li>
+      <li><span class="cross">✗</span> Gradients of gold→rust, glassmorphism, drop-shadow overload.</li>
+      <li><span class="cross">✗</span> Stock photography or cold 3D renders.</li>
+      <li><span class="cross">✗</span> Distort, recolor, or crowd the mark.</li>
+    </ul></div>
+  </div>
+</section>
+
+<div class="endplate cosmos">
+  <div class="rule" style="max-width:120px; margin:0 auto 26px"></div>
+  <div class="wm" style="color:var(--cream)">A<b>2</b>0<b>Core</b></div>
+  <div class="ti" style="font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:#7e88a8; margin-top:10px">A NEW RENAISSANCE · ORDER, BORN FROM MANY · BRAND BOOK V1.0 · 2026</div>
+</div>
+
+<script>
+const GOLD='#DCB94F',GOLD2='#C29A33',EM='#2BAE7F';
+const SEED=68,LINES=2;
+function mb(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+function ring(ctx,cx,cy,Rb,sq,ph){ctx.beginPath();for(let i=0;i<=180;i++){const th=i/180*Math.PI*2;const r=Rb*(1+0.030*Math.sin(th+ph)+0.020*Math.sin(2*th+ph*1.7)+0.012*Math.sin(3*th-ph));const x=cx+Math.cos(th)*r,y=cy+Math.sin(th)*r*sq;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();}
+function flowData(R,rng,lines){const out=[];for(let L=0;L<lines;L++){const f1=1+((rng()*3)|0),f2=1+((rng()*3)|0),p=rng()*7,amp=R*(0.78+rng()*0.18);const accent=L===lines-1&&rng()<0.5;const w=R*(0.010+0.010*rng());const pts=[];for(let t=0;t<=Math.PI*2+0.0001;t+=0.02){pts.push([amp*Math.sin(f1*t+p+L*0.5),amp*0.9*Math.sin(f2*t)]);}out.push({pts,accent,alpha:0.55+0.4*(L/lines),w});}return out;}
+function mark(canvas,S,dark){const d=Math.min(window.devicePixelRatio||1,2.5);canvas.width=S*d;canvas.height=S*d;canvas.style.width=S+'px';canvas.style.height=S+'px';const ctx=canvas.getContext('2d');ctx.scale(d,d);ctx.clearRect(0,0,S,S);
+  const cx=S/2,cy=S/2,rO=S*0.40,rI=S*0.305,sq=0.955,ph=0.7;
+  let g=ctx.createRadialGradient(cx,cy,0,cx,cy,S*0.42);g.addColorStop(0,hexA(GOLD,dark?0.12:0.07));g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,S,S);
+  ctx.save();ring(ctx,cx,cy,rI-S*0.012,sq,ph);ctx.clip();ctx.translate(cx,cy);ctx.lineJoin='round';ctx.lineCap='round';
+  flowData(rI*0.92,mb(SEED),LINES).forEach(ln=>{ctx.strokeStyle=hexA(ln.accent?EM:(dark?GOLD:GOLD2),ln.alpha);ctx.lineWidth=Math.max(0.6,ln.w*1.25);ctx.beginPath();ln.pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();});ctx.restore();
+  ctx.save();ctx.shadowColor=hexA(GOLD,0.85);ctx.shadowBlur=dark?S*0.05:S*0.018;ctx.strokeStyle=GOLD;ctx.lineWidth=Math.max(1,S*0.026*1.25);ring(ctx,cx,cy,rO,sq,ph);ctx.stroke();
+  ctx.shadowBlur=0;ctx.strokeStyle=hexA(GOLD2,0.9);ctx.lineWidth=Math.max(0.8,S*0.013*1.25);ring(ctx,cx,cy,rI,sq,ph);ctx.stroke();ctx.restore();}
+mark(document.getElementById('coverMark'),150,true);
+document.querySelectorAll('.appMark').forEach(c=>mark(c,parseInt(c.getAttribute('width')),!c.dataset.light));
+</script>
+</body>
+</html>

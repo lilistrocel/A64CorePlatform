@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { hrApi } from '../../services/hrService';
 import { formatNumber } from '../../utils/formatNumber';
 import type { HRDashboardStats } from '../../types/hr';
@@ -53,7 +53,7 @@ const StatCard = styled.div`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: ${({ theme }) => theme.shadows.md};
   }
 `;
 
@@ -129,7 +129,7 @@ const EmployeeDate = styled.span`
 const VisaItem = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid #fbbf24;
+  border: 1px solid ${({ theme }) => theme.colors.gold[200]};
   border-radius: 8px;
   margin-bottom: 8px;
 `;
@@ -137,12 +137,12 @@ const VisaItem = styled.div`
 const VisaEmployee = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const VisaExpiry = styled.div`
   font-size: 12px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   margin-top: 4px;
 `;
 
@@ -154,8 +154,8 @@ const QuickActions = styled.div`
 
 const ActionButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -164,7 +164,7 @@ const ActionButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -179,8 +179,8 @@ const LoadingContainer = styled.div`
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -215,7 +215,7 @@ const DepartmentName = styled.span`
 const DepartmentCount = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.info};
   background: ${({ theme }) => theme.colors.infoBg};
   padding: 4px 12px;
   border-radius: 16px;
@@ -227,6 +227,7 @@ const DepartmentCount = styled.span`
 
 export function HRDashboardPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [stats, setStats] = useState<HRDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,12 +293,12 @@ export function HRDashboardPage() {
 
         <StatCard>
           <StatLabel>Active</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.activeEmployees)}</StatValue>
+          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.activeEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>On Leave</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.onLeaveEmployees)}</StatValue>
+          <StatValue style={{ color: theme.colors.warning }}>{formatNumber(stats.onLeaveEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A20Core — A New Renaissance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F1E6CC; --cream-2:#E8DAB9; --ink:#1B1A14; --slate:#5C564A;
+  --lapis:#20419A; --lapis-bright:#3B6EE0; --gold:#C29A33; --gold-bright:#DCB94F;
+  --terra:#C15A2C; --emerald:#1B8A5A; --cosmos:#0E1330;
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Hanken Grotesk',system-ui,sans-serif;
+  --mono:'Space Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(120% 80% at 50% -10%, #FBF5E7 0%, var(--cream) 45%, var(--cream-2) 100%);
+  color:var(--ink); font-family:var(--sans); line-height:1.6;
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:48px 24px;
+}
+.page{
+  max-width:760px; width:100%; background:rgba(255,253,247,.55);
+  border:1px solid #D9CFB7; border-radius:6px;
+  padding:64px 68px 52px; position:relative;
+  box-shadow:0 24px 70px -40px rgba(28,27,23,.55);
+}
+.page::before{ content:""; position:absolute; top:0; left:0; right:0; height:4px;
+  background:linear-gradient(90deg,var(--lapis),var(--gold-bright),var(--terra));
+  border-radius:6px 6px 0 0; }
+
+.eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.32em; text-transform:uppercase;
+  color:var(--slate); margin-bottom:26px; }
+.eyebrow b{ color:var(--lapis); font-weight:500; }
+
+h1{ font-family:var(--serif); font-weight:500; font-size:60px; line-height:.98;
+  letter-spacing:.005em; margin:0 0 6px; color:var(--ink); }
+h1 .light{ font-style:italic; font-weight:400; color:var(--lapis); }
+.dek{ font-family:var(--serif); font-style:italic; font-size:23px; color:var(--gold);
+  margin:0 0 30px; }
+.rule{ width:64px; height:2px; background:var(--gold-bright); margin:0 0 32px; }
+
+.stanza{ margin:0 0 19px; font-size:15.5px; color:#322F28; }
+.stanza .cap{ font-family:var(--mono); font-size:10.5px; font-weight:500; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--terra); display:block; margin-bottom:5px; }
+.stanza b{ font-weight:500; color:var(--ink); }
+em{ font-style:italic; }
+.pull{ font-family:var(--serif); font-size:22px; line-height:1.35; color:var(--lapis);
+  border-left:2px solid var(--gold-bright); padding-left:20px; margin:26px 0; font-style:italic; }
+
+.close{ margin-top:34px; padding-top:24px; border-top:1px solid #D9CFB7;
+  display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.close .mark{ font-family:var(--serif); font-size:26px; color:var(--ink); }
+.close .mark span{ color:var(--terra); }
+.close .sig{ font-family:var(--serif); font-style:italic; font-size:21px; color:var(--gold); }
+.meta{ font-family:var(--mono); font-size:9.5px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--slate); margin-top:18px; text-align:center; }
+
+@media print{ body{background:var(--cream);} .page{box-shadow:none;border:none;} }
+@media(max-width:600px){ .page{padding:40px 28px;} h1{font-size:42px;} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="eyebrow">A20CORE &nbsp;·&nbsp; <b>FOUNDING MANIFESTO</b> &nbsp;·&nbsp; THE NATURE OF THE WORK</div>
+
+  <h1>A New<br><span class="light">Renaissance</span></h1>
+  <div class="dek">Order, born from many.</div>
+  <div class="rule"></div>
+
+  <p class="stanza"><span class="cap">The old way</span>
+  believed the world must be <b>commanded</b> — a single hand at the top, issuing orders downward, forcing the parts into line. It is how we built our machines, our institutions, our infrastructure. It is exhausting, and it is brittle.</p>
+
+  <p class="stanza"><span class="cap">Nature never worked that way</span>
+  The cosmos is a great organism without a boss. No bird leads the murmuration. No ant rules the colony. Order is not imposed from above — it <b>emerges from below</b>, from countless small intelligences each minding its neighbor. The ocean waves; the universe peoples; and out of what looks like randomness, breathtaking order is born.</p>
+
+  <div class="pull">The intelligence does not live in any single part. It lives in the whole.</div>
+
+  <p class="stanza"><span class="cap">We build the same way</span>
+  A20Core is not a controller barking commands at the physical world. It is a living layer of many intelligences — agents and machines, energy and industry, soil and steel — coordinating as one organism with no single master. Every part unique. Every part the whole, looking at itself from one more point of view.</p>
+
+  <p class="stanza"><span class="cap">We let it play</span>
+  Not everything must be made to mean something. Meaning is not cargo to be delivered at the end of the journey; it arises in the doing — the way the meaning of a dance is the dancing. So we let our systems play. We let order surprise us. We leave room for the accidental, <b>because that is where the new is born</b>.</p>
+
+  <p class="stanza"><span class="cap">This is a rebirth</span>
+  A return to the belief that the future can be <em>beautiful</em> — and that humanity, working as one and reaching past the known, is the most powerful instrument ever assembled. We are not here to control the world. We are here to help it organize itself, and to reach, together, for the stars.</p>
+
+  <div class="close">
+    <div class="mark">A<span>20</span>Core</div>
+    <div class="sig">Order, born from many.</div>
+  </div>
+  <div class="meta">ABU DHABI · A NEW RENAISSANCE · V0.1 · 2026</div>
+</div>
+</body>
+</html>

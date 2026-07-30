@@ -6,6 +6,7 @@ import styled, { keyframes, css } from 'styled-components';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button, Input } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
+import { useThemeStore } from '../../stores/theme.store';
 import { usePageVisibility } from '../../hooks/usePageVisibility';
 
 // Login form sessionStorage caching constants
@@ -109,6 +110,11 @@ export function Login() {
   const sessionExpired = searchParams.get('expired') === 'true';
   const redirectTo = searchParams.get('redirect');
   const { login, isLoading, error, clearError, mfaRequired, mfaPendingToken, isAuthenticated } = useAuthStore();
+  // The lockup ships as separate cream/cosmos-text SVGs (not a single
+  // currentColor asset), so the correct variant must be picked per theme —
+  // see Docs/2-Working-Progress/a20core-rebrand-spec.md §5.
+  const { mode } = useThemeStore();
+  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
   const [localError, setLocalError] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState<string | null>(null);
 
@@ -275,7 +281,8 @@ export function Login() {
     <PageWrapper>
       <LoginContainer>
         <LoginCard>
-          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+          <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
+          <Tagline>Order, born from many.</Tagline>
           <Title>Welcome Back</Title>
           <Subtitle>Sign in to your account to continue</Subtitle>
 
@@ -371,7 +378,7 @@ const LoginContainer = styled.div`
 const LoginCard = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   padding: 1.5rem;
   width: 100%;
   max-width: 400px;
@@ -404,6 +411,21 @@ const LogoImg = styled.img`
   width: auto;
   display: block;
   margin: 0 auto;
+`;
+
+// Brand contract §4 — Fraunces is editorial-only, permitted here as the
+// login tagline and nowhere else in the app.
+const Tagline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 0.9375rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-align: center;
+  margin: 0 0 1.25rem 0;
+
+  @media (min-width: 640px) {
+    font-size: 1.0625rem;
+  }
 `;
 
 const Title = styled.h1`
@@ -495,8 +517,8 @@ const SessionPreservedBanner = styled.div`
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border: 1px solid #10b981;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.successBg} 0%, ${({ theme }) => theme.colors.emerald[100]} 100%);
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   margin-bottom: 1rem;
   animation: ${slideIn} 0.4s ease-out;
@@ -508,8 +530,8 @@ const SessionPreservedIcon = styled.span`
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: #10b981;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   font-size: 0.75rem;
   font-weight: bold;
@@ -517,7 +539,7 @@ const SessionPreservedIcon = styled.span`
 
 const SessionPreservedText = styled.span`
   font-size: 0.8125rem;
-  color: #065f46;
+  color: ${({ theme }) => theme.colors.emerald[700]};
   font-weight: 500;
 `;
 
@@ -546,7 +568,7 @@ const MobileHelperIcon = styled.span`
 `;
 
 const ForgotPasswordLink = styled(Link)`
-  /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
+  /* WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast on the page ground */
   color: ${({ theme }) => theme.colors.primary[700]};
   font-size: 0.875rem;
   text-decoration: none;
@@ -567,7 +589,7 @@ const RegisterPrompt = styled.p`
 `;
 
 const RegisterLink = styled(Link)`
-  /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
+  /* WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast on the page ground */
   color: ${({ theme }) => theme.colors.primary[700]};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   text-decoration: none;

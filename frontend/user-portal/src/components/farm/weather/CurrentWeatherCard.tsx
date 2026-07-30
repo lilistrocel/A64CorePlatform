@@ -18,11 +18,11 @@ import {
 import { formatNumber } from '../../../utils';
 
 const Card = styled.div`
-  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  background: ${({ theme }) => `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[700]} 100%)`};
   border-radius: 16px;
   padding: 24px;
-  color: white;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  color: ${({ theme }) => theme.colors.onAccent};
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Header = styled.div`

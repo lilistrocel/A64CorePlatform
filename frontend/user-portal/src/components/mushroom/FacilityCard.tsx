@@ -5,7 +5,8 @@
  * Shows name, type, room count, active rooms, and status badge.
  */
 
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import type { Facility, FacilityStatus, FacilityType } from '../../types/mushroom';
 
 interface FacilityCardProps {
@@ -14,19 +15,23 @@ interface FacilityCardProps {
   selected?: boolean;
 }
 
-const STATUS_COLORS: Record<FacilityStatus, string> = {
-  active: '#10B981',
-  inactive: '#9E9E9E',
-  maintenance: '#F59E0B',
-  construction: '#3B82F6',
-};
+function getStatusColors(theme: Theme): Record<FacilityStatus, string> {
+  return {
+    active: theme.colors.success,
+    inactive: theme.colors.neutral[500],
+    maintenance: theme.colors.warning,
+    construction: theme.colors.info,
+  };
+}
 
-const STATUS_BG: Record<FacilityStatus, string> = {
-  active: '#D1FAE5',
-  inactive: '#F5F5F5',
-  maintenance: '#FEF3C7',
-  construction: '#DBEAFE',
-};
+function getStatusBg(theme: Theme): Record<FacilityStatus, string> {
+  return {
+    active: theme.colors.successBg,
+    inactive: theme.colors.neutral[100],
+    maintenance: theme.colors.warningBg,
+    construction: theme.colors.infoBg,
+  };
+}
 
 const TYPE_LABELS: Record<FacilityType, string> = {
   indoor: 'Indoor',
@@ -38,6 +43,9 @@ const TYPE_LABELS: Record<FacilityType, string> = {
 };
 
 export function FacilityCard({ facility, onClick, selected = false }: FacilityCardProps) {
+  const theme = useTheme();
+  const statusColors = getStatusColors(theme);
+  const statusBg = getStatusBg(theme);
   const activePercent =
     facility.totalRooms > 0
       ? Math.round((facility.activeRooms / facility.totalRooms) * 100)
@@ -66,8 +74,8 @@ export function FacilityCard({ facility, onClick, selected = false }: FacilityCa
           <FacilityType>{TYPE_LABELS[facility.facilityType]}</FacilityType>
         </HeaderInfo>
         <StatusBadge
-          $color={STATUS_COLORS[facility.status]}
-          $bg={STATUS_BG[facility.status]}
+          $color={statusColors[facility.status]}
+          $bg={statusBg[facility.status]}
         >
           {facility.status.charAt(0).toUpperCase() + facility.status.slice(1)}
         </StatusBadge>
@@ -117,15 +125,15 @@ interface CardWrapperProps {
 const CardWrapper = styled.div<CardWrapperProps>`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  border: 2px solid ${({ $selected, theme }) => ($selected ? '#2196f3' : theme.colors.neutral[300])};
+  border: 2px solid ${({ $selected, theme }) => ($selected ? theme.colors.primary[500] : theme.colors.neutral[300])};
   padding: 16px;
-  box-shadow: ${({ $selected }) =>
+  box-shadow: ${({ $selected, theme }) =>
     $selected
-      ? '0 0 0 3px rgba(33, 150, 243, 0.18)'
+      ? `0 0 0 3px ${theme.colors.primary[500]}2e`
       : '0 2px 6px rgba(0,0,0,0.07)'};
   transition: all 150ms ease-in-out;
 
-  ${({ $clickable }) =>
+  ${({ $clickable, theme }) =>
     $clickable &&
     `
     cursor: pointer;
@@ -134,7 +142,7 @@ const CardWrapper = styled.div<CardWrapperProps>`
       transform: translateY(-1px);
     }
     &:focus-visible {
-      outline: 2px solid #2196f3;
+      outline: 2px solid ${theme.colors.primary[500]};
       outline-offset: 2px;
     }
   `}
@@ -226,7 +234,7 @@ interface StatValueProps {
 const StatValue = styled.div<StatValueProps>`
   font-size: 18px;
   font-weight: 700;
-  color: ${({ $highlight, theme }) => ($highlight ? '#10B981' : theme.colors.textPrimary)};
+  color: ${({ $highlight, theme }) => ($highlight ? theme.colors.success : theme.colors.textPrimary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
@@ -258,7 +266,7 @@ interface UtilizationFillProps {
 const UtilizationFill = styled.div<UtilizationFillProps>`
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: linear-gradient(90deg, #10B981, #3B82F6);
+  background: ${({ theme }) => `linear-gradient(90deg, ${theme.colors.success}, ${theme.colors.info})`};
   border-radius: 4px;
   transition: width 400ms ease-in-out;
 `;

@@ -4,7 +4,7 @@
  * Displays air quality index (AQI), pollutant concentrations, and pollen levels.
  */
 
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import type { AirQuality } from '../../../types/farm';
 import { AQI_CATEGORY_COLORS, POLLEN_LEVEL_LABELS } from '../../../types/farm';
 
@@ -12,7 +12,7 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -44,7 +44,7 @@ const AQIValue = styled.div<{ $color: string }>`
   align-items: center;
   justify-content: center;
   background: ${({ $color }) => $color};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 
   .number {
     font-size: 24px;
@@ -131,20 +131,21 @@ const PollenLevel = styled.div<{ $level: number }>`
   font-size: 12px;
   font-weight: 600;
 
-  background: ${({ $level }) => {
-    if ($level === 0) return '#E5E7EB';   // None - gray
-    if ($level === 1) return '#D1FAE5';   // Low - green
-    if ($level === 2) return '#FEF3C7';   // Moderate - yellow
-    if ($level === 3) return '#FED7AA';   // High - orange
-    return '#FECACA';                      // Very High - red
+  background: ${({ $level, theme }) => {
+    // Severity scale, ordering preserved: neutral -> emerald -> gold -> terracotta (light to dark)
+    if ($level === 0) return theme.colors.neutral[200];   // None - gray
+    if ($level === 1) return theme.colors.emerald[100];   // Low - green
+    if ($level === 2) return theme.colors.gold[100];      // Moderate - gold
+    if ($level === 3) return theme.colors.terracotta[100]; // High - orange
+    return theme.colors.terracotta[200];                   // Very High - red
   }};
 
-  color: ${({ $level }) => {
-    if ($level === 0) return '#6B7280';   // None - gray
-    if ($level === 1) return '#065F46';   // Low - green
-    if ($level === 2) return '#92400E';   // Moderate - yellow
-    if ($level === 3) return '#C2410C';   // High - orange
-    return '#B91C1C';                      // Very High - red
+  color: ${({ $level, theme }) => {
+    if ($level === 0) return theme.colors.textSecondary;  // None - gray
+    if ($level === 1) return theme.colors.emerald[700];   // Low - green
+    if ($level === 2) return theme.colors.gold[800];      // Moderate - gold
+    if ($level === 3) return theme.colors.terracotta[600]; // High - orange
+    return theme.colors.terracotta[700];                   // Very High - red
   }};
 `;
 
@@ -177,6 +178,7 @@ function formatConcentration(value: number | undefined): string {
 }
 
 export function AirQualityCard({ airQuality }: AirQualityCardProps) {
+  const theme = useTheme();
   // Check if we have any meaningful data
   const hasAQI = airQuality.aqi !== undefined;
   const hasPollutants =
@@ -206,8 +208,8 @@ export function AirQualityCard({ airQuality }: AirQualityCardProps) {
   }
 
   const aqiColor = airQuality.aqiCategory
-    ? AQI_CATEGORY_COLORS[airQuality.aqiCategory] || '#6B7280'
-    : '#6B7280';
+    ? AQI_CATEGORY_COLORS[airQuality.aqiCategory] || theme.colors.textSecondary
+    : theme.colors.textSecondary;
 
   return (
     <Card>

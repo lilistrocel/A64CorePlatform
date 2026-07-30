@@ -31,7 +31,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Trash2, Plus } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth.store';
 import {
@@ -158,7 +158,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
   padding: 10px 12px;
   border: 1px solid
     ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error || '#dc2626' : theme.colors.neutral[300]};
+      $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -178,7 +178,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
   padding: 10px 12px;
   border: 1px solid
     ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error || '#dc2626' : theme.colors.neutral[300]};
+      $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -206,7 +206,7 @@ const Textarea = styled.textarea`
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const AllocTable = styled.table`
@@ -241,7 +241,7 @@ const SmallInput = styled.input<{ $hasError?: boolean }>`
   padding: 6px 8px;
   border: 1px solid
     ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error || '#dc2626' : theme.colors.neutral[300]};
+      $hasError ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.background};
@@ -264,7 +264,7 @@ const IconButton = styled.button`
   justify-content: center;
   &:hover {
     background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.error || '#dc2626'};
+    color: ${({ theme }) => theme.colors.terracotta[600]};
   }
 `;
 
@@ -285,7 +285,7 @@ const AddRowButton = styled.button`
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary[500]};
     color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
@@ -299,7 +299,7 @@ const ActionRow = styled.div`
 const PrimaryButton = styled.button`
   padding: 11px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -328,9 +328,9 @@ const SecondaryButton = styled.button`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -338,9 +338,9 @@ const ErrorBanner = styled.div`
 `;
 
 const InfoBanner = styled.div`
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.lapis[700]};
+  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -364,7 +364,7 @@ const SumLabel = styled.span`
 
 const SumValue = styled.span<{ $hasError?: boolean }>`
   color: ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error || '#dc2626' : theme.colors.textPrimary};
+    $hasError ? theme.colors.error : theme.colors.textPrimary};
   font-variant-numeric: tabular-nums;
   min-width: 120px;
   text-align: right;
@@ -373,6 +373,7 @@ const SumValue = styled.span<{ $hasError?: boolean }>`
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CustomerReceiptFormPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   // from-invoice mode uses ariDocEntry; edit mode uses docId
   const { ariDocEntry, docId } = useParams<{ ariDocEntry?: string; docId?: string }>();
@@ -619,7 +620,7 @@ export function CustomerReceiptFormPage() {
         <BackLink onClick={() => navigate('/sales/customer-receipts')}>
           ← Customer Receipts
         </BackLink>
-        <div style={{ textAlign: 'center', padding: '64px', color: '#9ca3af' }}>
+        <div style={{ textAlign: 'center', padding: '64px', color: theme.colors.textDisabled }}>
           Loading…
         </div>
       </Container>
@@ -871,7 +872,7 @@ export function CustomerReceiptFormPage() {
             <p
               style={{
                 fontSize: '13px',
-                color: '#6b7280',
+                color: theme.colors.textSecondary,
                 marginBottom: '16px',
                 marginTop: 0,
               }}

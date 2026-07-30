@@ -5,6 +5,10 @@
  * Matches backend models from farm_manager/models/alert.py
  */
 
+import { lightTheme } from '@a64core/shared';
+
+const c = lightTheme.colors;
+
 // ============================================================================
 // ENUMS
 // ============================================================================
@@ -149,22 +153,22 @@ export interface AlertStatusConfig {
 export const ALERT_SEVERITY_CONFIG: Record<AlertSeverity, AlertSeverityConfig> = {
   low: {
     label: 'Low',
-    color: '#4CAF50', // Green
+    color: c.success, // emerald (was green)
     icon: 'ℹ️',
   },
   medium: {
     label: 'Medium',
-    color: '#FF9800', // Orange
+    color: c.warning, // gold (was orange)
     icon: '⚠️',
   },
   high: {
     label: 'High',
-    color: '#FF5722', // Deep Orange
+    color: c.error, // terracotta (was deep orange)
     icon: '🔥',
   },
   critical: {
     label: 'Critical',
-    color: '#F44336', // Red
+    color: c.terracotta[700], // deepest terracotta (was red) — most severe carries the most weight, spec §1
     icon: '🚨',
   },
 };
@@ -172,17 +176,17 @@ export const ALERT_SEVERITY_CONFIG: Record<AlertSeverity, AlertSeverityConfig> =
 export const ALERT_STATUS_CONFIG: Record<AlertStatus, AlertStatusConfig> = {
   active: {
     label: 'Active',
-    color: '#2196F3', // Blue
+    color: c.primary[500], // lapis (was blue)
     icon: '🔔',
   },
   resolved: {
     label: 'Resolved',
-    color: '#4CAF50', // Green
+    color: c.success, // emerald (was green)
     icon: '✅',
   },
   dismissed: {
     label: 'Dismissed',
-    color: '#9E9E9E', // Gray
+    color: c.textDisabled, // (was gray)
     icon: '❌',
   },
 };

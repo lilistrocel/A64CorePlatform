@@ -69,23 +69,23 @@ const Chip = styled.button<{ $active: boolean }>`
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.primary[50] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] || '#1d4ed8' : theme.colors.textSecondary};
+    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -153,22 +153,22 @@ const StatusBadge = styled.span<{ $status: PRStatus }>`
   background: ${({ $status, theme }) => {
     switch ($status) {
       case 'Draft': return theme.colors.neutral[100];
-      case 'Pending Approval': return '#fef3c7';
-      case 'Approved': return theme.colors.successBg || '#ecfdf5';
-      case 'Rejected': return theme.colors.errorBg || '#fef2f2';
+      case 'Pending Approval': return theme.colors.warningBg;
+      case 'Approved': return theme.colors.emerald[100];
+      case 'Rejected': return theme.colors.terracotta[100];
       case 'Cancelled': return theme.colors.neutral[100];
-      case 'Closed': return '#ede9fe';
+      case 'Closed': return theme.colors.secondary[50];
       default: return theme.colors.neutral[100];
     }
   }};
   color: ${({ $status, theme }) => {
     switch ($status) {
       case 'Draft': return theme.colors.textSecondary;
-      case 'Pending Approval': return '#92400e';
-      case 'Approved': return theme.colors.success || '#10b981';
-      case 'Rejected': return theme.colors.error || '#ef4444';
+      case 'Pending Approval': return theme.colors.gold[800];
+      case 'Approved': return theme.colors.emerald[700];
+      case 'Rejected': return theme.colors.terracotta[800];
       case 'Cancelled': return theme.colors.textDisabled;
-      case 'Closed': return '#5b21b6';
+      case 'Closed': return theme.colors.secondary[700];
       default: return theme.colors.textSecondary;
     }
   }};
@@ -180,12 +180,12 @@ const UrgencyDot = styled.span<{ $urgency: UrgencyLevel }>`
   height: 8px;
   border-radius: 50%;
   margin-right: 6px;
-  background: ${({ $urgency }) => {
+  background: ${({ $urgency, theme }) => {
     switch ($urgency) {
-      case 'high': return '#ef4444';
-      case 'normal': return '#f59e0b';
-      case 'low': return '#6b7280';
-      default: return '#6b7280';
+      case 'high': return theme.colors.error;
+      case 'normal': return theme.colors.warning;
+      case 'low': return theme.colors.textSecondary;
+      default: return theme.colors.textSecondary;
     }
   }};
 `;

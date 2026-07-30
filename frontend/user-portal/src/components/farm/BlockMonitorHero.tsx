@@ -170,6 +170,6 @@ const PerformanceBadge = styled.div<{ $variant: 'exceeding' | 'good' }>`
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  background: ${({ $variant }) => ($variant === 'exceeding' ? '#10B981' : '#3B82F6')};
-  color: white;
+  background: ${({ $variant, theme }) => ($variant === 'exceeding' ? theme.colors.success : theme.colors.primary[500])};
+  color: ${({ theme }) => theme.colors.onAccent};
 `;

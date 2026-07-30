@@ -91,6 +91,47 @@
 
 ---
 
+### T-900 | A20Core rebrand — "A New Renaissance" (foundation + sweep)
+- **Category:** Frontend · **Priority:** P1
+- **Assigned:** frontend-dev-expert · **Started:** 2026-07-30
+- **Depends on:** none
+- **Blocks:** none (sweep phase depends on foundation phase within this same ticket)
+- **Description:** Rebrand the React frontend from the old Material-blue/purple
+  theme to A20Core "A New Renaissance" — Fresco Cream / Cosmos Ink grounds, Lapis /
+  Gold / Emerald / Terracotta chromatic voices, Hanken Grotesk + Space Mono +
+  Fraunces typography, new logo lockup/emblem, "A20Core" naming. Contract:
+  `Brand_Engineering/Brand/A20Core_BRAND.md`. Engineering translation + frozen
+  token surface: `Docs/2-Working-Progress/a20core-rebrand-spec.md`.
+- **Sequencing:** Phase 1 (this session) = foundation — `theme.ts` token rewrite,
+  self-hosted font vendoring, `GlobalStyles.tsx`, `index.html`, `index.css`,
+  `App.css`, logo asset swap, "A20Core" naming in owned files. Phase 2 (separate
+  fleet, blocked on Phase 1 merging) = sweep the 239 files under
+  `src/pages/**`/`src/components/**` with hardcoded hex colours onto the new
+  tokens, per the hex→token migration table in the spec §3.
+- **Steps:**
+  1. Rewrite `frontend/shared/src/theme/theme.ts` — same key shape, new Lapis/
+     Gold/Emerald/Terracotta/warm-neutral values; add `canvas`, `onAccent`,
+     `border`, standalone `lapis`/`gold`/`emerald`/`terracotta` ramps,
+     `typography.fontFamily.display`.
+  2. Vendor Hanken Grotesk / Fraunces / Space Mono TTFs (Latin only, no Cairo/
+     Amiri) into `frontend/user-portal/public/fonts/` + licences; write
+     `fonts.css`; link from `index.html` with a preload for Hanken Grotesk.
+  3. `GlobalStyles.tsx`: `body` background → `colors.canvas`; mono bindings for
+     `code/pre/kbd/samp/time`; link/focus colours → new primary.
+  4. `index.html`: title, favicon/touch-icon/PWA icons, `theme-color` meta.
+  5. `index.css` + `App.css`: rebase hardcoded hex onto brand values (App.css is
+     plain CSS with no theme access — literal brand hexes + comment explaining).
+  6. Swap `/a64logo_dark.png` references for the new lockup/emblem across
+     Login/Register/MFASetup/MFAVerify/DivisionSelector/MainLayout; delete old
+     logo + `vite.svg`/`react.svg` once unreferenced.
+  7. "A64 Core (Platform)" → "A20Core" in user-visible strings only (owned files).
+  8. Verify with `npx tsc -b` (not `tsc --noEmit`) in `frontend/user-portal`, and
+     type-check `frontend/shared`. No Playwright — UI is human-verified.
+  9. Leave this ticket **Active** (not archived) until the sweep phase (239 files)
+     also completes — see spec §7 for the two-phase sequencing.
+
+---
+
 ### T-800 | Genetics Repo — cross-domain lab traceability module (lines, accessions, propagation, media, observations)
 - **Category:** Full-stack · **Priority:** P1
 - **Assigned:** main session · **Started:** 2026-07-28

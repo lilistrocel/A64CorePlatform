@@ -33,7 +33,7 @@ export function BackupCodesModal({ isOpen, onClose, backupCodes }: BackupCodesMo
   };
 
   const handleDownload = () => {
-    const codesText = `A64 Core Platform - MFA Backup Codes
+    const codesText = `A20Core - MFA Backup Codes
 Generated: ${new Date().toISOString()}
 =====================================
 
@@ -50,7 +50,7 @@ these codes to sign in to your account.
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'a64-backup-codes.txt';
+    link.download = 'a20core-backup-codes.txt';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -135,7 +135,8 @@ const Overlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
+  background: rgba(14, 19, 48, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -150,7 +151,7 @@ const Overlay = styled.div`
 const Modal = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   width: 100%;
   max-width: 500px;
   max-height: 100vh;
@@ -223,7 +224,7 @@ const WarningBanner = styled.div`
 
 const WarningIcon = styled.span`
   font-size: 1.25rem;
-  color: #b45309;
+  color: ${({ theme }) => theme.colors.gold[700]};
   flex-shrink: 0;
 
   @media (min-width: 480px) {
@@ -232,7 +233,7 @@ const WarningIcon = styled.span`
 `;
 
 const WarningText = styled.div`
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   font-size: 0.8125rem;
   line-height: 1.4;
 
@@ -385,7 +386,7 @@ const CloseButton = styled.button<{ $acknowledged: boolean }>`
     $acknowledged ? theme.colors.primary[500] : theme.colors.neutral[300]};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ $acknowledged, theme }) => $acknowledged ? 'white' : theme.colors.textSecondary};
+  color: ${({ $acknowledged, theme }) => $acknowledged ? theme.colors.onAccent : theme.colors.textSecondary};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: ${({ $acknowledged }) => $acknowledged ? 'pointer' : 'not-allowed'};

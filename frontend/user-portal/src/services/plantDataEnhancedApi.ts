@@ -6,6 +6,7 @@
  */
 
 import { apiClient } from './api';
+import { lightTheme } from '@a64core/shared';
 import type {
   PlantDataEnhanced,
   PlantDataEnhancedCreate,
@@ -260,16 +261,17 @@ export function formatFarmType(farmType: FarmTypeCompatibility): string {
  * Get farm type color
  */
 export function getFarmTypeColor(farmType: FarmTypeCompatibility): string {
+  const c = lightTheme.colors;
   const colors: Record<FarmTypeCompatibility, string> = {
-    open_field: '#10B981',
-    greenhouse: '#3B82F6',
-    hydroponic: '#06B6D4',
-    vertical_farm: '#8B5CF6',
-    aquaponic: '#14B8A6',
-    indoor_farm: '#F59E0B',
-    polytunnel: '#84CC16',
+    open_field: c.emerald[500],
+    greenhouse: c.primary[500],
+    hydroponic: c.primary[400],     // was cyan — art-only hue, spec §3
+    vertical_farm: c.secondary[700], // was purple — categorical judgement call, deep gold to stay distinct from indoor_farm's warning gold
+    aquaponic: c.emerald[400],       // was teal — art-only hue, reads as a growth/farm-type metric, spec §3
+    indoor_farm: c.warning,          // gold
+    polytunnel: c.emerald[300],      // was lime — success family, lighter step than open_field
   };
-  return colors[farmType] || '#6B7280';
+  return colors[farmType] || c.textSecondary;
 }
 
 /**

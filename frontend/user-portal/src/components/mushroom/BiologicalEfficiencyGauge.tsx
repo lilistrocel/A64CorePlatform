@@ -5,7 +5,8 @@
  * BE% = (Fresh Mushroom Weight / Dry Substrate Weight) * 100
  */
 
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 
 interface BiologicalEfficiencyGaugeProps {
   value: number | undefined | null;
@@ -13,11 +14,14 @@ interface BiologicalEfficiencyGaugeProps {
   showLabel?: boolean;
 }
 
-function getBEColor(value: number): string {
-  if (value >= 80) return '#10B981'; // Excellent
-  if (value >= 60) return '#3B82F6'; // Good
-  if (value >= 40) return '#F59E0B'; // Fair
-  return '#EF4444';                  // Poor
+// BE% is a data encoding, not decoration — walk a single semantic progression
+// (success → info → warning → error) so the band ordering stays perceptually
+// separated after the rebrand.
+function getBEColor(value: number, theme: Theme): string {
+  if (value >= 80) return theme.colors.success; // Excellent
+  if (value >= 60) return theme.colors.info;    // Good
+  if (value >= 40) return theme.colors.warning; // Fair
+  return theme.colors.error;                    // Poor
 }
 
 function getBELabel(value: number): string {
@@ -38,6 +42,7 @@ export function BiologicalEfficiencyGauge({
   size = 'medium',
   showLabel = true,
 }: BiologicalEfficiencyGaugeProps) {
+  const theme = useTheme();
   const config = SIZE_CONFIG[size];
   const radius = (config.diameter - config.stroke * 2) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -54,7 +59,7 @@ export function BiologicalEfficiencyGauge({
           />
         </Svg>
         <CenterLabel>
-          <ValueText $fontSize={config.fontSize} $color="#bdbdbd">
+          <ValueText $fontSize={config.fontSize} $color={theme.colors.textDisabled}>
             N/A
           </ValueText>
         </CenterLabel>
@@ -64,7 +69,7 @@ export function BiologicalEfficiencyGauge({
 
   const clampedValue = Math.min(100, Math.max(0, value));
   const offset = circumference - (clampedValue / 100) * circumference;
-  const color = getBEColor(clampedValue);
+  const color = getBEColor(clampedValue, theme);
   const label = getBELabel(clampedValue);
 
   return (
@@ -139,7 +144,7 @@ interface TrackCircleProps {
 
 const TrackCircle = styled.circle<TrackCircleProps>`
   fill: none;
-  stroke: #e0e0e0;
+  stroke: ${({ theme }) => theme.colors.border};
   stroke-width: ${({ $stroke }) => $stroke}px;
 `;
 

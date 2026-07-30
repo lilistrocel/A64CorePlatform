@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import {
   MessageCircle,
   X,
@@ -37,6 +37,7 @@ const QUICK_ACTIONS = [
 ];
 
 export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
+  const theme = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -84,19 +85,19 @@ export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
 
   const getRiskIcon = (level: string) => {
     switch (level) {
-      case 'low': return <ShieldCheck size={16} color="#10B981" />;
-      case 'medium': return <Shield size={16} color="#F59E0B" />;
-      case 'high': return <ShieldAlert size={16} color="#EF4444" />;
+      case 'low': return <ShieldCheck size={16} color={theme.colors.success} />;
+      case 'medium': return <Shield size={16} color={theme.colors.warning} />;
+      case 'high': return <ShieldAlert size={16} color={theme.colors.error} />;
       default: return <Shield size={16} />;
     }
   };
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'low': return '#10B981';
-      case 'medium': return '#F59E0B';
-      case 'high': return '#EF4444';
-      default: return '#6B7280';
+      case 'low': return theme.colors.success;
+      case 'medium': return theme.colors.warning;
+      case 'high': return theme.colors.error;
+      default: return theme.colors.textSecondary;
     }
   };
 
@@ -125,7 +126,7 @@ export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
           {/* Header */}
           <ChatHeader>
             <HeaderLeft>
-              <Leaf size={18} color="#10B981" />
+              <Leaf size={18} color={theme.colors.success} />
               <HeaderTitle>Farm AI Assistant</HeaderTitle>
             </HeaderLeft>
             <HeaderRight>
@@ -147,7 +148,7 @@ export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
           <MessagesContainer>
             {messages.length === 0 && (
               <WelcomeMessage>
-                <Leaf size={32} color="#10B981" />
+                <Leaf size={32} color={theme.colors.success} />
                 <WelcomeTitle>Farm AI Assistant</WelcomeTitle>
                 <WelcomeText>
                   Ask me about sensor readings, crop conditions, automations, or control equipment.
@@ -289,20 +290,20 @@ const FloatingButton = styled.button`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #10B981;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  box-shadow: ${({ theme }) => `0 4px 12px ${theme.colors.success}66`};
   transition: all 150ms ease-in-out;
   z-index: 1000;
 
   &:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+    box-shadow: ${({ theme }) => `0 6px 16px ${theme.colors.success}80`};
   }
 `;
 
@@ -359,8 +360,8 @@ const HeaderRight = styled.div`
 const GrowthBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: #10B981;
-  background: #10B98115;
+  color: ${({ theme }) => theme.colors.success};
+  background: ${({ theme }) => `${theme.colors.success}15`};
   padding: 2px 8px;
   border-radius: 10px;
   text-transform: capitalize;
@@ -451,8 +452,8 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser, theme }) => ($isUser ? '#10B981' : theme.colors.surface)};
-  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $isUser, theme }) => ($isUser ? theme.colors.success : theme.colors.surface)};
+  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onAccent : theme.colors.textPrimary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -526,8 +527,8 @@ const ActionButtons = styled.div`
 const ApproveButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: #10B981;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -535,7 +536,7 @@ const ApproveButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.emerald[600]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -638,8 +639,8 @@ const ChatInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #10B981;
-    box-shadow: 0 0 0 2px #10B98130;
+    border-color: ${({ theme }) => theme.colors.success};
+    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.success}30`};
     background: ${({ theme }) => theme.colors.background};
   }
 
@@ -652,7 +653,7 @@ const SendButton = styled.button`
   height: 40px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.success};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   cursor: pointer;
   display: flex;
@@ -661,6 +662,6 @@ const SendButton = styled.button`
   flex-shrink: 0;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.emerald[600]}; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;

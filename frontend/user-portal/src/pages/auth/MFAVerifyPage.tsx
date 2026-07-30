@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
+import { useThemeStore } from '../../stores/theme.store';
 import { authService } from '../../services/auth.service';
 import {
   getCachedVerifyState,
@@ -25,6 +26,9 @@ export function MFAVerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyMfa, mfaPendingToken, mfaPendingUserId, mfaRequired, clearMfaState, isLoading, error: storeError, loadUser } = useAuthStore();
+  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
+  const { mode } = useThemeStore();
+  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
 
   // Get MFA token from location state (legacy) OR from auth store OR from sessionStorage cache
   const state = location.state as LocationState | null;
@@ -272,7 +276,7 @@ export function MFAVerifyPage() {
       <PageWrapper>
         <VerifyContainer>
           <VerifyCard>
-            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
             <ExpiredIcon>⏱️</ExpiredIcon>
             <Title>Session Expired</Title>
             <Subtitle>
@@ -300,7 +304,7 @@ export function MFAVerifyPage() {
       <PageWrapper>
         <VerifyContainer>
           <VerifyCard>
-            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
             {isNoCodesRemaining ? (
               <WarningIcon>&#9888;</WarningIcon>
             ) : (
@@ -341,7 +345,7 @@ export function MFAVerifyPage() {
     <PageWrapper>
       <VerifyContainer>
         <VerifyCard>
-          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+          <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
 
           {/* Authenticator App Illustration */}
           <AuthenticatorIllustration>
@@ -525,7 +529,7 @@ const VerifyContainer = styled.div`
 const VerifyCard = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   padding: 1rem;
   width: 100%;
   max-width: 420px;
@@ -684,8 +688,8 @@ const EmailConfirmCheck = styled.span`
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: #10b981;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   font-size: 0.75rem;
   font-weight: bold;
@@ -705,11 +709,11 @@ const ErrorBanner = styled.div`
 
 const WarningBanner = styled.div`
   background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid #f59e0b;
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 1rem;
   margin-bottom: 1rem;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   font-size: 0.875rem;
   text-align: center;
   font-weight: 500;
@@ -719,8 +723,8 @@ const WarningIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: #f59e0b;
-  color: white;
+  background: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -732,8 +736,8 @@ const SuccessIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -742,12 +746,12 @@ const SuccessIcon = styled.div`
 `;
 
 const SuccessBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.success || '#10b981'}10`};
-  border: 1px solid ${({ theme }) => theme.colors.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 1rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.success || '#059669'};
+  color: ${({ theme }) => theme.colors.emerald[700]};
   font-size: 0.875rem;
   text-align: center;
   font-weight: 500;
@@ -959,7 +963,7 @@ const ShieldBadge = styled.span`
 
 const LockoutBanner = styled.div`
   background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid #f59e0b;
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 1rem;
   margin-bottom: 1rem;
@@ -974,13 +978,13 @@ const LockoutIcon = styled.span`
 `;
 
 const LockoutText = styled.span`
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   font-size: 0.875rem;
 `;
 
 const LockoutTimer = styled.span`
   font-weight: bold;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $locked?: boolean }>`
@@ -1024,7 +1028,7 @@ const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $lo
     border-color: ${({ $error, $locked, theme }) =>
       $locked ? theme.colors.neutral[400] :
       $error ? theme.colors.error : theme.colors.primary[500]};
-    box-shadow: ${({ $locked }) => $locked ? 'none' : '0 0 0 3px rgba(59, 130, 246, 0.2)'};
+    box-shadow: ${({ $locked, theme }) => $locked ? 'none' : `0 0 0 3px ${theme.colors.primary[500]}33`};
   }
 
   &:disabled {
@@ -1050,7 +1054,7 @@ const StyledBackupInput = styled.input<{ $error?: boolean }>`
     border-color: ${({ $error, theme }) =>
       $error ? theme.colors.error : theme.colors.primary[500]};
     box-shadow: 0 0 0 3px ${({ $error, theme }) =>
-      $error ? 'rgba(239, 68, 68, 0.2)' : theme.colors.primary[100]};
+      $error ? `${theme.colors.error}33` : theme.colors.primary[100]};
   }
 
   &::placeholder {
@@ -1074,7 +1078,7 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   padding: 0.75rem 1rem;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   background: ${({ disabled, theme }) =>
     disabled ? theme.colors.neutral[300] : theme.colors.primary[500]};
   border: none;
@@ -1099,8 +1103,8 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
 const ButtonSpinner = styled.span`
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2px solid ${({ theme }) => theme.colors.onAccent}4D;
+  border-top-color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
 `;
@@ -1145,14 +1149,14 @@ const ExpiredIcon = styled.div`
   width: 70px;
   height: 70px;
   margin: 0.5rem auto 1rem;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gold[500]} 0%, ${({ theme }) => theme.colors.gold[600]} 100%);
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2rem;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 4px 12px ${({ theme }) => theme.colors.gold[500]}4D;
 `;
 
 const StartOverButton = styled.button`
@@ -1165,7 +1169,7 @@ const StartOverButton = styled.button`
   padding: 0.875rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   background: ${({ theme }) => theme.colors.primary[500]};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
@@ -1196,7 +1200,7 @@ const SessionTimer = styled.div<{ $warning?: boolean }>`
   margin-bottom: 1rem;
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   background: ${({ $warning, theme }) => $warning ? theme.colors.warningBg : theme.colors.infoBg};
-  border: 1px solid ${({ $warning }) => $warning ? '#f59e0b' : '#3b82f6'};
+  border: 1px solid ${({ $warning, theme }) => $warning ? theme.colors.warning : theme.colors.info};
   font-size: 0.75rem;
 
   @media (min-width: 480px) {
@@ -1228,7 +1232,7 @@ const MobileReassuranceText = styled.p`
   margin: 0 0 1rem 0;
   padding: 0.625rem 0.75rem;
   background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid #10b981;
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   line-height: 1.4;
   animation: slideInFade 0.3s ease-out;

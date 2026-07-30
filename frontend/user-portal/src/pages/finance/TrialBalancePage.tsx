@@ -20,7 +20,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceCompanies } from '../../hooks/queries/useFinanceCompanies';
 import { useTrialBalance, useFinancePeriods } from '../../hooks/queries/useTrialBalance';
@@ -165,7 +165,7 @@ const ToggleRow = styled.label`
 const GenerateButton = styled.button`
   padding: 10px 22px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -286,7 +286,7 @@ const TBTd = styled.td`
 const TBTdMono = styled.td`
   padding: 11px 16px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -294,7 +294,7 @@ const TBTdMono = styled.td`
 const AccountNumberCell = styled.td`
   padding: 11px 16px;
   font-size: 12px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
 `;
@@ -306,10 +306,10 @@ interface TotalRowProps {
 }
 
 const TotalsTRow = styled.tr<TotalRowProps>`
-  border-top: 3px double ${({ $outOfBalance }) =>
-    $outOfBalance ? '#ef4444' : '#d1d5db'};
-  background: ${({ $outOfBalance }) =>
-    $outOfBalance ? '#fef2f2' : 'transparent'};
+  border-top: 3px double ${({ $outOfBalance, theme }) =>
+    $outOfBalance ? theme.colors.error : theme.colors.border};
+  background: ${({ $outOfBalance, theme }) =>
+    $outOfBalance ? theme.colors.errorBg : 'transparent'};
 `;
 
 const TotalsTd = styled.td`
@@ -323,15 +323,15 @@ const TotalsTdMono = styled.td<TotalRowProps>`
   padding: 13px 16px;
   font-size: 14px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
-  color: ${({ $outOfBalance }) => ($outOfBalance ? '#dc2626' : 'inherit')};
+  color: ${({ $outOfBalance, theme }) => ($outOfBalance ? theme.colors.error : 'inherit')};
 `;
 
 const OutOfBalanceLabel = styled.span`
   font-size: 11px;
   font-weight: 700;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
   display: block;
   margin-top: 2px;
 `;
@@ -355,8 +355,8 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -366,14 +366,15 @@ const VoidedIncludedPill = styled.span`
   font-size: 11px;
   padding: 2px 10px;
   border-radius: 99px;
-  background: #fef3c7;
-  color: #92400e;
+  background: ${({ theme }) => theme.colors.warningBg};
+  color: ${({ theme }) => theme.colors.gold[800]};
   font-weight: 600;
 `;
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function TrialBalancePage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
 
   const organizationId = useMemo<string>(() => {
@@ -713,7 +714,7 @@ export function TrialBalancePage() {
                           <TBTr key={acc.accountId}>
                             <AccountNumberCell>{acc.accountNumber}</AccountNumberCell>
                             <TBTd>{acc.accountName}</TBTd>
-                            <TBTd style={{ fontSize: 12, color: '#6b7280' }}>
+                            <TBTd style={{ fontSize: 12, color: theme.colors.textSecondary }}>
                               {acc.drawer}
                             </TBTd>
                             <TBTdMono>

@@ -126,7 +126,7 @@ const NewButton = styled.button`
   width: 100%;
   padding: 8px ${({ theme }) => theme.spacing.sm};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};

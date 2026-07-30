@@ -265,19 +265,19 @@ const ExportButton = styled.button<ExportButtonProps>`
   border: 1.5px solid
     ${({ $variant, theme }) =>
       $variant === 'pdf'
-        ? '#ef4444'
+        ? theme.colors.error
         : theme.colors.primary[500]};
   background: transparent;
   color: ${({ $variant, theme }) =>
-    $variant === 'pdf' ? '#ef4444' : theme.colors.primary[500]};
+    $variant === 'pdf' ? theme.colors.error : theme.colors.primary[500]};
   &:hover:not(:disabled) {
     background: ${({ $variant, theme }) =>
-      $variant === 'pdf' ? '#fef2f2' : theme.colors.primary[50]};
+      $variant === 'pdf' ? theme.colors.errorBg : theme.colors.primary[50]};
   }
   &:focus-visible {
     outline: 2px solid
       ${({ $variant, theme }) =>
-        $variant === 'pdf' ? '#ef4444' : theme.colors.primary[500]};
+        $variant === 'pdf' ? theme.colors.error : theme.colors.primary[500]};
     outline-offset: 2px;
   }
   &:disabled {
@@ -324,7 +324,7 @@ const CCChip = styled.button<SelectedChipProps>`
       $isSelected ? theme.colors.primary[500] : theme.colors.neutral[300]};
   background: ${({ $isSelected, theme }) =>
     $isSelected ? theme.colors.primary[500] : 'transparent'};
-  color: ${({ $isSelected }) => ($isSelected ? '#fff' : 'inherit')};
+  color: ${({ $isSelected, theme }) => ($isSelected ? theme.colors.onAccent : 'inherit')};
   white-space: nowrap;
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
@@ -358,7 +358,7 @@ const ModalBackdrop = styled.div`
 const ModalPanel = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 25px -5px rgba(59, 44, 24, 0.15);
   width: 90vw;
   max-width: 860px;
   max-height: 85vh;

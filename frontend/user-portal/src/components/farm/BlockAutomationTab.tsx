@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   Droplet,
   Thermometer,
@@ -76,13 +76,17 @@ interface BlockAutomationTabProps {
   farmId: string;
 }
 
-type SubTab = 'overview' | 'equipment' | 'automations' | 'alerts' | 'lab';
+// Named ...Key to stay clear of the `SubTab` styled-component below: TypeScript
+// keeps types and values in separate declaration spaces, but the repo's
+// duplicate-identifier check does not.
+type SubTabKey = 'overview' | 'equipment' | 'automations' | 'alerts' | 'lab';
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps) {
+  const theme = useTheme();
   const [connectionStatus, setConnectionStatus] = useState<SenseHubConnectionStatus | null>(null);
   const [dashboard, setDashboard] = useState<SenseHubDashboard | null>(null);
   const [equipment, setEquipment] = useState<SenseHubEquipment[]>([]);
@@ -91,7 +95,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<SubTabKey>('overview');
 
   // Connection form state
   const [showConnectionForm, setShowConnectionForm] = useState(false);
@@ -480,9 +484,9 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
 
   const getSeverityColor = (severity: 'critical' | 'warning' | 'info') => {
     switch (severity) {
-      case 'critical': return '#EF4444';
-      case 'warning': return '#F59E0B';
-      case 'info': return '#3B82F6';
+      case 'critical': return theme.colors.error;
+      case 'warning': return theme.colors.warning;
+      case 'info': return theme.colors.info;
     }
   };
 
@@ -585,7 +589,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
             </ConnectionForm>
           ) : (
             <ConfigEmptyState>
-              <WifiOff size={48} color="#6B7280" />
+              <WifiOff size={48} color={theme.colors.textSecondary} />
               <EmptyText>Not connected to SenseHub</EmptyText>
               <ConfigButton onClick={() => setShowConnectionForm(true)}>
                 Connect to SenseHub
@@ -597,7 +601,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
             <ConfigInfo>
               <ConfigLabel>Status:</ConfigLabel>
               <ConfigValue>
-                <Wifi size={16} color="#10B981" />
+                <Wifi size={16} color={theme.colors.success} />
                 Connected to {connectionStatus.address}:{connectionStatus.port}
               </ConfigValue>
             </ConfigInfo>
@@ -679,7 +683,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
               </RefreshButton>
             </ConfigActions>
             {syncError && (
-              <LastUpdateText style={{ color: '#991b1b' }}>
+              <LastUpdateText style={{ color: theme.colors.terracotta[800] }}>
                 <AlertCircle size={12} />
                 {syncError}
               </LastUpdateText>
@@ -736,9 +740,9 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                   <StatLabel>Equipment</StatLabel>
                   <StatValue>{dashboard.equipment.total}</StatValue>
                   <StatBreakdown>
-                    <StatItem $color="#10B981">{dashboard.equipment.online} online</StatItem>
-                    <StatItem $color="#EF4444">{dashboard.equipment.offline} offline</StatItem>
-                    {dashboard.equipment.error > 0 && <StatItem $color="#F59E0B">{dashboard.equipment.error} error</StatItem>}
+                    <StatItem $color={theme.colors.success}>{dashboard.equipment.online} online</StatItem>
+                    <StatItem $color={theme.colors.error}>{dashboard.equipment.offline} offline</StatItem>
+                    {dashboard.equipment.error > 0 && <StatItem $color={theme.colors.warning}>{dashboard.equipment.error} error</StatItem>}
                   </StatBreakdown>
                 </StatCard>
 
@@ -746,7 +750,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                   <StatLabel>Automations</StatLabel>
                   <StatValue>{dashboard.automations.total}</StatValue>
                   <StatBreakdown>
-                    <StatItem $color="#10B981">{dashboard.automations.active} active</StatItem>
+                    <StatItem $color={theme.colors.success}>{dashboard.automations.active} active</StatItem>
                   </StatBreakdown>
                 </StatCard>
 
@@ -754,9 +758,9 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                   <StatLabel>Alerts</StatLabel>
                   <StatValue>{dashboard.alerts.unacknowledged}</StatValue>
                   <StatBreakdown>
-                    {dashboard.alerts.critical > 0 && <StatItem $color="#EF4444">{dashboard.alerts.critical} critical</StatItem>}
-                    {dashboard.alerts.warning > 0 && <StatItem $color="#F59E0B">{dashboard.alerts.warning} warning</StatItem>}
-                    {dashboard.alerts.info > 0 && <StatItem $color="#3B82F6">{dashboard.alerts.info} info</StatItem>}
+                    {dashboard.alerts.critical > 0 && <StatItem $color={theme.colors.error}>{dashboard.alerts.critical} critical</StatItem>}
+                    {dashboard.alerts.warning > 0 && <StatItem $color={theme.colors.warning}>{dashboard.alerts.warning} warning</StatItem>}
+                    {dashboard.alerts.info > 0 && <StatItem $color={theme.colors.info}>{dashboard.alerts.info} info</StatItem>}
                   </StatBreakdown>
                 </StatCard>
               </StatsGrid>
@@ -1123,7 +1127,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                               const unit = labLatest.find(r => r.nutrient === nutrient)?.unit || '';
                               return (
                                 <tr key={nutrient}>
-                                  <LabTd><strong>{nutrient}</strong> <span style={{ color: '#9e9e9e', fontSize: 12 }}>({unit})</span></LabTd>
+                                  <LabTd><strong>{nutrient}</strong> <span style={{ color: theme.colors.textDisabled, fontSize: 12 }}>({unit})</span></LabTd>
                                   {zones.map(zone => {
                                     const reading = labLatest.find(r => r.zone_name === zone && r.nutrient === nutrient);
                                     return (
@@ -1207,7 +1211,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                           >
                             <ChevronLeft size={14} /> Prev
                           </AutomationButton>
-                          <span style={{ fontSize: 14, color: '#616161' }}>
+                          <span style={{ fontSize: 14, color: theme.colors.neutral[700] }}>
                             Page {labPage + 1} of {Math.ceil(labReadingsTotal / 20)}
                           </span>
                           <AutomationButton
@@ -1314,8 +1318,8 @@ const EmptyText = styled.div`
 
 const ConfigButton = styled.button`
   padding: 8px 24px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -1324,7 +1328,7 @@ const ConfigButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1d4ed8;
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 `;
 
@@ -1369,8 +1373,8 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px #bfdbfe;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
   }
 
   &::placeholder {
@@ -1385,8 +1389,8 @@ const ButtonRow = styled.div`
 
 const ConnectButton = styled.button`
   padding: 8px 24px;
-  background: #10b981;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -1525,8 +1529,8 @@ const ErrorText = styled.div`
 
 const RetryButton = styled.button`
   padding: 4px 8px;
-  background: #dc2626;
-  color: white;
+  background: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 4px;
   font-size: 12px;
@@ -1535,7 +1539,7 @@ const RetryButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #b91c1c;
+    background: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 
@@ -1551,10 +1555,10 @@ const SubTab = styled.button<{ $active: boolean }>`
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#e3f2fd' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[50] : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -1568,7 +1572,7 @@ const SubTab = styled.button<{ $active: boolean }>`
 
 const AlertBadge = styled.span`
   background: ${({ theme }) => theme.colors.error};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 11px;
@@ -1627,11 +1631,11 @@ const AlertsList = styled.div`
 
 const AlertCard = styled.div<{ $severity: 'critical' | 'warning' | 'info' }>`
   background: ${({ theme }) => theme.colors.background};
-  border-left: 4px solid ${({ $severity }) => {
+  border-left: 4px solid ${({ $severity, theme }) => {
     switch ($severity) {
-      case 'critical': return '#ef4444';
-      case 'warning': return '#f59e0b';
-      case 'info': return '#3b82f6';
+      case 'critical': return theme.colors.error;
+      case 'warning': return theme.colors.warning;
+      case 'info': return theme.colors.info;
     }
   }};
   border-radius: 8px;
@@ -1665,8 +1669,8 @@ const AcknowledgeButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 4px;
   font-size: 12px;
@@ -1676,7 +1680,7 @@ const AcknowledgeButton = styled.button`
   align-self: flex-start;
 
   &:hover:not(:disabled) {
-    background: #1d4ed8;
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 
   &:disabled {
@@ -1690,7 +1694,7 @@ const AcknowledgedText = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #10b981;
+  color: ${({ theme }) => theme.colors.success};
   font-weight: 500;
 `;
 
@@ -1712,7 +1716,7 @@ const EquipmentCard = styled.div`
 
   &:hover {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border-color: #93c5fd;
+    border-color: ${({ theme }) => theme.colors.primary[300]};
   }
 `;
 
@@ -1726,8 +1730,8 @@ const EquipmentIconWrapper = styled.div<{ $online: boolean }>`
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: ${({ $online }) => ($online ? '#10b98115' : '#6b728015')};
-  color: ${({ $online }) => ($online ? '#10b981' : '#6b7280')};
+  background: ${({ $online, theme }) => ($online ? `${theme.colors.success}15` : `${theme.colors.textSecondary}15`)};
+  color: ${({ $online, theme }) => ($online ? theme.colors.success : theme.colors.textSecondary)};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1757,7 +1761,7 @@ const StatusDot = styled.div<{ $online: boolean }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ $online }) => ($online ? '#10b981' : '#ef4444')};
+  background: ${({ $online, theme }) => ($online ? theme.colors.success : theme.colors.error)};
 `;
 
 const EquipmentStatus = styled.div`
@@ -1824,8 +1828,8 @@ const RelayLabel = styled.div`
 
 const ToggleRelayButton = styled.button<{ $isOn: boolean }>`
   padding: 4px 12px;
-  background: ${({ $isOn, theme }) => ($isOn ? '#10b981' : theme.colors.neutral[300])};
-  color: ${({ $isOn, theme }) => ($isOn ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $isOn, theme }) => ($isOn ? theme.colors.success : theme.colors.neutral[300])};
+  color: ${({ $isOn, theme }) => ($isOn ? theme.colors.onAccent : theme.colors.textPrimary)};
   border: none;
   border-radius: 4px;
   font-size: 12px;
@@ -1887,8 +1891,8 @@ const AutomationDescription = styled.div`
 
 const AutomationBadge = styled.span<{ $enabled: boolean }>`
   padding: 4px 12px;
-  background: ${({ $enabled }) => ($enabled ? '#10b98115' : '#6b728015')};
-  color: ${({ $enabled }) => ($enabled ? '#10b981' : '#6b7280')};
+  background: ${({ $enabled, theme }) => ($enabled ? `${theme.colors.success}15` : `${theme.colors.textSecondary}15`)};
+  color: ${({ $enabled, theme }) => ($enabled ? theme.colors.success : theme.colors.textSecondary)};
   border-radius: 4px;
   font-size: 12px;
   font-weight: 700;
@@ -1954,8 +1958,8 @@ const LabSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px #bfdbfe;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
   }
 `;
 
@@ -1964,8 +1968,8 @@ const LabApplyButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -1974,7 +1978,7 @@ const LabApplyButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1d4ed8;
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 `;
 

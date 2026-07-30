@@ -15,7 +15,8 @@
  */
 
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import {
   LineChart,
   Line,
@@ -200,8 +201,9 @@ export function RoomDetailsModal({
 
   const isSubmitting = advancePhase.isPending || updateRoom.isPending;
 
-  const phaseColor = PHASE_COLORS[room.currentPhase] ?? '#9e9e9e';
-  const phaseTextColor = PHASE_TEXT_COLORS[room.currentPhase] ?? '#fff';
+  const theme = useTheme();
+  const phaseColor = PHASE_COLORS[room.currentPhase] ?? theme.colors.neutral[500];
+  const phaseTextColor = PHASE_TEXT_COLORS[room.currentPhase] ?? theme.colors.onAccent;
   const phaseLabel = PHASE_LABELS[room.currentPhase] ?? room.currentPhase;
 
   // Prepare chart data - last 24 readings, oldest first
@@ -707,17 +709,21 @@ export function RoomDetailsModal({
                   <ChartTitle>Last {chartData.length} Readings</ChartTitle>
                   <ResponsiveContainer width="100%" height={240}>
                     <LineChart data={chartData} margin={{ top: 5, right: 16, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.neutral[200]} />
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
                       <Tooltip />
                       <Legend />
+                      {/* Three distinct series need three distinct hues; error/info
+                          carry no "temp is bad" implication here, they're just
+                          visually separated categorical lines. Gold is reserved
+                          (brand §1.4), so CO2 takes emerald as the third voice. */}
                       <Line
                         yAxisId="left"
                         type="monotone"
                         dataKey="temp"
-                        stroke="#EF4444"
+                        stroke={theme.colors.error}
                         strokeWidth={2}
                         dot={false}
                         name="Temp (°C)"
@@ -726,7 +732,7 @@ export function RoomDetailsModal({
                         yAxisId="left"
                         type="monotone"
                         dataKey="humidity"
-                        stroke="#3B82F6"
+                        stroke={theme.colors.info}
                         strokeWidth={2}
                         dot={false}
                         name="Humidity (%)"
@@ -736,7 +742,7 @@ export function RoomDetailsModal({
                           yAxisId="right"
                           type="monotone"
                           dataKey="co2"
-                          stroke="#8B5CF6"
+                          stroke={theme.colors.emerald[500]}
                           strokeWidth={1.5}
                           dot={false}
                           name="CO2 (ppm)"
@@ -997,7 +1003,7 @@ const GenPill = styled.span<{ $warm: boolean }>`
   border-radius: 999px;
   background: ${({ $warm, theme }) =>
     $warm ? theme.colors.warningBg : theme.colors.primary[50]};
-  color: ${({ $warm, theme }) => ($warm ? '#92400e' : theme.colors.primary[800])};
+  color: ${({ $warm, theme }) => ($warm ? theme.colors.gold[800] : theme.colors.primary[800])};
 `;
 
 const MutedText = styled.span`
@@ -1067,7 +1073,7 @@ const HeaderRight = styled.div`
 const RoomCodeText = styled.h2`
   font-size: 22px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -1098,7 +1104,7 @@ const DangerButton = styled.button`
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
     border-color: ${({ theme }) => theme.colors.error};
-    color: #b91c1c;
+    color: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 
@@ -1107,7 +1113,7 @@ const CloseButton = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 150ms;
@@ -1115,10 +1121,10 @@ const CloseButton = styled.button`
 
   &:hover {
     background: rgba(0, 0, 0, 0.08);
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -1138,10 +1144,10 @@ const TabButton = styled.button<TabButtonProps>`
   padding: 12px 18px;
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
-  color: ${({ $active }) => ($active ? '#2196f3' : '#616161')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[700])};
   background: none;
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#2196f3' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   cursor: pointer;
   white-space: nowrap;
   display: flex;
@@ -1150,11 +1156,11 @@ const TabButton = styled.button<TabButtonProps>`
   transition: all 150ms;
 
   &:hover {
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
     background: rgba(0, 0, 0, 0.04);
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: -2px;
   }
 `;
@@ -1163,13 +1169,13 @@ const TabDot = styled.span`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10B981;
+  background: ${({ theme }) => theme.colors.success};
   display: inline-block;
 `;
 
 const AlertDot = styled.span`
-  background: #EF4444;
-  color: white;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 10px;
   font-weight: 700;
   border-radius: 10px;
@@ -1209,7 +1215,7 @@ const InfoGroup = styled.div`
 const InfoLabel = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -1217,7 +1223,7 @@ const InfoLabel = styled.span`
 const InfoValue = styled.span`
   font-size: 15px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 interface PhasePillProps {
@@ -1265,7 +1271,7 @@ const EditAssignmentBtn = styled.button`
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -1276,10 +1282,10 @@ const AdvancePhaseSection = styled.div``;
 
 const AdvancePhaseBtn = styled.button`
   padding: 8px 16px;
-  border: 1px solid #3b82f6;
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.background};
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1289,7 +1295,7 @@ const AdvancePhaseBtn = styled.button`
     background: ${({ theme }) => theme.colors.infoBg};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -1307,7 +1313,7 @@ const AdvanceFormBox = styled.div`
 const AdvanceFormTitle = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.neutral[800]};
 `;
 
 const PhaseOptionRow = styled.div`
@@ -1330,7 +1336,7 @@ const PhaseOptionBtn = styled.button<PhaseOptionBtnProps>`
   cursor: pointer;
   transition: all 150ms;
   border: 2px solid ${({ $bg }) => $bg};
-  background: ${({ $selected, $bg }) => ($selected ? $bg : 'white')};
+  background: ${({ $selected, $bg, theme }) => ($selected ? $bg : theme.colors.background)};
   color: ${({ $selected, $bg, $text }) => ($selected ? $text : $bg)};
   box-shadow: ${({ $selected }) =>
     $selected ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'};
@@ -1340,7 +1346,7 @@ const PhaseOptionBtn = styled.button<PhaseOptionBtnProps>`
     color: ${({ $text }) => $text};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -1354,7 +1360,7 @@ const AdvanceFormGroup = styled.div`
 const AdvanceFormLabel = styled.label`
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const AdvanceSelect = styled.select`
@@ -1368,8 +1374,8 @@ const AdvanceSelect = styled.select`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}26`};
   }
 `;
 
@@ -1385,16 +1391,16 @@ const AdvanceTextarea = styled.textarea`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}26`};
   }
 `;
 
 const AdvanceError = styled.div`
   font-size: 12px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid #fecaca;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 6px;
   padding: 8px 10px;
 `;
@@ -1425,15 +1431,15 @@ const AdvanceConfirmBtn = styled.button`
   padding: 7px 16px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover:not(:disabled) {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
   &:disabled {
     opacity: 0.5;
@@ -1462,7 +1468,7 @@ const BERow = styled.div`
 
 const BEExplain = styled.p`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.neutral[700]};
   line-height: 1.6;
   margin: 0;
 `;
@@ -1497,13 +1503,13 @@ const ReadingIcon = styled.div`
 const ReadingValue = styled.div`
   font-size: 16px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 2px;
 `;
 
 const ReadingLabel = styled.div`
   font-size: 10px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;
@@ -1513,7 +1519,7 @@ const ChartWrapper = styled.div``;
 const ChartTitle = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.neutral[700]};
   margin-bottom: 8px;
 `;
 
@@ -1526,16 +1532,16 @@ const SectionToolbar = styled.div`
 const SectionHeading = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const AddButton = styled.button`
   padding: 7px 14px;
-  border: 1px solid #10B981;
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.background};
-  color: #10B981;
+  color: ${({ theme }) => theme.colors.success};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1545,7 +1551,7 @@ const AddButton = styled.button`
     background: ${({ theme }) => theme.colors.successBg};
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid ${({ theme }) => theme.colors.success};
     outline-offset: 2px;
   }
 `;
@@ -1561,7 +1567,7 @@ const Th = styled.th`
   padding: 8px 10px;
   font-size: 11px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
@@ -1570,15 +1576,15 @@ const Th = styled.th`
 
 const Td = styled.td`
   padding: 10px;
-  border-bottom: 1px solid #f0f0f0;
-  color: #424242;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.neutral[800]};
 `;
 
 const TfootTd = styled.td`
   padding: 10px;
-  border-top: 2px solid #e0e0e0;
-  background: #fafafa;
-  color: #212121;
+  border-top: 2px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 interface GradePillProps {
@@ -1588,7 +1594,7 @@ interface GradePillProps {
 const GradePill = styled.span<GradePillProps>`
   font-size: 11px;
   font-weight: 600;
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   background: ${({ $color }) => $color};
   border-radius: 20px;
   padding: 2px 8px;
@@ -1605,8 +1611,8 @@ interface ContamCardProps {
 }
 
 const ContamCard = styled.div<ContamCardProps>`
-  background: ${({ $resolved }) => ($resolved ? '#f9fafb' : '#fff5f5')};
-  border: 1px solid ${({ $resolved }) => ($resolved ? '#e0e0e0' : '#fecaca')};
+  background: ${({ $resolved, theme }) => ($resolved ? theme.colors.neutral[100] : theme.colors.errorBg)};
+  border: 1px solid ${({ $resolved, theme }) => ($resolved ? theme.colors.border : theme.colors.terracotta[200])};
   border-radius: 10px;
   padding: 14px;
   opacity: ${({ $resolved }) => ($resolved ? 0.7 : 1)};
@@ -1623,7 +1629,7 @@ const ContamHeader = styled.div`
 const ContamType = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   text-transform: capitalize;
   flex: 1;
 `;
@@ -1632,18 +1638,22 @@ interface SeverityBadgeProps {
   $severity: string;
 }
 
-const SEVERITY_COLORS: Record<string, string> = {
-  low: '#10B981',
-  medium: '#F59E0B',
-  high: '#EF4444',
-  critical: '#7F1D1D',
-};
+// Contamination severity is a data encoding — walk a single ramp from low
+// risk to critical rather than mixing hues, so the ordering stays legible.
+function getSeverityColors(theme: Theme): Record<string, string> {
+  return {
+    low: theme.colors.success,
+    medium: theme.colors.warning,
+    high: theme.colors.error,
+    critical: theme.colors.terracotta[900],
+  };
+}
 
 const SeverityBadge = styled.span<SeverityBadgeProps>`
   font-size: 11px;
   font-weight: 600;
-  color: white;
-  background: ${({ $severity }) => SEVERITY_COLORS[$severity] ?? '#9e9e9e'};
+  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ $severity, theme }) => getSeverityColors(theme)[$severity] ?? theme.colors.neutral[500]};
   border-radius: 20px;
   padding: 2px 8px;
   text-transform: capitalize;
@@ -1656,8 +1666,8 @@ interface StatusBadgeProps {
 const StatusBadge = styled.span<StatusBadgeProps>`
   font-size: 11px;
   font-weight: 600;
-  color: ${({ $resolved }) => ($resolved ? '#10B981' : '#F59E0B')};
-  background: ${({ $resolved }) => ($resolved ? '#D1FAE5' : '#FEF3C7')};
+  color: ${({ $resolved, theme }) => ($resolved ? theme.colors.success : theme.colors.warning)};
+  background: ${({ $resolved, theme }) => ($resolved ? theme.colors.successBg : theme.colors.warningBg)};
   border-radius: 20px;
   padding: 2px 8px;
   text-transform: capitalize;
@@ -1665,22 +1675,22 @@ const StatusBadge = styled.span<StatusBadgeProps>`
 
 const ContamMeta = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 4px;
 `;
 
 const ContamDesc = styled.div`
   font-size: 13px;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.neutral[800]};
   margin-bottom: 8px;
 `;
 
 const ResolveButton = styled.button`
   padding: 5px 12px;
-  border: 1px solid #10B981;
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.background};
-  color: #10B981;
+  color: ${({ theme }) => theme.colors.success};
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1694,24 +1704,24 @@ const ResolveButton = styled.button`
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid ${({ theme }) => theme.colors.success};
     outline-offset: 2px;
   }
 `;
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-align: center;
   padding: 32px;
 `;
 
 const EmptyTabState = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-align: center;
   padding: 32px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[100]};
   border-radius: 10px;
-  border: 1px dashed #e0e0e0;
+  border: 1px dashed ${({ theme }) => theme.colors.border};
 `;

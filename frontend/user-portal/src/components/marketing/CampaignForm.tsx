@@ -13,23 +13,23 @@ interface CampaignFormProps {
   onClose: () => void;
 }
 
-const Overlay = styled.div`position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
+const Overlay = styled.div`position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: ${({ theme }) => `${theme.colors.neutral[900]}80`}; display: flex; justify-content: center; align-items: center; z-index: 1000;`;
 const Modal = styled.div`background: ${({ theme }) => theme.colors.background}; border-radius: 12px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;`;
 const Title = styled.h2`font-size: 24px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0 0 24px 0;`;
 const Form = styled.form``;
 const FormGroup = styled.div`margin-bottom: 20px;`;
 const Label = styled.label`display: block; font-size: 14px; font-weight: 500; color: ${({ theme }) => theme.colors.textPrimary}; margin-bottom: 8px;`;
-const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; } &:focus { outline: none; border-color: #3B82F6; }`;
-const TextArea = styled.textarea`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; min-height: 100px; resize: vertical; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; } &:focus { outline: none; border-color: #3B82F6; }`;
-const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: #3B82F6; }`;
+const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; } &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }`;
+const TextArea = styled.textarea`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; min-height: 100px; resize: vertical; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; } &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }`;
+const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }`;
 const ButtonRow = styled.div`display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;`;
-const Button = styled.button`padding: 10px 24px; background: #3B82F6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: #1976d2; }`;
+const Button = styled.button`padding: 10px 24px; background: ${({ theme }) => theme.colors.primary[500]}; color: ${({ theme }) => theme.colors.onAccent}; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: ${({ theme }) => theme.colors.primary[600]}; }`;
 const CancelButton = styled(Button)`background: transparent; color: ${({ theme }) => theme.colors.textSecondary}; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; &:hover { background: ${({ theme }) => theme.colors.surface}; }`;
-const ErrorText = styled.div`color: #EF4444; font-size: 13px; margin-top: 8px;`;
+const ErrorText = styled.div`color: ${({ theme }) => theme.colors.error}; font-size: 13px; margin-top: 8px;`;
 const TagInput = styled(Input)``;
 const TagsContainer = styled.div`display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;`;
-const Tag = styled.span`padding: 4px 12px; background: #E0F2FE; color: #0369A1; border-radius: 12px; font-size: 13px; display: flex; align-items: center; gap: 6px;`;
-const RemoveTag = styled.button`background: none; border: none; color: #0369A1; cursor: pointer; font-size: 16px; padding: 0;`;
+const Tag = styled.span`padding: 4px 12px; background: ${({ theme }) => theme.colors.primary[50]}; color: ${({ theme }) => theme.colors.primary[700]}; border-radius: 12px; font-size: 13px; display: flex; align-items: center; gap: 6px;`;
+const RemoveTag = styled.button`background: none; border: none; color: ${({ theme }) => theme.colors.primary[700]}; cursor: pointer; font-size: 16px; padding: 0;`;
 
 export function CampaignForm({ campaign, onClose }: CampaignFormProps) {
   const [formData, setFormData] = useState({

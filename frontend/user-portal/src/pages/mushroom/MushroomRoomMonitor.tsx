@@ -664,7 +664,7 @@ const FilterSelect = styled.select`
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}40`};
   }
 `;
 
@@ -685,7 +685,7 @@ const FilterInput = styled.input`
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}40`};
   }
 `;
 

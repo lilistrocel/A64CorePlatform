@@ -115,5 +115,5 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;

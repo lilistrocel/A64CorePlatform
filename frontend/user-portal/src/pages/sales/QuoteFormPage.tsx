@@ -22,7 +22,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -140,7 +140,7 @@ const Label = styled.label`
 const Input = styled.input<{ $error?: boolean }>`
   padding: 10px 12px;
   border: 1px solid ${({ $error, theme }) =>
-    $error ? '#dc2626' : theme.colors.neutral[300]};
+    $error ? theme.colors.error : theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
@@ -148,7 +148,7 @@ const Input = styled.input<{ $error?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? '#dc2626' : theme.colors.primary[500]};
+      $error ? theme.colors.error : theme.colors.primary[500]};
   }
 `;
 
@@ -169,7 +169,7 @@ const Textarea = styled.textarea`
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const LinesHeader = styled.div`
@@ -253,8 +253,8 @@ const DeleteLineBtn = styled.button`
   border-radius: 6px;
   cursor: pointer;
   &:hover {
-    background: #fef2f2;
-    color: #dc2626;
+    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.terracotta[600]};
   }
 `;
 
@@ -297,7 +297,7 @@ const ActionRow = styled.div`
 const SubmitBtn = styled.button`
   padding: 12px 28px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -320,10 +320,10 @@ const CancelBtn = styled.button`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 20px;
 `;
@@ -367,6 +367,7 @@ function calcLineTotals(line: {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function QuoteFormPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId } = useParams<{ docId?: string }>();
   const isEditMode = Boolean(docId);
@@ -543,7 +544,7 @@ export function QuoteFormPage() {
     return (
       <Container>
         <BackLink onClick={() => navigate('/sales/quotes')}>← Back to Quotes</BackLink>
-        <p style={{ color: '#6b7280' }}>Loading quote…</p>
+        <p style={{ color: theme.colors.textSecondary }}>Loading quote…</p>
       </Container>
     );
   }
@@ -722,7 +723,7 @@ export function QuoteFormPage() {
               <tbody>
                 {fields.map((field, index) => (
                   <tr key={field.id}>
-                    <Td style={{ color: '#6b7280', fontSize: 13, textAlign: 'center' }}>
+                    <Td style={{ color: theme.colors.textDisabled, fontSize: 13, textAlign: 'center' }}>
                       {index + 1}
                     </Td>
                     <Td>

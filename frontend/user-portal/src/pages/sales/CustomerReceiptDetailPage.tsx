@@ -18,12 +18,20 @@
  * FiscalPeriod and JournalEntry entity types.
  *
  * Modals do NOT close on overlay click — X button only (project rule).
+ *
+ * Status badge colours (A20Core tokens — shared vocabulary across all
+ * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
+ *   draft     → neutral      (neutral[100] / textSecondary)
+ *   open      → emerald      (successBg / emerald[700])
+ *   closed    → neutral (dark) (neutral[200] / neutral[800])
+ *   cancelled → terracotta   (errorBg / terracotta[700])
+ *
  * Route: /sales/customer-receipts/:docId
  */
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ExternalLink } from 'lucide-react';
 import {
   useCustomerReceipt,
@@ -84,22 +92,22 @@ const StatusBadge = styled.span<{ $status: CustomerReceiptStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'open': return '#059669';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -113,7 +121,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -150,12 +158,12 @@ const GhostButton = styled.button`
 const DangerButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
@@ -289,7 +297,7 @@ const UnallocValue = styled.span<{ $positive: boolean }>`
   font-variant-numeric: tabular-nums;
   min-width: 120px;
   text-align: right;
-  color: ${({ $positive, theme }) => ($positive ? '#059669' : theme.colors.textPrimary)};
+  color: ${({ $positive, theme }) => ($positive ? theme.colors.emerald[600] : theme.colors.textPrimary)};
 `;
 
 const EmptyState = styled.div`
@@ -300,9 +308,9 @@ const EmptyState = styled.div`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -323,7 +331,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 28px;
   max-width: 460px;
@@ -397,6 +405,7 @@ function paymentMethodLabel(method: string): string {
 
 export function CustomerReceiptDetailPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
@@ -607,7 +616,7 @@ export function CustomerReceiptDetailPage() {
           {receipt.unallocatedAmount > 0 && (
             <InfoItem>
               <InfoLabel>Unallocated Amount</InfoLabel>
-              <InfoValue style={{ color: '#d97706' }}>
+              <InfoValue style={{ color: theme.colors.gold[600] }}>
                 {formatAmount(receipt.unallocatedAmount, receipt.currency)}
               </InfoValue>
             </InfoItem>

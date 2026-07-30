@@ -33,7 +33,7 @@ const Container = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
-  border-left: 3px solid #1976d2;
+  border-left: 3px solid ${({ theme }) => theme.colors.primary[600]};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -92,7 +92,7 @@ const StateBadge = styled.span<{ $color: string }>`
   font-size: 11px;
   font-weight: 600;
   background: ${({ $color }) => $color};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -107,9 +107,9 @@ const DaysInfo = styled.div`
 const DeleteButton = styled.button`
   padding: 4px 8px;
   background: transparent;
-  border: 1px solid #dc2626;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[600]};
   border-radius: 4px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   font-size: 12px;
   cursor: pointer;
   transition: all 150ms ease-in-out;

@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { ProtocolFormModal } from '../../components/protocols/ProtocolFormModal';
 import { ProtocolViewModal } from '../../components/protocols/ProtocolViewModal';
@@ -37,11 +38,13 @@ import {
   PROTOCOL_STATUS_LABELS,
 } from '../../types/protocols';
 
-const STATUS_STYLES: Record<ProtocolStatus, { bg: string; fg: string }> = {
-  draft: { bg: '#fef3c7', fg: '#92400e' },
-  active: { bg: '#f0fdf4', fg: '#15803d' },
-  retired: { bg: '#eeeeee', fg: '#616161' },
-};
+function getStatusStyles(theme: Theme): Record<ProtocolStatus, { bg: string; fg: string }> {
+  return {
+    draft: { bg: theme.colors.warningBg, fg: theme.colors.gold[800] },
+    active: { bg: theme.colors.successBg, fg: theme.colors.emerald[700] },
+    retired: { bg: theme.colors.neutral[100], fg: theme.colors.neutral[700] },
+  };
+}
 
 const StatusBadge = styled.span<{ $status: ProtocolStatus }>`
   display: inline-flex;
@@ -49,8 +52,8 @@ const StatusBadge = styled.span<{ $status: ProtocolStatus }>`
   border-radius: ${({ theme }) => theme.borderRadius.full};
   font-size: 12px;
   font-weight: 700;
-  background: ${({ $status }) => STATUS_STYLES[$status].bg};
-  color: ${({ $status }) => STATUS_STYLES[$status].fg};
+  background: ${({ $status, theme }) => getStatusStyles(theme)[$status].bg};
+  color: ${({ $status, theme }) => getStatusStyles(theme)[$status].fg};
 `;
 
 const ProtocolCard = styled(Card)`

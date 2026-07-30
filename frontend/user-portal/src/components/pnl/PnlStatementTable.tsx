@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import type { PnlSummary } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -99,9 +99,10 @@ interface TdProps {
 
 const Td = styled.td<TdProps>`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  /* Debit/credit polarity — deepened 600s for legibility at this size. */
   color: ${({ theme, $positive, $negative, $muted }) => {
-    if ($positive) return theme.colors.success;
-    if ($negative) return theme.colors.error;
+    if ($positive) return theme.colors.emerald[600];
+    if ($negative) return theme.colors.terracotta[600];
     if ($muted) return theme.colors.textSecondary;
     return theme.colors.textPrimary;
   }};
@@ -172,7 +173,7 @@ const ErrorState = styled.div`
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -195,6 +196,7 @@ export function PnlStatementTable({
   isError,
   onRetry,
 }: PnlStatementTableProps) {
+  const theme = useTheme();
   const [revenueOpen, setRevenueOpen] = useState(true);
   const [cogsOpen, setCogsOpen] = useState(true);
   const [opexOpen, setOpexOpen] = useState(true);
@@ -227,13 +229,13 @@ export function PnlStatementTable({
           </colgroup>
           <thead>
             <tr>
-              <Td as="th" $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#9e9e9e', paddingBottom: '8px' }}>
+              <Td as="th" $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.colors.textDisabled, paddingBottom: '8px' }}>
                 Line Item
               </Td>
-              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#9e9e9e', paddingBottom: '8px' }}>
+              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.colors.textDisabled, paddingBottom: '8px' }}>
                 Amount (AED)
               </Td>
-              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#9e9e9e', paddingBottom: '8px' }}>
+              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.colors.textDisabled, paddingBottom: '8px' }}>
                 % of Revenue
               </Td>
             </tr>

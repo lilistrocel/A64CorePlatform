@@ -7,7 +7,7 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.neutral[100]} 0%, ${({ theme }) => theme.colors.primary[100]} 100%);
   padding: 2rem;
   text-align: center;
 `;
@@ -15,7 +15,7 @@ const Container = styled.div`
 const ErrorCode = styled.h1`
   font-size: 8rem;
   font-weight: 800;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   margin: 0;
   line-height: 1;
 
@@ -27,7 +27,7 @@ const ErrorCode = styled.h1`
 const Title = styled.h2`
   font-size: 2rem;
   font-weight: 600;
-  color: #1F2937;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 1rem 0 0.5rem;
 
   @media (max-width: 640px) {
@@ -37,7 +37,7 @@ const Title = styled.h2`
 
 const Message = styled.p`
   font-size: 1.125rem;
-  color: #6B7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 2rem;
   max-width: 480px;
   line-height: 1.6;
@@ -56,8 +56,8 @@ const ButtonGroup = styled.div`
 
 const PrimaryButton = styled.button`
   padding: 0.75rem 2rem;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 1rem;
@@ -66,15 +66,15 @@ const PrimaryButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563EB;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
 const SecondaryButton = styled.button`
   padding: 0.75rem 2rem;
   background: ${({ theme }) => theme.colors.background};
-  color: #374151;
-  border: 1px solid #D1D5DB;
+  color: ${({ theme }) => theme.colors.neutral[800]};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   font-size: 1rem;
   font-weight: 500;
@@ -83,7 +83,7 @@ const SecondaryButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.neutral[50]};
-    border-color: #9CA3AF;
+    border-color: ${({ theme }) => theme.colors.neutral[400]};
   }
 `;
 

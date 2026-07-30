@@ -396,7 +396,7 @@ const FiltersCard = styled.div`
   border-radius: 8px;
   padding: ${({ theme }) => theme.spacing.md};
   margin-bottom: ${({ theme }) => theme.spacing.md};
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const FiltersRow = styled.div`
@@ -448,15 +448,15 @@ const FilterSelect = styled.select`
 
 const ClearButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.error[300]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.error[600]};
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.error[50]};
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 `;
 
@@ -469,7 +469,7 @@ const LoadingText = styled.div`
 const ErrorText = styled.div`
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.error[600]};
+  color: ${({ theme }) => theme.colors.terracotta[600]};
 `;
 
 const EmptyText = styled.div`
@@ -538,8 +538,8 @@ const EmailText = styled.div`
 
 const UnverifiedBadge = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  background: ${({ theme }) => theme.colors.warning[100]};
-  color: ${({ theme }) => theme.colors.warning[700]};
+  background: ${({ theme }) => theme.colors.gold[100]};
+  color: ${({ theme }) => theme.colors.gold[700]};
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: ${({ theme }) => theme.spacing.xs};
@@ -554,19 +554,19 @@ const RoleBadge = styled.span<{ role: string }>`
   text-transform: capitalize;
   background: ${({ role, theme }) => {
     switch (role) {
-      case 'super_admin': return theme.colors.error[100];
-      case 'admin': return theme.colors.warning[100];
-      case 'moderator': return theme.colors.info[100];
-      case 'user': return theme.colors.success[100];
+      case 'super_admin': return theme.colors.terracotta[100];
+      case 'admin': return theme.colors.gold[100];
+      case 'moderator': return theme.colors.primary[100];
+      case 'user': return theme.colors.emerald[100];
       default: return theme.colors.neutral[100];
     }
   }};
   color: ${({ role, theme }) => {
     switch (role) {
-      case 'super_admin': return theme.colors.error[700];
-      case 'admin': return theme.colors.warning[700];
-      case 'moderator': return theme.colors.info[700];
-      case 'user': return theme.colors.success[700];
+      case 'super_admin': return theme.colors.terracotta[700];
+      case 'admin': return theme.colors.gold[700];
+      case 'moderator': return theme.colors.primary[700];
+      case 'user': return theme.colors.emerald[700];
       default: return theme.colors.neutral[700];
     }
   }};
@@ -578,8 +578,8 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   border-radius: 4px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ $active, theme }) => $active ? theme.colors.success[100] : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) => $active ? theme.colors.success[700] : theme.colors.neutral[600]};
+  background: ${({ $active, theme }) => $active ? theme.colors.emerald[100] : theme.colors.neutral[100]};
+  color: ${({ $active, theme }) => $active ? theme.colors.emerald[700] : theme.colors.neutral[600]};
 `;
 
 const RoleEditRow = styled.div`
@@ -631,22 +631,22 @@ const ActionButton = styled.button`
 `;
 
 const DeleteButton = styled(ActionButton)`
-  border-color: ${({ theme }) => theme.colors.error[300]};
-  color: ${({ theme }) => theme.colors.error[600]};
+  border-color: ${({ theme }) => theme.colors.terracotta[300]};
+  color: ${({ theme }) => theme.colors.terracotta[600]};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.error[50]};
-    color: ${({ theme }) => theme.colors.error[700]};
+    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 
 const ResetMfaButton = styled(ActionButton)`
-  border-color: ${({ theme }) => theme.colors.warning[300]};
-  color: ${({ theme }) => theme.colors.warning[700]};
+  border-color: ${({ theme }) => theme.colors.gold[300]};
+  color: ${({ theme }) => theme.colors.gold[700]};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.warning[50]};
-    color: ${({ theme }) => theme.colors.warning[800]};
+    background: ${({ theme }) => theme.colors.warningBg};
+    color: ${({ theme }) => theme.colors.gold[800]};
   }
 `;
 
@@ -656,8 +656,8 @@ const MfaEnabledBadge = styled.span`
   border-radius: 4px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.success[100]};
-  color: ${({ theme }) => theme.colors.success[700]};
+  background: ${({ theme }) => theme.colors.emerald[100]};
+  color: ${({ theme }) => theme.colors.emerald[700]};
 `;
 
 const MfaPendingBadge = styled.span`
@@ -666,8 +666,8 @@ const MfaPendingBadge = styled.span`
   border-radius: 4px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.warning[100]};
-  color: ${({ theme }) => theme.colors.warning[700]};
+  background: ${({ theme }) => theme.colors.gold[100]};
+  color: ${({ theme }) => theme.colors.gold[700]};
 `;
 
 const MfaDisabledBadge = styled.span`

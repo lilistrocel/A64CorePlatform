@@ -17,7 +17,7 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -41,21 +41,21 @@ const DayCard = styled.div<{ $isToday?: boolean }>`
   flex-direction: column;
   align-items: center;
   padding: 16px 12px;
-  background: ${({ $isToday, theme }) => ($isToday ? '#EFF6FF' : theme.colors.surface)};
+  background: ${({ $isToday, theme }) => ($isToday ? theme.colors.primary[50] : theme.colors.surface)};
   border-radius: 12px;
-  border: ${({ $isToday }) => ($isToday ? '2px solid #3B82F6' : '1px solid transparent')};
+  border: ${({ $isToday, theme }) => ($isToday ? `2px solid ${theme.colors.primary[500]}` : '1px solid transparent')};
   transition: all 150ms ease-in-out;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: ${({ theme }) => theme.shadows.md};
   }
 `;
 
 const DayName = styled.div<{ $isToday?: boolean }>`
   font-size: 13px;
   font-weight: ${({ $isToday }) => ($isToday ? '600' : '500')};
-  color: ${({ $isToday, theme }) => ($isToday ? '#3B82F6' : theme.colors.textSecondary)};
+  color: ${({ $isToday, theme }) => ($isToday ? theme.colors.primary[500] : theme.colors.textSecondary)};
   margin-bottom: 8px;
 `;
 
@@ -92,7 +92,7 @@ const Precipitation = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
 
   .icon {
     font-size: 12px;
@@ -109,7 +109,7 @@ const Description = styled.div`
 
 const EvapotranspirationBadge = styled.div`
   font-size: 10px;
-  color: #16A34A;
+  color: ${({ theme }) => theme.colors.emerald[600]};
   background: ${({ theme }) => theme.colors.successBg};
   padding: 2px 6px;
   border-radius: 4px;

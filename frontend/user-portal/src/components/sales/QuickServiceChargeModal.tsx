@@ -40,7 +40,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
 import { SalesItemCombobox } from './SalesItemCombobox';
@@ -107,7 +107,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 12px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 520px;
@@ -127,14 +127,14 @@ const ModalTitle = styled.h2`
   font-size: 1.0625rem;
   font-weight: 700;
   margin: 0;
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#111827'};
+  color: ${({ theme }) => theme.colors.textPrimary};
   line-height: 1.3;
 `;
 
 const ModalTitleSub = styled.span`
   font-size: 0.875rem;
   font-weight: 400;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#6b7280'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   display: block;
   margin-top: 2px;
 `;
@@ -144,13 +144,13 @@ const ModalClose = styled.button`
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#6b7280'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px;
   border-radius: 4px;
   line-height: 1;
   flex-shrink: 0;
   &:hover {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f3f4f6'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
   &:disabled {
     opacity: 0.4;
@@ -170,7 +170,7 @@ const ModalFooter = styled.div`
   flex-direction: column;
   gap: 6px;
   padding: 12px 24px 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const FooterButtons = styled.div`
@@ -181,7 +181,7 @@ const FooterButtons = styled.div`
 
 const FooterNote = styled.p`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#9ca3af'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
   text-align: right;
 `;
@@ -195,11 +195,11 @@ const FormField = styled.div`
 const FormLabel = styled.label`
   font-size: 0.875rem;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#374151'};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const RequiredMark = styled.span`
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   margin-left: 2px;
 `;
 
@@ -207,22 +207,22 @@ const FormInput = styled.input<{ $hasError?: boolean }>`
   width: 100%;
   padding: 8px 12px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#ef4444' : theme.colors?.border ?? '#d1d5db')};
+    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.border)};
   border-radius: 6px;
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#111827'};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#ef4444' : '#3b82f6')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
     box-shadow: 0 0 0 2px
-      ${({ $hasError }) =>
-        $hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'};
+      ${({ $hasError, theme }) =>
+        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
   }
   &:disabled {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f9fafb'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
     cursor: not-allowed;
     opacity: 0.7;
   }
@@ -232,11 +232,11 @@ const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
   width: 100%;
   padding: 8px 12px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#ef4444' : theme.colors?.border ?? '#d1d5db')};
+    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.border)};
   border-radius: 6px;
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#111827'};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
   box-sizing: border-box;
   resize: vertical;
   min-height: 72px;
@@ -244,13 +244,13 @@ const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
   font-family: inherit;
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#ef4444' : '#3b82f6')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
     box-shadow: 0 0 0 2px
-      ${({ $hasError }) =>
-        $hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'};
+      ${({ $hasError, theme }) =>
+        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
   }
   &:disabled {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f9fafb'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
     cursor: not-allowed;
     opacity: 0.7;
   }
@@ -258,7 +258,7 @@ const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
 
 const FormError = styled.span`
   font-size: 0.75rem;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const FormRow = styled.div`
@@ -273,26 +273,26 @@ const SubtotalRow = styled.div`
   align-items: center;
   gap: 8px;
   padding: 10px 0 2px;
-  border-top: 1px dashed ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  border-top: 1px dashed ${({ theme }) => theme.colors.border};
 `;
 
 const SubtotalLabel = styled.span`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#6b7280'};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const SubtotalValue = styled.span`
   font-size: 1rem;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#111827'};
-  font-family: 'JetBrains Mono', monospace;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 // ─── Progress panel ───────────────────────────────────────────────────────────
 
 const ProgressPanel = styled.div`
-  background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f9fafb'};
-  border: 1px solid ${({ theme }) => theme.colors?.border ?? '#e5e7eb'};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   padding: 14px 16px;
   display: flex;
@@ -303,7 +303,7 @@ const ProgressPanel = styled.div`
 const ProgressPanelTitle = styled.p`
   font-size: 0.8125rem;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors?.text?.secondary ?? '#6b7280'};
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 4px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -328,16 +328,16 @@ const ProgressIcon = styled.span<{ $status: StepStatus }>`
   font-weight: 700;
   margin-top: 1px;
 
-  ${({ $status }) => {
+  ${({ $status, theme }) => {
     switch ($status) {
       case 'pending':
-        return 'background: #e5e7eb; color: #9ca3af;';
+        return `background: ${theme.colors.neutral[200]}; color: ${theme.colors.textDisabled};`;
       case 'inProgress':
-        return 'background: #fef3c7; color: #d97706; animation: pulse 1s ease-in-out infinite;';
+        return `background: ${theme.colors.warningBg}; color: ${theme.colors.gold[600]}; animation: pulse 1s ease-in-out infinite;`;
       case 'success':
-        return 'background: #dcfce7; color: #16a34a;';
+        return `background: ${theme.colors.successBg}; color: ${theme.colors.emerald[600]};`;
       case 'failure':
-        return 'background: #fee2e2; color: #dc2626;';
+        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[600]};`;
     }
   }}
 
@@ -355,16 +355,16 @@ const ProgressText = styled.div`
 
 const ProgressLabel = styled.span<{ $status: StepStatus }>`
   color: ${({ $status, theme }) => {
-    if ($status === 'success') return '#16a34a';
-    if ($status === 'failure') return '#dc2626';
-    if ($status === 'inProgress') return '#d97706';
-    return theme.colors?.text?.secondary ?? '#6b7280';
+    if ($status === 'success') return theme.colors.emerald[600];
+    if ($status === 'failure') return theme.colors.terracotta[600];
+    if ($status === 'inProgress') return theme.colors.gold[600];
+    return theme.colors.textSecondary;
   }};
 `;
 
 const ProgressError = styled.span`
   font-size: 0.75rem;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
 `;
 
 // ─── Buttons ──────────────────────────────────────────────────────────────────
@@ -375,13 +375,13 @@ const SubmitButton = styled.button<{ $loading?: boolean }>`
   font-size: 0.875rem;
   font-weight: 600;
   border: none;
-  background: ${({ theme }) => theme.colors?.primary?.main ?? '#2563eb'};
-  color: #fff;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
   opacity: ${({ $loading }) => ($loading ? 0.7 : 1)};
   transition: opacity 0.15s, background 0.15s;
   &:hover:not([disabled]) {
-    background: ${({ theme }) => theme.colors?.primary?.dark ?? '#1d4ed8'};
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
   &:disabled {
     cursor: not-allowed;
@@ -394,12 +394,12 @@ const CancelButton = styled.button`
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid ${({ theme }) => theme.colors?.border ?? '#d1d5db'};
-  background: ${({ theme }) => theme.colors?.surface ?? '#fff'};
-  color: ${({ theme }) => theme.colors?.text?.primary ?? '#374151'};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors?.surfaceSecondary ?? '#f3f4f6'};
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 
@@ -460,6 +460,7 @@ export function QuickServiceChargeModal({
   onClose,
   onSuccess,
 }: QuickServiceChargeModalProps) {
+  const theme = useTheme();
   const navigate = useNavigate();
 
   const user = useAuthStore((s) => s.user);
@@ -714,7 +715,7 @@ export function QuickServiceChargeModal({
           <FormField>
             <FormLabel htmlFor="qsc-item">
               Item<RequiredMark aria-hidden="true">*</RequiredMark>
-              <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 8, fontSize: '0.75rem' }}>
+              <span style={{ fontWeight: 400, color: theme.colors.textSecondary, marginLeft: 8, fontSize: '0.75rem' }}>
                 (service items only)
               </span>
             </FormLabel>

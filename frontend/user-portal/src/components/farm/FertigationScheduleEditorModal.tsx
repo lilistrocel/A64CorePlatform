@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { updatePlantDataEnhanced } from '../../services/plantDataEnhancedApi';
 import { showSuccessToast } from '../../stores/toast.store';
 import { useChemicals, useCreateChemical } from '../../hooks/queries/useTools';
@@ -236,7 +236,7 @@ const Overlay = styled.div`
 const ModalBox = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   width: 100%;
   max-width: 860px;
   max-height: 92vh;
@@ -346,7 +346,7 @@ const Label = styled.label`
 
 const FieldInput = styled.input<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.background};
@@ -361,8 +361,8 @@ const FieldInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
-    box-shadow: 0 0 0 2px ${({ $hasError }) => ($hasError ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
+    box-shadow: 0 0 0 2px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1F` : `${theme.colors.primary[500]}1F`)};
   }
 
   &:read-only {
@@ -379,7 +379,7 @@ const FieldInput = styled.input<{ $hasError?: boolean }>`
 
 const FieldSelect = styled.select<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.background};
@@ -391,14 +391,14 @@ const FieldSelect = styled.select<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}1F`};
   }
 `;
 
 const FieldTextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
@@ -416,14 +416,14 @@ const FieldTextArea = styled.textarea<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}1F`};
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 11px;
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
   line-height: 1.3;
 `;
 
@@ -445,7 +445,7 @@ const PrimaryButton = styled.button`
   transition: all 150ms ease-in-out;
   border: none;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
 
   &:hover:not(:disabled) {
     background: ${({ theme }) => theme.colors.primary[700]};
@@ -489,11 +489,11 @@ const AddButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: #3B82F6;
-  border: 1px dashed #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px dashed ${({ theme }) => theme.colors.primary[500]};
 
   &:hover:not(:disabled) {
-    background: #eff6ff;
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 
   &:disabled {
@@ -512,13 +512,13 @@ const DeleteButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: #EF4444;
-  border: 1px solid #EF4444;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   white-space: nowrap;
   flex-shrink: 0;
 
   &:hover:not(:disabled) {
-    background: #fef2f2;
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 
   &:disabled {
@@ -554,7 +554,7 @@ const MoveButton = styled.button`
 const TextLinkButton = styled.button`
   background: none;
   border: none;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   font-size: 12px;
   cursor: pointer;
   padding: 2px 0;
@@ -562,7 +562,7 @@ const TextLinkButton = styled.button`
   text-align: left;
 
   &:hover {
-    color: #1d4ed8;
+    color: ${({ theme }) => theme.colors.primary[700]};
   }
 `;
 
@@ -665,7 +665,7 @@ const IngredientRow = styled.div`
   align-items: flex-start;
   gap: 8px;
   padding: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 6px;
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
@@ -674,7 +674,7 @@ const ApplicationBlock = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   border-radius: 6px;
   overflow: hidden;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   margin-bottom: 8px;
 `;
 
@@ -701,11 +701,11 @@ const ApplicationBody = styled.div`
 
 const TypeSwitchWarning = styled.div`
   padding: 8px 12px;
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.gold[50]};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 6px;
   font-size: 12px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -713,8 +713,8 @@ const TypeSwitchWarning = styled.div`
 `;
 
 const WarnConfirmButton = styled.button`
-  background: #f59e0b;
-  color: white;
+  background: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 4px;
   padding: 4px 10px;
@@ -723,7 +723,7 @@ const WarnConfirmButton = styled.button`
   cursor: pointer;
 
   &:hover {
-    background: #d97706;
+    background: ${({ theme }) => theme.colors.gold[600]};
   }
 `;
 
@@ -731,8 +731,8 @@ const WarnConfirmButton = styled.button`
 
 const InlineChemForm = styled.div`
   padding: 12px;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.emerald[300]};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -743,7 +743,7 @@ const InlineChemForm = styled.div`
 const InlineChemFormTitle = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #166534;
+  color: ${({ theme }) => theme.colors.emerald[800]};
 `;
 
 // Source field ────────────────────────────────────────────────────────────────
@@ -772,7 +772,7 @@ const TypeaheadDropdown = styled.ul`
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   max-height: 180px;
   overflow-y: auto;
   margin: 0;
@@ -878,6 +878,7 @@ function DosageInput({ value, hasError, onChange }: DosageInputProps) {
 }
 
 function IngredientEditor({ ingredient, path, errors, onChange, onDelete }: IngredientEditorProps) {
+  const theme = useTheme();
   const { data: chemicals = [] } = useChemicals(false);
   const createChemical = useCreateChemical();
 
@@ -982,7 +983,7 @@ function IngredientEditor({ ingredient, path, errors, onChange, onDelete }: Ingr
                   >
                     {c.name}
                     {c.aliases.length > 0 && (
-                      <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 6 }}>
+                      <span style={{ fontSize: 11, color: theme.colors.textDisabled, marginLeft: 6 }}>
                         ({c.aliases.join(', ')})
                       </span>
                     )}
@@ -1135,6 +1136,7 @@ interface RuleEditorProps {
 }
 
 function RuleEditor({ rule, ruleIndex, cardIndex, errors, onChange, onDelete }: RuleEditorProps) {
+  const theme = useTheme();
   const rp = `cards[${cardIndex}].rules[${ruleIndex}]`;
   // Pending type switch: null = no pending switch
   const [pendingTypeSwitch, setPendingTypeSwitch] = useState<'interval' | 'custom' | null>(null);
@@ -1291,7 +1293,7 @@ function RuleEditor({ rule, ruleIndex, cardIndex, errors, onChange, onDelete }: 
             <WarnConfirmButton type="button" onClick={() => applyTypeSwitch(pendingTypeSwitch)}>
               Yes, switch
             </WarnConfirmButton>
-            <TextLinkButton type="button" style={{ color: '#92400e', fontSize: 12, textDecoration: 'none' }} onClick={() => setPendingTypeSwitch(null)}>
+            <TextLinkButton type="button" style={{ color: theme.colors.gold[800], fontSize: 12, textDecoration: 'none' }} onClick={() => setPendingTypeSwitch(null)}>
               Cancel
             </TextLinkButton>
           </TypeSwitchWarning>
@@ -1467,6 +1469,7 @@ function CardEditor({
   onMoveUp,
   onMoveDown,
 }: CardEditorProps) {
+  const theme = useTheme();
   const cp = `cards[${cardIndex}]`;
 
   const updateRule = (ri: number, updated: FertigationRule) => {
@@ -1493,7 +1496,7 @@ function CardEditor({
         <CardBlockHeaderLeft>
           {cardLabel}
           {dayRangeLabel && (
-            <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280', marginLeft: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 400, color: theme.colors.textSecondary, marginLeft: 8 }}>
               {dayRangeLabel}
             </span>
           )}
@@ -1501,8 +1504,8 @@ function CardEditor({
             <span
               style={{
                 fontSize: 11,
-                background: '#fee2e2',
-                color: '#dc2626',
+                background: theme.colors.errorBg,
+                color: theme.colors.terracotta[600],
                 borderRadius: 4,
                 padding: '2px 6px',
                 marginLeft: 8,
@@ -1646,6 +1649,7 @@ export function FertigationScheduleEditorModal({
   onClose,
   onSaved,
 }: FertigationScheduleEditorModalProps) {
+  const theme = useTheme();
   const [draft, setDraft] = useState<FertigationSchedule>(() =>
     initialSchedule ? structuredClone(initialSchedule) : emptySchedule()
   );
@@ -1783,10 +1787,10 @@ export function FertigationScheduleEditorModal({
         <ModalFooter>
           <div>
             {saveError && (
-              <span style={{ fontSize: 13, color: '#EF4444' }}>{saveError}</span>
+              <span style={{ fontSize: 13, color: theme.colors.error }}>{saveError}</span>
             )}
             {!isValid && (
-              <span style={{ fontSize: 12, color: '#9ca3af' }}>
+              <span style={{ fontSize: 12, color: theme.colors.textDisabled }}>
                 Fix validation errors above before saving.
               </span>
             )}

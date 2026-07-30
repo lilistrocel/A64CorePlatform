@@ -18,12 +18,21 @@
  *
  * Delete modal closes via X button only — NOT on overlay click (project rule).
  * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
+ *
+ * Status badge colours (A20Core tokens — shared vocabulary across all
+ * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
+ *   draft         → neutral      (neutral[100] / textSecondary)
+ *   open          → emerald      (successBg / emerald[700])
+ *   partly_closed → lapis        (infoBg / lapis[700])
+ *   closed        → neutral (dark) (neutral[200] / neutral[800])
+ *   cancelled     → terracotta   (errorBg / terracotta[700])
+ *
  * Route: /sales/ar-credit-notes/:docId
  */
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ExternalLink } from 'lucide-react';
 import { useArCreditNote, useTransitionArCreditNote, useDeleteArCreditNote } from '../../hooks/queries/useArCreditNotes';
 import { useAuthStore } from '../../stores/auth.store';
@@ -85,24 +94,24 @@ const StatusBadge = styled.span<{ $status: ARCreditNoteStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'partly_closed': return '#eff6ff';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'partly_closed': return theme.colors.infoBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'open': return '#059669';
-      case 'partly_closed': return '#2563eb';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'partly_closed': return theme.colors.lapis[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -116,7 +125,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -142,12 +151,12 @@ const SecondaryButton = styled.button`
 const DangerButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
@@ -309,9 +318,9 @@ const EmptyState = styled.div`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -331,7 +340,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 28px;
   max-width: 460px;
@@ -436,6 +445,7 @@ function docTypeLabel(docType: string): string {
 
 export function ArCreditNoteDetailPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
@@ -651,7 +661,7 @@ export function ArCreditNoteDetailPage() {
           <tbody>
             {arc.lines.map((line: ARCreditNoteLine) => (
               <tr key={line.lineId}>
-                <Td style={{ color: '#9ca3af' }}>{line.lineNumber}</Td>
+                <Td style={{ color: theme.colors.textDisabled }}>{line.lineNumber}</Td>
                 <Td style={{ fontWeight: 500 }}>{line.itemCode}</Td>
                 <Td>{line.description || line.itemName}</Td>
                 <TdRight>{line.creditedQty}</TdRight>
@@ -686,11 +696,11 @@ export function ArCreditNoteDetailPage() {
       {/* ── Allocations Table ── */}
       <Card>
         <CardTitle>Invoice Allocations</CardTitle>
-        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 0, marginBottom: 16 }}>
           Click a row to open the credited AR Invoice.
         </p>
         {arc.allocations.length === 0 ? (
-          <div style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ color: theme.colors.textDisabled, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
             No allocations recorded.
           </div>
         ) : (
@@ -709,9 +719,9 @@ export function ArCreditNoteDetailPage() {
                   onClick={() => navigate(`/sales/ar-invoices/${alloc.arInvoiceDocEntry}`)}
                   aria-label={`Open AR Invoice ${alloc.arInvoiceDocNumber}`}
                 >
-                  <Td style={{ color: '#9ca3af' }}>{alloc.allocationLineNumber}</Td>
+                  <Td style={{ color: theme.colors.textDisabled }}>{alloc.allocationLineNumber}</Td>
                   <Td>
-                    <span style={{ color: '#2563eb', fontWeight: 500 }}>
+                    <span style={{ color: theme.colors.primary[600], fontWeight: 500 }}>
                       {alloc.arInvoiceDocNumber}
                     </span>
                   </Td>
@@ -744,7 +754,7 @@ export function ArCreditNoteDetailPage() {
         ) : (
           <DocChainItem>
             <DocChainType>Source Invoice</DocChainType>
-            <span style={{ color: '#9ca3af', fontSize: 13 }}>
+            <span style={{ color: theme.colors.textDisabled, fontSize: 13 }}>
               Not linked (check allocation rows above)
             </span>
           </DocChainItem>
@@ -762,7 +772,7 @@ export function ArCreditNoteDetailPage() {
               <ExternalLink size={14} />
             </DocChainLink>
           ) : (
-            <span style={{ color: '#9ca3af', fontSize: 13 }}>
+            <span style={{ color: theme.colors.textDisabled, fontSize: 13 }}>
               Direct credit — no physical return
             </span>
           )}

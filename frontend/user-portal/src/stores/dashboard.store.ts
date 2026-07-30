@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CCMWidget, StatWidgetData } from '@a64core/shared';
+import { lightTheme } from '@a64core/shared';
 import { queryClient } from '../config/react-query.config';
 import { queryKeys } from '../config/react-query.config';
 import type { Layout } from 'react-grid-layout';
@@ -348,7 +349,7 @@ export const useDashboardStore = create<DashboardState>()(
             xKey: 'farm',
             yKey: 'blocks',
             series: [
-              { name: 'Blocks', dataKey: 'blocks', color: '#3b82f6' },
+              { name: 'Blocks', dataKey: 'blocks', color: lightTheme.colors.primary[500] },
             ],
           };
           break;

@@ -12,9 +12,9 @@ import styled from 'styled-components';
 import { useFinanceUnreachable } from '../../hooks/useCapabilities';
 
 const Banner = styled.div`
-  background: ${({ theme }) => theme.colors?.warning?.background ?? '#fef3c7'};
-  border: 1px solid ${({ theme }) => theme.colors?.warning?.border ?? '#f59e0b'};
-  color: ${({ theme }) => theme.colors?.warning?.text ?? '#92400e'};
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.gold[800]};
   padding: 0.75rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
@@ -28,7 +28,7 @@ const Dot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors?.warning?.border ?? '#f59e0b'};
+  background: ${({ theme }) => theme.colors.warning};
   display: inline-block;
   flex-shrink: 0;
 `;

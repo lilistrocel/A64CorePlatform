@@ -6,6 +6,7 @@
  */
 
 import { apiClient } from './api';
+import { lightTheme } from '@a64core/shared';
 import type {
   Employee,
   EmployeeCreate,
@@ -267,15 +268,16 @@ export function getEmployeeFullName(employee: Employee): string {
  * Get employee status color
  */
 export function getEmployeeStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'active':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'on_leave':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     case 'terminated':
-      return '#EF4444'; // red
+      return c.error; // terracotta
     default:
-      return '#6B7280'; // gray
+      return c.textSecondary;
   }
 }
 
@@ -317,15 +319,16 @@ export function getContractTypeLabel(type: string): string {
  * Get contract status color
  */
 export function getContractStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'active':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'expired':
-      return '#6B7280'; // gray
+      return c.textSecondary;
     case 'terminated':
-      return '#EF4444'; // red
+      return c.error; // terracotta
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 
@@ -333,15 +336,16 @@ export function getContractStatusColor(status: string): string {
  * Get visa status color
  */
 export function getVisaStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'valid':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'expired':
-      return '#EF4444'; // red
+      return c.error; // terracotta
     case 'pending_renewal':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 

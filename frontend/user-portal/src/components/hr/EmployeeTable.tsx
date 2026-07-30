@@ -125,7 +125,7 @@ const EmployeeName = styled.span`
 const EmployeeCode = styled.span`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const StatusBadge = styled.span<{ $color: string }>`
@@ -153,32 +153,32 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
-        color: white;
+        background: ${theme.colors.primary[500]};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[600]};
         }
       `;
     }
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}

@@ -29,7 +29,7 @@ const Card = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -100,7 +100,7 @@ const SunTimeBox = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  background: ${({ theme }) => `linear-gradient(135deg, ${theme.colors.gold[50]} 0%, ${theme.colors.gold[100]} 100%)`};
   border-radius: 8px;
 
   .icon {
@@ -110,7 +110,7 @@ const SunTimeBox = styled.div`
   .text {
     .label {
       font-size: 11px;
-      color: #9A3412;
+      color: ${({ theme }) => theme.colors.gold[800]};
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -118,7 +118,7 @@ const SunTimeBox = styled.div`
     .time {
       font-size: 16px;
       font-weight: 600;
-      color: #C2410C;
+      color: ${({ theme }) => theme.colors.terracotta[600]};
     }
   }
 `;
@@ -132,25 +132,29 @@ const UVIndicator = styled.div<{ $level: 'low' | 'moderate' | 'high' | 'very_hig
   font-size: 12px;
   font-weight: 600;
 
-  background: ${({ $level }) => {
+  background: ${({ $level, theme }) => {
+    // EPA-style UV severity scale, ordering preserved as increasing saturation/
+    // depth: emerald (low) -> gold (moderate) -> terracotta, deepening through
+    // high/very_high/extreme. Brand has no purple for "extreme" so it takes the
+    // deepest terracotta step instead, one notch past very_high.
     switch ($level) {
-      case 'low': return '#D1FAE5';
-      case 'moderate': return '#FEF3C7';
-      case 'high': return '#FED7AA';
-      case 'very_high': return '#FECACA';
-      case 'extreme': return '#E9D5FF';
-      default: return '#F3F4F6';
+      case 'low': return theme.colors.emerald[100];
+      case 'moderate': return theme.colors.gold[100];
+      case 'high': return theme.colors.terracotta[100];
+      case 'very_high': return theme.colors.terracotta[200];
+      case 'extreme': return theme.colors.terracotta[300];
+      default: return theme.colors.neutral[100];
     }
   }};
 
-  color: ${({ $level }) => {
+  color: ${({ $level, theme }) => {
     switch ($level) {
-      case 'low': return '#065F46';
-      case 'moderate': return '#92400E';
-      case 'high': return '#C2410C';
-      case 'very_high': return '#B91C1C';
-      case 'extreme': return '#7C3AED';
-      default: return '#374151';
+      case 'low': return theme.colors.emerald[700];
+      case 'moderate': return theme.colors.gold[800];
+      case 'high': return theme.colors.terracotta[600];
+      case 'very_high': return theme.colors.terracotta[700];
+      case 'extreme': return theme.colors.terracotta[900];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -205,7 +209,7 @@ const DualValueItem = styled.div`
 
   .par-value {
     .value {
-      color: #16A34A;
+      color: ${({ theme }) => theme.colors.emerald[600]};
     }
   }
 `;
@@ -224,8 +228,8 @@ const EstimatedBadge = styled.span`
 `;
 
 const DLIHighlight = styled.div`
-  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
-  border: 1px solid #A7F3D0;
+  background: ${({ theme }) => `linear-gradient(135deg, ${theme.colors.emerald[50]} 0%, ${theme.colors.emerald[100]} 100%)`};
+  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 16px;
@@ -243,7 +247,7 @@ const DLIHighlight = styled.div`
     .title {
       font-size: 13px;
       font-weight: 600;
-      color: #065F46;
+      color: ${({ theme }) => theme.colors.emerald[700]};
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -257,18 +261,18 @@ const DLIHighlight = styled.div`
     .value {
       font-size: 24px;
       font-weight: 700;
-      color: #047857;
+      color: ${({ theme }) => theme.colors.emerald[600]};
     }
 
     .unit {
       font-size: 12px;
-      color: #059669;
+      color: ${({ theme }) => theme.colors.emerald[600]};
     }
   }
 
   .note {
     font-size: 11px;
-    color: #6B7280;
+    color: ${({ theme }) => theme.colors.textSecondary};
     margin-top: 6px;
   }
 `;

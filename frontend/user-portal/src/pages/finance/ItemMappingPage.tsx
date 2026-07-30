@@ -31,6 +31,7 @@ import {
   useEffect,
 } from 'react';
 import styled from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast } from '../../stores/toast.store';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
@@ -254,9 +255,9 @@ const BadgeChip = styled.span`
 
 const BulkActionButton = styled.button`
   padding: 8px 14px;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
-  border: 1px solid ${({ theme }) => (theme.colors.info || '#1d4ed8') + '44'};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.info};
+  border: 1px solid ${({ theme }) => `${theme.colors.info}44`};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -266,11 +267,11 @@ const BulkActionButton = styled.button`
   font-family: inherit;
 
   &:hover {
-    background: ${({ theme }) => (theme.colors.info || '#1d4ed8') + '18'};
+    background: ${({ theme }) => `${theme.colors.info}18`};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.info || '#1d4ed8'};
+    outline: 2px solid ${({ theme }) => theme.colors.info};
     outline-offset: 2px;
   }
 `;
@@ -286,17 +287,17 @@ const BannerBase = styled.div`
 `;
 
 const BannerInfo = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.info};
 `;
 
 const BannerSuccess = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.success || '#065f46'};
+  background: ${({ theme }) => theme.colors.successBg};
+  color: ${({ theme }) => theme.colors.success};
 `;
 
 const BannerError = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
+  background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
 `;
 
@@ -340,8 +341,8 @@ interface TrProps {
 const Tr = styled.tr<TrProps>`
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   background: ${({ $warning, $dirty, theme }) => {
-    if ($dirty) return (theme.colors.infoBg || '#eff6ff') + '55';
-    if ($warning) return (theme.colors.warningBg || '#fffbeb');
+    if ($dirty) return `${theme.colors.infoBg}55`;
+    if ($warning) return theme.colors.warningBg;
     return 'transparent';
   }};
   transition: background 120ms ease-in-out;
@@ -352,8 +353,8 @@ const Tr = styled.tr<TrProps>`
 
   &:hover {
     background: ${({ $dirty, $warning, theme }) => {
-      if ($dirty) return (theme.colors.infoBg || '#eff6ff') + '88';
-      if ($warning) return (theme.colors.warningBg || '#fffbeb') + 'cc';
+      if ($dirty) return `${theme.colors.infoBg}88`;
+      if ($warning) return `${theme.colors.warningBg}cc`;
       return theme.colors.neutral[50];
     }};
   }
@@ -370,7 +371,7 @@ const Td = styled.td`
 const ItemCodeCell = styled.td`
   padding: 10px 14px;
   font-size: 12px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textSecondary};
   vertical-align: middle;
   white-space: nowrap;
@@ -391,12 +392,15 @@ interface TypePillProps {
   $type: PurchaseItemType;
 }
 
-const TYPE_PILL_COLORS: Record<NonNullable<PurchaseItemType>, { bg: string; text: string }> = {
-  raw_material: { bg: '#ecfdf5', text: '#065f46' },
-  consumable: { bg: '#fffbeb', text: '#92400e' },
-  service: { bg: '#eff6ff', text: '#1e40af' },
-  fixed_asset_acquisition: { bg: '#f5f3ff', text: '#4c1d95' },
-};
+// Four purchase-item categories, mapped one-per-brand-voice so no two
+// categories share a hue (spec: lapis/gold/emerald/terracotta are the
+// standalone categorical ramps for non-semantic, non-status use).
+const typePillColors = (theme: Theme): Record<NonNullable<PurchaseItemType>, { bg: string; text: string }> => ({
+  raw_material: { bg: theme.colors.emerald[50], text: theme.colors.emerald[800] },
+  consumable: { bg: theme.colors.gold[50], text: theme.colors.gold[800] },
+  service: { bg: theme.colors.lapis[50], text: theme.colors.lapis[800] },
+  fixed_asset_acquisition: { bg: theme.colors.terracotta[50], text: theme.colors.terracotta[800] },
+});
 
 const TypePill = styled.span<TypePillProps>`
   display: inline-block;
@@ -405,10 +409,10 @@ const TypePill = styled.span<TypePillProps>`
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
-  background: ${({ $type }) =>
-    $type ? TYPE_PILL_COLORS[$type]?.bg ?? '#f5f5f5' : '#f5f5f5'};
-  color: ${({ $type }) =>
-    $type ? TYPE_PILL_COLORS[$type]?.text ?? '#616161' : '#616161'};
+  background: ${({ $type, theme }) =>
+    $type ? typePillColors(theme)[$type]?.bg ?? theme.colors.neutral[100] : theme.colors.neutral[100]};
+  color: ${({ $type, theme }) =>
+    $type ? typePillColors(theme)[$type]?.text ?? theme.colors.textSecondary : theme.colors.textSecondary};
 `;
 
 // ─── Status pill ───────────────────────────────────────────────────────────────
@@ -424,13 +428,9 @@ const StatusPill = styled.span<StatusPillProps>`
   font-size: 11px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active
-      ? theme.colors.successBg || '#ecfdf5'
-      : theme.colors.neutral[100]};
+    $active ? theme.colors.successBg : theme.colors.neutral[100]};
   color: ${({ $active, theme }) =>
-    $active
-      ? theme.colors.success || '#065f46'
-      : theme.colors.textDisabled};
+    $active ? theme.colors.success : theme.colors.textDisabled};
 `;
 
 // ─── Inline editable controls ──────────────────────────────────────────────────
@@ -539,7 +539,7 @@ const FooterRow = styled.div`
 const SaveAllButton = styled.button`
   padding: 10px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;

@@ -12,6 +12,7 @@
  */
 
 import { apiClient } from './api';
+import { lightTheme } from '@a64core/shared';
 import type {
   SalesDashboardStats,
   FarmingYearItem,
@@ -60,21 +61,22 @@ export async function getAvailableFarmingYears(): Promise<{ years: FarmingYearIt
  * Get order status color
  */
 export function getOrderStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'draft':
-      return '#6B7280';
+      return c.textSecondary;
     case 'confirmed':
-      return '#3B82F6';
+      return c.primary[500]; // lapis
     case 'processing':
-      return '#F59E0B';
+      return c.warning; // gold
     case 'shipped':
-      return '#8B5CF6';
+      return c.secondary[700]; // gold, deep step — was purple (spec §3 judgement call)
     case 'delivered':
-      return '#10B981';
+      return c.success; // emerald
     case 'cancelled':
-      return '#EF4444';
+      return c.error; // terracotta
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 
@@ -82,15 +84,16 @@ export function getOrderStatusColor(status: string): string {
  * Get payment status color
  */
 export function getPaymentStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'pending':
-      return '#F59E0B';
+      return c.warning; // gold
     case 'partial':
-      return '#3B82F6';
+      return c.primary[500]; // lapis
     case 'paid':
-      return '#10B981';
+      return c.success; // emerald
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 
@@ -98,17 +101,18 @@ export function getPaymentStatusColor(status: string): string {
  * Get inventory status color
  */
 export function getInventoryStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'available':
-      return '#10B981';
+      return c.success; // emerald
     case 'reserved':
-      return '#3B82F6';
+      return c.primary[500]; // lapis
     case 'sold':
-      return '#6B7280';
+      return c.textSecondary;
     case 'expired':
-      return '#EF4444';
+      return c.error; // terracotta
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 

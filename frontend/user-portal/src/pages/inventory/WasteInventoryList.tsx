@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import type { WasteInventory, WasteSummary, WasteSourceType, DisposalMethod, PaginatedWaste } from '../../types/sales';
 import api from '../../services/api';
 import { formatNumber, formatCurrency } from '../../utils';
@@ -44,21 +44,21 @@ const Button = styled.button<ButtonProps>`
     switch ($variant) {
       case 'primary':
         return `
-          background: #4a90d9;
-          color: white;
-          &:hover { background: #3a7bc8; }
+          background: ${theme.colors.primary[500]};
+          color: ${theme.colors.onAccent};
+          &:hover { background: ${theme.colors.primary[600]}; }
         `;
       case 'danger':
         return `
-          background: #dc3545;
-          color: white;
-          &:hover { background: #c82333; }
+          background: ${theme.colors.terracotta[600]};
+          color: ${theme.colors.onAccent};
+          &:hover { background: ${theme.colors.terracotta[700]}; }
         `;
       case 'success':
         return `
-          background: #28a745;
-          color: white;
-          &:hover { background: #218838; }
+          background: ${theme.colors.success};
+          color: ${theme.colors.onAccent};
+          &:hover { background: ${theme.colors.emerald[600]}; }
         `;
       default:
         return `
@@ -91,8 +91,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #4a90d9;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 3px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: ${spin} 1s linear infinite;
 `;
@@ -126,7 +126,7 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 1.75rem;
   font-weight: 600;
-  color: #1a1a2e;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -144,18 +144,18 @@ interface SummaryCardProps {
 const SummaryCard = styled(Card)<SummaryCardProps>`
   padding: 20px;
   text-align: center;
-  border-left: 4px solid ${({ $color }) => $color || '#6c757d'};
+  border-left: 4px solid ${({ $color, theme }) => $color || theme.colors.border};
 `;
 
 const SummaryValue = styled.div`
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SummaryLabel = styled.div`
   font-size: 0.875rem;
-  color: #6c757d;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
@@ -177,8 +177,8 @@ const FilterSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #4a90d9;
-    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}26;
   }
 `;
 
@@ -197,8 +197,8 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #4a90d9;
-    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}26;
   }
 `;
 
@@ -261,9 +261,9 @@ const TableRow = styled.tr`
 
 const TableCell = styled.td`
   padding: 14px 16px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   font-size: 0.875rem;
-  color: #333;
+  color: ${({ theme }) => theme.colors.neutral[800]};
 `;
 
 interface SourceBadgeProps {
@@ -282,15 +282,15 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   ${({ $type, theme }) => {
     switch ($type) {
       case 'return':
-        return `background: ${theme.colors.infoBg}; color: #7C3AED;`;
+        return `background: ${theme.colors.infoBg}; color: ${theme.colors.primary[700]};`;
       case 'expired':
-        return `background: ${theme.colors.warningBg}; color: #D97706;`;
+        return `background: ${theme.colors.warningBg}; color: ${theme.colors.gold[600]};`;
       case 'damaged':
-        return `background: ${theme.colors.errorBg}; color: #DC2626;`;
+        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[600]};`;
       case 'harvest':
-        return `background: ${theme.colors.successBg}; color: #059669;`;
+        return `background: ${theme.colors.successBg}; color: ${theme.colors.emerald[600]};`;
       case 'quality_reject':
-        return `background: ${theme.colors.errorBg}; color: #DB2777;`;
+        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[800]};`;
       default:
         return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
     }
@@ -313,17 +313,17 @@ const DisposalBadge = styled.span<DisposalBadgeProps>`
   ${({ $method, theme }) => {
     switch ($method) {
       case 'compost':
-        return `background: ${theme.colors.successBg}; color: #059669;`;
+        return `background: ${theme.colors.successBg}; color: ${theme.colors.emerald[600]};`;
       case 'animal_feed':
-        return `background: ${theme.colors.infoBg}; color: #2563EB;`;
+        return `background: ${theme.colors.infoBg}; color: ${theme.colors.primary[600]};`;
       case 'donated':
-        return `background: ${theme.colors.infoBg}; color: #4F46E5;`;
+        return `background: ${theme.colors.infoBg}; color: ${theme.colors.primary[800]};`;
       case 'sold_discount':
-        return `background: ${theme.colors.warningBg}; color: #D97706;`;
+        return `background: ${theme.colors.warningBg}; color: ${theme.colors.gold[600]};`;
       case 'discard':
         return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
       case 'pending':
-        return `background: ${theme.colors.errorBg}; color: #DC2626;`;
+        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[600]};`;
       default:
         return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
     }
@@ -348,16 +348,16 @@ const ActionButton = styled.button<ActionButtonProps>`
   cursor: pointer;
   transition: all 0.2s;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
-        return 'background: #4a90d9; color: white; &:hover { background: #3a7bc8; }';
+        return `background: ${theme.colors.primary[500]}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.primary[600]}; }`;
       case 'success':
-        return 'background: #28a745; color: white; &:hover { background: #218838; }';
+        return `background: ${theme.colors.success}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.emerald[600]}; }`;
       case 'danger':
-        return 'background: #dc3545; color: white; &:hover { background: #c82333; }';
+        return `background: ${theme.colors.terracotta[600]}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.terracotta[700]}; }`;
       default:
-        return 'background: #6c757d; color: white; &:hover { background: #5a6268; }';
+        return `background: ${theme.colors.neutral[600]}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.neutral[700]}; }`;
     }
   }}
 `;
@@ -365,7 +365,7 @@ const ActionButton = styled.button<ActionButtonProps>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px;
-  color: #6c757d;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PaginationContainer = styled.div`
@@ -373,12 +373,12 @@ const PaginationContainer = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const PaginationInfo = styled.span`
   font-size: 0.875rem;
-  color: #6c757d;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PaginationButtons = styled.div`
@@ -392,16 +392,16 @@ interface PageButtonProps {
 
 const PageButton = styled.button<PageButtonProps>`
   padding: 8px 14px;
-  border: 1px solid ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 6px;
-  background: ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textPrimary)};
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#3a7bc8' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
   }
 
   &:disabled {
@@ -436,7 +436,7 @@ const ModalContent = styled.div`
 const ModalTitle = styled.h2`
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1a1a2e;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 20px 0;
 `;
 
@@ -448,7 +448,7 @@ const FormLabel = styled.label`
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #333;
+  color: ${({ theme }) => theme.colors.neutral[800]};
   margin-bottom: 6px;
 `;
 
@@ -492,6 +492,7 @@ interface WasteInventoryListProps {
 
 // Component
 const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = false }) => {
+  const theme = useTheme();
   const [wasteItems, setWasteItems] = useState<WasteInventory[]>([]);
   const [summary, setSummary] = useState<WasteSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -652,19 +653,19 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
 
       {summary && (
         <SummaryGrid>
-          <SummaryCard $color="#DC2626">
+          <SummaryCard $color={theme.colors.terracotta[600]}>
             <SummaryValue>{formatNumber(summary.totalWasteRecords)}</SummaryValue>
             <SummaryLabel>Total Waste Records</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color="#D97706">
+          <SummaryCard $color={theme.colors.gold[600]}>
             <SummaryValue>{formatNumber(summary.totalQuantity, { decimals: 2 })}</SummaryValue>
             <SummaryLabel>Total Quantity</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color="#7C3AED">
+          <SummaryCard $color={theme.colors.primary[700]}>
             <SummaryValue>{formatCurrency(summary.totalEstimatedValue, 'AED')}</SummaryValue>
             <SummaryLabel>Estimated Value Lost</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color="#EF4444">
+          <SummaryCard $color={theme.colors.error}>
             <SummaryValue>{formatNumber(summary.pendingDisposal)}</SummaryValue>
             <SummaryLabel>Pending Disposal</SummaryLabel>
           </SummaryCard>
@@ -742,7 +743,7 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
                     <TableRow key={item.wasteId}>
                       <TableCell>
                         <strong>{item.plantName}</strong>
-                        {item.variety && <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>{item.variety}</div>}
+                        {item.variety && <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>{item.variety}</div>}
                       </TableCell>
                       <TableCell>
                         {formatNumber(item.quantity, { decimals: 2 })} {item.unit}

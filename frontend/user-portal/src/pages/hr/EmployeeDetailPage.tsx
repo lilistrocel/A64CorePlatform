@@ -47,8 +47,8 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: #3B82F6;
-  border: 1px solid #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -56,7 +56,7 @@ const BackButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e3f2fd;
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
@@ -74,22 +74,22 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
-      background: #3B82F6;
-      color: white;
+      background: ${theme.colors.primary[500]};
+      color: ${theme.colors.onAccent};
       &:hover {
-        background: #1976d2;
+        background: ${theme.colors.primary[600]};
       }
     `;
   }}
@@ -110,9 +110,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -149,7 +149,7 @@ const EmployeeCode = styled.div`
   font-size: 14px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const StatusBadge = styled.span<{ $color: string }>`
@@ -173,9 +173,9 @@ const TabsContainer = styled.div`
 const Tab = styled.button<{ $active: boolean }>`
   padding: 12px 24px;
   background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.textSecondary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -184,7 +184,7 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    color: #3B82F6;
+    color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 

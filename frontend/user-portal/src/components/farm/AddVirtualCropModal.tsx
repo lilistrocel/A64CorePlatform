@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { farmApi, getSpacingCategories } from '../../services/farmApi';
 import { getActivePlants } from '../../services/plantDataEnhancedApi';
 import type {
@@ -176,16 +176,16 @@ const AreaBudgetText = styled.div`
 
 const AreaBudgetWarning = styled.div`
   font-size: 12px;
-  color: #f59e0b;
+  color: ${({ theme }) => theme.colors.warning};
   text-align: center;
   font-weight: 500;
 `;
 
 const AreaBudgetError = styled.div`
   font-size: 13px;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
   border-radius: 6px;
   padding: 10px 14px;
   margin-top: 8px;
@@ -212,7 +212,7 @@ const ApprovalCheckbox = styled.input`
   margin-top: 1px;
   cursor: pointer;
   flex-shrink: 0;
-  accent-color: #dc2626;
+  accent-color: ${({ theme }) => theme.colors.terracotta[600]};
 `;
 
 /* ---- Derived area preview ---- */
@@ -227,7 +227,7 @@ const DerivedAreaPreview = styled.div`
   border-radius: 8px;
   margin: 12px 0 20px;
   font-size: 13px;
-  color: #2e7d32;
+  color: ${({ theme }) => theme.colors.emerald[600]};
 `;
 
 /* ---- Form primitives ---- */
@@ -245,7 +245,7 @@ const Label = styled.label`
 `;
 
 const RequiredMark = styled.span`
-  color: #f44336;
+  color: ${({ theme }) => theme.colors.error};
   margin-left: 4px;
 `;
 
@@ -265,7 +265,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 
   &:disabled {
@@ -287,7 +287,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 
   &:disabled {
@@ -335,7 +335,7 @@ const DensityUnitButton = styled.button<{ $active: boolean }>`
   white-space: nowrap;
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ $active }) => ($active ? '#fff' : 'inherit')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : 'inherit')};
 
   &:hover:not([disabled]) {
     background: ${({ $active, theme }) =>
@@ -422,18 +422,18 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
     switch ($variant) {
       case 'primary':
         return `
-          background: #3b82f6;
-          color: white;
+          background: ${theme.colors.primary[500]};
+          color: ${theme.colors.onAccent};
           &:hover:not(:disabled) {
-            background: #2563eb;
+            background: ${theme.colors.primary[600]};
           }
         `;
       case 'success':
         return `
-          background: #4caf50;
-          color: white;
+          background: ${theme.colors.success};
+          color: ${theme.colors.onAccent};
           &:hover:not(:disabled) {
-            background: #388e3c;
+            background: ${theme.colors.emerald[600]};
           }
         `;
       default:
@@ -464,7 +464,7 @@ const VirtualBlockCodePreview = styled.div`
   border-radius: 6px;
   padding: 16px;
   margin-top: 16px;
-  border: 2px dashed #3b82f6;
+  border: 2px dashed ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const CodeLabel = styled.div`
@@ -477,7 +477,7 @@ const CodeLabel = styled.div`
 const CodeValue = styled.div`
   font-size: 20px;
   font-weight: 600;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   font-family: 'JetBrains Mono', monospace;
 `;
 
@@ -491,7 +491,7 @@ const NoSpacingWarning = styled.div`
   border-radius: 8px;
   margin: 8px 0 20px;
   font-size: 12px;
-  color: #e65100;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 // ============================================================================
@@ -515,6 +515,7 @@ function formatCategoryDensityLabel(cat: SpacingCategoryInfo): string {
 // ============================================================================
 
 export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVirtualCropModalProps) {
+  const theme = useTheme();
   const [plants, setPlants] = useState<PlantDataEnhanced[]>([]);
   const [loadingPlants, setLoadingPlants] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1176,7 +1177,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                       <AreaBudgetText>
                         {availableArea.toFixed(1)} m² available · {usedArea.toFixed(1)} m² used ·{' '}
                         {totalArea.toFixed(1)} m² total
-                        <span style={{ color: overBudget ? '#dc2626' : '#16a34a' }}>
+                        <span style={{ color: overBudget ? theme.colors.terracotta[600] : theme.colors.emerald[600] }}>
                           {' '}— new crop needs {preview.derivedAreaM2.toFixed(1)} m²
                         </span>
                       </AreaBudgetText>

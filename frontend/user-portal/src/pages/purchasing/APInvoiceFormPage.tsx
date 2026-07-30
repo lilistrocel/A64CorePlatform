@@ -24,7 +24,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   usePostedGRsForAP,
   useCreateAPFromGR,
@@ -171,16 +171,16 @@ const Td = styled.td`
 
 /** Amber row highlight when invoice price differs from PO price */
 const LineRow = styled.tr<{ $hasVariance: boolean }>`
-  background: ${({ $hasVariance }) => ($hasVariance ? '#fffbeb' : 'transparent')};
+  background: ${({ $hasVariance, theme }) => ($hasVariance ? theme.colors.gold[50] : 'transparent')};
 `;
 
 const VarianceCell = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
   font-size: 12px;
   font-weight: ${({ $sign }) => ($sign === 'zero' ? '400' : '600')};
-  color: ${({ $sign }) => {
-    if ($sign === 'positive') return '#dc2626';
-    if ($sign === 'negative') return '#059669';
-    return '#9ca3af';
+  color: ${({ $sign, theme }) => {
+    if ($sign === 'positive') return theme.colors.terracotta[600];
+    if ($sign === 'negative') return theme.colors.emerald[600];
+    return theme.colors.textDisabled;
   }};
 `;
 
@@ -219,10 +219,10 @@ const TotalsVariance = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
   font-size: 14px;
   min-width: 120px;
   text-align: right;
-  color: ${({ $sign }) => {
-    if ($sign === 'positive') return '#dc2626';
-    if ($sign === 'negative') return '#059669';
-    return '#9ca3af';
+  color: ${({ $sign, theme }) => {
+    if ($sign === 'positive') return theme.colors.terracotta[600];
+    if ($sign === 'negative') return theme.colors.emerald[600];
+    return theme.colors.textDisabled;
   }};
 `;
 
@@ -236,7 +236,7 @@ const FooterRow = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 24px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -259,16 +259,16 @@ const GhostButton = styled.button`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 13px;
   margin: 8px 0 0;
 `;
 
 const VarianceHelpText = styled.p`
   font-size: 12px;
-  color: #92400e;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
+  color: ${({ theme }) => theme.colors.gold[800]};
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.gold[300]};
   border-radius: 6px;
   padding: 8px 12px;
   margin: 12px 0 0;
@@ -354,6 +354,7 @@ function GRPickerCard({
   onSelect: (grDocId: string) => void;
 }) {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [page, setPage] = useState(1);
   const { data, isLoading } = usePostedGRsForAP({ organizationId, page, perPage: 20 });
   // Reason: one AP per GR in v1 (the backend enforces this). Fetch existing
@@ -380,7 +381,7 @@ function GRPickerCard({
   if (isLoading) {
     return (
       <Card>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>Loading posted goods receipts...</p>
+        <p style={{ fontSize: 14, color: theme.colors.textSecondary }}>Loading posted goods receipts...</p>
       </Card>
     );
   }
@@ -389,7 +390,7 @@ function GRPickerCard({
     return (
       <Card>
         <CardTitle>Select Source GR</CardTitle>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>
+        <p style={{ fontSize: 14, color: theme.colors.textSecondary }}>
           No posted GRs available. A GR must be in Posted status to create an AP Invoice.
         </p>
         <GhostButton onClick={() => navigate('/purchasing/gr')}>
@@ -402,7 +403,7 @@ function GRPickerCard({
   return (
     <Card>
       <CardTitle>Select Source GR (Posted)</CardTitle>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>
+      <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 16 }}>
         Choose the Posted Goods Receipt you are invoicing against.
       </p>
       <Table>
@@ -422,7 +423,7 @@ function GRPickerCard({
               <Td><code style={{ fontWeight: 600 }}>{gr.docNumber}</code></Td>
               <Td>
                 {gr.baseDocNumber ?? (
-                  <span style={{ color: '#9ca3af' }}>—</span>
+                  <span style={{ color: theme.colors.textDisabled }}>—</span>
                 )}
               </Td>
               <Td>{gr.vendorName ?? gr.vendorCode ?? '—'}</Td>
@@ -459,7 +460,7 @@ function GRPickerCard({
           >
             Previous
           </GhostButton>
-          <span style={{ padding: '6px 8px', fontSize: 13, color: '#6b7280' }}>
+          <span style={{ padding: '6px 8px', fontSize: 13, color: theme.colors.textSecondary }}>
             Page {meta.page} / {meta.totalPages}
           </span>
           <GhostButton
@@ -480,6 +481,7 @@ function GRPickerCard({
 export function APInvoiceFormPage() {
   const rawParams = useParams<{ docId?: string; grDocId?: string }>();
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
 
@@ -796,8 +798,8 @@ export function APInvoiceFormPage() {
 
       {/* Source GR context banner */}
       {sourceGR && !isEdit && (
-        <Card style={{ borderLeft: '4px solid #2563eb', padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, fontSize: 14, color: '#1d4ed8' }}>
+        <Card style={{ borderLeft: `4px solid ${theme.colors.primary[600]}`, padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, fontSize: 14, color: theme.colors.primary[700] }}>
             Invoicing against GR <strong>{sourceGR.docNumber}</strong>{' '}
             {sourceGR.baseDocNumber && <>from PO <strong>{sourceGR.baseDocNumber}</strong> · </>}
             Vendor: <strong>{sourceGR.vendorName ?? sourceGR.vendorCode ?? '—'}</strong>
@@ -900,11 +902,11 @@ export function APInvoiceFormPage() {
                   <LineRow key={line.grLineId} $hasVariance={line.variance !== 0}>
                     <Td>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{line.itemCode}</div>
-                      <div style={{ fontSize: 11, color: '#6b7280' }}>{line.itemName}</div>
+                      <div style={{ fontSize: 11, color: theme.colors.textSecondary }}>{line.itemName}</div>
                     </Td>
-                    <Td style={{ color: '#6b7280' }}>{line.quantity}</Td>
+                    <Td style={{ color: theme.colors.textSecondary }}>{line.quantity}</Td>
                     <Td>{line.uom}</Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                    <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
                       {formatAmt(line.poUnitPrice, currency)}
                     </Td>
                     <Td>
@@ -923,7 +925,7 @@ export function APInvoiceFormPage() {
                         aria-label={`Invoice unit price for ${line.itemCode}`}
                       />
                     </Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                    <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
                       {line.discountPercent ? `${line.discountPercent}%` : '—'}
                     </Td>
                     <Td>
@@ -952,7 +954,7 @@ export function APInvoiceFormPage() {
                       )}
                     </Td>
                     {financeOn && (
-                      <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                      <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
                         {line.costCenterId ?? '—'}
                       </Td>
                     )}
@@ -999,7 +1001,7 @@ export function APInvoiceFormPage() {
       ) : (
         effectiveGrDocId && (
           <Card>
-            <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center' }}>
               Loading GR lines...
             </p>
           </Card>

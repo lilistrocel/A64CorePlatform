@@ -5,6 +5,10 @@
  * Based on the backend API response schemas.
  */
 
+import { lightTheme } from '@a64core/shared';
+
+const c = lightTheme.colors;
+
 // ============================================================================
 // ENUMS
 // ============================================================================
@@ -67,18 +71,18 @@ export type ContaminationSeverity = 'low' | 'medium' | 'high' | 'critical';
 // ============================================================================
 
 export const PHASE_COLORS: Record<RoomPhase, string> = {
-  empty: '#9e9e9e',
-  preparing: '#90caf9',
-  inoculated: '#42a5f5',
-  colonizing: '#fdd835',
-  fruiting_initiation: '#ffa726',
-  fruiting: '#66bb6a',
-  harvesting: '#2e7d32',
-  resting: '#80deea',
-  cleaning: '#bdbdbd',
-  quarantined: '#ef5350',
-  decommissioned: '#616161',
-  maintenance: '#ce93d8',
+  empty: c.neutral[600],             // was mid gray
+  preparing: c.primary[200],         // was light blue
+  inoculated: c.primary[500],        // lapis (was medium blue)
+  colonizing: c.gold[300],           // gold-hi (was yellow)
+  fruiting_initiation: c.terracotta[300], // was orange
+  fruiting: c.emerald[400],          // was green
+  harvesting: c.emerald[700],        // deep emerald (was dark green)
+  resting: c.primary[100],           // was light cyan — art-only hue, spec §3
+  cleaning: c.neutral[300],          // was light gray
+  quarantined: c.error,              // terracotta (was red)
+  decommissioned: c.neutral[700],    // was dark gray
+  maintenance: c.gold[200],          // was light purple — categorical judgement call, spec §3
 };
 
 export const PHASE_LABELS: Record<RoomPhase, string> = {
@@ -96,19 +100,22 @@ export const PHASE_LABELS: Record<RoomPhase, string> = {
   maintenance: 'Maintenance',
 };
 
+// Text colours chosen for contrast against the matching PHASE_COLORS
+// background — light backgrounds get a dark same-hue text, dark/mid
+// backgrounds get onAccent (never pure white, spec §2).
 export const PHASE_TEXT_COLORS: Record<RoomPhase, string> = {
-  empty: '#fff',
-  preparing: '#1565c0',
-  inoculated: '#fff',
-  colonizing: '#4e3400',
-  fruiting_initiation: '#4e2100',
-  fruiting: '#fff',
-  harvesting: '#fff',
-  resting: '#006064',
-  cleaning: '#424242',
-  quarantined: '#fff',
-  decommissioned: '#fff',
-  maintenance: '#4a148c',
+  empty: c.onAccent,
+  preparing: c.primary[800],
+  inoculated: c.onAccent,
+  colonizing: c.gold[900],
+  fruiting_initiation: c.terracotta[900],
+  fruiting: c.onAccent,
+  harvesting: c.onAccent,
+  resting: c.primary[900],
+  cleaning: c.neutral[800],
+  quarantined: c.onAccent,
+  decommissioned: c.onAccent,
+  maintenance: c.gold[800],
 };
 
 // ============================================================================
@@ -511,11 +518,11 @@ export const QUALITY_GRADE_LABELS: Record<HarvestQualityGrade, string> = {
 };
 
 export const QUALITY_GRADE_COLORS: Record<HarvestQualityGrade, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
-  D: '#EF4444',
-  rejected: '#6B7280',
+  A: c.success,        // emerald
+  B: c.primary[500],   // lapis
+  C: c.warning,        // gold
+  D: c.error,           // terracotta
+  rejected: c.textSecondary,
 };
 
 export const DIFFICULTY_LABELS: Record<MushroomDifficulty, string> = {
@@ -526,8 +533,8 @@ export const DIFFICULTY_LABELS: Record<MushroomDifficulty, string> = {
 };
 
 export const DIFFICULTY_COLORS: Record<MushroomDifficulty, string> = {
-  beginner: '#10B981',
-  intermediate: '#3B82F6',
-  advanced: '#F59E0B',
-  expert: '#EF4444',
+  beginner: c.success,       // emerald
+  intermediate: c.primary[500], // lapis
+  advanced: c.warning,       // gold
+  expert: c.error,           // terracotta
 };

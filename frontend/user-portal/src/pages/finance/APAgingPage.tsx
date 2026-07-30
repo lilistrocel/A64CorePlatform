@@ -27,7 +27,8 @@
  */
 
 import { useState, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceCompanies } from '../../hooks/queries/useFinanceCompanies';
 import { useApAging } from '../../hooks/queries/useFinanceReports';
@@ -191,7 +192,7 @@ const ToolbarDateInput = styled.input`
 const GenerateButton = styled.button`
   padding: 10px 22px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -229,7 +230,7 @@ const BucketCard = styled.div<BucketCardProps>`
   padding: 16px 18px;
   border-radius: 12px;
   background: ${({ $color }) => $color};
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(59, 44, 24, 0.06);
 `;
 
 const BucketLabel = styled.div<{ $textColor: string }>`
@@ -245,7 +246,7 @@ const BucketLabel = styled.div<{ $textColor: string }>`
 const BucketAmount = styled.div<{ $textColor: string }>`
   font-size: 18px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ $textColor }) => $textColor};
 `;
 
@@ -330,7 +331,7 @@ const AgingTd = styled.td`
 const AgingTdMono = styled.td`
   padding: 11px 14px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -344,7 +345,7 @@ interface TotalTrProps {
 }
 
 const TotalTr = styled.tr<TotalTrProps>`
-  border-top: ${({ $isFooter }) => ($isFooter ? '3px double #d1d5db' : 'none')};
+  border-top: ${({ $isFooter, theme }) => ($isFooter ? `3px double ${theme.colors.border}` : 'none')};
   background: ${({ $isFooter, theme }) =>
     $isFooter ? theme.colors.neutral[50] : 'transparent'};
 `;
@@ -360,7 +361,7 @@ const TotalTdMono = styled.td`
   padding: 13px 14px;
   font-size: 14px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -384,8 +385,8 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -408,54 +409,58 @@ interface BucketDef {
   text: string;
 }
 
-const BUCKET_DEFS: BucketDef[] = [
+// Aging severity ramp: healthy (emerald) -> early warning (gold) -> escalating
+// overdue (terracotta, light to dark-inverted) -> grand total set apart in the
+// primary (lapis) voice so it doesn't read as "most severe".
+const bucketDefs = (theme: Theme): BucketDef[] => [
   {
     key: 'notDue',
     label: 'Not Due',
     sublabel: 'Current',
-    bg: '#f0fdf4',
-    text: '#166534',
+    bg: theme.colors.emerald[50],
+    text: theme.colors.emerald[800],
   },
   {
     key: 'days1To30',
     label: '1–30 Days',
     sublabel: 'Overdue',
-    bg: '#fefce8',
-    text: '#854d0e',
+    bg: theme.colors.gold[50],
+    text: theme.colors.gold[800],
   },
   {
     key: 'days31To60',
     label: '31–60 Days',
     sublabel: 'Overdue',
-    bg: '#fff7ed',
-    text: '#c2410c',
+    bg: theme.colors.terracotta[50],
+    text: theme.colors.terracotta[600],
   },
   {
     key: 'days61To90',
     label: '61–90 Days',
     sublabel: 'Overdue',
-    bg: '#fef2f2',
-    text: '#b91c1c',
+    bg: theme.colors.terracotta[100],
+    text: theme.colors.terracotta[700],
   },
   {
     key: 'daysOver90',
     label: '> 90 Days',
     sublabel: 'Overdue',
-    bg: '#4c0519',
-    text: '#fce7f3',
+    bg: theme.colors.terracotta[900],
+    text: theme.colors.onAccent,
   },
   {
     key: 'total',
     label: 'Grand Total',
     sublabel: 'All vendors',
-    bg: '#1e3a5f',
-    text: '#dbeafe',
+    bg: theme.colors.primary[800],
+    text: theme.colors.primary[100],
   },
 ];
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function APAgingPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
 
   const organizationId = useMemo<string>(() => {
@@ -718,7 +723,7 @@ export function APAgingPage() {
         <>
           {/* ── Totals cards ── */}
           <TotalsRow role="list" aria-label="AP Aging bucket totals">
-            {BUCKET_DEFS.map((bucket) => (
+            {bucketDefs(theme).map((bucket) => (
               <BucketCard
                 key={bucket.key}
                 $color={bucket.bg}
@@ -771,7 +776,7 @@ export function APAgingPage() {
                   <tbody>
                     {sortedVendors.map((vendor) => (
                       <AgingTr key={vendor.vendorId}>
-                        <AgingTd style={{ fontFamily: 'JetBrains Mono, Courier New, monospace', fontSize: 12 }}>
+                        <AgingTd style={{ fontFamily: theme.typography.fontFamily.mono, fontSize: 12 }}>
                           {vendor.vendorCode || '—'}
                         </AgingTd>
                         <AgingTd>{vendor.vendorName || '—'}</AgingTd>

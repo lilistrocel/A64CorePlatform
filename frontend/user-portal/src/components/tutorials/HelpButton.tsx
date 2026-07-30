@@ -80,7 +80,7 @@ const Num = styled.span`
   font-size: 11.5px;
   font-weight: 700;
   background: ${({ theme }) => theme.colors.primary[600]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const StepBody = styled.div`

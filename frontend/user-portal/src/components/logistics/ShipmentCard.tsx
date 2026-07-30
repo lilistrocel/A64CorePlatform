@@ -53,7 +53,7 @@ const ShipmentCode = styled.h3`
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const StatusBadge = styled.span<{ $color: string }>`
@@ -123,23 +123,23 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.terracotta[100]};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}

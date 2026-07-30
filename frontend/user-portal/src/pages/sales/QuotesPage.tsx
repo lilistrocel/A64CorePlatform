@@ -15,7 +15,7 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { FileText } from 'lucide-react';
 import { useQuotes } from '../../hooks/queries/useQuotes';
 import { useAuthStore } from '../../stores/auth.store';
@@ -115,7 +115,7 @@ const Chip = styled.button<{ $active: boolean }>`
 const NewButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -171,6 +171,12 @@ const ClickableTr = styled.tr`
   }
 `;
 
+// Status badge colours — A20Core document-status canon, shared across all
+// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md):
+//   draft     → neutral   (neutral[100] / textSecondary)
+//   open      → emerald   (successBg / emerald[700])
+//   closed    → neutral (dark) (neutral[200] / neutral[800])
+//   cancelled → terracotta (errorBg / terracotta[700])
 const StatusBadge = styled.span<{ $status: QuoteStatus }>`
   display: inline-flex;
   align-items: center;
@@ -178,22 +184,22 @@ const StatusBadge = styled.span<{ $status: QuoteStatus }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'open': return '#059669';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -222,7 +228,7 @@ const PageBtn = styled.button<{ $active?: boolean }>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? '#fff' : theme.colors.textPrimary};
+    $active ? theme.colors.onAccent : theme.colors.textPrimary};
   font-size: 13px;
   cursor: pointer;
   &:disabled {
@@ -256,10 +262,10 @@ const EmptyText = styled.p`
 
 const ErrorBanner = styled.div`
   padding: 16px 20px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 24px;
 `;
@@ -304,6 +310,7 @@ function statusLabel(status: QuoteStatus): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function QuotesPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const orgId = user?.organizationId ?? '';
@@ -446,7 +453,7 @@ export function QuotesPage() {
                     onClick={() => handleRowClick(item.docEntry)}
                   >
                     <Td>
-                      <strong style={{ color: '#2196f3' }}>{item.docNumber}</strong>
+                      <strong style={{ color: theme.colors.primary[500] }}>{item.docNumber}</strong>
                     </Td>
                     <Td>{formatDate(item.docDate)}</Td>
                     <Td>{formatDate(item.validUntilDate)}</Td>

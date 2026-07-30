@@ -10,7 +10,7 @@
  * PhysicalBlockCard to keep a single visual source of truth.
  */
 
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 
 // ============================================================================
 // PUBLIC PROPS INTERFACE
@@ -110,12 +110,14 @@ export function AreaBudgetBar({
   const ariaLabel =
     newAreaM2 != null ? 'Projected area budget' : 'Current area budget';
 
+  const theme = useTheme();
+
   return (
     <>
       <AreaBudgetBarTrack aria-label={ariaLabel}>
-        <AreaBudgetBarSegment $widthPct={usedPct} $color="#22c55e" />
+        <AreaBudgetBarSegment $widthPct={usedPct} $color={theme.colors.success} />
         {newAreaM2 != null && (
-          <AreaBudgetBarSegment $widthPct={newPct} $color="#ef4444" />
+          <AreaBudgetBarSegment $widthPct={newPct} $color={theme.colors.error} />
         )}
       </AreaBudgetBarTrack>
 

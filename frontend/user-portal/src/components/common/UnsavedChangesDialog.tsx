@@ -16,7 +16,7 @@ import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${({ theme }) => theme.colors.neutral[900]}80;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,14 +30,14 @@ const Dialog = styled.div`
   padding: 32px;
   max-width: 440px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const IconContainer = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #FEF3C7;
+  background: ${({ theme }) => theme.colors.warningBg};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -83,8 +83,8 @@ const CancelButton = styled.button`
 
 const LeaveButton = styled.button`
   padding: 10px 20px;
-  background: #EF4444;
-  color: white;
+  background: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -93,7 +93,7 @@ const LeaveButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #DC2626;
+    background: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 

@@ -109,7 +109,7 @@ const RouteName = styled.span`
 const RouteCode = styled.span`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const LocationText = styled.div`
@@ -124,8 +124,8 @@ const StatusBadge = styled.span<{ $isActive: boolean }>`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $isActive }) => ($isActive ? '#10B98120' : '#6B728020')};
-  color: ${({ $isActive }) => ($isActive ? '#10B981' : '#6B7280')};
+  background: ${({ $isActive, theme }) => ($isActive ? `${theme.colors.success}20` : `${theme.colors.textSecondary}20`)};
+  color: ${({ $isActive, theme }) => ($isActive ? theme.colors.success : theme.colors.textSecondary)};
 `;
 
 const Actions = styled.div`
@@ -146,7 +146,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.primary[500]};
-        color: white;
+        color: ${theme.colors.onAccent};
         &:hover {
           background: ${theme.colors.primary[700]};
         }

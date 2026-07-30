@@ -16,7 +16,7 @@
  */
 
 import { useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import type { LineageGraph, LineageNode } from '../../types/genetics';
 import { METHOD_LABELS, STATUS_LABELS, VESSEL_LABELS } from '../../types/genetics';
 
@@ -123,7 +123,7 @@ const Gen = styled.span<{ $warm: boolean }>`
   padding: 1px 6px;
   border-radius: ${({ theme }) => theme.borderRadius.full};
   background: ${({ $warm, theme }) => ($warm ? theme.colors.warningBg : theme.colors.primary[50])};
-  color: ${({ $warm, theme }) => ($warm ? '#92400e' : theme.colors.primary[800])};
+  color: ${({ $warm, theme }) => ($warm ? theme.colors.gold[800] : theme.colors.primary[800])};
 `;
 
 const Legend = styled.div`
@@ -154,19 +154,6 @@ const Empty = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const STATUS_DOT: Record<string, string> = {
-  active: '#10B981',
-  contaminated: '#EF4444',
-  senescent: '#F59E0B',
-  consumed: '#9e9e9e',
-  archived: '#9e9e9e',
-  discarded: '#bdbdbd',
-};
-
-const ASEXUAL_COLOR = '#2196f3';
-const SEXUAL_COLOR = '#F59E0B';
-const UNKNOWN_COLOR = '#bdbdbd';
-
 interface LineageTreeProps {
   graph: LineageGraph;
   onSelectNode?: (accessionId: string) => void;
@@ -175,6 +162,24 @@ interface LineageTreeProps {
 }
 
 export function LineageTree({ graph, onSelectNode, highlightId }: LineageTreeProps) {
+  const theme = useTheme();
+
+  // Same categorical status treatment as the accession StatusBadge (genetics
+  // styled.ts) — active/contaminated/senescent map to the semantic tokens,
+  // the inactive states fall back to neutral.
+  const STATUS_DOT: Record<string, string> = {
+    active: theme.colors.success,
+    contaminated: theme.colors.error,
+    senescent: theme.colors.warning,
+    consumed: theme.colors.neutral[500],
+    archived: theme.colors.neutral[500],
+    discarded: theme.colors.neutral[400],
+  };
+
+  const ASEXUAL_COLOR = theme.colors.info;
+  const SEXUAL_COLOR = theme.colors.warning;
+  const UNKNOWN_COLOR = theme.colors.neutral[400];
+
   const layout = useMemo(() => {
     if (!graph.nodes.length) {
       return { nodes: [] as PositionedNode[], width: 0, height: 0, byId: new Map<string, PositionedNode>() };
@@ -308,7 +313,7 @@ export function LineageTree({ graph, onSelectNode, highlightId }: LineageTreePro
                 {node.quantity} {node.unit} · {VESSEL_LABELS[node.form]}
               </NodeMeta>
               <NodeFooter>
-                <Dot $color={STATUS_DOT[node.status] ?? '#9e9e9e'} />
+                <Dot $color={STATUS_DOT[node.status] ?? theme.colors.neutral[500]} />
                 <Gen $warm={node.cloneGeneration >= 5}>{node.generationLabel}</Gen>
                 {node.mediumBatchCode && <NodeMeta>{node.mediumBatchCode}</NodeMeta>}
               </NodeFooter>
@@ -328,7 +333,7 @@ export function LineageTree({ graph, onSelectNode, highlightId }: LineageTreePro
           <Swatch $color={UNKNOWN_COLOR} $dashed /> Unidentified parent
         </LegendItem>
         {graph.truncated && (
-          <LegendItem style={{ color: '#92400e' }}>
+          <LegendItem style={{ color: theme.colors.gold[800] }}>
             ⚠ Graph truncated — showing the first {graph.nodes.length} accessions
           </LegendItem>
         )}

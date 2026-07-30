@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { useFacilities, useCreateFacility } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms, useCreateRoom } from '../../hooks/mushroom/useRoomData';
@@ -515,7 +516,7 @@ const PageTitle = styled.h1`
 
 const PageSubtitle = styled.p`
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -523,8 +524,8 @@ const AddFacilityBtn = styled.button`
   padding: 10px 18px;
   border: none;
   border-radius: 8px;
-  background: #10B981;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -532,10 +533,10 @@ const AddFacilityBtn = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #059669;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -552,7 +553,7 @@ const DetailPanel = styled.section`
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 2px solid #e3f2fd;
+  border: 2px solid ${({ theme }) => theme.colors.primary[50]};
   margin-top: 8px;
 `;
 
@@ -580,10 +581,10 @@ const DetailActions = styled.div`
 
 const AddRoomBtn = styled.button`
   padding: 8px 14px;
-  border: 1px solid #3b82f6;
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.background};
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -593,7 +594,7 @@ const AddRoomBtn = styled.button`
     background: ${({ theme }) => theme.colors.infoBg};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -613,7 +614,7 @@ const CloseDetailBtn = styled.button`
     color: ${({ theme }) => theme.colors.textSecondary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -636,7 +637,7 @@ const InlineSpinner = styled.span`
   width: 14px;
   height: 14px;
   border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -680,21 +681,29 @@ interface SubstrateStatusProps {
   $status: string;
 }
 
-const STATUS_COLOR_MAP: Record<string, string> = {
-  ready: '#10B981',
-  colonizing: '#F59E0B',
-  sterilizing: '#3B82F6',
-  mixing: '#8B5CF6',
-  depleted: '#9E9E9E',
-  discarded: '#EF4444',
-  inoculating: '#6366F1',
-};
+// Purple in the old palette marked "mixing"/"inoculating" but gold (secondary)
+// is reserved for nav/CTA/highlight use, not ordinary status row accents
+// (brand contract §1.4) — so these categorical states borrow distinct shades
+// off the lapis/terracotta ramps instead of the semantic tokens already
+// spoken for by ready/colonizing/sterilizing/discarded.
+function getSubstrateStatusColor(theme: Theme, status: string): string {
+  const map: Record<string, string> = {
+    ready: theme.colors.success,
+    colonizing: theme.colors.warning,
+    sterilizing: theme.colors.info,
+    mixing: theme.colors.primary[700],
+    depleted: theme.colors.neutral[500],
+    discarded: theme.colors.error,
+    inoculating: theme.colors.terracotta[300],
+  };
+  return map[status] ?? theme.colors.neutral[500];
+}
 
 const SubstrateStatus = styled.span<SubstrateStatusProps>`
   font-size: 11px;
   font-weight: 600;
-  color: white;
-  background: ${({ $status }) => STATUS_COLOR_MAP[$status] ?? '#9e9e9e'};
+  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ $status, theme }) => getSubstrateStatusColor(theme, $status)};
   border-radius: 20px;
   padding: 2px 8px;
   text-transform: capitalize;
@@ -719,7 +728,7 @@ const Spinner = styled.div`
   width: 36px;
   height: 36px;
   border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -818,7 +827,7 @@ const CloseModalBtn = styled.button`
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -847,7 +856,7 @@ const Label = styled.label`
 `;
 
 const Required = styled.span`
-  color: #ef5350;
+  color: ${({ theme }) => theme.colors.error};
   margin-left: 2px;
 `;
 
@@ -866,8 +875,8 @@ const Input = styled.input`
   }
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -883,8 +892,8 @@ const SelectField = styled.select`
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -907,7 +916,7 @@ const DeleteFacilityBtn = styled.button`
   &:not(:disabled):hover {
     background: ${({ theme }) => theme.colors.errorBg};
     border-color: ${({ theme }) => theme.colors.error};
-    color: #b91c1c;
+    color: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 
@@ -923,8 +932,8 @@ const Select = styled.select`
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -952,16 +961,16 @@ const TextArea = styled.textarea`
   }
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
 const FormError = styled.div`
   font-size: 13px;
-  color: #ef5350;
+  color: ${({ theme }) => theme.colors.error};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid #fecaca;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 10px 12px;
 `;
@@ -987,7 +996,7 @@ const CancelBtn = styled.button`
     background: ${({ theme }) => theme.colors.surface};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -996,22 +1005,22 @@ const SubmitBtn = styled.button`
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
-  background: #10B981;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;

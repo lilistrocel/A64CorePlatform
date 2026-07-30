@@ -618,16 +618,19 @@ const PageTitle = styled.h1`
 
 const PageSubtitle = styled.p`
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
+// This is the one primary CTA on the Strain Library view, so gold (secondary)
+// is the deliberate choice here (brand contract §1.4) rather than a departure
+// from "ordinary interactive colour is primary".
 const AddStrainBtn = styled.button`
   padding: 10px 18px;
   border: none;
   border-radius: 8px;
-  background: #8B5CF6;
-  color: white;
+  background: ${({ theme }) => theme.colors.secondary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -635,10 +638,10 @@ const AddStrainBtn = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #7C3AED;
+    background: ${({ theme }) => theme.colors.secondary[600]};
   }
   &:focus-visible {
-    outline: 2px solid #8B5CF6;
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -663,12 +666,12 @@ const SearchInput = styled.input`
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 
   &::placeholder {
-    color: #bdbdbd;
+    color: ${({ theme }) => theme.colors.neutral[400]};
   }
 `;
 
@@ -698,8 +701,8 @@ const FilterSelect = styled.select`
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -729,7 +732,7 @@ const Spinner = styled.div`
   width: 36px;
   height: 36px;
   border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #8B5CF6;
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -828,7 +831,7 @@ const CloseModalBtn = styled.button`
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -878,7 +881,7 @@ const Label = styled.label`
 `;
 
 const Required = styled.span`
-  color: #ef5350;
+  color: ${({ theme }) => theme.colors.error};
   margin-left: 2px;
 `;
 
@@ -898,8 +901,8 @@ const Input = styled.input`
   }
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -927,8 +930,8 @@ const SelectField = styled.select`
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -949,16 +952,16 @@ const TextArea = styled.textarea`
   }
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
 const FormError = styled.div`
   font-size: 13px;
-  color: #ef5350;
+  color: ${({ theme }) => theme.colors.error};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid #fecaca;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 10px 12px;
 `;
@@ -985,31 +988,33 @@ const CancelBtn = styled.button`
     background: ${({ theme }) => theme.colors.surface};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
 
+// Matches AddStrainBtn: this modal's submit is the same "create/save a
+// strain" action, so it carries the same reserved gold CTA treatment.
 const SubmitBtn = styled.button`
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
-  background: #8B5CF6;
-  color: white;
+  background: ${({ theme }) => theme.colors.secondary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms;
 
   &:hover:not(:disabled) {
-    background: #7C3AED;
+    background: ${({ theme }) => theme.colors.secondary[600]};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #8B5CF6;
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;

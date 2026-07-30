@@ -15,7 +15,7 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Truck } from 'lucide-react';
 import { useDeliveries } from '../../hooks/queries/useDeliveries';
 import { useAuthStore } from '../../stores/auth.store';
@@ -100,31 +100,31 @@ const StatusChip = styled.button<{ $active: boolean; $status: StatusFilter }>`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-  background: ${({ $active, $status }) => {
-    if (!$active) return '#f3f4f6';
+  background: ${({ $active, $status, theme }) => {
+    if (!$active) return theme.colors.neutral[100];
     switch ($status) {
-      case 'draft': return '#e0e7ff';
-      case 'open': return '#d1fae5';
-      case 'cancelled': return '#fee2e2';
-      default: return '#e0e7ff';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.primary[50];
     }
   }};
-  color: ${({ $active, $status }) => {
-    if (!$active) return '#6b7280';
+  color: ${({ $active, $status, theme }) => {
+    if (!$active) return theme.colors.textSecondary;
     switch ($status) {
-      case 'draft': return '#3730a3';
-      case 'open': return '#065f46';
-      case 'cancelled': return '#991b1b';
-      default: return '#1e40af';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.primary[700];
     }
   }};
-  border-color: ${({ $active, $status }) => {
+  border-color: ${({ $active, $status, theme }) => {
     if (!$active) return 'transparent';
     switch ($status) {
-      case 'draft': return '#818cf8';
-      case 'open': return '#34d399';
-      case 'cancelled': return '#f87171';
-      default: return '#93c5fd';
+      case 'draft': return theme.colors.neutral[400];
+      case 'open': return theme.colors.emerald[300];
+      case 'cancelled': return theme.colors.terracotta[300];
+      default: return theme.colors.primary[300];
     }
   }};
   &:hover {
@@ -138,7 +138,7 @@ const PrimaryButton = styled.button`
   gap: 8px;
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -197,20 +197,20 @@ const StatusBadge = styled.span<{ $status: DeliveryStatus }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#374151';
-      case 'open': return '#065f46';
-      case 'cancelled': return '#991b1b';
-      default: return '#374151';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -225,13 +225,13 @@ const FilterToggleChip = styled.button<{ $active: boolean }>`
   gap: 6px;
   padding: 6px 16px;
   border-radius: 99px;
-  border: 1.5px solid ${({ $active }) => ($active ? '#6366f1' : 'transparent')};
+  border: 1.5px solid ${({ $active, theme }) => ($active ? theme.colors.primary[300] : 'transparent')};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-  background: ${({ $active }) => ($active ? '#e0e7ff' : '#f3f4f6')};
-  color: ${({ $active }) => ($active ? '#3730a3' : '#6b7280')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[50] : theme.colors.neutral[100])};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[700] : theme.colors.textSecondary)};
   &:hover { opacity: 0.85; }
 `;
 
@@ -243,12 +243,12 @@ const OpenInvoiceListBadge = styled.span<{ $zero: boolean }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: ${({ $zero }) => ($zero ? 'transparent' : '#fef3c7')};
-  color: ${({ $zero }) => ($zero ? '#d1d5db' : '#92400e')};
+  background: ${({ $zero, theme }) => ($zero ? 'transparent' : theme.colors.warningBg)};
+  color: ${({ $zero, theme }) => ($zero ? theme.colors.border : theme.colors.gold[800])};
   border-radius: 99px;
   font-size: 12px;
   font-weight: ${({ $zero }) => ($zero ? 400 : 600)};
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const EmptyState = styled.div`
@@ -317,6 +317,7 @@ const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
 ];
 
 export function DeliveriesPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const orgId = user?.organizationId ?? '';
@@ -437,7 +438,7 @@ export function DeliveriesPage() {
       </FilterRow>
 
       {isLoading && <EmptyState>Loading...</EmptyState>}
-      {error && <EmptyState style={{ color: '#dc2626' }}>Failed to load deliveries.</EmptyState>}
+      {error && <EmptyState style={{ color: theme.colors.error }}>Failed to load deliveries.</EmptyState>}
 
       {!isLoading && !error && (
         <>
@@ -480,7 +481,7 @@ export function DeliveriesPage() {
                     <Td>
                       {dn.baseDocRef ? (
                         <span
-                          style={{ color: '#6366f1', cursor: 'pointer', fontWeight: 500 }}
+                          style={{ color: theme.colors.primary[500], cursor: 'pointer', fontWeight: 500 }}
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/sales/orders-v2/${dn.baseDocRef!.docId}`);
@@ -489,7 +490,7 @@ export function DeliveriesPage() {
                           {dn.baseDocRef.docNumber}
                         </span>
                       ) : (
-                        <span style={{ color: '#9ca3af' }}>—</span>
+                        <span style={{ color: theme.colors.textDisabled }}>—</span>
                       )}
                     </Td>
                     <Td>

@@ -12,7 +12,8 @@
  */
 
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import { usePayment } from '../../hooks/queries/usePayments';
 import { useAuthStore } from '../../stores/auth.store';
 import type { PaymentMethod } from '../../services/paymentsService';
@@ -49,11 +50,12 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
 };
 
-const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
-  bank_transfer: { bg: '#dbeafe', text: '#1e40af' },
-  cheque: { bg: '#fef9c3', text: '#854d0e' },
-  cash: { bg: '#dcfce7', text: '#166534' },
-};
+// Payment method is categorical, not a status — one brand voice per method.
+const methodColors = (theme: Theme): Record<PaymentMethod, { bg: string; text: string }> => ({
+  bank_transfer: { bg: theme.colors.primary[100], text: theme.colors.primary[800] },
+  cheque: { bg: theme.colors.gold[100], text: theme.colors.gold[800] },
+  cash: { bg: theme.colors.emerald[100], text: theme.colors.emerald[800] },
+});
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -104,15 +106,15 @@ const ActionsRow = styled.div`
 
 const ReverseButton = styled.button`
   padding: 9px 18px;
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: #fee2e2; }
+  &:hover { background: ${({ theme }) => theme.colors.terracotta[100]}; }
 `;
 
 const ReversedBanner = styled.div`
@@ -121,11 +123,11 @@ const ReversedBanner = styled.div`
   gap: 12px;
   padding: 14px 18px;
   margin-bottom: 20px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-left: 4px solid #dc2626;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  border-left: 4px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #7f1d1d;
+  color: ${({ theme }) => theme.colors.terracotta[900]};
   font-size: 14px;
   line-height: 1.5;
 `;
@@ -139,9 +141,9 @@ const ReversedTag = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: ${({ theme }) => theme.colors.terracotta[100]};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
   margin-left: 10px;
   vertical-align: middle;
 `;
@@ -193,6 +195,7 @@ const TotalAmount = styled.span`
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const MethodPill = styled.span<{ $bg: string; $text: string }>`
@@ -243,7 +246,7 @@ const Td = styled.td`
 
 const TdRight = styled(Td)`
   text-align: right;
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 600;
 `;
 
@@ -255,7 +258,7 @@ const InvoiceLink = styled.button`
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 600;
   &:hover { opacity: 0.75; }
 `;
@@ -285,7 +288,7 @@ const JeInlineSummary = styled.span`
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 6px;
   padding: 4px 10px;
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TotalFooter = styled.div`
@@ -308,7 +311,7 @@ const TotalValue = styled.span`
   font-size: 16px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const LoadingState = styled.div`
@@ -322,12 +325,13 @@ const ErrorState = styled.div`
   padding: 48px;
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function PaymentDetailPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { paymentId } = useParams<{ paymentId: string }>();
   const { user } = useAuthStore();
@@ -361,7 +365,7 @@ export function PaymentDetailPage() {
   }
 
   const methodLabel = METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod;
-  const methodColor = METHOD_COLORS[payment.paymentMethod] ?? { bg: '#f3f4f6', text: '#374151' };
+  const methodColor = methodColors(theme)[payment.paymentMethod] ?? { bg: theme.colors.neutral[100], text: theme.colors.neutral[800] };
   const isReversed = Boolean(payment.je?.reversedByJeNumber);
 
   const applicationsTotal = payment.applications.reduce(
@@ -451,7 +455,7 @@ export function PaymentDetailPage() {
             <MetaValue>
               <strong>{payment.vendorCode}</strong>
               {payment.vendorName && (
-                <span style={{ fontWeight: 400, marginLeft: 6, color: '#6b7280' }}>
+                <span style={{ fontWeight: 400, marginLeft: 6, color: theme.colors.textSecondary }}>
                   {payment.vendorName}
                 </span>
               )}
@@ -468,7 +472,7 @@ export function PaymentDetailPage() {
           <MetaField>
             <MetaLabel>Reference #</MetaLabel>
             <MetaValue>
-              {payment.referenceNumber ?? <span style={{ color: '#9ca3af' }}>—</span>}
+              {payment.referenceNumber ?? <span style={{ color: theme.colors.textDisabled }}>—</span>}
             </MetaValue>
           </MetaField>
           <MetaField>
@@ -503,7 +507,7 @@ export function PaymentDetailPage() {
       <Card>
         <CardTitle>Applied Invoices ({payment.applications.length})</CardTitle>
         {payment.applications.length === 0 ? (
-          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
+          <p style={{ fontSize: 14, color: theme.colors.textSecondary, margin: 0 }}>
             No invoice applications recorded.
           </p>
         ) : (
@@ -519,7 +523,7 @@ export function PaymentDetailPage() {
               <tbody>
                 {payment.applications.map((app, idx) => (
                   <tr key={app.applicationId}>
-                    <Td style={{ color: '#6b7280', width: 48 }}>{idx + 1}</Td>
+                    <Td style={{ color: theme.colors.textSecondary, width: 48 }}>{idx + 1}</Td>
                     <Td>
                       <InvoiceLink
                         onClick={() => handleInvoiceClick(app.apDocId)}
@@ -565,7 +569,7 @@ export function PaymentDetailPage() {
             </JeInlineSummary>
           </JeSummaryRow>
           {canReverse && !isReversed && (
-            <p style={{ fontSize: 13, color: '#6b7280', marginTop: 12, marginBottom: 0 }}>
+            <p style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 12, marginBottom: 0 }}>
               To reverse this payment, click "Reverse this Payment" above. This will
               navigate to the linked journal entry where you can trigger the reversal.
             </p>

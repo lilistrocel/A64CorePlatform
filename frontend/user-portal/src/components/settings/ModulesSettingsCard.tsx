@@ -227,9 +227,9 @@ const Muted = styled.div`
 `;
 
 const UnreachableNote = styled.div`
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  color: #92400e;
+  background: ${({ theme }: any) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }: any) => theme.colors.warning};
+  color: ${({ theme }: any) => theme.colors.gold[800]};
   padding: 0.625rem 0.875rem;
   border-radius: 6px;
   font-size: 0.8125rem;
@@ -240,7 +240,8 @@ const UnreachableNote = styled.div`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
+  background: rgba(14, 19, 48, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,7 +254,7 @@ const ModalContent = styled.div`
   border-radius: 8px;
   max-width: 480px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }: any) => theme.shadows.lg};
   display: flex;
   flex-direction: column;
 `;
@@ -340,14 +341,14 @@ const SecondaryButton = styled.button`
 const DangerButton = styled.button`
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  background: ${({ theme }: any) => theme.colors.error?.[500] ?? '#dc2626'};
-  color: white;
+  background: ${({ theme }: any) => theme.colors.terracotta[600]};
+  color: ${({ theme }: any) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.error?.[600] ?? '#b91c1c'};
+    background: ${({ theme }: any) => theme.colors.terracotta[700]};
   }
 
   &:disabled {

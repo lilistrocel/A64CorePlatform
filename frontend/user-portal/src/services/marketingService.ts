@@ -7,6 +7,7 @@
 
 import { apiClient } from './api';
 import { formatNumber, formatCurrency as formatCurrencyUtil } from '../utils/formatNumber';
+import { lightTheme } from '@a64core/shared';
 import type {
   MarketingCampaign,
   MarketingCampaignCreate,
@@ -344,17 +345,18 @@ export async function getDashboardStats(): Promise<MarketingDashboardStats> {
  * Get campaign status color
  */
 export function getCampaignStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'draft':
-      return '#6B7280'; // gray
+      return c.textSecondary;
     case 'active':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'paused':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     case 'completed':
-      return '#3B82F6'; // blue
+      return c.primary[500]; // lapis
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 
@@ -362,17 +364,18 @@ export function getCampaignStatusColor(status: string): string {
  * Get budget status color
  */
 export function getBudgetStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'draft':
-      return '#6B7280'; // gray
+      return c.textSecondary;
     case 'approved':
-      return '#3B82F6'; // blue
+      return c.primary[500]; // lapis
     case 'active':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'closed':
-      return '#EF4444'; // red
+      return c.error; // terracotta
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 
@@ -380,17 +383,18 @@ export function getBudgetStatusColor(status: string): string {
  * Get event status color
  */
 export function getEventStatusColor(status: string): string {
+  const c = lightTheme.colors;
   switch (status) {
     case 'planned':
-      return '#3B82F6'; // blue
+      return c.primary[500]; // lapis
     case 'ongoing':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     case 'completed':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'cancelled':
-      return '#EF4444'; // red
+      return c.error; // terracotta
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 
@@ -398,21 +402,22 @@ export function getEventStatusColor(status: string): string {
  * Get channel type color
  */
 export function getChannelTypeColor(type: string): string {
+  const c = lightTheme.colors;
   switch (type) {
     case 'social_media':
-      return '#8B5CF6'; // purple
+      return c.secondary[700]; // gold, deep step — was purple; distinguishes from adjacent 'email' lapis and from 'event's warning gold[500] (spec §3 judgement call)
     case 'email':
-      return '#3B82F6'; // blue
+      return c.primary[500]; // lapis
     case 'print':
-      return '#6B7280'; // gray
+      return c.textSecondary;
     case 'digital':
-      return '#10B981'; // green
+      return c.success; // emerald
     case 'event':
-      return '#F59E0B'; // amber
+      return c.warning; // gold
     case 'other':
-      return '#EF4444'; // red
+      return c.error; // terracotta
     default:
-      return '#6B7280';
+      return c.textSecondary;
   }
 }
 

@@ -279,8 +279,8 @@ const BlockSelect = styled.select`
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -340,7 +340,7 @@ const RoomBadge = styled.span`
   font-size: 13px;
   font-weight: 600;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: #1565c0;
+  color: ${({ theme }) => theme.colors.primary[700]};
   border-radius: 20px;
   padding: 4px 10px;
 `;
@@ -361,7 +361,7 @@ const CloseButton = styled.button`
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -393,7 +393,7 @@ const Label = styled.label`
 `;
 
 const Required = styled.span`
-  color: #ef5350;
+  color: ${({ theme }) => theme.colors.error};
   margin-left: 2px;
 `;
 
@@ -410,7 +410,7 @@ interface InputProps {
 const Input = styled.input<InputProps>`
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#ef5350' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -423,8 +423,8 @@ const Input = styled.input<InputProps>`
   }
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
@@ -455,14 +455,14 @@ const GradeOption = styled.button<GradeOptionProps>`
   transition: all 150ms;
   border: 2px solid ${({ $color }) => $color};
   background: ${({ $selected, $color, theme }) => ($selected ? $color : theme.colors.background)};
-  color: ${({ $selected, $color }) => ($selected ? 'white' : $color)};
+  color: ${({ $selected, $color, theme }) => ($selected ? theme.colors.onAccent : $color)};
 
   &:hover {
     background: ${({ $color }) => $color};
-    color: white;
+    color: ${({ theme }) => theme.colors.onAccent};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -484,16 +484,16 @@ const TextArea = styled.textarea`
   }
 
   &:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 `;
 
 const ValidationError = styled.div`
   font-size: 13px;
-  color: #ef5350;
+  color: ${({ theme }) => theme.colors.error};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid #fecaca;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 10px 12px;
 `;
@@ -520,7 +520,7 @@ const CancelButton = styled.button`
     background: ${({ theme }) => theme.colors.surface};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -529,22 +529,22 @@ const SubmitButton = styled.button`
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
-  background: #10B981;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;

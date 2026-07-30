@@ -198,10 +198,10 @@ const MfaSetupBanner = styled.div`
   justify-content: center;
   gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => theme.spacing.md};
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gold[500]} 0%, ${({ theme }) => theme.colors.gold[600]} 100%);
+  color: ${({ theme }) => theme.colors.onAccent};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const BannerIcon = styled.span`

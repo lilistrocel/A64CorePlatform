@@ -11,7 +11,8 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes, css, useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import {
   LineChart,
   Line,
@@ -56,22 +57,32 @@ const TABS: Array<{ key: TabType; label: string; icon: string }> = [
   { key: 'alerts', label: 'Alerts', icon: '⚠️' },
 ];
 
-const QUALITY_COLORS: Record<string, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
-};
+// Quality-grade and lifecycle-state colour maps are theme-aware functions
+// (not static objects) because some tokens they resolve to — textSecondary in
+// particular — differ between light and dark theme. Call sites hold `theme`
+// via `useTheme()`.
+function getQualityColor(theme: Theme, grade: string): string {
+  const map: Record<string, string> = {
+    A: theme.colors.success,
+    B: theme.colors.primary[500],
+    C: theme.colors.warning,
+  };
+  return map[grade] ?? theme.colors.textSecondary;
+}
 
-const STATE_COLORS: Record<string, string> = {
-  empty: '#6B7280',
-  planned: '#3B82F6',
-  planted: '#10B981',
-  growing: '#10B981',
-  fruiting: '#A855F7',
-  harvesting: '#F59E0B',
-  cleaning: '#F97316',
-  alert: '#EF4444',
-};
+function getStateColor(theme: Theme, state: string): string {
+  const map: Record<string, string> = {
+    empty: theme.colors.textSecondary,
+    planned: theme.colors.primary[500],
+    planted: theme.colors.success,
+    growing: theme.colors.success,
+    fruiting: theme.colors.secondary[500],
+    harvesting: theme.colors.warning,
+    cleaning: theme.colors.terracotta[400],
+    alert: theme.colors.error,
+  };
+  return map[state] ?? theme.colors.textSecondary;
+}
 
 // ============================================================================
 // COMPONENT
@@ -260,6 +271,8 @@ function StateProgressBar({ steps }: { steps: StateProgressStep[] }) {
 }
 
 function OverviewTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
+
   if (!analytics || !analytics.performanceMetrics || !analytics.blockInfo) {
     return <TabContent><EmptyText>Loading overview data...</EmptyText></TabContent>;
   }
@@ -267,12 +280,12 @@ function OverviewTab({ analytics }: { analytics: any }) {
   const performanceScore = analytics?.performanceMetrics?.overallScore ?? 0;
   const performanceColor =
     performanceScore >= 80
-      ? '#10B981'
+      ? theme.colors.success
       : performanceScore >= 60
-      ? '#3B82F6'
+      ? theme.colors.primary[500]
       : performanceScore >= 40
-      ? '#F59E0B'
-      : '#EF4444';
+      ? theme.colors.warning
+      : theme.colors.error;
 
   return (
     <TabContent>
@@ -290,7 +303,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
           <InfoCard>
             <InfoLabel>Current State</InfoLabel>
             <InfoValue>
-              <StateBadge $color={STATE_COLORS[analytics.blockInfo.currentState] || '#6B7280'}>
+              <StateBadge $color={getStateColor(theme, analytics.blockInfo.currentState)}>
                 {analytics.blockInfo.currentState.charAt(0).toUpperCase() + analytics.blockInfo.currentState.slice(1)}
               </StateBadge>
             </InfoValue>
@@ -348,7 +361,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
         {analytics.performanceMetrics.strengths?.length > 0 && (
           <div style={{ marginTop: '16px' }}>
             <InfoLabel style={{ marginBottom: '8px' }}>Strengths:</InfoLabel>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: '#10B981' }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: theme.colors.success }}>
               {analytics.performanceMetrics.strengths.map((strength: string, idx: number) => (
                 <li key={idx} style={{ fontSize: '13px', marginBottom: '4px' }}>{strength}</li>
               ))}
@@ -358,7 +371,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
         {analytics.performanceMetrics.improvements?.length > 0 && (
           <div style={{ marginTop: '12px' }}>
             <InfoLabel style={{ marginBottom: '8px' }}>Areas for Improvement:</InfoLabel>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: '#F59E0B' }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: theme.colors.warning }}>
               {analytics.performanceMetrics.improvements.map((improvement: string, idx: number) => (
                 <li key={idx} style={{ fontSize: '13px', marginBottom: '4px' }}>{improvement}</li>
               ))}
@@ -397,10 +410,11 @@ function OverviewTab({ analytics }: { analytics: any }) {
 }
 
 function YieldTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
   const qualityData = [
-    { name: 'Grade A (Premium)', value: analytics.yieldAnalytics.yieldByQuality.A, color: QUALITY_COLORS.A },
-    { name: 'Grade B (Good)', value: analytics.yieldAnalytics.yieldByQuality.B, color: QUALITY_COLORS.B },
-    { name: 'Grade C (Standard)', value: analytics.yieldAnalytics.yieldByQuality.C, color: QUALITY_COLORS.C },
+    { name: 'Grade A (Premium)', value: analytics.yieldAnalytics.yieldByQuality.A, color: getQualityColor(theme, 'A') },
+    { name: 'Grade B (Good)', value: analytics.yieldAnalytics.yieldByQuality.B, color: getQualityColor(theme, 'B') },
+    { name: 'Grade C (Standard)', value: analytics.yieldAnalytics.yieldByQuality.C, color: getQualityColor(theme, 'C') },
   ].filter((item) => item.value > 0);
 
   const hasYieldData = analytics.yieldAnalytics.totalYieldKg > 0;
@@ -423,10 +437,10 @@ function YieldTab({ analytics }: { analytics: any }) {
             <YieldStatValue
               $color={
                 analytics.yieldAnalytics.yieldEfficiencyPercent >= 90
-                  ? '#10B981'
+                  ? theme.colors.success
                   : analytics.yieldAnalytics.yieldEfficiencyPercent >= 70
-                  ? '#3B82F6'
-                  : '#F59E0B'
+                  ? theme.colors.primary[500]
+                  : theme.colors.warning
               }
             >
               {analytics.yieldAnalytics.yieldEfficiencyPercent.toFixed(1)}%
@@ -452,7 +466,7 @@ function YieldTab({ analytics }: { analytics: any }) {
                   <YieldRecordMain>
                     <YieldRecordLeft>
                       <YieldRecordDate>{new Date(record.harvestDate).toLocaleDateString()}</YieldRecordDate>
-                      <GradeBadge $color={QUALITY_COLORS[record.qualityGrade]}>
+                      <GradeBadge $color={getQualityColor(theme, record.qualityGrade)}>
                         Grade {record.qualityGrade}
                       </GradeBadge>
                       <YieldRecordQuantity>{record.quantityKg.toFixed(1)} kg</YieldRecordQuantity>
@@ -515,8 +529,8 @@ function YieldTab({ analytics }: { analytics: any }) {
                       formatter={(value: number) => [`${value.toFixed(2)} kg`, '']}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="cumulativeKg" stroke="#3B82F6" name="Cumulative Yield" strokeWidth={2} />
-                    <Line type="monotone" dataKey="quantityKg" stroke="#10B981" name="Harvest Quantity" strokeWidth={2} />
+                    <Line type="monotone" dataKey="cumulativeKg" stroke={theme.colors.primary[500]} name="Cumulative Yield" strokeWidth={2} />
+                    <Line type="monotone" dataKey="quantityKg" stroke={theme.colors.success} name="Harvest Quantity" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -534,10 +548,11 @@ function YieldTab({ analytics }: { analytics: any }) {
 }
 
 function TimelineTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
   const stateDurationData = Object.entries(analytics.timelineAnalytics.daysInEachState).map(([state, days]) => ({
     state: state.charAt(0).toUpperCase() + state.slice(1),
     days: days as number,
-    color: STATE_COLORS[state] || '#6B7280',
+    color: getStateColor(theme, state),
   }));
 
   return (
@@ -627,6 +642,7 @@ function TimelineTab({ analytics }: { analytics: any }) {
 }
 
 function TasksTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
   const taskTypeData = Object.entries(analytics.taskAnalytics.tasksByType).map(([type, stats]: [string, any]) => ({
     type: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
     total: stats.total,
@@ -647,19 +663,19 @@ function TasksTab({ analytics }: { analytics: any }) {
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Completed</TaskStatLabel>
-            <TaskStatValue $color="#10B981">{analytics.taskAnalytics.completedTasks}</TaskStatValue>
+            <TaskStatValue $color={theme.colors.success}>{analytics.taskAnalytics.completedTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Pending</TaskStatLabel>
-            <TaskStatValue $color="#F59E0B">{analytics.taskAnalytics.pendingTasks}</TaskStatValue>
+            <TaskStatValue $color={theme.colors.warning}>{analytics.taskAnalytics.pendingTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Overdue</TaskStatLabel>
-            <TaskStatValue $color="#EF4444">{analytics.taskAnalytics.overdueTasks}</TaskStatValue>
+            <TaskStatValue $color={theme.colors.error}>{analytics.taskAnalytics.overdueTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Completion Rate</TaskStatLabel>
-            <TaskStatValue $color="#3B82F6">{analytics.taskAnalytics.completionRate.toFixed(0)}%</TaskStatValue>
+            <TaskStatValue $color={theme.colors.primary[500]}>{analytics.taskAnalytics.completionRate.toFixed(0)}%</TaskStatValue>
           </TaskStatCard>
         </TaskStatsGrid>
       </Section>
@@ -677,9 +693,9 @@ function TasksTab({ analytics }: { analytics: any }) {
                     <YAxis label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="total" fill="#3B82F6" name="Total Tasks" />
-                    <Bar dataKey="completed" fill="#10B981" name="Completed" />
-                    <Bar dataKey="pending" fill="#F59E0B" name="Pending" />
+                    <Bar dataKey="total" fill={theme.colors.primary[500]} name="Total Tasks" />
+                    <Bar dataKey="completed" fill={theme.colors.success} name="Completed" />
+                    <Bar dataKey="pending" fill={theme.colors.warning} name="Pending" />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -700,7 +716,7 @@ function TasksTab({ analytics }: { analytics: any }) {
               )}
               <MetricItem>
                 <MetricLabel>Overdue Tasks:</MetricLabel>
-                <MetricValue $color={analytics.taskAnalytics.overdueTasks > 0 ? '#EF4444' : '#10B981'}>
+                <MetricValue $color={analytics.taskAnalytics.overdueTasks > 0 ? theme.colors.error : theme.colors.success}>
                   {analytics.taskAnalytics.overdueTasks}
                 </MetricValue>
               </MetricItem>
@@ -726,11 +742,12 @@ function TasksTab({ analytics }: { analytics: any }) {
 }
 
 function AlertsTab({ analytics }: { analytics: any }) {
+  const theme = useTheme();
   const alertSeverityData = [
-    { severity: 'Critical', count: analytics.alertAnalytics.criticalCount, color: '#DC2626' },
-    { severity: 'High', count: analytics.alertAnalytics.highCount, color: '#F59E0B' },
-    { severity: 'Medium', count: analytics.alertAnalytics.mediumCount, color: '#3B82F6' },
-    { severity: 'Low', count: analytics.alertAnalytics.lowCount, color: '#6B7280' },
+    { severity: 'Critical', count: analytics.alertAnalytics.criticalCount, color: theme.colors.terracotta[600] },
+    { severity: 'High', count: analytics.alertAnalytics.highCount, color: theme.colors.warning },
+    { severity: 'Medium', count: analytics.alertAnalytics.mediumCount, color: theme.colors.primary[500] },
+    { severity: 'Low', count: analytics.alertAnalytics.lowCount, color: theme.colors.textSecondary },
   ].filter((item) => item.count > 0);
 
   const hasAlertData = analytics.alertAnalytics.totalAlerts > 0;
@@ -746,15 +763,15 @@ function AlertsTab({ analytics }: { analytics: any }) {
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Active</AlertStatLabel>
-            <AlertStatValue $color="#EF4444">{analytics.alertAnalytics.activeAlerts}</AlertStatValue>
+            <AlertStatValue $color={theme.colors.error}>{analytics.alertAnalytics.activeAlerts}</AlertStatValue>
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Resolved</AlertStatLabel>
-            <AlertStatValue $color="#10B981">{analytics.alertAnalytics.resolvedAlerts}</AlertStatValue>
+            <AlertStatValue $color={theme.colors.success}>{analytics.alertAnalytics.resolvedAlerts}</AlertStatValue>
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Dismissed</AlertStatLabel>
-            <AlertStatValue $color="#6B7280">{analytics.alertAnalytics.dismissedAlerts}</AlertStatValue>
+            <AlertStatValue $color={theme.colors.textSecondary}>{analytics.alertAnalytics.dismissedAlerts}</AlertStatValue>
           </AlertStatCard>
         </AlertStatsGrid>
       </Section>
@@ -794,7 +811,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
                 {analytics.alertAnalytics.fastestResolutionHours !== null && (
                   <MetricItem>
                     <MetricLabel>Fastest Resolution:</MetricLabel>
-                    <MetricValue $color="#10B981">
+                    <MetricValue $color={theme.colors.success}>
                       {analytics.alertAnalytics.fastestResolutionHours.toFixed(1)} hours
                     </MetricValue>
                   </MetricItem>
@@ -802,7 +819,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
                 {analytics.alertAnalytics.slowestResolutionHours !== null && (
                   <MetricItem>
                     <MetricLabel>Slowest Resolution:</MetricLabel>
-                    <MetricValue $color="#EF4444">
+                    <MetricValue $color={theme.colors.error}>
                       {analytics.alertAnalytics.slowestResolutionHours.toFixed(1)} hours
                     </MetricValue>
                   </MetricItem>
@@ -940,7 +957,7 @@ const PeriodSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -984,12 +1001,12 @@ const Tab = styled.button<{ $active: boolean }>`
   padding: 14px 20px;
   border: none;
   background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   white-space: nowrap;
 
   &:hover {
@@ -1390,7 +1407,7 @@ const StepConnector = styled.div<{ $completed: boolean }>`
   width: 100%;
   height: 2px;
   z-index: 0;
-  background: ${({ $completed, theme }) => ($completed ? '#10B981' : theme.colors.neutral[300])};
+  background: ${({ $completed, theme }) => ($completed ? theme.colors.success : theme.colors.neutral[300])};
   transition: background 150ms ease-in-out;
 `;
 
@@ -1418,12 +1435,12 @@ const StepNode = styled.div<{ $state: NodeState }>`
   flex-shrink: 0;
   transition: background 150ms ease-in-out, border-color 150ms ease-in-out;
 
-  ${({ $state }) =>
+  ${({ $state, theme }) =>
     $state === 'active' &&
     css`
-      background: #3b82f6;
-      border: 2px solid #3b82f6;
-      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+      background: ${theme.colors.primary[500]};
+      border: 2px solid ${theme.colors.primary[500]};
+      box-shadow: 0 0 0 4px ${theme.colors.primary[500]}2E;
 
       /* Two staggered rings emanate from behind the node like ripples on water.
          z-index: -1 keeps them behind the solid node so they radiate from under it. */
@@ -1433,7 +1450,7 @@ const StepNode = styled.div<{ $state: NodeState }>`
         position: absolute;
         inset: -1px;
         border-radius: 50%;
-        border: 1.5px solid #3b82f6;
+        border: 1.5px solid ${theme.colors.primary[500]};
         z-index: -1;
         pointer-events: none;
         animation: ${ripple} 2.8s ease-out infinite;
@@ -1443,11 +1460,11 @@ const StepNode = styled.div<{ $state: NodeState }>`
       }
     `}
 
-  ${({ $state }) =>
+  ${({ $state, theme }) =>
     $state === 'completed' &&
     `
-    background: #10B981;
-    border: 2px solid #10B981;
+    background: ${theme.colors.success};
+    border: 2px solid ${theme.colors.success};
   `}
 
   ${({ $state, theme }) =>
@@ -1461,7 +1478,7 @@ const StepNode = styled.div<{ $state: NodeState }>`
 const StepCheckmark = styled.span`
   font-size: 14px;
   font-weight: 700;
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.onAccent};
   line-height: 1;
 `;
 
@@ -1469,7 +1486,7 @@ const StepDot = styled.div`
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #ffffff;
+  background: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const StepLabel = styled.div<{ $state: NodeState }>`
@@ -1503,7 +1520,7 @@ const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1552,14 +1569,14 @@ const RetryButton = styled.button`
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -1683,9 +1700,9 @@ const StalenessChip = styled.span`
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.gold[50]};
+  color: ${({ theme }) => theme.colors.gold[800]};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   margin-left: 8px;
   vertical-align: middle;
 `;

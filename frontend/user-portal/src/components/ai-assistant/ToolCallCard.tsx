@@ -65,9 +65,9 @@ const Card = styled.div<{ $isPending: boolean }>`
   gap: 8px;
   padding: 6px 10px;
   background: ${({ theme, $isPending }) =>
-    $isPending ? theme.colors.neutral[100] : theme.colors.successBg ?? theme.colors.neutral[50]};
+    $isPending ? theme.colors.neutral[100] : theme.colors.successBg};
   border: 1px solid ${({ theme, $isPending }) =>
-    $isPending ? theme.colors.neutral[300] : theme.colors.success ?? '#10B981'};
+    $isPending ? theme.colors.neutral[300] : theme.colors.success};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   transition: all 200ms ease;
@@ -116,7 +116,7 @@ const Spinner = styled.div`
 `;
 
 const DoneCheck = styled.span`
-  color: ${({ theme }) => theme.colors.success ?? '#10B981'};
+  color: ${({ theme }) => theme.colors.success};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   font-size: 13px;
   flex-shrink: 0;

@@ -19,11 +19,12 @@
  *   baseDocRef  — the Delivery Note this RR was raised against
  *   targetDocRefs — Return Notes created from this RR
  *
- * Status badge colours:
- *   draft     → gray  (#f3f4f6 / #374151)
- *   open      → green (#ecfdf5 / #065f46)
- *   closed    → purple (#f3e8ff / #6b21a8)
- *   cancelled → red   (#fef2f2 / #991b1b)
+ * Status badge colours (A20Core tokens — shared vocabulary across all
+ * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
+ *   draft     → neutral   (neutral[100] / textSecondary)
+ *   open      → emerald   (successBg / emerald[700])
+ *   closed    → neutral (dark) (neutral[200] / neutral[800])
+ *   cancelled → terracotta (errorBg / terracotta[700])
  *
  * Modals (delete confirm) do NOT close on overlay click — X button only.
  * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
@@ -33,7 +34,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ExternalLink, FileText } from 'lucide-react';
 import {
   useReturnRequest,
@@ -99,22 +100,22 @@ const StatusBadge = styled.span<{ $status: ReturnRequestStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'closed': return '#f3e8ff';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#374151';
-      case 'open': return '#065f46';
-      case 'closed': return '#6b21a8';
-      case 'cancelled': return '#991b1b';
-      default: return '#374151';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -132,7 +133,7 @@ const PrimaryButton = styled.button`
   gap: 7px;
   padding: 9px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -157,13 +158,13 @@ const SecondaryButton = styled.button`
 const DangerButton = styled.button`
   padding: 9px 18px;
   background: transparent;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: #fef2f2; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.errorBg}; }
 `;
 
 const GhostButton = styled.button`
@@ -262,7 +263,7 @@ const ProgressFill = styled.div<{ $pct: number; $isComplete: boolean }>`
   height: 100%;
   width: ${({ $pct }) => Math.min(100, $pct)}%;
   border-radius: 3px;
-  background: ${({ $isComplete }) => ($isComplete ? '#8b5cf6' : '#10b981')};
+  background: ${({ $isComplete, theme }) => ($isComplete ? theme.colors.primary[600] : theme.colors.success)};
   transition: width 0.3s ease;
 `;
 
@@ -287,8 +288,8 @@ const Tooltip = styled.span`
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: #1f2937;
-  color: #fff;
+  background: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.background};
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 6px;
@@ -377,12 +378,12 @@ const CloseButton = styled.button`
 `;
 
 const ActionError = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   margin-bottom: 16px;
 `;
 
@@ -470,6 +471,7 @@ function ConsumptionCell({ requestedQty, consumedQty }: ConsumptionCellProps) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ReturnRequestDetailPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId } = useParams<{ docId: string }>();
   const user = useAuthStore((s) => s.user);
@@ -530,7 +532,7 @@ export function ReturnRequestDetailPage() {
   if (isLoading) return <Container>Loading...</Container>;
   if (error || !rr) {
     return (
-      <Container style={{ color: '#dc2626' }}>
+      <Container style={{ color: theme.colors.error }}>
         Return Request not found.
       </Container>
     );
@@ -714,33 +716,33 @@ export function ReturnRequestDetailPage() {
                   <tr key={line.lineId}>
                     <Td>{line.lineNumber}</Td>
                     <Td>
-                      <strong style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                      <strong style={{ fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                         {line.itemCode}
                       </strong>
                     </Td>
                     <Td>{line.itemName}</Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                    <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
                       {line.description || '—'}
                     </Td>
-                    <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13 }}>
+                    <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                       {requested.toLocaleString('en-AE', { maximumFractionDigits: 3 })}
                     </Td>
-                    <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13 }}>
+                    <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                       {consumed > 0 ? (
-                        <span style={{ color: '#7c3aed', fontWeight: 600 }}>
+                        <span style={{ color: theme.colors.primary[700], fontWeight: 600 }}>
                           {consumed.toLocaleString('en-AE', { maximumFractionDigits: 3 })}
                         </span>
                       ) : (
-                        <span style={{ color: '#d1d5db' }}>—</span>
+                        <span style={{ color: theme.colors.border }}>—</span>
                       )}
                     </Td>
-                    <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13 }}>
+                    <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                       {remaining > 0 ? (
-                        <span style={{ color: '#059669', fontWeight: 600 }}>
+                        <span style={{ color: theme.colors.emerald[600], fontWeight: 600 }}>
                           {remaining.toLocaleString('en-AE', { maximumFractionDigits: 3 })}
                         </span>
                       ) : (
-                        <span style={{ color: '#7c3aed' }}>Fully Consumed</span>
+                        <span style={{ color: theme.colors.primary[700] }}>Fully Consumed</span>
                       )}
                     </Td>
                     <Td>
@@ -750,7 +752,7 @@ export function ReturnRequestDetailPage() {
                       />
                     </Td>
                     <Td>{line.uom}</Td>
-                    <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13 }}>
+                    <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                       {Number(line.unitPrice).toLocaleString('en-AE', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 4,
@@ -759,7 +761,7 @@ export function ReturnRequestDetailPage() {
                     <Td
                       style={{
                         textAlign: 'right',
-                        fontFamily: 'monospace',
+                        fontFamily: theme.typography.fontFamily.mono,
                         fontSize: 13,
                         fontWeight: 600,
                       }}
@@ -784,27 +786,27 @@ export function ReturnRequestDetailPage() {
             gap: 32,
             marginTop: 16,
             paddingTop: 12,
-            borderTop: '1px solid #e5e7eb',
+            borderTop: `1px solid ${theme.colors.border}`,
           }}
         >
-          <span style={{ fontSize: 13, color: '#6b7280' }}>
-            Net: <strong style={{ color: '#111827' }}>
+          <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+            Net: <strong style={{ color: theme.colors.textPrimary }}>
               {Number(rr.totals.net).toLocaleString('en-AE', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })} AED
             </strong>
           </span>
-          <span style={{ fontSize: 13, color: '#6b7280' }}>
-            Tax: <strong style={{ color: '#111827' }}>
+          <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+            Tax: <strong style={{ color: theme.colors.textPrimary }}>
               {Number(rr.totals.tax).toLocaleString('en-AE', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })} AED
             </strong>
           </span>
-          <span style={{ fontSize: 13, color: '#6b7280' }}>
-            Gross: <strong style={{ color: '#111827', fontSize: 15 }}>
+          <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+            Gross: <strong style={{ color: theme.colors.textPrimary, fontSize: 15 }}>
               {Number(rr.totals.gross).toLocaleString('en-AE', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -863,7 +865,7 @@ export function ReturnRequestDetailPage() {
         )}
 
         {!rr.baseDocRef && (!rr.targetDocRefs || rr.targetDocRefs.length === 0) && (
-          <span style={{ color: '#9ca3af', fontSize: 14 }}>No linked documents.</span>
+          <span style={{ color: theme.colors.textDisabled, fontSize: 14 }}>No linked documents.</span>
         )}
       </Card>
 

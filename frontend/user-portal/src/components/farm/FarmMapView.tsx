@@ -7,7 +7,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import type { Farm, Block, BlockState } from '../../types/farm';
@@ -86,7 +86,7 @@ const MapInner = styled.div`
     padding: 0;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: ${({ theme }) => theme.shadows.md};
   }
 
   .maplibregl-popup-close-button {
@@ -118,7 +118,7 @@ const LoadingSpinner = styled.div`
   width: 40px;
   height: 40px;
   border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3b82f6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -142,7 +142,7 @@ const Legend = styled.div`
   background: ${({ theme }) => theme.colors.background};
   padding: 12px 16px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   z-index: 5;
   max-width: 200px;
 `;
@@ -175,7 +175,7 @@ const LegendColor = styled.div<{ $color: string }>`
   border-radius: 3px;
   background-color: ${(props) => props.$color};
   opacity: 0.7;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid ${({ theme }) => `${theme.colors.textPrimary}33`};
 `;
 
 const EditBoundaryButton = styled.button`
@@ -189,7 +189,7 @@ const EditBoundaryButton = styled.button`
   background: ${({ theme }) => theme.colors.background};
   border: none;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   font-size: 13px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -199,7 +199,7 @@ const EditBoundaryButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface};
-    color: #3b82f6;
+    color: ${({ theme }) => theme.colors.primary[500]};
   }
 
   svg {
@@ -221,17 +221,17 @@ const AddBoundaryButton = styled.button`
   gap: 8px;
   padding: 12px 20px;
   margin-top: 16px;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.primary[500]};
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 
   svg {
@@ -246,7 +246,7 @@ const PopupContent = styled.div`
 
 const PopupHeader = styled.div<{ $stateColor: string }>`
   background: ${(props) => props.$stateColor};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   padding: 12px 16px;
 `;
 
@@ -277,19 +277,19 @@ const PopupRow = styled.div`
 `;
 
 const PopupLabel = styled.span`
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PopupValue = styled.span`
-  color: #1f2937;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: 500;
 `;
 
 const PopupButton = styled.button`
   width: 100%;
   padding: 10px;
-  background: #3b82f6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   font-size: 13px;
   font-weight: 500;
@@ -299,7 +299,7 @@ const PopupButton = styled.button`
   border-radius: 4px;
 
   &:hover {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -309,7 +309,7 @@ const NoBoundaryMessage = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
   padding: 40px;
 `;
@@ -327,7 +327,7 @@ const NoBoundaryText = styled.p`
 
 const NoBoundaryHint = styled.p`
   font-size: 12px;
-  color: #9ca3af;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0;
 `;
 
@@ -336,6 +336,7 @@ const NoBoundaryHint = styled.p`
 // ============================================================================
 
 export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, height = '500px' }: FarmMapViewProps) {
+  const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
@@ -419,7 +420,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           type: 'fill',
           source: 'farm-boundary',
           paint: {
-            'fill-color': '#3B82F6',
+            'fill-color': theme.colors.primary[500],
             'fill-opacity': 0.05,
           },
         });
@@ -430,7 +431,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           type: 'line',
           source: 'farm-boundary',
           paint: {
-            'line-color': '#3B82F6',
+            'line-color': theme.colors.primary[500],
             'line-width': 3,
             'line-dasharray': [4, 2],
           },
@@ -445,7 +446,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             blockId: block.blockId,
             name: block.name,
             state: block.state,
-            color: BLOCK_STATE_COLORS[block.state] || '#6B7280',
+            color: BLOCK_STATE_COLORS[block.state] || theme.colors.textSecondary,
             area: block.area,
             availableArea: block.availableArea,
             currentPlantingId: block.currentPlantingId,
@@ -484,7 +485,10 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           },
         });
 
-        // Block labels (white text with dark halo for satellite visibility)
+        // Block labels (white text with dark halo for satellite visibility).
+        // Intentionally NOT themed: these render directly onto the Esri satellite
+        // photo basemap, not app chrome — the basemap's own contrast (not the
+        // light/dark app theme) is what this halo needs to read against.
         map.addLayer({
           id: 'block-labels',
           type: 'symbol',
@@ -561,7 +565,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
       console.error('Error initializing map:', error);
       setMapError('Failed to initialize map. Your browser may not support WebGL.');
     }
-  }, [farm, blocks, hasAnyBoundary, hasFarmBoundary, blocksWithBoundaries, getMapCenter]);
+  }, [farm, blocks, hasAnyBoundary, hasFarmBoundary, blocksWithBoundaries, getMapCenter, theme]);
 
   // Handle popup for selected block
   useEffect(() => {
@@ -575,14 +579,16 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
 
     if (selectedBlock) {
       const { block, coordinates } = selectedBlock;
-      const stateColor = BLOCK_STATE_COLORS[block.state] || '#6B7280';
+      const stateColor = BLOCK_STATE_COLORS[block.state] || theme.colors.textSecondary;
       const areaHectares = block.area ? (block.area / 10000).toFixed(2) : 'N/A';
 
       const availableAreaHectares = block.availableArea != null ? (block.availableArea / 10000).toFixed(2) : 'N/A';
 
+      // Popup content is rendered by MapLibre via raw HTML (setHTML), so it can't
+      // use styled-components — theme values are interpolated directly instead.
       const popupHtml = `
         <div style="min-width: 200px;">
-          <div style="background: ${stateColor}; color: white; padding: 12px 16px;">
+          <div style="background: ${stateColor}; color: ${theme.colors.onAccent}; padding: 12px 16px;">
             <div style="font-size: 14px; font-weight: 600;">${block.name}</div>
             <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">
               ${BLOCK_STATE_LABELS[block.state]}
@@ -590,23 +596,23 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           </div>
           <div style="padding: 12px 16px;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span style="color: #6b7280;">Area</span>
-              <span style="color: #1f2937; font-weight: 500;">${areaHectares} ha</span>
+              <span style="color: ${theme.colors.textSecondary};">Area</span>
+              <span style="color: ${theme.colors.textPrimary}; font-weight: 500;">${areaHectares} ha</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span style="color: #6b7280;">Available</span>
-              <span style="color: #1f2937; font-weight: 500;">${availableAreaHectares} ha</span>
+              <span style="color: ${theme.colors.textSecondary};">Available</span>
+              <span style="color: ${theme.colors.textPrimary}; font-weight: 500;">${availableAreaHectares} ha</span>
             </div>
             ${block.targetCropName ? `
               <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-                <span style="color: #6b7280;">Crop</span>
-                <span style="color: #1f2937; font-weight: 500;">${block.targetCropName}</span>
+                <span style="color: ${theme.colors.textSecondary};">Crop</span>
+                <span style="color: ${theme.colors.textPrimary}; font-weight: 500;">${block.targetCropName}</span>
               </div>
             ` : ''}
             ${onBlockClick ? `
               <button
                 id="popup-view-btn"
-                style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; border-radius: 4px;"
+                style="width: 100%; padding: 10px; background: ${theme.colors.primary[500]}; color: ${theme.colors.onAccent}; border: none; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; border-radius: 4px;"
               >
                 View Details
               </button>
@@ -643,7 +649,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
 
       popupRef.current = popup;
     }
-  }, [selectedBlock, mapLoaded, onBlockClick]);
+  }, [selectedBlock, mapLoaded, onBlockClick, theme]);
 
   // Show error message if map initialization failed
   if (mapError) {
@@ -712,7 +718,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             <>
               <div style={{ height: 8 }} />
               <LegendItem>
-                <LegendColor $color="#3B82F6" />
+                <LegendColor $color={theme.colors.primary[500]} />
                 <span>Farm Boundary</span>
               </LegendItem>
             </>

@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Button } from '@a64core/shared';
 import { createAlert } from '../../services/alertsApi';
 import type { AlertSeverity } from '../../types/alerts';
@@ -30,6 +30,7 @@ export function ReportAlertModal({
 }: ReportAlertModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const theme = useTheme();
   const [severity, setSeverity] = useState<AlertSeverity>('medium');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,9 +151,14 @@ export function ReportAlertModal({
           <FormGroup>
             <Label htmlFor="alert-severity">Severity Level</Label>
             <SeverityGrid>
+              {/* Same severity ramp as the mushroom module's contamination
+                  reports (RoomDetailsModal / MushroomDashboardPage): low →
+                  medium → high walk success → warning → error, and critical
+                  steps past error into a deeper terracotta so it still reads
+                  as "beyond error" rather than a duplicate of high. */}
               <SeverityOption
                 $selected={severity === 'low'}
-                $color="#4CAF50"
+                $color={theme.colors.success}
                 onClick={() => !loading && setSeverity('low')}
               >
                 <SeverityIcon>ℹ️</SeverityIcon>
@@ -162,7 +168,7 @@ export function ReportAlertModal({
 
               <SeverityOption
                 $selected={severity === 'medium'}
-                $color="#FF9800"
+                $color={theme.colors.warning}
                 onClick={() => !loading && setSeverity('medium')}
               >
                 <SeverityIcon>⚠️</SeverityIcon>
@@ -172,7 +178,7 @@ export function ReportAlertModal({
 
               <SeverityOption
                 $selected={severity === 'high'}
-                $color="#FF5722"
+                $color={theme.colors.error}
                 onClick={() => !loading && setSeverity('high')}
               >
                 <SeverityIcon>🔥</SeverityIcon>
@@ -182,7 +188,7 @@ export function ReportAlertModal({
 
               <SeverityOption
                 $selected={severity === 'critical'}
-                $color="#F44336"
+                $color={theme.colors.terracotta[900]}
                 onClick={() => !loading && setSeverity('critical')}
               >
                 <SeverityIcon>🚨</SeverityIcon>

@@ -38,10 +38,10 @@ const Card = styled.div<{ $stateColor: string; $isVirtual?: boolean }>`
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border-left: 4px solid ${({ $stateColor }) => $stateColor};
-  ${({ $isVirtual }) =>
+  ${({ $isVirtual, theme }) =>
     $isVirtual &&
     `
-    border: 2px dashed #1976d2;
+    border: 2px dashed ${theme.colors.primary[600]};
     border-left-width: 4px;
     border-left-style: solid;
   `}
@@ -66,15 +66,15 @@ const VirtualBadge = styled.span`
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[600]};
   font-size: 10px;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border: 1px solid #1976d2;
+  border: 1px solid ${({ theme }) => theme.colors.primary[600]};
 `;
 
 const BlockIcon = styled.div`
@@ -85,13 +85,13 @@ const BlockIcon = styled.div`
 const BlockName = styled.h4`
   font-size: 18px;
   font-weight: 600;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   margin: 0 0 8px 0;
   cursor: pointer;
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: #2563eb;
+    color: ${({ theme }) => theme.colors.primary[600]};
     text-decoration: underline;
   }
 `;
@@ -103,7 +103,7 @@ const StateBadge = styled.span<{ $color: string }>`
   font-size: 12px;
   font-weight: 500;
   background: ${({ $color }) => $color};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -192,50 +192,54 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   flex: 1;
   min-width: fit-content;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
-        color: white;
+        background: ${theme.colors.primary[500]};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[600]};
         }
       `;
     }
     if ($variant === 'success') {
       return `
-        background: #4CAF50;
-        color: white;
+        background: ${theme.colors.success};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #388E3C;
+          background: ${theme.colors.emerald[600]};
         }
       `;
     }
     if ($variant === 'analytics') {
+      // Deliberately lapis, not gold/secondary: brand spec reserves gold for the
+      // active nav item / one CTA per view / highlight badges, not ordinary
+      // per-card action buttons. A deeper primary shade keeps this visually
+      // distinct from the plain "primary" variant above without spending gold.
       return `
-        background: #6366F1;
-        color: white;
+        background: ${theme.colors.primary[700]};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #4F46E5;
+          background: ${theme.colors.primary[800]};
         }
       `;
     }
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.terracotta[100]};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}
@@ -248,23 +252,23 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 
 const StateSelect = styled.select`
   padding: 6px 12px;
-  border: 1px solid #3B82F6;
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   flex: 1;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e3f2fd;
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1A;
   }
 `;
 

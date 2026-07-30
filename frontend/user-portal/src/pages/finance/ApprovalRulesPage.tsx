@@ -16,7 +16,7 @@
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast } from '../../stores/toast.store';
 import {
@@ -174,7 +174,7 @@ const FilterSelect = styled.select`
 const PrimaryButton = styled.button`
   padding: 9px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -233,15 +233,15 @@ const DangerButton = styled.button`
 const SuccessButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.success || '#10b981'};
-  border: 1px solid ${({ theme }) => theme.colors.success || '#10b981'};
+  color: ${({ theme }) => theme.colors.success};
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'};
+    background: ${({ theme }) => theme.colors.successBg};
   }
   &:disabled {
     opacity: 0.5;
@@ -372,8 +372,8 @@ const AlwaysPill = styled.span`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.successBg};
+  color: ${({ theme }) => theme.colors.success};
 `;
 
 const StatusBadge = styled.span<{ $active: boolean }>`
@@ -384,9 +384,9 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   font-size: 11px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg || '#ecfdf5' : theme.colors.neutral[100]};
+    $active ? theme.colors.successBg : theme.colors.neutral[100]};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.success || '#10b981' : theme.colors.textDisabled};
+    $active ? theme.colors.success : theme.colors.textDisabled};
 `;
 
 const DocTypeBadge = styled.span`
@@ -396,9 +396,9 @@ const DocTypeBadge = styled.span`
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#2196f3'};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.info};
 `;
 
 // ─── Empty / Loading states ────────────────────────────────────────────────────
@@ -702,20 +702,20 @@ const TesterResult = styled.div<{ $requiresApproval: boolean | null }>`
   background: ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.neutral[50];
     return $requiresApproval
-      ? theme.colors.warningBg || '#fffbeb'
-      : theme.colors.successBg || '#ecfdf5';
+      ? theme.colors.warningBg
+      : theme.colors.successBg;
   }};
   color: ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.textDisabled;
     return $requiresApproval
-      ? theme.colors.warning || '#92400e'
-      : theme.colors.success || '#065f46';
+      ? theme.colors.gold[800]
+      : theme.colors.emerald[800];
   }};
   border: 1px solid ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.neutral[200];
     return $requiresApproval
-      ? theme.colors.warning || '#fde68a'
-      : theme.colors.success || '#6ee7b7';
+      ? theme.colors.gold[200]
+      : theme.colors.emerald[200];
   }};
 `;
 
@@ -1324,6 +1324,7 @@ function TesterWidget({ organizationId, companies, companiesLoading }: TesterWid
 // ─── Main Page Component ───────────────────────────────────────────────────────
 
 export function ApprovalRulesPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   // Reason: showSuccessToast is a module-level helper, imported directly above.
 
@@ -1728,7 +1729,7 @@ export function ApprovalRulesPage() {
                               aria-label={`Reactivate approval rule for ${rule.docType}`}
                               disabled={reactivateMutation.isPending}
                               style={{
-                                color: 'var(--color-success, #10b981)',
+                                color: theme.colors.success,
                                 borderColor: 'currentColor',
                               }}
                             >

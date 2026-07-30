@@ -27,7 +27,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useCreatePayment } from '../../hooks/queries/usePayments';
 import { getApDocTotalsPaid } from '../../services/financeReportsService';
 import { usePayments } from '../../hooks/queries/usePayments';
@@ -159,7 +159,7 @@ const Input = styled.input`
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
   &:disabled { opacity: 0.6; background: ${({ theme }) => theme.colors.neutral[100]}; }
-  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error || '#ef4444'}; }
+  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error}; }
 `;
 
 const Select = styled.select`
@@ -170,7 +170,7 @@ const Select = styled.select`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error || '#ef4444'}; }
+  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error}; }
 `;
 
 const Textarea = styled.textarea`
@@ -206,14 +206,14 @@ const MethodRadioLabel = styled.label<{ $active: boolean }>`
   color: ${({ $active, theme }) =>
     $active ? theme.colors.primary[600] || theme.colors.primary[500] : theme.colors.textPrimary};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.primary[50] : 'transparent'};
   transition: border-color 150ms ease, background 150ms ease;
   user-select: none;
 `;
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const InvoiceTable = styled.table`
@@ -253,11 +253,12 @@ const AmountInput = styled.input`
   border-radius: 6px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error || '#ef4444'}; }
+  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error}; }
 `;
 
 const TotalSummary = styled.div`
@@ -298,12 +299,12 @@ const EmptyInvoiceHint = styled.p`
 `;
 
 const ErrorBanner = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
-  color: #991b1b;
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   margin-bottom: 16px;
 `;
 
@@ -317,7 +318,7 @@ const FooterRow = styled.div`
 const PrimaryButton = styled.button`
   padding: 11px 28px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -358,6 +359,7 @@ interface ApplicationRow {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function RecordPaymentPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const organizationId = user?.organizationId ?? '';
@@ -746,7 +748,7 @@ export function RecordPaymentPage() {
         <CardTitle>
           Invoices to Pay
           {vendorId && approvedInvoices.length > 0 && (
-            <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8, color: '#6b7280' }}>
+            <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8, color: theme.colors.textSecondary }}>
               — {rows.length} outstanding invoice{rows.length !== 1 ? 's' : ''}
             </span>
           )}
@@ -790,7 +792,7 @@ export function RecordPaymentPage() {
                   <Th>Due Date</Th>
                   <Th style={{ textAlign: 'right' }}>Total Gross</Th>
                   <Th style={{ textAlign: 'right' }}>Total Paid</Th>
-                  <Th style={{ textAlign: 'right', color: '#059669' }}>Outstanding</Th>
+                  <Th style={{ textAlign: 'right', color: theme.colors.emerald[600] }}>Outstanding</Th>
                   <Th style={{ textAlign: 'right' }}>Amount to Apply *</Th>
                 </tr>
               </thead>
@@ -812,16 +814,16 @@ export function RecordPaymentPage() {
                         <code style={{ fontWeight: 600, fontSize: 13 }}>{row.apDocNumber}</code>
                       </Td>
                       <Td style={{ fontSize: 13 }}>{formatDate(row.invoiceDate)}</Td>
-                      <Td style={{ fontSize: 13, color: row.dueDate && row.dueDate < today_ ? '#dc2626' : 'inherit' }}>
+                      <Td style={{ fontSize: 13, color: row.dueDate && row.dueDate < today_ ? theme.colors.error : 'inherit' }}>
                         {formatDate(row.dueDate)}
                       </Td>
                       <TdRight style={{ fontSize: 13 }}>
                         {formatCurrency(row.totalGross, row.currency)}
                       </TdRight>
-                      <TdRight style={{ fontSize: 13, color: '#6b7280' }}>
+                      <TdRight style={{ fontSize: 13, color: theme.colors.textSecondary }}>
                         {row.totalPaid > 0 ? formatCurrency(row.totalPaid, row.currency) : '—'}
                       </TdRight>
-                      <TdRight style={{ fontSize: 13, fontWeight: 600, color: '#059669' }}>
+                      <TdRight style={{ fontSize: 13, fontWeight: 600, color: theme.colors.emerald[600] }}>
                         {formatCurrency(row.outstanding, row.currency)}
                       </TdRight>
                       <Td style={{ textAlign: 'right' }}>
@@ -840,7 +842,7 @@ export function RecordPaymentPage() {
                               : undefined
                           }
                           style={{
-                            borderColor: row.selected && isOverpay ? '#ef4444' : undefined,
+                            borderColor: row.selected && isOverpay ? theme.colors.error : undefined,
                           }}
                         />
                       </Td>

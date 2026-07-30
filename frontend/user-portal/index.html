@@ -2,9 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>user-portal</title>
+    <meta name="theme-color" content="#F1E6CC" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E1330" media="(prefers-color-scheme: dark)" />
+    <!-- Self-hosted A20Core type system (Hanken Grotesk / Fraunces / Space
+         Mono) — no Google Fonts CDN, per brand contract §4/§9.3 sovereign-
+         build rule and this app's CSP (no external font hosts allowed). -->
+    <link
+      rel="preload"
+      href="/fonts/ttf/HankenGrotesk-Variable.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <title>A20Core</title>
   </head>
   <body>
     <div id="root"></div>

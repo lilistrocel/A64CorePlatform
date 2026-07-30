@@ -91,7 +91,7 @@ const RemoveBtn = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
-    color: #b91c1c;
+    color: ${({ theme }) => theme.colors.terracotta[700]};
   }
 `;
 

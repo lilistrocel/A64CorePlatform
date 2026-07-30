@@ -75,24 +75,24 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   border: none;
   white-space: nowrap;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
-        color: white;
-        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+        background: ${theme.colors.primary[500]};
+        color: ${theme.colors.onAccent};
+        box-shadow: 0 4px 6px -1px ${theme.colors.primary[500]}4d;
         &:hover {
-          background: #1976d2;
-          box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+          background: ${theme.colors.primary[600]};
+          box-shadow: 0 10px 15px -3px ${theme.colors.primary[500]}66;
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 2px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 2px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.primary[50]};
       }
     `;
   }}
@@ -115,7 +115,7 @@ const StatCard = styled.div`
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #3B82F6;
+  border-left: 4px solid ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const StatLabel = styled.div`
@@ -161,8 +161,8 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 
   &::placeholder {
@@ -183,8 +183,8 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
   }
 
   option {
@@ -236,13 +236,13 @@ const PageButton = styled.button<{ $active?: boolean }>`
   font-size: 14px;
   font-weight: 500;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
   }
 
   &:disabled {
@@ -262,7 +262,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3B82F6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -275,10 +275,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
   text-align: center;
 `;
 
@@ -313,17 +313,17 @@ const ImportFeedback = styled.div<{ $type: 'success' | 'error' }>`
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  ${({ $type }) =>
+  ${({ $type, theme }) =>
     $type === 'success'
       ? `
-    background: #DCFCE7;
-    border: 1px solid #22C55E;
-    color: #166534;
+    background: ${theme.colors.successBg};
+    border: 1px solid ${theme.colors.success};
+    color: ${theme.colors.emerald[800]};
   `
       : `
-    background: #FEE2E2;
-    border: 1px solid #EF4444;
-    color: #991B1B;
+    background: ${theme.colors.errorBg};
+    border: 1px solid ${theme.colors.error};
+    color: ${theme.colors.terracotta[800]};
   `}
 `;
 
@@ -352,8 +352,8 @@ const HiddenFileInput = styled.input`
 const ProgressContainer = styled.div`
   margin-bottom: 16px;
   padding: 16px 20px;
-  background: #F0F9FF;
-  border: 1px solid #3B82F6;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
 `;
 
@@ -367,19 +367,19 @@ const ProgressHeader = styled.div`
 const ProgressLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #1E40AF;
+  color: ${({ theme }) => theme.colors.primary[800]};
 `;
 
 const ProgressPercent = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const ProgressBarOuter = styled.div`
   width: 100%;
   height: 8px;
-  background: #DBEAFE;
+  background: ${({ theme }) => theme.colors.primary[100]};
   border-radius: 4px;
   overflow: hidden;
 `;
@@ -387,7 +387,7 @@ const ProgressBarOuter = styled.div`
 const ProgressBarInner = styled.div<{ $progress: number }>`
   width: ${({ $progress }) => $progress}%;
   height: 100%;
-  background: linear-gradient(90deg, #3B82F6 0%, #1D4ED8 100%);
+  background: ${({ theme }) => `linear-gradient(90deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[700]} 100%)`};
   border-radius: 4px;
   transition: width 200ms ease-out;
 `;

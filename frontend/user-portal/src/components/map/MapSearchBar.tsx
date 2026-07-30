@@ -202,13 +202,13 @@ const SearchForm = styled.form`
   align-items: center;
   background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   padding: 8px 12px;
   gap: 8px;
 `;
 
 const SearchIcon = styled.div`
-  color: #9ca3af;
+  color: ${({ theme }) => theme.colors.textDisabled};
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -231,8 +231,8 @@ const SearchInput = styled.input`
 const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #3b82f6;
+  border: 2px solid ${({ theme }) => theme.colors.border};
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
@@ -271,7 +271,7 @@ const ResultsList = styled.ul`
   right: 0;
   background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: ${({ theme }) => theme.shadows.lg};
   list-style: none;
   margin: 0;
   padding: 4px 0;
@@ -293,14 +293,14 @@ const ResultItem = styled.li`
 `;
 
 const ResultIcon = styled.div`
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   flex-shrink: 0;
   margin-top: 2px;
 `;
 
 const ResultText = styled.span`
   font-size: 13px;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.neutral[800]};
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -315,7 +315,7 @@ const ErrorMessage = styled.div`
   left: 0;
   right: 0;
   background: ${({ theme }) => theme.colors.errorBg};
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.error};
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;

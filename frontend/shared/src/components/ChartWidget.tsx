@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   LineChart,
   Line,
@@ -26,6 +26,7 @@ export interface ChartWidgetProps {
 }
 
 export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWidgetProps) {
+  const theme = useTheme();
   const chartType = widget.chartType || 'line';
 
   const renderChart = () => {
@@ -38,13 +39,17 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
       );
     }
 
+    // Fallback qualitative palette when the caller doesn't supply per-series
+    // colors. The brand offers four chromatic voices (lapis/emerald/gold/
+    // terracotta) for categorical use — cycled through two shades each to
+    // give six visually distinct slots for multi-series charts.
     const colors = data.series?.map(s => s.color) || [
-      '#3b82f6',
-      '#10b981',
-      '#f59e0b',
-      '#ef4444',
-      '#8b5cf6',
-      '#ec4899',
+      theme.colors.lapis[500],
+      theme.colors.emerald[500],
+      theme.colors.gold[500],
+      theme.colors.terracotta[500],
+      theme.colors.lapis[300],
+      theme.colors.emerald[300],
     ];
 
     switch (chartType) {
@@ -52,13 +57,13 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
         return (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey={data.xKey} stroke="#6b7280" fontSize={12} />
-              <YAxis stroke="#6b7280" fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
+              <XAxis dataKey={data.xKey} stroke={theme.colors.textSecondary} fontSize={12} />
+              <YAxis stroke={theme.colors.textSecondary} fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: theme.colors.background,
+                  border: `1px solid ${theme.colors.border}`,
                   borderRadius: '0.5rem',
                 }}
               />
@@ -94,13 +99,13 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey={data.xKey} stroke="#6b7280" fontSize={12} />
-              <YAxis stroke="#6b7280" fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
+              <XAxis dataKey={data.xKey} stroke={theme.colors.textSecondary} fontSize={12} />
+              <YAxis stroke={theme.colors.textSecondary} fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: theme.colors.background,
+                  border: `1px solid ${theme.colors.border}`,
                   borderRadius: '0.5rem',
                 }}
               />
@@ -146,8 +151,8 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: theme.colors.background,
+                  border: `1px solid ${theme.colors.border}`,
                   borderRadius: '0.5rem',
                 }}
               />
@@ -332,7 +337,7 @@ const ErrorText = styled.p`
 const RetryButton = styled.button`
   padding: 0.5rem 1rem;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: 0.875rem;

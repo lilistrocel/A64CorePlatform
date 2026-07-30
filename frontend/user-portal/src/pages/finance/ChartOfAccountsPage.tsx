@@ -10,7 +10,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { css, keyframes, useTheme } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import {
@@ -163,7 +163,7 @@ const FilterSelect = styled.select`
 const PrimaryButton = styled.button`
   padding: 9px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -206,14 +206,14 @@ const DangerButton = styled.button`
 const SuccessButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.success || '#10b981'};
-  border: 1px solid ${({ theme }) => theme.colors.success || '#10b981'};
+  color: ${({ theme }) => theme.colors.success};
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'}; }
+  &:hover { background: ${({ theme }) => theme.colors.successBg}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -316,7 +316,7 @@ const AccountNumber = styled.span<{ $isHeader: boolean }>`
   font-size: 12px;
   font-weight: ${({ $isHeader }) => ($isHeader ? 700 : 400)};
   color: ${({ $isHeader, theme }) => ($isHeader ? theme.colors.textPrimary : theme.colors.textSecondary)};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   min-width: 110px;
   flex-shrink: 0;
 `;
@@ -342,8 +342,8 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'control') {
       return `
-        background: ${theme.colors.infoBg || '#eff6ff'};
-        color: ${theme.colors.info || '#2196f3'};
+        background: ${theme.colors.infoBg};
+        color: ${theme.colors.info};
       `;
     }
     if ($variant === 'inactive') {
@@ -354,8 +354,8 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
     }
     // locked
     return `
-      background: ${theme.colors.warningBg || '#fffbeb'};
-      color: ${theme.colors.warning || '#f59e0b'};
+      background: ${theme.colors.warningBg};
+      color: ${theme.colors.warning};
     `;
   }}
 `;
@@ -390,7 +390,7 @@ const DetailAccountNumber = styled.div`
   font-size: 22px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -453,9 +453,9 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg || '#ecfdf5' : theme.colors.neutral[100]};
+    $active ? theme.colors.successBg : theme.colors.neutral[100]};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.success || '#10b981' : theme.colors.textDisabled};
+    $active ? theme.colors.success : theme.colors.textDisabled};
 `;
 
 const FlagRow = styled.div`
@@ -489,20 +489,20 @@ const LevelBadge = styled.span<{ $level: AccountLevel }>`
   ${({ $level, theme }) => {
     if ($level === 'active') {
       return `
-        background: ${theme.colors.successBg || '#ecfdf5'};
-        color: ${theme.colors.success || '#10b981'};
+        background: ${theme.colors.successBg};
+        color: ${theme.colors.success};
       `;
     }
     if ($level === 'title') {
       return `
-        background: ${theme.colors.infoBg || '#eff6ff'};
-        color: ${theme.colors.info || '#2196f3'};
+        background: ${theme.colors.infoBg};
+        color: ${theme.colors.info};
       `;
     }
     // drawer
     return `
-      background: ${theme.colors.warningBg || '#fffbeb'};
-      color: ${theme.colors.warning || '#f59e0b'};
+      background: ${theme.colors.warningBg};
+      color: ${theme.colors.warning};
     `;
   }}
 `;
@@ -524,7 +524,7 @@ const IfrsTagLabel = styled.span`
   display: inline-block;
   font-size: 12px;
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   padding: 2px 8px;
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.neutral[100]};
@@ -713,8 +713,8 @@ const BannerContainer = styled.div`
   gap: 12px;
   padding: 14px 18px;
   border-radius: 10px;
-  background: ${({ theme }) => theme.colors.warningBg || '#fffbeb'};
-  border: 1px solid ${({ theme }) => theme.colors.warning || '#f59e0b'};
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   margin-bottom: 20px;
 `;
 
@@ -735,7 +735,7 @@ const BannerTitle = styled.strong`
   display: block;
   font-weight: 700;
   margin-bottom: 4px;
-  color: ${({ theme }) => theme.colors.warning || '#b45309'};
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 const BannerDismiss = styled.button`
@@ -751,7 +751,7 @@ const BannerDismiss = styled.button`
   align-self: flex-start;
   &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.warning || '#f59e0b'};
+    outline: 2px solid ${({ theme }) => theme.colors.warning};
     outline-offset: 2px;
   }
 `;
@@ -759,9 +759,9 @@ const BannerDismiss = styled.button`
 // ─── Cash-flow category inline-edit cell ──────────────────────────────────────
 
 /** Subtle flash animation when a save completes successfully. */
-const flashGreen = keyframes`
+const flashGreen = (flashColor: string) => keyframes`
   0%   { background-color: transparent; }
-  30%  { background-color: #d1fae5; }
+  30%  { background-color: ${flashColor}; }
   100% { background-color: transparent; }
 `;
 
@@ -816,7 +816,7 @@ const CfSpinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.primary[200] || '#bfdbfe'};
+  border: 2px solid ${({ theme }) => theme.colors.primary[200]};
   border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -828,7 +828,7 @@ const CfSpinner = styled.span`
 `;
 
 const CfSuccessFlash = styled.span`
-  animation: ${flashGreen} 800ms ease forwards;
+  animation: ${({ theme }) => css`${flashGreen(theme.colors.emerald[100])} 800ms ease forwards`};
   border-radius: 4px;
   padding: 2px 4px;
   font-size: 14px;
@@ -1452,6 +1452,7 @@ function AccountFormModal({
 // ─── Main page component ───────────────────────────────────────────────────────
 
 export function ChartOfAccountsPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   // Reason: showSuccessToast / showErrorToast are module-level helpers, imported above.
 
@@ -1860,7 +1861,12 @@ export function ChartOfAccountsPage() {
                 {selectedAccount.isHeader && (
                   <BannerError
                     role="note"
-                    style={{ marginBottom: 20, background: '#fffbeb', color: '#92400e', borderColor: '#fde68a' }}
+                    style={{
+                      marginBottom: 20,
+                      background: theme.colors.warningBg,
+                      color: theme.colors.gold[800],
+                      borderColor: theme.colors.gold[200],
+                    }}
                   >
                     This is a header account. It is a section title and cannot be posted to directly.
                   </BannerError>

@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { salesApi } from '../../services/salesService';
 import { formatNumber, formatCurrency } from '../../utils';
 import type { SalesDashboardStats } from '../../types/sales';
@@ -39,7 +39,7 @@ const HeaderLeft = styled.div`
 const FarmingYearBadge = styled.span`
   display: inline-block;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: #0369a1;
+  color: ${({ theme }) => theme.colors.lapis[700]};
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 12px;
@@ -146,13 +146,13 @@ const OrderCode = styled.span`
   font-size: 14px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const OrderAmount = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #10B981;
+  color: ${({ theme }) => theme.colors.success};
 `;
 
 const InventoryList = styled.div`
@@ -167,7 +167,7 @@ const InventoryItem = styled.div`
   align-items: center;
   padding: 8px 12px;
   background: ${({ theme }) => theme.colors.warningBg};
-  border-left: 3px solid #F59E0B;
+  border-left: 3px solid ${({ theme }) => theme.colors.warning};
   border-radius: 4px;
   font-size: 13px;
 `;
@@ -179,7 +179,7 @@ const ProductName = styled.span`
 
 const ExpiryDate = styled.span`
   font-size: 12px;
-  color: #92400E;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const LoadingContainer = styled.div`
@@ -193,8 +193,8 @@ const LoadingContainer = styled.div`
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -212,6 +212,7 @@ const EmptyText = styled.div`
 
 export function SalesDashboardPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [stats, setStats] = useState<SalesDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -281,31 +282,31 @@ export function SalesDashboardPage() {
 
         <StatCard>
           <StatLabel>Confirmed</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.confirmedOrders)}</StatValue>
+          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.confirmedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Shipped</StatLabel>
-          <StatValue style={{ color: '#8B5CF6' }}>{formatNumber(stats.shippedOrders)}</StatValue>
+          <StatValue style={{ color: theme.colors.secondary[500] }}>{formatNumber(stats.shippedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.deliveredOrders)}</StatValue>
+          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.deliveredOrders)}</StatValue>
         </StatCard>
       </StatsGrid>
 
       <StatsGrid>
         <StatCard>
           <StatLabel>Total Revenue</StatLabel>
-          <CurrencyValue style={{ color: '#10B981' }}>
+          <CurrencyValue style={{ color: theme.colors.success }}>
             {formatCurrency(stats.totalRevenue, 'AED')}
           </CurrencyValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Pending Payments</StatLabel>
-          <CurrencyValue style={{ color: '#F59E0B' }}>
+          <CurrencyValue style={{ color: theme.colors.warning }}>
             {formatCurrency(stats.pendingPayments, 'AED')}
           </CurrencyValue>
         </StatCard>
@@ -317,7 +318,7 @@ export function SalesDashboardPage() {
 
         <StatCard>
           <StatLabel>Reserved Stock</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.reservedInventory)}</StatValue>
+          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.reservedInventory)}</StatValue>
         </StatCard>
       </StatsGrid>
 

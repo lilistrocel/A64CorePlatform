@@ -26,7 +26,7 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ExternalLink, Truck, FileText } from 'lucide-react';
 import {
   useSalesOrderV2,
@@ -88,24 +88,24 @@ const StatusBadge = styled.span<{ $status: SalesOrderStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'partly_closed': return '#fef9c3';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'partly_closed': return theme.colors.infoBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'open': return '#059669';
-      case 'partly_closed': return '#b45309';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'partly_closed': return theme.colors.lapis[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -120,7 +120,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 10px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -155,12 +155,12 @@ const GhostButton = styled.button`
 const DangerButton = styled.button`
   padding: 10px 16px;
   background: transparent;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: #fef2f2; }
+  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -169,20 +169,20 @@ const DeliveryButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: #059669;
-  color: #fff;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: #047857; }
+  &:hover { background: ${({ theme }) => theme.colors.emerald[700]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 /**
  * T-201.10 — "Generate Service Invoice" primary action button.
- * Teal/indigo palette to distinguish from the green Delivery button.
+ * Lapis (primary) to distinguish from the emerald (success) Delivery button.
  */
 const ServiceInvoiceButton = styled.button`
   display: flex;
@@ -190,7 +190,7 @@ const ServiceInvoiceButton = styled.button`
   gap: 8px;
   padding: 10px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -212,12 +212,12 @@ const TypeChip = styled.span<{ $isStock: boolean }>`
   font-weight: 600;
   background: ${({ $isStock, theme }) =>
     $isStock
-      ? (theme.colors?.primary?.light ?? '#eff6ff')
-      : '#fef3c7'};
+      ? theme.colors.primary[50]
+      : theme.colors.warningBg};
   color: ${({ $isStock, theme }) =>
     $isStock
-      ? (theme.colors?.primary?.main ?? '#1d4ed8')
-      : '#92400e'};
+      ? theme.colors.primary[500]
+      : theme.colors.gold[800]};
 `;
 
 const Card = styled.div`
@@ -315,8 +315,8 @@ const ProgressBar = styled.div`
 const ProgressFill = styled.div<{ $pct: number }>`
   height: 100%;
   width: ${({ $pct }) => Math.min(100, Math.max(0, $pct))}%;
-  background: ${({ $pct }) =>
-    $pct >= 100 ? '#059669' : $pct > 0 ? '#f59e0b' : '#e5e7eb'};
+  background: ${({ $pct, theme }) =>
+    $pct >= 100 ? theme.colors.success : $pct > 0 ? theme.colors.warning : theme.colors.neutral[200]};
   border-radius: 99px;
   transition: width 300ms ease;
 `;
@@ -423,10 +423,10 @@ const ModalCloseBtn = styled.button`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  color: #dc2626;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 14px;
   margin-bottom: 20px;
 `;
@@ -481,6 +481,7 @@ function deliveryPct(line: SalesOrderLine): number {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SalesOrderDetailPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId } = useParams<{ docId: string }>();
   const user = useAuthStore((s) => s.user);
@@ -564,7 +565,7 @@ export function SalesOrderDetailPage() {
       <Container>
         <BackLink onClick={() => navigate('/sales/orders-v2')}>← Sales Orders</BackLink>
         <Card>
-          <p style={{ color: '#6b7280' }}>Loading…</p>
+          <p style={{ color: theme.colors.textSecondary }}>Loading…</p>
         </Card>
       </Container>
     );
@@ -740,7 +741,7 @@ export function SalesOrderDetailPage() {
                 );
                 return (
                   <tr key={line.lineId}>
-                    <Td style={{ color: '#6b7280' }}>{line.lineNumber}</Td>
+                    <Td style={{ color: theme.colors.textSecondary }}>{line.lineNumber}</Td>
                     <Td>
                       <TypeChip $isStock={!isService}>
                         {isService ? 'Service' : 'Stock'}
@@ -748,29 +749,29 @@ export function SalesOrderDetailPage() {
                     </Td>
                     <Td>
                       <div style={{ fontWeight: 500 }}>{line.itemCode}</div>
-                      <div style={{ color: '#6b7280', fontSize: 12 }}>{line.itemName}</div>
+                      <div style={{ color: theme.colors.textSecondary, fontSize: 12 }}>{line.itemName}</div>
                     </Td>
-                    <Td style={{ color: '#6b7280' }}>{line.description || '—'}</Td>
+                    <Td style={{ color: theme.colors.textSecondary }}>{line.description || '—'}</Td>
                     <Td>{line.uom}</Td>
                     <TdRight>{formatAmount(line.unitPrice, so.currency)}</TdRight>
                     <TdRight>{formatAmount(line.lineGross, so.currency)}</TdRight>
                     <TdRight style={{ fontWeight: 600 }}>{line.orderedQty}</TdRight>
                     {/* Stock: show deliveredQty; Service: show — */}
-                    <TdRight style={{ color: '#059669' }}>
+                    <TdRight style={{ color: theme.colors.emerald[600] }}>
                       {isService ? '—' : line.deliveredQty}
                     </TdRight>
                     {/* Service: show invoicedQty; Stock: show — */}
-                    <TdRight style={{ color: '#059669' }}>
+                    <TdRight style={{ color: theme.colors.emerald[600] }}>
                       {isService ? line.invoicedQty : '—'}
                     </TdRight>
-                    <TdRight style={{ color: '#dc2626' }}>{line.cancelledQty}</TdRight>
-                    <TdRight style={{ fontWeight: 600, color: (isService ? serviceOpenQty : oQty) > 0 ? '#b45309' : '#6b7280' }}>
+                    <TdRight style={{ color: theme.colors.error }}>{line.cancelledQty}</TdRight>
+                    <TdRight style={{ fontWeight: 600, color: (isService ? serviceOpenQty : oQty) > 0 ? theme.colors.gold[700] : theme.colors.textSecondary }}>
                       {isService ? serviceOpenQty : oQty}
                     </TdRight>
                     <Td>
                       {isService ? (
                         <>
-                          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>
+                          <div style={{ fontSize: 11, color: theme.colors.textSecondary, marginBottom: 2 }}>
                             {line.orderedQty > 0
                               ? ((line.invoicedQty / line.orderedQty) * 100).toFixed(0)
                               : '0'}% invoiced
@@ -787,7 +788,7 @@ export function SalesOrderDetailPage() {
                         </>
                       ) : (
                         <>
-                          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>
+                          <div style={{ fontSize: 11, color: theme.colors.textSecondary, marginBottom: 2 }}>
                             {pct.toFixed(0)}% delivered
                           </div>
                           <ProgressBar>
@@ -858,7 +859,7 @@ export function SalesOrderDetailPage() {
         </div>
 
         {isClosed && so.targetDocRefs.length === 0 && (
-          <p style={{ fontSize: 12, color: '#6b7280', marginTop: 12, marginBottom: 0 }}>
+          <p style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 12, marginBottom: 0 }}>
             This SO is closed. All lines have been fulfilled via delivery documents.
           </p>
         )}

@@ -132,7 +132,7 @@ const ComboInput = styled.input<{ $hasError?: boolean; $disabled?: boolean; $has
     box-shadow: 0 0 0 3px
       ${({ $hasError, theme }) =>
         $hasError
-          ? 'rgba(239, 68, 68, 0.1)'
+          ? `${theme.colors.error}1a`
           : `${theme.colors.primary[500]}1a`};
   }
 `;
@@ -176,12 +176,12 @@ const ClearButton = styled.button`
   padding: 0;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: ${({ theme }) => `${theme.colors.error}1a`};
+    color: ${({ theme }) => theme.colors.error};
   }
 
   &:focus-visible {
-    outline: 2px solid #ef4444;
+    outline: 2px solid ${({ theme }) => theme.colors.error};
     outline-offset: 2px;
   }
 
@@ -198,8 +198,8 @@ const InputControlBadge = styled.span`
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 99px;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.info};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   white-space: nowrap;
@@ -216,7 +216,7 @@ const Dropdown = styled.ul`
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 4px 16px rgba(59, 44, 24, 0.14);
   max-height: 280px;
   overflow-y: auto;
   z-index: 9999;
@@ -260,8 +260,8 @@ const ControlBadge = styled.span`
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 99px;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.info};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   white-space: nowrap;

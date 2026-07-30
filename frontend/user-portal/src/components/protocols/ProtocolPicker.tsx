@@ -83,13 +83,13 @@ const CriticalTag = styled.span`
   text-transform: uppercase;
   letter-spacing: 0.04em;
   background: ${({ theme }) => theme.colors.warningBg};
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const Ppe = styled.div`
   margin-bottom: 8px;
   font-size: 12px;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 interface ProtocolPickerProps {

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
+import { useThemeStore } from '../../stores/theme.store';
 import { BackupCodesModal } from '../../components/auth/BackupCodesModal';
 import {
   useMFASetup,
@@ -18,6 +19,9 @@ import { queryKeys } from '../../config/react-query.config';
 export function MFASetupPage() {
   const navigate = useNavigate();
   const { user, loadUser, logout } = useAuthStore();
+  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
+  const { mode } = useThemeStore();
+  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
   const queryClient = useQueryClient();
 
   // Forced-setup: account has mfaSetupRequired=true and not yet enabled.
@@ -223,7 +227,7 @@ export function MFASetupPage() {
       <PageWrapper>
         <SetupContainer>
           <SetupCard>
-            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
             <Title>Setting Up Two-Factor Authentication</Title>
             <LoadingSpinner>
               <SpinnerIcon />
@@ -240,7 +244,7 @@ export function MFASetupPage() {
       <PageWrapper>
         <SetupContainer>
           <SetupCard>
-            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
             <Title>Setup Failed</Title>
             <ErrorBanner>{error}</ErrorBanner>
             <ButtonGroup>
@@ -262,7 +266,7 @@ export function MFASetupPage() {
       <PageWrapper>
         <SetupContainer>
           <SetupCard>
-            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
             <ExpiredIcon>⏱️</ExpiredIcon>
             <Title>Session Expired</Title>
             <Subtitle>
@@ -288,7 +292,7 @@ export function MFASetupPage() {
       <PageWrapper>
         <SetupContainer>
           <SetupCard>
-            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
             <SuccessIcon>&#10003;</SuccessIcon>
             <Title>MFA Enabled Successfully!</Title>
             <Subtitle>Your account is now protected with two-factor authentication.</Subtitle>
@@ -307,7 +311,7 @@ export function MFASetupPage() {
     <PageWrapper>
       <SetupContainer>
         <SetupCard>
-          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+          <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
           <Title>Set Up Two-Factor Authentication</Title>
           <Subtitle>Scan the QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)</Subtitle>
 
@@ -451,7 +455,7 @@ const SetupContainer = styled.div`
 const SetupCard = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   padding: 1rem;
   width: 100%;
   max-width: 480px;
@@ -573,11 +577,11 @@ const ErrorBanner = styled.div`
 
 const WarningBanner = styled.div`
   background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid #f59e0b;
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem 1rem;
   margin-bottom: 1.5rem;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   font-size: 0.875rem;
   display: flex;
   align-items: center;
@@ -593,7 +597,7 @@ const SuccessIcon = styled.div`
   height: 60px;
   margin: 0 auto 1rem;
   background: ${({ theme }) => theme.colors.success};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -606,8 +610,8 @@ const ExpiredIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: ${({ theme }) => theme.colors.warning || '#F59E0B'};
-  color: white;
+  background: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -623,13 +627,13 @@ const SessionTimer = styled.div<{ $warning: boolean }>`
   padding: 0.5rem 1rem;
   margin-bottom: 1rem;
   background: ${({ $warning, theme }) =>
-    $warning ? 'rgba(245, 158, 11, 0.1)' : theme.colors.neutral[50]};
+    $warning ? `${theme.colors.gold[500]}1A` : theme.colors.neutral[50]};
   border: 1px solid ${({ $warning, theme }) =>
-    $warning ? 'rgba(245, 158, 11, 0.3)' : theme.colors.neutral[200]};
+    $warning ? `${theme.colors.gold[500]}4D` : theme.colors.neutral[200]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: 0.8125rem;
   color: ${({ $warning, theme }) =>
-    $warning ? '#92400e' : theme.colors.textSecondary};
+    $warning ? theme.colors.gold[800] : theme.colors.textSecondary};
   transition: all 0.3s ease;
 
   @media (min-width: 640px) {
@@ -689,14 +693,14 @@ const StepNumber = styled.div`
   height: 28px;
   min-width: 28px;
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[600]} 100%);
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   font-size: 0.75rem;
-  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+  box-shadow: 0 2px 4px ${({ theme }) => theme.colors.primary[500]}4D;
 
   @media (min-width: 360px) {
     width: 32px;
@@ -743,7 +747,7 @@ const QRCodeContainer = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   margin-bottom: 0.75rem;
   border: 2px solid ${({ theme }) => theme.colors.neutral[200]};
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  box-shadow: ${({ theme }) => theme.shadows.sm};
   position: relative;
 
   @media (min-width: 360px) {
@@ -902,7 +906,7 @@ const CopySecretButton = styled.button<{ $copied?: boolean }>`
   gap: 0.375rem;
   background: ${({ $copied, theme }) =>
     $copied ? theme.colors.success : theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   /* Touch-friendly: min 44px height for accessibility */
@@ -1040,14 +1044,14 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   background: ${({ disabled, theme }) =>
     disabled ? theme.colors.neutral[300] : `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[600]} 100%)`};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   transition: all 0.2s ease;
-  box-shadow: ${({ disabled }) => disabled ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'};
+  box-shadow: ${({ disabled, theme }) => disabled ? 'none' : theme.shadows.md};
 
   @media (min-width: 360px) {
     font-size: 0.9375rem;
@@ -1065,7 +1069,7 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15), 0 3px 5px -1px rgba(0, 0, 0, 0.08);
+    box-shadow: ${({ theme }) => theme.shadows.lg};
   }
 
   &:active:not(:disabled) {
@@ -1076,8 +1080,8 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
 const ButtonSpinner = styled.span`
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2px solid ${({ theme }) => theme.colors.onAccent}4D;
+  border-top-color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
 `;

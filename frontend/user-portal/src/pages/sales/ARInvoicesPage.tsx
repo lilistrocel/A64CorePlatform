@@ -15,7 +15,7 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { FileText } from 'lucide-react';
 import { useArInvoices } from '../../hooks/queries/useArInvoices';
 import { useAuthStore } from '../../stores/auth.store';
@@ -99,23 +99,23 @@ const Chip = styled.button<{ $active: boolean }>`
     ${({ $active, theme }) =>
       $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.primary[50] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] || '#1d4ed8' : theme.colors.textSecondary};
+    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -193,6 +193,14 @@ const Tr = styled.tr`
   }
 `;
 
+// Status badge colours — A20Core document-status canon, shared across all
+// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md):
+//   draft            → neutral   (neutral[100] / textSecondary)
+//   pending_approval → gold      (warningBg / gold[700])
+//   open             → emerald   (successBg / emerald[700])
+//   partly_closed    → lapis     (infoBg / lapis[700])
+//   closed           → neutral (dark) (neutral[200] / neutral[800])
+//   cancelled        → terracotta (errorBg / terracotta[700])
 const StatusBadge = styled.span<{ $status: ARInvoiceStatus }>`
   display: inline-flex;
   align-items: center;
@@ -200,40 +208,40 @@ const StatusBadge = styled.span<{ $status: ARInvoiceStatus }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
       case 'draft':
-        return '#f3f4f6';
+        return theme.colors.neutral[100];
       case 'pending_approval':
-        return '#fef3c7';
+        return theme.colors.warningBg;
       case 'open':
-        return '#ecfdf5';
+        return theme.colors.successBg;
       case 'partly_closed':
-        return '#eff6ff';
+        return theme.colors.infoBg;
       case 'closed':
-        return '#ede9fe';
+        return theme.colors.neutral[200];
       case 'cancelled':
-        return '#fef2f2';
+        return theme.colors.errorBg;
       default:
-        return '#f3f4f6';
+        return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
       case 'draft':
-        return '#6b7280';
+        return theme.colors.textSecondary;
       case 'pending_approval':
-        return '#92400e';
+        return theme.colors.gold[700];
       case 'open':
-        return '#059669';
+        return theme.colors.emerald[700];
       case 'partly_closed':
-        return '#2563eb';
+        return theme.colors.lapis[700];
       case 'closed':
-        return '#5b21b6';
+        return theme.colors.neutral[800];
       case 'cancelled':
-        return '#dc2626';
+        return theme.colors.terracotta[700];
       default:
-        return '#6b7280';
+        return theme.colors.textSecondary;
     }
   }};
 `;
@@ -267,9 +275,9 @@ const PaginationButtons = styled.div`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -333,6 +341,7 @@ const PAGE_SIZE = 20;
 
 export function ARInvoicesPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
 
@@ -491,7 +500,7 @@ export function ARInvoicesPage() {
                       style={{
                         display: 'block',
                         fontSize: '11px',
-                        color: '#6b7280',
+                        color: theme.colors.textSecondary,
                         marginTop: '2px',
                       }}
                     >

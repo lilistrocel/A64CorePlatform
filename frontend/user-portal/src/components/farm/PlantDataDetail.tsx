@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import type { PlantDataEnhanced } from '../../types/farm';
 import { formatFarmType, getFarmTypeColor } from '../../services/plantDataEnhancedApi';
 import { useAuthStore } from '../../stores/auth.store';
@@ -48,7 +48,7 @@ const Overlay = styled.div`
 const Modal = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.xl};
   width: 100%;
   max-width: 900px;
   max-height: 90vh;
@@ -114,28 +114,28 @@ const ActionButton = styled.button<{ $variant?: 'edit' | 'clone' | 'delete' | 'c
   ${({ $variant, theme }) => {
     if ($variant === 'edit') {
       return `
-        background: #F59E0B;
-        color: white;
+        background: ${theme.colors.warning};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #D97706;
+          background: ${theme.colors.gold[600]};
         }
       `;
     }
     if ($variant === 'clone') {
       return `
-        background: #10B981;
-        color: white;
+        background: ${theme.colors.success};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #059669;
+          background: ${theme.colors.emerald[600]};
         }
       `;
     }
     if ($variant === 'delete') {
       return `
-        background: #EF4444;
-        color: white;
+        background: ${theme.colors.error};
+        color: ${theme.colors.onAccent};
         &:hover {
-          background: #DC2626;
+          background: ${theme.colors.terracotta[600]};
         }
       `;
     }
@@ -244,7 +244,7 @@ const Badge = styled.span<{ $color?: string }>`
   font-size: 12px;
   font-weight: 500;
   background: ${({ $color, theme }) => $color || theme.colors.neutral[300]};
-  color: ${({ $color, theme }) => ($color ? 'white' : theme.colors.textSecondary)};
+  color: ${({ $color, theme }) => ($color ? theme.colors.onAccent : theme.colors.textSecondary)};
 `;
 
 const Tag = styled.span`
@@ -311,7 +311,7 @@ const FrequencyBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: #1d4ed8;
+  color: ${({ theme }) => theme.colors.primary[700]};
 `;
 
 const IngredientRow = styled.div`
@@ -319,7 +319,7 @@ const IngredientRow = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   font-size: 13px;
 
   &:last-child {
@@ -328,11 +328,11 @@ const IngredientRow = styled.div`
 `;
 
 const IngredientName = styled.span`
-  color: #374151;
+  color: ${({ theme }) => theme.colors.neutral[800]};
 `;
 
 const IngredientDosage = styled.span`
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
 `;
 
@@ -357,12 +357,12 @@ const StageBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
   background: ${({ theme }) => theme.colors.successBg};
-  color: #065f46;
+  color: ${({ theme }) => theme.colors.emerald[700]};
 `;
 
 const DayRange = styled.span`
   font-size: 12px;
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 // ============================================================================
@@ -370,6 +370,7 @@ const DayRange = styled.span`
 // ============================================================================
 
 export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onSaved }: PlantDataDetailProps) {
+  const theme = useTheme();
   const { user: currentUser } = useAuthStore();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     basic: true, // Open by default
@@ -689,7 +690,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                       <FieldLabel>Name</FieldLabel>
                       <FieldValue>
                         <strong>{disease.name}</strong>
-                        {disease.severity && <Badge $color="#EF4444">{disease.severity}</Badge>}
+                        {disease.severity && <Badge $color={theme.colors.error}>{disease.severity}</Badge>}
                       </FieldValue>
                     </Field>
                     {disease.symptoms && (
@@ -780,7 +781,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                       <FieldValue>
                         <strong>{grade.gradeName}</strong>
                         {grade.priceMultiplier && (
-                          <Badge $color="#10B981">{grade.priceMultiplier}x price</Badge>
+                          <Badge $color={theme.colors.success}>{grade.priceMultiplier}x price</Badge>
                         )}
                       </FieldValue>
                     </Field>
@@ -896,7 +897,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                         {' '}
                         Click{' '}
                         <button
-                          style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: 14, textDecoration: 'underline', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: theme.colors.primary[500], cursor: 'pointer', fontSize: 14, textDecoration: 'underline', padding: 0 }}
                           onClick={() => setShowFertigationEditor(true)}
                         >
                           Create Fertigation Schedule
@@ -924,7 +925,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                           <CardTitle>{card.cardName}</CardTitle>
                           <StageBadge>{card.growthStage}</StageBadge>
                           <DayRange>Day {card.dayStart} - {card.dayEnd}</DayRange>
-                          {!card.isActive && <Badge $color="#EF4444">Inactive</Badge>}
+                          {!card.isActive && <Badge $color={theme.colors.error}>Inactive</Badge>}
                         </CardHeader>
                         {card.rules.map((rule, ruleIdx) => (
                           <RuleCard key={ruleIdx}>

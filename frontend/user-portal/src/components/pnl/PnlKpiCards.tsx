@@ -5,7 +5,8 @@
  * Shows: Total Revenue, Gross Profit, Operating Profit, Total Orders, Kg Sold, AR Outstanding.
  */
 
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
+import type { Theme } from '@a64core/shared';
 import type { PnlSummary } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,18 +102,20 @@ interface ValueProps {
   $color?: 'positive' | 'negative' | 'neutral' | 'warning';
 }
 
-const VALUE_COLORS = {
-  positive: '#10B981',
-  negative: '#EF4444',
-  neutral: '#212121',
-  warning: '#F59E0B',
-};
+// Positive/negative is the debit-credit polarity signal for KPI figures —
+// deepened 600s (not the 500 semantic base) for legibility at small sizes
+// against Fresco Cream, per the brand's financial-figure contrast rule.
+const valueColors = (theme: Theme) => ({
+  positive: theme.colors.emerald[600],
+  negative: theme.colors.terracotta[600],
+  neutral: theme.colors.textPrimary,
+  warning: theme.colors.gold[600],
+});
 
 const CardValue = styled.div<ValueProps>`
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ $color = 'neutral', theme }) =>
-    $color === 'neutral' ? theme.colors.textPrimary : VALUE_COLORS[$color]};
+  color: ${({ $color = 'neutral', theme }) => valueColors(theme)[$color]};
   line-height: ${({ theme }) => theme.typography.lineHeight.tight};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
   word-break: break-word;
@@ -150,6 +153,7 @@ function SkeletonCard() {
 }
 
 export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCardsProps) {
+  const theme = useTheme();
   if (isLoading) {
     return (
       <Grid>
@@ -167,15 +171,15 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
           style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px' }}
           role="alert"
         >
-          <p style={{ marginBottom: '16px', color: '#EF4444' }}>
+          <p style={{ marginBottom: '16px', color: theme.colors.error }}>
             Failed to load KPI summary.
           </p>
           <button
             onClick={onRetry}
             style={{
               padding: '8px 16px',
-              background: '#2196f3',
-              color: 'white',
+              background: theme.colors.primary[500],
+              color: theme.colors.onAccent,
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -247,7 +251,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
         <CardSub>
           {formatNumber(orderCounts.paid)} paid · {formatNumber(orderCounts.pending)} pending
           {orderCounts.overdue > 0 && (
-            <span style={{ color: '#EF4444' }}> · {formatNumber(orderCounts.overdue)} overdue</span>
+            <span style={{ color: theme.colors.error }}> · {formatNumber(orderCounts.overdue)} overdue</span>
           )}
         </CardSub>
       </Card>

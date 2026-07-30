@@ -72,8 +72,8 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.colors.primary[500]}1a`};
   }
 
   @media (max-width: 768px) {
@@ -83,8 +83,8 @@ const SearchInput = styled.input`
 
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -97,7 +97,7 @@ const CreateButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 
   &:disabled {
@@ -131,9 +131,9 @@ const FilterLabel = styled.span`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -141,7 +141,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
   }
 `;
 
@@ -156,19 +156,22 @@ const FilterSelect = styled.select`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23616161' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: ${({ theme }) =>
+    `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='${encodeURIComponent(
+      theme.colors.neutral[700]
+    )}' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`};
   background-repeat: no-repeat;
   background-position: right 10px center;
   min-width: 150px;
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.colors.primary[500]}1a`};
   }
 
   &:hover {
-    border-color: #bdbdbd;
+    border-color: ${({ theme }) => theme.colors.neutral[400]};
   }
 `;
 
@@ -190,7 +193,7 @@ const ViewButton = styled.button<{ $active: boolean }>`
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  box-shadow: ${({ $active }) => ($active ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none')};
+  box-shadow: ${({ $active, theme }) => ($active ? theme.shadows.sm : 'none')};
 
   &:hover {
     background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
@@ -223,7 +226,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: #3B82F6;
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -235,9 +238,9 @@ const Spinner = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -310,8 +313,8 @@ const EmptyStateMessage = styled.p`
 
 const ClearSearchButton = styled.button`
   padding: 10px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -320,14 +323,14 @@ const ClearSearchButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
 const CreateActionButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
-  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -336,15 +339,15 @@ const CreateActionButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
 const ClearFiltersButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: #EF4444;
-  border: 1px solid #EF4444;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -353,7 +356,7 @@ const ClearFiltersButton = styled.button`
   margin-left: auto;
 
   &:hover {
-    background: #FEE2E2;
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 
   @media (max-width: 768px) {

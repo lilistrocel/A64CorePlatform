@@ -70,12 +70,12 @@ const Chip = styled.span<{ $tone?: 'active' | 'draft' | 'retired' }>`
   font-weight: 700;
   background: ${({ $tone, theme }) =>
     $tone === 'active'
-      ? '#f0fdf4'
+      ? theme.colors.successBg
       : $tone === 'draft'
       ? theme.colors.warningBg
       : theme.colors.surface};
-  color: ${({ $tone }) =>
-    $tone === 'active' ? '#15803d' : $tone === 'draft' ? '#92400e' : '#616161'};
+  color: ${({ $tone, theme }) =>
+    $tone === 'active' ? theme.colors.emerald[700] : $tone === 'draft' ? theme.colors.gold[800] : theme.colors.neutral[700]};
 `;
 
 const Section = styled.section`
@@ -159,7 +159,7 @@ const StepMeta = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.gold[800]};
   margin-left: 8px;
 `;
 

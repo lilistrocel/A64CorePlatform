@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme, type DefaultTheme } from 'styled-components';
 import {
   Leaf,
   Send,
@@ -61,21 +61,21 @@ const FARM_QUICK_ACTIONS = [
 // HELPER FUNCTIONS
 // ============================================================================
 
-function getRiskIcon(level: string): React.ReactNode {
+function getRiskIcon(level: string, theme: DefaultTheme): React.ReactNode {
   switch (level) {
-    case 'low': return <ShieldCheck size={16} color="#10B981" />;
-    case 'medium': return <Shield size={16} color="#F59E0B" />;
-    case 'high': return <ShieldAlert size={16} color="#EF4444" />;
+    case 'low': return <ShieldCheck size={16} color={theme.colors.success} />;
+    case 'medium': return <Shield size={16} color={theme.colors.warning} />;
+    case 'high': return <ShieldAlert size={16} color={theme.colors.error} />;
     default: return <Shield size={16} />;
   }
 }
 
-function getRiskColor(level: string): string {
+function getRiskColor(level: string, theme: DefaultTheme): string {
   switch (level) {
-    case 'low': return '#10B981';
-    case 'medium': return '#F59E0B';
-    case 'high': return '#EF4444';
-    default: return '#6B7280';
+    case 'low': return theme.colors.success;
+    case 'medium': return theme.colors.warning;
+    case 'high': return theme.colors.error;
+    default: return theme.colors.textSecondary;
   }
 }
 
@@ -98,6 +98,7 @@ interface ConfirmationCardProps {
 }
 
 function ConfirmationCard({ action, onConfirm, confirming }: ConfirmationCardProps) {
+  const theme = useTheme();
   const [timeLeft, setTimeLeft] = useState(getExpiryRemaining(action.expires_at));
 
   useEffect(() => {
@@ -108,9 +109,9 @@ function ConfirmationCard({ action, onConfirm, confirming }: ConfirmationCardPro
   }, [action.expires_at]);
 
   return (
-    <ActionCard $riskColor={getRiskColor(action.risk_level)}>
+    <ActionCard $riskColor={getRiskColor(action.risk_level, theme)}>
       <ActionHeader>
-        {getRiskIcon(action.risk_level)}
+        {getRiskIcon(action.risk_level, theme)}
         <ActionTitle>Confirmation Required</ActionTitle>
         <ExpiryBadge>{timeLeft}</ExpiryBadge>
       </ActionHeader>
@@ -138,6 +139,7 @@ function ConfirmationCard({ action, onConfirm, confirming }: ConfirmationCardPro
 // ============================================================================
 
 export function AIAnalyticsChat({ farms, scope, onScopeChange }: AIAnalyticsChatProps) {
+  const theme = useTheme();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -192,7 +194,7 @@ export function AIAnalyticsChat({ farms, scope, onScopeChange }: AIAnalyticsChat
       {/* Header */}
       <ChatHeader>
         <HeaderLeft>
-          <Leaf size={20} color="#10B981" aria-hidden="true" />
+          <Leaf size={20} color={theme.colors.success} aria-hidden="true" />
           <div>
             <HeaderTitle>AI Farm Monitor</HeaderTitle>
             <HeaderScope>
@@ -231,7 +233,7 @@ export function AIAnalyticsChat({ farms, scope, onScopeChange }: AIAnalyticsChat
       <MessagesContainer role="log" aria-live="polite" aria-label="Chat messages">
         {messages.length === 0 && (
           <WelcomeMessage>
-            <MessageCircle size={36} color="#10B981" aria-hidden="true" />
+            <MessageCircle size={36} color={theme.colors.success} aria-hidden="true" />
             <WelcomeTitle>AI Farm Monitor</WelcomeTitle>
             <WelcomeText>
               {scope.level === 'global'
@@ -358,7 +360,7 @@ const ChatContainer = styled.div`
   height: 100%;
   background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   overflow: hidden;
 `;
 
@@ -397,7 +399,7 @@ const HeaderScope = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #10B981;
+  color: ${({ theme }) => theme.colors.success};
   font-weight: 500;
 `;
 
@@ -474,7 +476,7 @@ const MessagesContainer = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
+    background: ${({ theme }) => theme.colors.border};
     border-radius: 3px;
   }
 `;
@@ -544,8 +546,8 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser, theme }) => ($isUser ? '#10B981' : theme.colors.neutral[200])};
-  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $isUser, theme }) => ($isUser ? theme.colors.success : theme.colors.neutral[200])};
+  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onAccent : theme.colors.textPrimary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -604,7 +606,7 @@ const ExpiryBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const ActionDescription = styled.div`
@@ -621,8 +623,8 @@ const ActionButtons = styled.div`
 const ApproveButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: #10B981;
-  color: white;
+  background: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -630,7 +632,7 @@ const ApproveButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.emerald[600]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -731,7 +733,7 @@ const InputContainer = styled.div`
 const ChatInput = styled.input`
   flex: 1;
   padding: 10px 16px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 22px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -740,8 +742,8 @@ const ChatInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #10B981;
-    box-shadow: 0 0 0 2px #10B98125;
+    border-color: ${({ theme }) => theme.colors.success};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.success}25;
     background: ${({ theme }) => theme.colors.background};
   }
 
@@ -754,7 +756,7 @@ const SendButton = styled.button`
   height: 42px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.success};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   cursor: pointer;
   display: flex;
@@ -763,6 +765,6 @@ const SendButton = styled.button`
   flex-shrink: 0;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.emerald[600]}; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;

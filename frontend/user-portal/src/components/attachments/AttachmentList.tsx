@@ -99,7 +99,7 @@ const HelpText = styled.p`
 const DropZone = styled.div<{ $active: boolean; $hasError: boolean }>`
   border: 2px dashed ${({ theme, $active, $hasError }) =>
     $hasError
-      ? (theme.colors.error ?? '#ef4444')
+      ? theme.colors.error
       : $active
         ? theme.colors.primary[500]
         : theme.colors.neutral[300]};
@@ -108,13 +108,13 @@ const DropZone = styled.div<{ $active: boolean; $hasError: boolean }>`
   text-align: center;
   cursor: pointer;
   background: ${({ theme, $active }) =>
-    $active ? theme.colors.primary[50] ?? '#eff6ff' : theme.colors.surface};
+    $active ? theme.colors.primary[50] : theme.colors.surface};
   transition: border-color 150ms ease, background 150ms ease;
   user-select: none;
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50] ?? '#eff6ff'};
+    background: ${({ theme }) => theme.colors.primary[50]};
   }
 `;
 
@@ -168,7 +168,7 @@ const DescriptionInput = styled.input`
   font-size: 13px;
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background ?? theme.colors.surface};
+  background: ${({ theme }) => theme.colors.background};
   box-sizing: border-box;
   margin-bottom: 10px;
   &:focus {
@@ -188,7 +188,7 @@ const PendingActions = styled.div`
 const UploadButton = styled.button`
   padding: 7px 16px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -213,7 +213,7 @@ const CancelPendingButton = styled.button`
 
 const WarnText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   margin-bottom: 8px;
   line-height: 1.4;
 `;
@@ -236,8 +236,8 @@ const ProgressFill = styled.div<{ $percent: number }>`
     45deg,
     ${({ theme }) => theme.colors.primary[500]},
     ${({ theme }) => theme.colors.primary[500]} 10px,
-    ${({ theme }) => theme.colors.primary[400] ?? '#60a5fa'} 10px,
-    ${({ theme }) => theme.colors.primary[400] ?? '#60a5fa'} 20px
+    ${({ theme }) => theme.colors.primary[400]} 10px,
+    ${({ theme }) => theme.colors.primary[400]} 20px
   );
   background-size: 40px 40px;
   animation: ${progressStripe} 600ms linear infinite;
@@ -314,8 +314,8 @@ const DeleteButton = styled.button`
   align-items: center;
   transition: color 150ms ease, background 150ms ease;
   &:hover {
-    color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
-    background: #fee2e2;
+    color: ${({ theme }) => theme.colors.error};
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 `;
 
@@ -327,10 +327,10 @@ const EmptyState = styled.div`
 
 const InlineError = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 8px;
   padding: 8px 12px;
-  background: #fee2e2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border-radius: 6px;
   line-height: 1.4;
 `;
@@ -340,7 +340,8 @@ const InlineError = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
+  background: rgba(14, 19, 48, 0.5);
   z-index: 1100;
   display: flex;
   align-items: center;
@@ -414,15 +415,15 @@ const GhostButton = styled.button`
 
 const DangerButton = styled.button`
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.error ?? '#ef4444'};
-  color: white;
+  background: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: #dc2626; }
+  &:hover { background: ${({ theme }) => theme.colors.terracotta[700]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 

@@ -185,7 +185,7 @@ const SummaryLabel = styled.span`
 const SummaryValue = styled.span`
   font-size: 24px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -272,7 +272,7 @@ const SLTd = styled.td`
 const SLTdMono = styled.td`
   padding: 11px 14px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -291,10 +291,11 @@ interface BalanceTdProps {
 const BalanceTd = styled.td<BalanceTdProps>`
   padding: 11px 14px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   font-weight: 600;
-  color: ${({ $negative }) => ($negative ? '#dc2626' : '#166534')};
+  /* Debit/credit polarity — deepened 600s for legibility at this size. */
+  color: ${({ $negative, theme }) => ($negative ? theme.colors.terracotta[600] : theme.colors.emerald[600])};
 `;
 
 const ViewEntriesLink = styled.button`
@@ -337,8 +338,8 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -347,7 +348,7 @@ const ErrorBanner = styled.div`
 const VendorCodeCell = styled.td`
   padding: 11px 14px;
   font-size: 12px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
 `;

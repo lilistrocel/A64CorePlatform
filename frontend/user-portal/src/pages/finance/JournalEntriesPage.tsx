@@ -11,7 +11,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useJournalEntries, useJournalEntry, useReverseJournalEntry } from '../../hooks/queries/useJournalEntries';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { useAuthStore } from '../../stores/auth.store';
@@ -150,7 +150,7 @@ const ExpandedRow = styled.tr`
 
 const ExpandedCell = styled.td`
   padding: 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.primary[200] || '#bfdbfe'};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.primary[200]};
 `;
 
 const LinesContainer = styled.div`
@@ -211,14 +211,14 @@ const StatusBadge = styled.span<{ $status: string }>`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
-  background: ${({ $status }) =>
-    $status === 'posted' ? '#d1fae5' :
-    $status === 'void'   ? '#fee2e2' :
-    '#f3f4f6'};
-  color: ${({ $status }) =>
-    $status === 'posted' ? '#065f46' :
-    $status === 'void'   ? '#991b1b' :
-    '#6b7280'};
+  background: ${({ $status, theme }) =>
+    $status === 'posted' ? theme.colors.successBg :
+    $status === 'void'   ? theme.colors.errorBg :
+    theme.colors.neutral[100]};
+  color: ${({ $status, theme }) =>
+    $status === 'posted' ? theme.colors.success :
+    $status === 'void'   ? theme.colors.error :
+    theme.colors.textSecondary};
 `;
 
 const DescriptionCell = styled.span`
@@ -244,8 +244,8 @@ const Tooltip = styled.span`
     top: calc(100% + 4px);
     left: 0;
     z-index: 1050;
-    background: #1f2937;
-    color: white;
+    background: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.canvas};
     border-radius: 6px;
     padding: 6px 10px;
     font-size: 12px;
@@ -323,9 +323,9 @@ const ReversalBadge = styled.span`
   border-radius: 99px;
   font-size: 10px;
   font-weight: 700;
-  background: #f0f4ff;
-  color: #3b4fd9;
-  border: 1px solid #c7d2fe;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[700]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
   margin-left: 6px;
   vertical-align: middle;
 `;
@@ -334,7 +334,7 @@ const SourceDocLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.primary[600]};
   font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
@@ -345,9 +345,9 @@ const SourceDocLink = styled.button`
 
 const ReverseButton = styled.button`
   padding: 4px 10px;
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -355,7 +355,7 @@ const ReverseButton = styled.button`
   white-space: nowrap;
   transition: background 150ms ease;
   &:hover {
-    background: #fee2e2;
+    background: ${({ theme }) => theme.colors.terracotta[100]};
   }
   &:disabled {
     opacity: 0.4;
@@ -381,7 +381,7 @@ const ModalCard = styled.div`
   padding: 28px 32px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 20px 40px rgba(59, 44, 24, 0.18);
   position: relative;
 `;
 
@@ -429,12 +429,12 @@ const ModalCharCount = styled.div<{ $warn: boolean }>`
   font-size: 11px;
   text-align: right;
   margin-top: 4px;
-  color: ${({ $warn }) => ($warn ? '#ef4444' : '#9ca3af')};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.textDisabled)};
 `;
 
 const ModalErrorText = styled.div`
   font-size: 12px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 6px;
 `;
 
@@ -459,21 +459,21 @@ const ModalCancelButton = styled.button`
 
 const ModalConfirmButton = styled.button`
   padding: 9px 20px;
-  background: #dc2626;
-  color: white;
+  background: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: #b91c1c; }
+  &:hover { background: ${({ theme }) => theme.colors.terracotta[700]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const NewJEButton = styled.button`
   padding: 10px 18px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -557,12 +557,13 @@ interface ExpandedLinesProps {
 }
 
 function ExpandedLines({ jeId, organizationId, accountMap }: ExpandedLinesProps) {
+  const theme = useTheme();
   const { data: detail, isLoading, isError } = useJournalEntry(jeId, organizationId);
 
   if (isLoading) {
     return (
       <LinesContainer>
-        <div style={{ fontSize: 13, color: '#6b7280' }}>Loading lines...</div>
+        <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Loading lines...</div>
       </LinesContainer>
     );
   }
@@ -570,7 +571,7 @@ function ExpandedLines({ jeId, organizationId, accountMap }: ExpandedLinesProps)
   if (isError || !detail?.lines) {
     return (
       <LinesContainer>
-        <div style={{ fontSize: 13, color: '#ef4444' }}>Failed to load journal entry lines.</div>
+        <div style={{ fontSize: 13, color: theme.colors.error }}>Failed to load journal entry lines.</div>
       </LinesContainer>
     );
   }
@@ -605,14 +606,14 @@ function ExpandedLines({ jeId, organizationId, accountMap }: ExpandedLinesProps)
               <tr key={line.jeLineId}>
                 <LinesTd>{line.lineNumber}</LinesTd>
                 <LinesTd style={{ fontWeight: 500 }}>{accountLabel}</LinesTd>
-                <LinesTd style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                <LinesTd style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono }}>
                   {line.debit ? formatCurrency(line.debit) : ''}
                 </LinesTd>
-                <LinesTd style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                <LinesTd style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono }}>
                   {line.credit ? formatCurrency(line.credit) : ''}
                 </LinesTd>
-                <LinesTd style={{ color: '#6b7280' }}>{line.description ?? '—'}</LinesTd>
-                <LinesTd style={{ color: '#6b7280' }}>{line.costCenterId ?? '—'}</LinesTd>
+                <LinesTd style={{ color: theme.colors.textSecondary }}>{line.description ?? '—'}</LinesTd>
+                <LinesTd style={{ color: theme.colors.textSecondary }}>{line.costCenterId ?? '—'}</LinesTd>
               </tr>
             );
           })}
@@ -622,10 +623,10 @@ function ExpandedLines({ jeId, organizationId, accountMap }: ExpandedLinesProps)
             <LinesTd colSpan={2} style={{ textAlign: 'right', fontSize: 12, fontWeight: 600 }}>
               Totals
             </LinesTd>
-            <LinesTd style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+            <LinesTd style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono }}>
               {formatCurrency(totalDr)}
             </LinesTd>
-            <LinesTd style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+            <LinesTd style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono }}>
               {formatCurrency(totalCr)}
             </LinesTd>
             <LinesTd colSpan={2} />
@@ -646,6 +647,7 @@ interface ReversalModalState {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function JournalEntriesPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   // Reason: showSuccessToast is a module-level helper, imported directly above.
   // The previous `const { showSuccessToast } = useToastStore()` returned
@@ -938,10 +940,10 @@ export function JournalEntriesPage() {
                             <span>{je.description}</span>
                           </Tooltip>
                         ) : (
-                          <span style={{ color: '#9ca3af', fontSize: 13 }}>—</span>
+                          <span style={{ color: theme.colors.textDisabled, fontSize: 13 }}>—</span>
                         )}
                       </Td>
-                      <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
+                      <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontWeight: 600 }}>
                         {formatCurrency(je.totalDebit)}
                       </Td>
                       <Td>
@@ -960,7 +962,7 @@ export function JournalEntriesPage() {
                           </StatusBadge>
                         )}
                       </Td>
-                      <Td style={{ fontSize: 12, color: '#6b7280' }}>
+                      <Td style={{ fontSize: 12, color: theme.colors.textSecondary }}>
                         {formatDateTime(je.postedAt)}
                       </Td>
                       {/* Actions column — Reverse Entry for posted, not-yet-reversed JEs */}

@@ -18,7 +18,7 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useArCreditNotes } from '../../hooks/queries/useArCreditNotes';
 import { useAuthStore } from '../../stores/auth.store';
 import type { ARCreditNoteStatus, ARCreditNoteListItem } from '../../services/salesApi';
@@ -50,7 +50,7 @@ const Title = styled.h1`
 const PrimaryButton = styled.button`
   padding: 10px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -165,6 +165,13 @@ const TdRight = styled(Td)`
   font-variant-numeric: tabular-nums;
 `;
 
+// Status badge colours — A20Core document-status canon, shared across all
+// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md):
+//   draft         → neutral   (neutral[100] / textSecondary)
+//   open          → emerald   (successBg / emerald[700])
+//   partly_closed → lapis     (infoBg / lapis[700])
+//   closed        → neutral (dark) (neutral[200] / neutral[800])
+//   cancelled     → terracotta (errorBg / terracotta[700])
 const StatusBadge = styled.span<{ $status: ARCreditNoteStatus }>`
   display: inline-flex;
   align-items: center;
@@ -172,24 +179,24 @@ const StatusBadge = styled.span<{ $status: ARCreditNoteStatus }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'partly_closed': return '#eff6ff';
-      case 'closed': return '#ede9fe';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'partly_closed': return theme.colors.infoBg;
+      case 'closed': return theme.colors.neutral[200];
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#6b7280';
-      case 'open': return '#059669';
-      case 'partly_closed': return '#2563eb';
-      case 'closed': return '#5b21b6';
-      case 'cancelled': return '#dc2626';
-      default: return '#6b7280';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'partly_closed': return theme.colors.lapis[700];
+      case 'closed': return theme.colors.neutral[800];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -217,7 +224,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? 'white' : theme.colors.textPrimary};
+    $active ? theme.colors.onAccent : theme.colors.textPrimary};
   font-size: 13px;
   cursor: pointer;
   &:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -235,7 +242,7 @@ const LoadingState = styled(EmptyState)``;
 const ErrorState = styled.div`
   text-align: center;
   padding: 40px 20px;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 14px;
 `;
 
@@ -307,6 +314,7 @@ function labelStatus(s: ARCreditNoteStatus): string {
 
 export function ArCreditNotesPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
 
@@ -466,12 +474,12 @@ export function ArCreditNotesPage() {
                       <Td style={{ fontWeight: 600 }}>{item.docNumber}</Td>
                       <Td>{formatDate(item.docDate)}</Td>
                       <Td>{item.customerName}</Td>
-                      <Td style={{ color: item.baseReturnDocRef ? '#2563eb' : '#6b7280' }}>
+                      <Td style={{ color: item.baseReturnDocRef ? theme.colors.primary[600] : theme.colors.textSecondary }}>
                         {getSourceLabel(item)}
                       </Td>
                       <TdRight>
                         {formatAmount(item.totals.gross)}{' '}
-                        <span style={{ color: '#9ca3af', fontSize: 11 }}>AED</span>
+                        <span style={{ color: theme.colors.textDisabled, fontSize: 11 }}>AED</span>
                       </TdRight>
                       <Td>
                         <StatusBadge $status={item.status}>

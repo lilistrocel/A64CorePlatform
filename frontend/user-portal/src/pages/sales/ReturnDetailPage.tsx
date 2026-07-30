@@ -10,10 +10,11 @@
  *               Cancel (super_admin only, OPEN→CANCELLED)
  *   cancelled → read-only
  *
- * Status badge colours:
- *   draft     → gray  (#f3f4f6 / #374151)
- *   open      → green (#ecfdf5 / #065f46)
- *   cancelled → red   (#fef2f2 / #991b1b)
+ * Status badge colours (A20Core tokens — shared vocabulary across all
+ * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
+ *   draft     → neutral   (neutral[100] / textSecondary)
+ *   open      → emerald   (successBg / emerald[700])
+ *   cancelled → terracotta (errorBg / terracotta[700])
  *
  * Doc-chain card:
  *   baseDocRef   — the RR (if from-RR path) or DN (if from-DN path)
@@ -27,7 +28,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { ExternalLink } from 'lucide-react';
 import { useReturn, useTransitionReturn, useDeleteReturn } from '../../hooks/queries/useReturns';
 import { useAuthStore } from '../../stores/auth.store';
@@ -88,20 +89,20 @@ const StatusBadge = styled.span<{ $status: ReturnNoteStatus }>`
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $status }) => {
+  background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#f3f4f6';
-      case 'open': return '#ecfdf5';
-      case 'cancelled': return '#fef2f2';
-      default: return '#f3f4f6';
+      case 'draft': return theme.colors.neutral[100];
+      case 'open': return theme.colors.successBg;
+      case 'cancelled': return theme.colors.errorBg;
+      default: return theme.colors.neutral[100];
     }
   }};
-  color: ${({ $status }) => {
+  color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'draft': return '#374151';
-      case 'open': return '#065f46';
-      case 'cancelled': return '#991b1b';
-      default: return '#374151';
+      case 'draft': return theme.colors.textSecondary;
+      case 'open': return theme.colors.emerald[700];
+      case 'cancelled': return theme.colors.terracotta[700];
+      default: return theme.colors.textSecondary;
     }
   }};
 `;
@@ -115,7 +116,7 @@ const ActionBar = styled.div`
 const PrimaryButton = styled.button`
   padding: 9px 20px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -140,14 +141,14 @@ const SecondaryButton = styled.button`
 
 const DangerButton = styled.button`
   padding: 9px 20px;
-  border: 1px solid #fecaca;
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 8px;
-  background: #fef2f2;
-  color: #dc2626;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.terracotta[600]};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { background: #fee2e2; }
+  &:hover { background: ${({ theme }) => theme.colors.terracotta[100]}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
@@ -166,10 +167,10 @@ const GhostButton = styled.button`
 const ActionError = styled.div`
   margin-top: 12px;
   padding: 10px 14px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
   border-radius: 6px;
-  color: #991b1b;
+  color: ${({ theme }) => theme.colors.terracotta[700]};
   font-size: 13px;
 `;
 
@@ -356,8 +357,8 @@ const TooltipText = styled.span`
   visibility: hidden;
   opacity: 0;
   width: 230px;
-  background: #1f2937;
-  color: #f9fafb;
+  background: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.background};
   text-align: center;
   border-radius: 6px;
   padding: 6px 10px;
@@ -376,7 +377,7 @@ const TooltipText = styled.span`
     left: 50%;
     transform: translateX(-50%);
     border: 5px solid transparent;
-    border-top-color: #1f2937;
+    border-top-color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -416,6 +417,7 @@ function resolveDocRoute(ref: DocumentLinkRef): string | null {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ReturnDetailPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { docId } = useParams<{ docId: string }>();
   const user = useAuthStore((s) => s.user);
@@ -473,7 +475,7 @@ export function ReturnDetailPage() {
   };
 
   if (isLoading) return <Container>Loading...</Container>;
-  if (error || !rtn) return <Container style={{ color: '#dc2626' }}>Return Note not found.</Container>;
+  if (error || !rtn) return <Container style={{ color: theme.colors.error }}>Return Note not found.</Container>;
 
   const baseRef = rtn.baseDocRef as DocumentLinkRef | null;
   const targetRefs = (rtn.targetDocRefs ?? []) as DocumentLinkRef[];
@@ -592,10 +594,10 @@ export function ReturnDetailPage() {
           <tbody>
             {rtn.lines.map((line: ReturnNoteLine) => (
               <tr key={line.lineId}>
-                <Td style={{ color: '#9ca3af', width: 32 }}>{line.lineNumber}</Td>
+                <Td style={{ color: theme.colors.textDisabled, width: 32 }}>{line.lineNumber}</Td>
                 <Td style={{ fontWeight: 600 }}>{line.itemCode}</Td>
                 <Td>{line.itemName}</Td>
-                <Td style={{ color: '#6b7280' }}>{line.description || '—'}</Td>
+                <Td style={{ color: theme.colors.textSecondary }}>{line.description || '—'}</Td>
                 <Td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                   {Number(line.returnedQty).toLocaleString('en-AE', {
                     minimumFractionDigits: 0, maximumFractionDigits: 3,

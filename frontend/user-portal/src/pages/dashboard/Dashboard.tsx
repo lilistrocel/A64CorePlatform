@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme, type DefaultTheme } from 'styled-components';
 import {
   PieChart,
   Pie,
@@ -169,41 +169,71 @@ interface Insight {
 // CONSTANTS
 // ============================================================================
 
-const MODULE_COLORS: Record<string, string> = {
-  farms: '#10B981',
-  blocks: '#3B82F6',
-  employees: '#8B5CF6',
-  customers: '#F59E0B',
-  orders: '#EF4444',
-  vehicles: '#6366F1',
-  shipments: '#14B8A6',
-  campaigns: '#EC4899',
-  users: '#64748B',
-};
+/**
+ * Categorical colour maps, built from the brand's four chromatic ramps
+ * (lapis, emerald, terracotta, gold) rather than the old ad-hoc palette.
+ * These are functions of `theme`, not module-level constants, because
+ * `textDisabled` / `textSecondary` invert between light and dark theme and
+ * must be resolved against the live theme at render time.
+ */
+function getModuleColors(theme: DefaultTheme): Record<string, string> {
+  return {
+    farms: theme.colors.success,
+    blocks: theme.colors.primary[500],
+    // was purple (#8B5CF6) — decorative only, doesn't distinguish from an
+    // adjacent blue element in this file, so primary[700] per spec §3.
+    employees: theme.colors.primary[700],
+    customers: theme.colors.warning,
+    orders: theme.colors.error,
+    // was indigo (#6366F1) — decorative only.
+    vehicles: theme.colors.primary[600],
+    // was teal (#14B8A6) — teal is art-only; this reads as a yield/growth
+    // metric (feeds the "Total Yield" hero card) so emerald fits better
+    // than the generic primary[400] fallback.
+    shipments: theme.colors.emerald[400],
+    // was pink (#EC4899) — no direct token in the migration table; nearest
+    // warm categorical value. Unused in this file today (kept for parity).
+    campaigns: theme.colors.terracotta[400],
+    users: theme.colors.textSecondary,
+  };
+}
 
-const BLOCK_STATE_COLORS: Record<string, string> = {
-  growing: '#10B981',
-  harvesting: '#F59E0B',
-  planned: '#3B82F6',
-  empty: '#9E9E9E',
-  cleaning: '#8B5CF6',
-  alert: '#EF4444',
-  fruiting: '#F97316',
-  partial: '#06B6D4',
-};
+function getBlockStateColors(theme: DefaultTheme): Record<string, string> {
+  return {
+    growing: theme.colors.success,
+    harvesting: theme.colors.warning,
+    planned: theme.colors.primary[500],
+    empty: theme.colors.textDisabled,
+    // was purple (#8B5CF6) — decorative only, primary[700] per spec §3.
+    cleaning: theme.colors.primary[700],
+    alert: theme.colors.error,
+    // was orange (#F97316) — explicit table mapping, distinct from warning/gold.
+    fruiting: theme.colors.terracotta[400],
+    // was cyan (#06B6D4) — teal/cyan is art-only in the brand.
+    partial: theme.colors.primary[400],
+  };
+}
 
-const CROP_PALETTE: string[] = [
-  '#10B981',
-  '#3B82F6',
-  '#F59E0B',
-  '#8B5CF6',
-  '#EC4899',
-  '#14B8A6',
-  '#F97316',
-  '#06B6D4',
-  '#6366F1',
-  '#84CC16',
-];
+/**
+ * 10-swatch categorical palette for the crop-distribution donut. Built from
+ * the four brand ramps at varying shades (per spec: "where a chart needs 4+
+ * distinguishable series, build them from the four brand ramps") rather than
+ * mechanically remapping the old rainbow list hex-for-hex.
+ */
+function getCropPalette(theme: DefaultTheme): string[] {
+  return [
+    theme.colors.primary[500],
+    theme.colors.success,
+    theme.colors.warning,
+    theme.colors.error,
+    theme.colors.primary[300],
+    theme.colors.emerald[300],
+    theme.colors.gold[300],
+    theme.colors.terracotta[300],
+    theme.colors.primary[700],
+    theme.colors.emerald[700],
+  ];
+}
 
 // ============================================================================
 // HELPERS
@@ -472,6 +502,11 @@ function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
 // ============================================================================
 
 export function Dashboard() {
+  const theme = useTheme();
+  const MODULE_COLORS = useMemo(() => getModuleColors(theme), [theme]);
+  const BLOCK_STATE_COLORS = useMemo(() => getBlockStateColors(theme), [theme]);
+  const CROP_PALETTE = useMemo(() => getCropPalette(theme), [theme]);
+
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [farmData, setFarmData] = useState<FarmSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -546,7 +581,7 @@ export function Dashboard() {
         .map(([key, value]) => ({
           name: key.charAt(0).toUpperCase() + key.slice(1),
           value,
-          color: BLOCK_STATE_COLORS[key] ?? '#9E9E9E',
+          color: BLOCK_STATE_COLORS[key] ?? theme.colors.textDisabled,
         }))
     : [];
 
@@ -608,7 +643,7 @@ export function Dashboard() {
       .map(([name, value]) => ({
         name,
         value,
-        color: BLOCK_STATE_COLORS[name.toLowerCase()] ?? '#9E9E9E',
+        color: BLOCK_STATE_COLORS[name.toLowerCase()] ?? theme.colors.textDisabled,
       }));
   })();
 
@@ -653,7 +688,7 @@ export function Dashboard() {
         {
           label: 'Active Alerts',
           value: farmData?.recentActivity.activeAlerts ?? 0,
-          borderColor: '#EF4444',
+          borderColor: theme.colors.error,
         },
       ]
     : [];
@@ -1001,6 +1036,7 @@ export function Dashboard() {
 const REVENUE_CROP_DEFAULT_VISIBLE = 5;
 
 function PnLTab() {
+  const theme = useTheme();
   const { selectedYear } = useFarmingYearStore();
   const { data: pnlFarmingYearsData } = useFarmingYearsList(5, true);
   const selectedYearDisplay = selectedYear !== null
@@ -1146,7 +1182,7 @@ function PnLTab() {
                   {pnlCropSearchResults.map((c) => (
                     <CropSearchItem key={c.cropName} onClick={() => togglePnlCrop(c.cropName)}>
                       <span>{c.cropName}</span>
-                      <CropSearchItemKpi $color="#10B981">
+                      <CropSearchItemKpi $color={theme.colors.success}>
                         {c.revenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} AED
                       </CropSearchItemKpi>
                     </CropSearchItem>
@@ -1207,6 +1243,7 @@ interface YieldKpiChartProps {
 }
 
 function YieldKpiChart({ data }: YieldKpiChartProps) {
+  const theme = useTheme();
   const sorted = [...data].sort((a, b) => b.efficiencyPercent - a.efficiencyPercent);
 
   return (
@@ -1220,7 +1257,7 @@ function YieldKpiChart({ data }: YieldKpiChartProps) {
       </LeaderboardHeader>
       {sorted.map((farm, i) => {
         const pct = farm.efficiencyPercent;
-        const barColor = pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444';
+        const barColor = pct >= 80 ? theme.colors.success : pct >= 40 ? theme.colors.warning : theme.colors.error;
         return (
           <LeaderboardRow key={farm.farmId}>
             <LbRankCol>
@@ -1261,6 +1298,7 @@ interface CropYieldKpiChartProps {
 }
 
 function CropYieldKpiChart({ data, selectedFarm }: CropYieldKpiChartProps) {
+  const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCrops, setSelectedCrops] = useState<Set<string>>(new Set());
@@ -1341,7 +1379,7 @@ function CropYieldKpiChart({ data, selectedFarm }: CropYieldKpiChartProps) {
               {searchResults.map((c) => (
                 <CropSearchItem key={c.cropName} onClick={() => toggleCrop(c.cropName)}>
                   <span>{c.cropName}</span>
-                  <CropSearchItemKpi $color={c.efficiencyPercent >= 80 ? '#10B981' : c.efficiencyPercent >= 40 ? '#F59E0B' : '#EF4444'}>
+                  <CropSearchItemKpi $color={c.efficiencyPercent >= 80 ? theme.colors.success : c.efficiencyPercent >= 40 ? theme.colors.warning : theme.colors.error}>
                     {c.efficiencyPercent}%
                   </CropSearchItemKpi>
                 </CropSearchItem>
@@ -1373,7 +1411,7 @@ function CropYieldKpiChart({ data, selectedFarm }: CropYieldKpiChartProps) {
         </LeaderboardHeader>
         {displayList.map((crop, i) => {
           const pct = crop.efficiencyPercent;
-          const barColor = pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444';
+          const barColor = pct >= 80 ? theme.colors.success : pct >= 40 ? theme.colors.warning : theme.colors.error;
           return (
             <LeaderboardRow key={crop.cropName}>
               <LbRankCol>
@@ -1419,10 +1457,11 @@ interface OrdersOverviewListProps {
 }
 
 function OrdersOverviewList({ data }: OrdersOverviewListProps) {
+  const theme = useTheme();
   const statusColors: Record<string, string> = {
-    pending: MODULE_COLORS.orders,
-    processing: '#F59E0B',
-    delivered: '#10B981',
+    pending: theme.colors.error,
+    processing: theme.colors.warning,
+    delivered: theme.colors.success,
   };
 
   const rows: { key: string; label: string; count: number }[] = [
@@ -1454,7 +1493,7 @@ function OrdersOverviewList({ data }: OrdersOverviewListProps) {
       {rows.map((row) => (
         <OrderStatusRow key={row.key}>
           <OrderStatusLeft>
-            <StatusDot $color={statusColors[row.key] ?? '#9E9E9E'} />
+            <StatusDot $color={statusColors[row.key] ?? theme.colors.textDisabled} />
             <OrderStatusLabel>{row.label}</OrderStatusLabel>
           </OrderStatusLeft>
           <OrderStatusCount>{formatNumber(row.count)}</OrderStatusCount>
@@ -1485,7 +1524,10 @@ const PageContainer = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
   width: 100%;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
+  /* Dashboard is the landing surface — this is the page's own ground, so it
+     uses canvas (Fresco Cream) directly rather than the recessed "surface"
+     token; cards below sit on "background" (Cream Hi), raised above this. */
+  background: ${({ theme }) => theme.colors.canvas};
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: ${({ theme }) => theme.spacing.lg};
@@ -1550,13 +1592,19 @@ const HeaderRight = styled.div`
   flex-wrap: wrap;
 `;
 
+/**
+ * The dashboard's one deliberate gold accent (spec §1: "rare and meaningful" —
+ * reserved for the active nav item, one primary CTA per view, or a genuine
+ * highlight badge). Refresh is the single most prominent, always-visible
+ * action on this page, so it carries the gold rather than lapis.
+ */
 const RefreshButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xs};
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.secondary[500]};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -1566,7 +1614,7 @@ const RefreshButton = styled.button`
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.secondary[700]};
   }
 
   &:disabled {
@@ -1627,6 +1675,9 @@ const HeroCard = styled.article<{ $borderColor: string }>`
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   padding: ${({ theme }) => theme.spacing.xl};
   box-shadow: ${({ theme }) => theme.shadows.sm};
+  /* Hairline border does the heavy lifting for card-on-canvas separation —
+     background vs canvas alone is a subtle cream-on-cream contrast. */
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-left: 4px solid ${({ $borderColor }) => $borderColor};
   transition: box-shadow 150ms ease-in-out;
 
@@ -1636,6 +1687,7 @@ const HeroCard = styled.article<{ $borderColor: string }>`
 `;
 
 const KpiValue = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -1686,6 +1738,8 @@ const ChartCard = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   padding: ${({ theme }) => theme.spacing.xl};
   box-shadow: ${({ theme }) => theme.shadows.sm};
+  /* See HeroCard — border carries card-on-canvas separation, not shadow alone. */
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const CardTitle = styled.h3`
@@ -1786,19 +1840,33 @@ const LegendLabel = styled.span`
 
 // ── Insights grid ───────────────────────────────────────────────────────────
 
-const INSIGHT_BORDER_COLORS: Record<InsightType, string> = {
-  success: '#10B981',
-  warning: '#F59E0B',
-  info: '#3B82F6',
-  critical: '#EF4444',
-};
+/**
+ * Semantic border/background per insight type, resolved from the live theme
+ * (not module-level constants) via the styled-component's theme callback —
+ * success/warning/error/info are theme-invariant, but this keeps the pattern
+ * consistent with everything else in this file that reads off `theme`.
+ */
+function insightBorderColor(type: InsightType, theme: DefaultTheme): string {
+  const map: Record<InsightType, string> = {
+    success: theme.colors.success,
+    warning: theme.colors.warning,
+    info: theme.colors.info,
+    critical: theme.colors.error,
+  };
+  return map[type];
+}
 
-const INSIGHT_BG_COLORS: Record<InsightType, string> = {
-  success: 'rgba(16, 185, 129, 0.06)',
-  warning: 'rgba(245, 158, 11, 0.06)',
-  info: 'rgba(59, 130, 246, 0.06)',
-  critical: 'rgba(239, 68, 68, 0.06)',
-};
+function insightBgColor(type: InsightType, theme: DefaultTheme): string {
+  // Subtle ~6% tint of the semantic hue — matches the hex-alpha idiom used
+  // elsewhere in this file (see PnLPeriodBadge below).
+  const map: Record<InsightType, string> = {
+    success: `${theme.colors.success}0F`,
+    warning: `${theme.colors.warning}0F`,
+    info: `${theme.colors.info}0F`,
+    critical: `${theme.colors.error}0F`,
+  };
+  return map[type];
+}
 
 const InsightsGrid = styled.div`
   display: grid;
@@ -1811,10 +1879,10 @@ const InsightsGrid = styled.div`
 `;
 
 const InsightCard = styled.article<{ $type: InsightType }>`
-  background: ${({ $type }) => INSIGHT_BG_COLORS[$type]};
+  background: ${({ $type, theme }) => insightBgColor($type, theme)};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   padding: ${({ theme }) => theme.spacing.md};
-  border-left: 4px solid ${({ $type }) => INSIGHT_BORDER_COLORS[$type]};
+  border-left: 4px solid ${({ $type, theme }) => insightBorderColor($type, theme)};
   box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
@@ -2062,6 +2130,7 @@ const LbFarmName = styled.span`
 `;
 
 const LbKpiValue = styled.span<{ $color: string }>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ $color }) => $color};
@@ -2084,6 +2153,7 @@ const LbProgressFill = styled.div<{ $pct: number; $color: string }>`
 `;
 
 const LbYieldText = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
@@ -2137,6 +2207,7 @@ const OrdersTotalLabel = styled.span`
 `;
 
 const OrdersTotalValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -2165,6 +2236,7 @@ const OrderStatusLabel = styled.span`
 `;
 
 const OrderStatusCount = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -2237,7 +2309,7 @@ const ErrorMessage = styled.p`
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.xl}`};
   background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};

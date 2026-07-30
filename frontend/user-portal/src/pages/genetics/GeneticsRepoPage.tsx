@@ -115,7 +115,7 @@ const Metric = styled.div`
 const MetricValue = styled.span<{ $warn?: boolean }>`
   font-size: 15px;
   font-weight: 700;
-  color: ${({ $warn, theme }) => ($warn ? '#92400e' : theme.colors.textPrimary)};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.gold[800] : theme.colors.textPrimary)};
 `;
 
 const MetricLabel = styled.span`
@@ -173,7 +173,7 @@ const StepNum = styled.span`
   font-size: 12px;
   font-weight: 700;
   background: ${({ theme }) => theme.colors.primary[600]};
-  color: #fff;
+  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 const StepBody = styled.div`

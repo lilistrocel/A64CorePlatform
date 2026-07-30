@@ -6,7 +6,7 @@
  * - Warning banner when >30% of revenue is imputed
  */
 
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import {
   ResponsiveContainer,
   PieChart,
@@ -15,16 +15,19 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import type { Theme } from '@a64core/shared';
 import type { RevenueSourcesResponse } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const SOURCE_COLORS: Record<string, string> = {
-  excel_match: '#10B981',
-  excel_alias_match: '#2196f3',
-  imputed: '#F59E0B',
-  no_data: '#9e9e9e',
-};
+// Confidence level maps cleanly onto semantic state: confirmed = success,
+// alias-matched = informational, imputed/estimated = warning, none = neutral.
+const sourceColors = (theme: Theme): Record<string, string> => ({
+  excel_match: theme.colors.success,
+  excel_alias_match: theme.colors.info,
+  imputed: theme.colors.warning,
+  no_data: theme.colors.textDisabled,
+});
 
 const SOURCE_LABELS: Record<string, string> = {
   excel_match: 'Excel Confirmed',
@@ -156,12 +159,12 @@ const WarningBanner = styled.div`
   align-items: flex-start;
   gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => theme.spacing.md};
-  background: #FEF3C7;
-  border: 1px solid #F59E0B;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   margin-top: ${({ theme }) => theme.spacing.lg};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: #92400E;
+  color: ${({ theme }) => theme.colors.gold[800]};
 `;
 
 const WarningIcon = styled.span`
@@ -183,7 +186,7 @@ const ErrorState = styled.div`
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -213,6 +216,7 @@ export function PnlRevenueConfidence({
   isError,
   onRetry,
 }: PnlRevenueConfidenceProps) {
+  const theme = useTheme();
   return (
     <Section aria-labelledby="confidence-title">
       <SectionTitle id="confidence-title">Revenue Confidence</SectionTitle>
@@ -253,7 +257,7 @@ export function PnlRevenueConfidence({
                     {data.sources.map((entry) => (
                       <Cell
                         key={entry.priceSource}
-                        fill={SOURCE_COLORS[entry.priceSource] || '#9e9e9e'}
+                        fill={sourceColors(theme)[entry.priceSource] || theme.colors.textDisabled}
                       />
                     ))}
                   </Pie>
@@ -264,8 +268,10 @@ export function PnlRevenueConfidence({
                     ]}
                     contentStyle={{
                       borderRadius: '8px',
-                      border: '1px solid #e0e0e0',
+                      border: `1px solid ${theme.colors.border}`,
                       fontSize: '13px',
+                      background: theme.colors.background,
+                      color: theme.colors.textPrimary,
                     }}
                   />
                   {/* Suppress default Recharts legend — we build our own */}
@@ -277,7 +283,7 @@ export function PnlRevenueConfidence({
             <LegendList aria-label="Revenue confidence breakdown">
               {data.sources.map((entry) => (
                 <LegendItem key={entry.priceSource}>
-                  <Dot $color={SOURCE_COLORS[entry.priceSource] || '#9e9e9e'} aria-hidden="true" />
+                  <Dot $color={sourceColors(theme)[entry.priceSource] || theme.colors.textDisabled} aria-hidden="true" />
                   <LegendText>
                     <LegendLabel>
                       {SOURCE_LABELS[entry.priceSource] || entry.label}
