@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
+import { HelpButton } from '../../components/tutorials/HelpButton';
 import { LineFormModal } from '../../components/genetics/LineFormModal';
 import {
   Banner,
@@ -245,7 +246,7 @@ export function GeneticsRepoPage() {
     <PageWrap>
       <PageHeader>
         <div>
-          <PageTitle>🧬 Genetics Repo</PageTitle>
+          <PageTitle>🧬 Genetics Repo<HelpButton topic="genetics.repo" /></PageTitle>
           <PageSubtitle>
             Strains, varieties and bloodlines across every department — with full traceability
             from the dish in your hand back to where it came from.

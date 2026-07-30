@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
+import { HelpButton } from '../../components/tutorials/HelpButton';
 import { LineageTree } from '../../components/genetics/LineageTree';
 import { ObservationModal } from '../../components/genetics/ObservationModal';
 import { PromoteTraitModal } from '../../components/genetics/PromoteTraitModal';
@@ -243,6 +244,7 @@ export function AccessionDetailPage() {
             <CodeChip style={{ fontSize: 22, padding: '4px 10px' }}>
               {accession.accessionCode}
             </CodeChip>
+            <HelpButton topic="genetics.accession" />
           </PageTitle>
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
             <GenerationBadge

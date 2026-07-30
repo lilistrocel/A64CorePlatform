@@ -78,6 +78,66 @@ async def list_users(
     return result
 
 
+# ---------------------------------------------------------------------------
+# Tutorial seen-state
+#
+# Declared BEFORE /{user_id} so the literal "me" path is not captured by the
+# path parameter.
+#
+# Stored in users.metadata.tutorialsSeen rather than a new column: it is UI
+# state, not domain data, and it needs no migration. Per-user rather than
+# per-device so a tutorial dismissed on the bench laptop stays dismissed on the
+# office machine — and, more importantly, so a new team member gets the tour
+# even on a shared browser.
+# ---------------------------------------------------------------------------
+
+@router.get("/me/tutorials", response_model=Dict[str, Any])
+async def get_my_tutorials(current_user=Depends(get_current_user)):
+    """Topics this user has already dismissed."""
+    from ...services.database import mongodb
+
+    db = mongodb.get_database()
+    doc = await db.users.find_one(
+        {"userId": current_user.userId}, {"metadata": 1, "_id": 0}
+    )
+    seen = ((doc or {}).get("metadata") or {}).get("tutorialsSeen") or []
+    return {"seen": seen}
+
+
+@router.post("/me/tutorials/{topic}/seen", response_model=Dict[str, Any])
+async def mark_tutorial_seen(topic: str, current_user=Depends(get_current_user)):
+    """Record that this user has dismissed a tutorial topic.
+
+    Uses $addToSet so repeated dismissals are idempotent — the button can be
+    clicked twice without duplicating the entry.
+    """
+    from ...services.database import mongodb
+
+    db = mongodb.get_database()
+    await db.users.update_one(
+        {"userId": current_user.userId},
+        {"$addToSet": {"metadata.tutorialsSeen": topic}},
+    )
+    return {"topic": topic, "seen": True}
+
+
+@router.delete("/me/tutorials", response_model=Dict[str, Any])
+async def reset_my_tutorials(current_user=Depends(get_current_user)):
+    """Clear the dismissed list so every tutorial auto-opens again.
+
+    Useful after a UI change, and for anyone who dismissed a tour before they
+    needed it.
+    """
+    from ...services.database import mongodb
+
+    db = mongodb.get_database()
+    await db.users.update_one(
+        {"userId": current_user.userId},
+        {"$set": {"metadata.tutorialsSeen": []}},
+    )
+    return {"reset": True}
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: str,

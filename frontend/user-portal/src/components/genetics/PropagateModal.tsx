@@ -30,6 +30,7 @@ import {
   VESSEL_LABELS,
 } from '../../types/genetics';
 import { Modal } from './Modal';
+import { HelpButton } from '../tutorials/HelpButton';
 import { ProtocolPicker } from '../protocols/ProtocolPicker';
 import { scopeForMethod } from '../../types/protocols';
 import {
@@ -115,6 +116,13 @@ const ROLE_OPTIONS: ParentRole[] = [
   'spore_source',
   'unknown',
 ];
+
+const MethodHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+`;
 
 const Preview = styled.div`
   padding: 14px 16px;
@@ -332,8 +340,11 @@ export function PropagateModal({
         </Banner>
       )}
 
-      <Field>
+      <MethodHead>
         <Label>Method</Label>
+        <HelpButton topic="genetics.propagate" autoOpen={false} label="Cloning versus expanding" />
+      </MethodHead>
+      <Field>
         <Select value={method} onChange={(e) => setMethod(e.target.value as PropagationMethodValue)}>
           <optgroup label="Clone — new generation, G advances">
             {ADVANCING_METHODS.map((m) => (

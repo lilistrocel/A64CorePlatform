@@ -160,7 +160,18 @@ export function Modal({ title, subtitle, width, onClose, children, footer }: Mod
 
   return (
     <Overlay>
-      <Panel ref={panelRef} $width={width} role="dialog" aria-modal="true" aria-label={title}>
+      <Panel
+        ref={panelRef}
+        $width={width}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        /* Explicit marker for "a blocking modal is open". role=dialog is not
+           usable for that test: the AI assistant panel is permanently mounted
+           with role="dialog" (aria-modal="false"), so sniffing the role would
+           always report a dialog and suppress every auto-opening tutorial. */
+        data-blocking-modal="true"
+      >
         <Header>
           <TitleWrap>
             <Title>{title}</Title>

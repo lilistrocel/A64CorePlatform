@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { HelpButton } from '../../components/tutorials/HelpButton';
 import { useFacilities, useCreateFacility } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms, useCreateRoom } from '../../hooks/mushroom/useRoomData';
 import { useDeleteFacility } from '../../hooks/mushroom/useFacilityData';
@@ -133,7 +134,7 @@ export function MushroomFacilityManager() {
       {/* Header */}
       <PageHeader>
         <TitleSection>
-          <PageTitle>Facility Manager</PageTitle>
+          <PageTitle>Facility Manager<HelpButton topic="mushroom.facilities" /></PageTitle>
           <PageSubtitle>
             Manage your growing facilities, rooms, and substrate batches
           </PageSubtitle>

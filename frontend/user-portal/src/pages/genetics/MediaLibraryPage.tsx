@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { HelpButton } from '../../components/tutorials/HelpButton';
 import { BatchFormModal } from '../../components/genetics/BatchFormModal';
 import { RecipeFormModal } from '../../components/genetics/RecipeFormModal';
 import {
@@ -139,7 +140,7 @@ export function MediaLibraryPage() {
     <PageWrap>
       <PageHeader>
         <div>
-          <PageTitle>🧪 Media &amp; Recipes</PageTitle>
+          <PageTitle>🧪 Media &amp; Recipes<HelpButton topic="genetics.media" /></PageTitle>
           <PageSubtitle>
             Versioned formulations and the batches poured from them. Additives are tracked
             separately from the base recipe so you can trace what any experiment was actually

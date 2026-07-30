@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { HelpButton } from '../tutorials/HelpButton';
 import type { GrowingRoom, HarvestQualityGrade, CreateHarvestPayload } from '../../types/mushroom';
 import { QUALITY_GRADE_LABELS, QUALITY_GRADE_COLORS } from '../../types/mushroom';
 import { useCreateHarvest } from '../../hooks/mushroom/useMushroomHarvests';
@@ -127,7 +128,14 @@ export function HarvestEntryModal({
         <Form onSubmit={handleSubmit} noValidate>
           {/* Flush Number */}
           <FormGroup>
-            <Label htmlFor="harvest-block">Fruiting block (optional)</Label>
+            <LabelRow>
+              <Label htmlFor="harvest-block">Fruiting block (optional)</Label>
+              <HelpButton
+                topic="mushroom.harvest"
+                autoOpen={false}
+                label="What makes a harvest number meaningful"
+              />
+            </LabelRow>
             <BlockSelect
               id="harvest-block"
               value={accessionId}
@@ -274,6 +282,13 @@ const BlockSelect = styled.select`
     border-color: #2196f3;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
+`;
+
+const LabelRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 `;
 
 const FieldNote = styled.p`

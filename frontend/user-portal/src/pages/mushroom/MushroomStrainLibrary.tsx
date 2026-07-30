@@ -10,6 +10,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { HelpButton } from '../../components/tutorials/HelpButton';
 import { useMushroomStrains, useCreateStrain, useUpdateStrain } from '../../hooks/mushroom/useMushroomStrains';
 import { useLinkedProfileCounts } from '../../hooks/genetics/useGenetics';
 import { StrainCard } from '../../components/mushroom/StrainCard';
@@ -223,7 +224,7 @@ export function MushroomStrainLibrary() {
       {/* Header */}
       <PageHeader>
         <TitleSection>
-          <PageTitle>Strain Library</PageTitle>
+          <PageTitle>Strain Library<HelpButton topic="mushroom.strains" /></PageTitle>
           <PageSubtitle>
             Manage your mushroom strain catalogue with growing parameters
           </PageSubtitle>

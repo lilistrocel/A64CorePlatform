@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { HelpButton } from '../../components/tutorials/HelpButton';
 import { ProtocolFormModal } from '../../components/protocols/ProtocolFormModal';
 import {
   Banner,
@@ -146,7 +147,7 @@ export function ProtocolsPage() {
     <PageWrap>
       <PageHeader>
         <div>
-          <PageTitle>📋 Protocols</PageTitle>
+          <PageTitle>📋 Protocols<HelpButton topic="protocols.library" /></PageTitle>
           <PageSubtitle>
             Written procedures — how a job is done here. Only approved protocols are
             offered when recording work, and revising one returns it to draft for
