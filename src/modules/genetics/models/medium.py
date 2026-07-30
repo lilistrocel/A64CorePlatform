@@ -20,14 +20,21 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from .enums import MediumBatchStatus, MediumType, SterilizationMethod
+from .enums import IngredientUnit, MediumBatchStatus, MediumType, SterilizationMethod
 
 
 class Ingredient(BaseModel):
-    """One component of a medium formulation."""
+    """One component of a medium formulation.
+
+    ``unit`` is a controlled vocabulary, not free text — see IngredientUnit for
+    why. Without it the same quantity ends up stored four ways and any later
+    ratio or scaling calculation splits across the spellings.
+    """
     name: str = Field(..., min_length=1, max_length=120, description="e.g. 'Malt extract'")
     amount: Optional[float] = Field(None, ge=0)
-    unit: Optional[str] = Field(None, max_length=32, description="g, ml, %, g/L")
+    unit: Optional[IngredientUnit] = Field(
+        None, description="Controlled unit, e.g. g/L. Free text is deliberately not accepted."
+    )
     notes: Optional[str] = Field(None, max_length=500)
 
 

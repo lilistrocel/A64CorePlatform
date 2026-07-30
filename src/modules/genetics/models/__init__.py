@@ -14,6 +14,7 @@ from .accession import (
 )
 from .enums import (
     AccessionStatus,
+    IngredientUnit,
     DerivationType,
     MediumBatchStatus,
     MediumType,
@@ -71,6 +72,7 @@ from .propagation import (
 __all__ = [
     # Enums
     "AccessionStatus",
+    "IngredientUnit",
     "DerivationType",
     "MediumBatchStatus",
     "MediumType",

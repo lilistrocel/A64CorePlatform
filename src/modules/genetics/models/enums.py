@@ -202,6 +202,44 @@ _TWO_PARENT_METHODS = frozenset({
 })
 
 
+class IngredientUnit(str, Enum):
+    """Controlled vocabulary for recipe quantities.
+
+    Deliberately an enum rather than free text. Typed units drift immediately —
+    ``g/L``, ``G/L``, ``g/l``, ``gm/L`` all mean the same thing to a person and
+    are four distinct strings to a database. Any later attempt to compute a
+    ratio, scale a recipe, or group "everything containing 20 g/L malt" would
+    silently split across those spellings and quietly under-report.
+
+    ``%`` is split by basis for the same reason wet and dry substrate are: a
+    bare percentage is ambiguous between weight-in-volume and volume-in-volume,
+    and the two differ by the density of whatever is being added.
+
+    Add to this list rather than reintroducing free text — a controlled
+    vocabulary is only worth having if it stays controlled.
+    """
+
+    # Concentration — the common case for a per-litre medium recipe
+    G_PER_L = "g/L"
+    MG_PER_L = "mg/L"
+    UG_PER_L = "ug/L"
+    ML_PER_L = "mL/L"
+    PERCENT_W_V = "%w/v"
+    PERCENT_V_V = "%v/v"
+    PPM = "ppm"
+
+    # Absolute amounts — for a recipe written per batch rather than per litre
+    G = "g"
+    KG = "kg"
+    MG = "mg"
+    ML = "mL"
+    L = "L"
+
+    # Relative and countable
+    PARTS = "parts"
+    UNITS = "units"
+
+
 class MediumType(str, Enum):
     """Category of growth medium / substrate."""
     AGAR = "agar"

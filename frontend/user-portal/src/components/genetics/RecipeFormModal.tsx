@@ -16,11 +16,16 @@ import { useCreateRecipe, useUpdateRecipe } from '../../hooks/genetics/useGeneti
 import type {
   Additive,
   Ingredient,
+  IngredientUnit,
   MediumRecipe,
   MediumTypeValue,
   SterilizationMethod,
 } from '../../types/genetics';
-import { MEDIUM_TYPE_LABELS } from '../../types/genetics';
+import {
+  MEDIUM_TYPE_LABELS,
+  INGREDIENT_UNIT_GROUPS,
+  INGREDIENT_UNIT_LABELS,
+} from '../../types/genetics';
 import { Modal } from './Modal';
 import {
   Banner,
@@ -58,6 +63,22 @@ const AdditiveRow = styled.div`
   align-items: center;
 `;
 
+const UnitSelect = styled.select`
+  width: 100%;
+  padding: 9px 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+`;
+
 const RemoveBtn = styled.button`
   background: none;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
@@ -91,11 +112,11 @@ const AddBtn = styled.button`
   }
 `;
 
-const emptyIngredient = (): Ingredient => ({ name: '', amount: null, unit: '' });
+const emptyIngredient = (): Ingredient => ({ name: '', amount: null, unit: 'g/L' });
 const emptyAdditive = (): Additive => ({
   name: '',
   amount: null,
-  unit: '',
+  unit: 'g/L',
   purpose: '',
   isExperimental: true,
 });
@@ -243,11 +264,23 @@ export function RecipeFormModal({ recipe, onClose, onDone }: RecipeFormModalProp
               placeholder="20"
               onChange={(e) => patchIngredient(i, { amount: e.target.value as any })}
             />
-            <Input
+            <UnitSelect
               value={ing.unit ?? ''}
-              placeholder="g/L"
-              onChange={(e) => patchIngredient(i, { unit: e.target.value })}
-            />
+              onChange={(e) =>
+                patchIngredient(i, { unit: (e.target.value || null) as IngredientUnit | null })
+              }
+            >
+              <option value="">unit…</option>
+              {INGREDIENT_UNIT_GROUPS.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.units.map((u) => (
+                    <option key={u} value={u} title={INGREDIENT_UNIT_LABELS[u]}>
+                      {u}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </UnitSelect>
             <RemoveBtn
               type="button"
               onClick={() => setIngredients((prev) => prev.filter((_, idx) => idx !== i))}
@@ -282,11 +315,23 @@ export function RecipeFormModal({ recipe, onClose, onDone }: RecipeFormModalProp
               placeholder="1"
               onChange={(e) => patchAdditive(i, { amount: e.target.value as any })}
             />
-            <Input
+            <UnitSelect
               value={add.unit ?? ''}
-              placeholder="g/L"
-              onChange={(e) => patchAdditive(i, { unit: e.target.value })}
-            />
+              onChange={(e) =>
+                patchAdditive(i, { unit: (e.target.value || null) as IngredientUnit | null })
+              }
+            >
+              <option value="">unit…</option>
+              {INGREDIENT_UNIT_GROUPS.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.units.map((u) => (
+                    <option key={u} value={u} title={INGREDIENT_UNIT_LABELS[u]}>
+                      {u}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </UnitSelect>
             <Input
               value={add.purpose ?? ''}
               placeholder="testing growth response"

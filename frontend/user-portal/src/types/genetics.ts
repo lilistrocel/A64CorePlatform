@@ -88,6 +88,53 @@ export type PropagationMethodValue =
   | 'artificial_insemination'
   | 'embryo_transfer';
 
+/**
+ * Controlled vocabulary for recipe quantities. Mirrors IngredientUnit on the
+ * backend, which rejects anything outside this list — free text drifts into
+ * g/L, G/L, g/l and gm/L, which are one unit to a person and four to a
+ * database, breaking any later ratio or scaling calculation.
+ */
+export type IngredientUnit =
+  | 'g/L'
+  | 'mg/L'
+  | 'ug/L'
+  | 'mL/L'
+  | '%w/v'
+  | '%v/v'
+  | 'ppm'
+  | 'g'
+  | 'kg'
+  | 'mg'
+  | 'mL'
+  | 'L'
+  | 'parts'
+  | 'units';
+
+/** Grouped for the picker, so concentrations sit apart from absolute amounts. */
+export const INGREDIENT_UNIT_GROUPS: { label: string; units: IngredientUnit[] }[] = [
+  { label: 'Concentration (per litre)', units: ['g/L', 'mg/L', 'ug/L', 'mL/L', 'ppm'] },
+  { label: 'Percentage — basis matters', units: ['%w/v', '%v/v'] },
+  { label: 'Absolute amount', units: ['g', 'kg', 'mg', 'mL', 'L'] },
+  { label: 'Relative / count', units: ['parts', 'units'] },
+];
+
+export const INGREDIENT_UNIT_LABELS: Record<IngredientUnit, string> = {
+  'g/L': 'g/L — grams per litre',
+  'mg/L': 'mg/L — milligrams per litre',
+  'ug/L': 'µg/L — micrograms per litre',
+  'mL/L': 'mL/L — millilitres per litre',
+  '%w/v': '%w/v — weight in volume',
+  '%v/v': '%v/v — volume in volume',
+  ppm: 'ppm — parts per million',
+  g: 'g — grams',
+  kg: 'kg — kilograms',
+  mg: 'mg — milligrams',
+  mL: 'mL — millilitres',
+  L: 'L — litres',
+  parts: 'parts — ratio',
+  units: 'units — count',
+};
+
 export type MediumTypeValue =
   | 'agar'
   | 'liquid_culture'
@@ -356,7 +403,8 @@ export interface MethodInfo {
 export interface Ingredient {
   name: string;
   amount?: number | null;
-  unit?: string | null;
+  /** Controlled — the backend rejects anything outside IngredientUnit. */
+  unit?: IngredientUnit | null;
   notes?: string | null;
 }
 
