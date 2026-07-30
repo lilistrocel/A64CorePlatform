@@ -156,6 +156,28 @@ python3 scripts/codebase_mapper/task_manager.py stats    # Verify
 - Farm endpoints are `/api/v1/farm/*` (NOT `/farm-management/*` — no longer a separate service)
 - Default admin: `admin@a64platform.com` / `SuperAdmin123!`
 
+### `response_model` silently strips fields — restart after model changes
+
+FastAPI filters every response through its declared `response_model`. Any field
+the *running process* does not know about is **dropped without error**. Two
+distinct ways this bites, both of which look like "the data was never saved":
+
+1. **Stale process after adding a field.** Add a field to a Pydantic model,
+   `docker cp` the file, and the API keeps serving the old model until it is
+   restarted. The field is written to MongoDB correctly and is missing from
+   every API response. Verify with `mongosh` before assuming a write failed —
+   if the document has it and the response does not, you need a restart:
+   `docker restart a64coreplatform-api-1` (that container has no `--reload`).
+
+2. **Declaring a narrower model than the service returns.** A route declared
+   `response_model=PaginatedResponse[Line]` will strip the rollups off a
+   `LineWithStats` the service carefully computed. If a service enriches a
+   model, the route must declare the enriched type.
+
+Neither raises. The symptom is always a field that is present in the database,
+present in the service return value, and absent on the client. This has cost
+debugging time twice — check it early when a field "isn't saving".
+
 ## Remote Server & Git
 
 ### Local-First Rule
