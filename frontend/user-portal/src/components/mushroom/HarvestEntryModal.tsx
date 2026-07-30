@@ -2,7 +2,12 @@
  * HarvestEntryModal Component
  *
  * Modal form to log a new harvest for a growing room.
- * Form includes: weight (kg), quality grade selector, notes, flush number (auto-filled).
+ *
+ * Includes a block selector: the fruiting blocks currently held in this room,
+ * from the Genetics Repo. Naming the block is what lets yield be attributed to
+ * a lineage rather than just a species — without it, "Yield by generation" on
+ * the line page has nothing to group by. Optional, because a harvest with an
+ * unknown block is still worth recording; it just cannot be attributed.
  */
 
 import { useState } from 'react';
@@ -10,6 +15,7 @@ import styled from 'styled-components';
 import type { GrowingRoom, HarvestQualityGrade, CreateHarvestPayload } from '../../types/mushroom';
 import { QUALITY_GRADE_LABELS, QUALITY_GRADE_COLORS } from '../../types/mushroom';
 import { useCreateHarvest } from '../../hooks/mushroom/useMushroomHarvests';
+import { useAccessions } from '../../hooks/genetics/useGenetics';
 
 interface HarvestEntryModalProps {
   isOpen: boolean;
@@ -34,9 +40,19 @@ export function HarvestEntryModal({
   const [flushNumber, setFlushNumber] = useState(
     String(room.currentFlush > 0 ? room.currentFlush : 1)
   );
+  const [accessionId, setAccessionId] = useState('');
+  const [substrateWeightKg, setSubstrateWeightKg] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const createHarvest = useCreateHarvest(facilityId, room.id);
+
+  // Blocks physically in this room. Only fruiting blocks and bulk spawn can be
+  // harvested, so the list is narrowed rather than offering every dish.
+  const { data: heldPage } = useAccessions({ roomId: room.id, perPage: 100 });
+  const blocks = (heldPage?.data ?? []).filter(
+    (a) => a.form === 'fruiting_block' || a.form === 'bulk_spawn'
+  );
+  const selectedBlock = blocks.find((b) => b.id === accessionId);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -54,11 +70,19 @@ export function HarvestEntryModal({
       return;
     }
 
+    const substrate = parseFloat(substrateWeightKg);
+    if (substrateWeightKg.trim() !== '' && (isNaN(substrate) || substrate <= 0)) {
+      setValidationError('Substrate weight must be greater than 0 kg, or left blank.');
+      return;
+    }
+
     const payload: CreateHarvestPayload = {
       weightKg: weight,
       qualityGrade,
       flushNumber: flush,
       notes: notes.trim() || undefined,
+      accessionId: accessionId || undefined,
+      substrateWeightKg: substrateWeightKg.trim() !== '' ? substrate : undefined,
     };
 
     try {
@@ -71,6 +95,8 @@ export function HarvestEntryModal({
   };
 
   const handleClose = () => {
+    setAccessionId('');
+    setSubstrateWeightKg('');
     setWeightKg('');
     setQualityGrade('A');
     setNotes('');
@@ -100,6 +126,52 @@ export function HarvestEntryModal({
 
         <Form onSubmit={handleSubmit} noValidate>
           {/* Flush Number */}
+          <FormGroup>
+            <Label htmlFor="harvest-block">Fruiting block (optional)</Label>
+            <BlockSelect
+              id="harvest-block"
+              value={accessionId}
+              onChange={(e) => setAccessionId(e.target.value)}
+            >
+              <option value="">
+                {blocks.length
+                  ? '— not attributed to a block —'
+                  : 'no blocks recorded in this room'}
+              </option>
+              {blocks.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.accessionCode} · {b.generationLabel} · {b.quantity} {b.unit}
+                </option>
+              ))}
+            </BlockSelect>
+            <FieldNote>
+              {selectedBlock
+                ? `Yield will be attributed to ${selectedBlock.accessionCode} at ${selectedBlock.generationLabel}, so it appears in that line's yield-by-generation.`
+                : 'Without a block, this harvest is recorded but cannot be attributed to a lineage.'}
+            </FieldNote>
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="harvest-substrate">Dry substrate weight (optional)</Label>
+            <InputWithUnit>
+              <Input
+                id="harvest-substrate"
+                type="number"
+                step="0.1"
+                min="0"
+                value={substrateWeightKg}
+                onChange={(e) => setSubstrateWeightKg(e.target.value)}
+                placeholder="e.g. 10"
+              />
+              <UnitLabel>kg</UnitLabel>
+            </InputWithUnit>
+            <FieldNote>
+              Overrides the room figure. Set this per block when a room holds blocks
+              from several substrate batches — otherwise every block shares one
+              denominator and the BE comparison between lineages is meaningless.
+            </FieldNote>
+          </FormGroup>
+
           <FormGroup>
             <Label htmlFor="harvest-flush">Flush Number</Label>
             <Input
@@ -185,6 +257,31 @@ export function HarvestEntryModal({
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
+
+const BlockSelect = styled.select`
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  outline: none;
+  transition: border-color 150ms;
+
+  &:focus {
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  }
+`;
+
+const FieldNote = styled.p`
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
 
 const Backdrop = styled.div`
   position: fixed;

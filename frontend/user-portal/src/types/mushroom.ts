@@ -381,8 +381,17 @@ export interface CreateHarvestPayload {
   harvestDate?: string;
   weightKg: number;
   qualityGrade?: HarvestQualityGrade;
+  /**
+   * Dry substrate weight for THIS block, overriding the room-level figure.
+   * Needed for a comparable BE when a room holds blocks from several batches.
+   */
   substrateWeightKg?: number;
   notes?: string;
+  /**
+   * The fruiting block this came off, as a genetic_accessions id. Supplying it
+   * is what lets yield be attributed to a lineage rather than just a species.
+   */
+  accessionId?: string;
 }
 
 // ============================================================================
