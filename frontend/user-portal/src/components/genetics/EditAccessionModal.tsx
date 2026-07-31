@@ -1,13 +1,22 @@
 /**
- * Genetics Repo - Register Accession Modal
+ * Genetics Repo - Edit Accession Modal
  *
- * Registers founding material by hand — a G0, or something acquired from
- * outside. Anything produced by a clone or cross goes through the propagate
- * flow instead, which derives generations and parentage automatically.
+ * Everything about an accession except status and generation is otherwise
+ * permanent once recorded — a mistyped acquired date or the wrong plate
+ * location had no way back. This exposes the rest of `AccessionUpdate`.
+ *
+ * Deliberately NOT exposed:
+ *  - `status` — already has a live control on the detail page; this modal
+ *    would just be a second place writing the same field.
+ *  - `cloneGeneration` / `filialGeneration` — auto-derived from the
+ *    propagation method (spec §3, `advances_generation`) and already
+ *    overridable at propagation time. Hand-editing G/F after the fact here
+ *    would silently desync a vessel from its own lineage and from the
+ *    generation printed on its label.
  */
 
 import { useState } from 'react';
-import { useCreateAccession, useMediumBatches } from '../../hooks/genetics/useGenetics';
+import { useMediumBatches, useUpdateAccession } from '../../hooks/genetics/useGenetics';
 import type { Accession, ProvenanceType, VesselForm } from '../../types/genetics';
 import { PROVENANCE_LABELS, VESSEL_LABELS } from '../../types/genetics';
 import { LocationPicker } from './LocationPicker';
@@ -40,79 +49,84 @@ function getToday(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-interface RegisterAccessionModalProps {
-  lineId: string;
-  lineCode?: string;
+/** `Accession.acquiredAt` etc. come back as ISO datetimes; the date input wants YYYY-MM-DD. */
+function toDateInputValue(value?: string | null): string {
+  if (!value) return '';
+  return value.slice(0, 10);
+}
+
+interface EditAccessionModalProps {
+  accession: Accession;
   onClose: () => void;
   onDone?: (accession: Accession) => void;
 }
 
-export function RegisterAccessionModal({
-  lineId,
-  lineCode,
-  onClose,
-  onDone,
-}: RegisterAccessionModalProps) {
-  const createAccession = useCreateAccession();
+export function EditAccessionModal({ accession, onClose, onDone }: EditAccessionModalProps) {
+  const updateAccession = useUpdateAccession(accession.id);
   const { data: batchPage } = useMediumBatches({ perPage: 100 });
 
-  const [form, setForm] = useState<VesselForm>('petri_dish');
-  const [quantity, setQuantity] = useState('4');
-  const [unit, setUnit] = useState('plates');
-  const [cloneGeneration, setCloneGeneration] = useState('0');
-  const [filialGeneration, setFilialGeneration] = useState('0');
-  const [mediumBatchId, setMediumBatchId] = useState('');
-  const [provenanceType, setProvenanceType] = useState<ProvenanceType>('purchased');
-  const [sourceNote, setSourceNote] = useState('');
-  const [acquiredAt, setAcquiredAt] = useState(getToday());
-  const [colonizedAt, setColonizedAt] = useState('');
-  const [unitLocation, setUnitLocation] = useState('');
-  const [position, setPosition] = useState('');
-  const [facilityId, setFacilityId] = useState('');
-  const [roomId, setRoomId] = useState('');
-  const [label, setLabel] = useState('');
-  const [notes, setNotes] = useState('');
+  const [form, setForm] = useState<VesselForm>(accession.form);
+  const [quantity, setQuantity] = useState(String(accession.quantity));
+  const [unit, setUnit] = useState(accession.unit);
+  const [mediumBatchId, setMediumBatchId] = useState(accession.mediumBatchId ?? '');
+  const [provenanceType, setProvenanceType] = useState<ProvenanceType>(
+    accession.provenance?.type ?? 'unknown'
+  );
+  const [sourceNote, setSourceNote] = useState(accession.provenance?.sourceNote ?? '');
+  const [acquiredAt, setAcquiredAt] = useState(toDateInputValue(accession.acquiredAt));
+  const [colonizedAt, setColonizedAt] = useState(toDateInputValue(accession.colonizedAt));
+  const [facilityId, setFacilityId] = useState(accession.location.facilityId ?? '');
+  const [roomId, setRoomId] = useState(accession.location.roomId ?? '');
+  const [unitLocation, setUnitLocation] = useState(accession.location.unit ?? '');
+  const [position, setPosition] = useState(accession.location.position ?? '');
+  const [label, setLabel] = useState(accession.label ?? '');
+  const [notes, setNotes] = useState(accession.notes ?? '');
+  const [tags, setTags] = useState(accession.tags.join(', '));
 
   const today = getToday();
-  const acquiredAtValid = !!acquiredAt && acquiredAt <= today;
+  const acquiredAtValid = acquiredAt === '' || acquiredAt <= today;
   const colonizedAtValid = colonizedAt === '' || colonizedAt <= today;
 
   const canSubmit =
     Number(quantity) >= 0 &&
     acquiredAtValid &&
     colonizedAtValid &&
-    !createAccession.isPending;
-
-  const previewCode = `${(lineCode ?? 'LINE').toUpperCase()}-${
-    Number(filialGeneration) > 0 ? `F${filialGeneration}-` : ''
-  }G${cloneGeneration || 0}-…`;
+    !updateAccession.isPending;
 
   const handleSubmit = async () => {
-    const result = await createAccession.mutateAsync({
-      lineId,
+    const result = await updateAccession.mutateAsync({
       form,
       quantity: Number(quantity),
-      unit: unit || 'vessels',
-      cloneGeneration: Number(cloneGeneration) || 0,
-      filialGeneration: Number(filialGeneration) || 0,
+      unit: unit.trim() || 'vessels',
       mediumBatchId: mediumBatchId || undefined,
       // Sent as bare YYYY-MM-DD strings, never through `new Date(...)` — the
       // backend's Optional[datetime] parses a date-only string as a naive
       // midnight on that exact day, with no UTC shift either direction.
-      acquiredAt,
+      acquiredAt: acquiredAt || undefined,
       colonizedAt: colonizedAt || undefined,
-      provenance: {
-        type: provenanceType,
-        sourceNote: sourceNote.trim() || undefined,
-      },
+      // The update is a full `$set` of `location`, not a merge — spread the
+      // existing document first so free-text `facility`/`room`/`temperatureC`
+      // (which LocationPicker doesn't manage) survive an edit untouched.
       location: {
+        ...accession.location,
         facilityId: facilityId || undefined,
         roomId: roomId || undefined,
         unit: unitLocation.trim() || undefined,
         position: position.trim() || undefined,
       },
+      // Same full-replace reasoning: keep any sub-fields this form doesn't
+      // surface (e.g. provenance.acquiredAt) rather than dropping them.
+      provenance: {
+        ...(accession.provenance ?? {}),
+        type: provenanceType,
+        sourceNote: sourceNote.trim() || undefined,
+      },
       label: label.trim() || undefined,
       notes: notes.trim() || undefined,
+      tags: tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
     });
     onDone?.(result);
     onClose();
@@ -120,8 +134,8 @@ export function RegisterAccessionModal({
 
   return (
     <Modal
-      title="Register material"
-      subtitle="Founding material entered by hand. Clones and crosses go through Propagate instead."
+      title={`Edit ${accession.accessionCode}`}
+      subtitle="Corrects the record — status is changed from the detail page, not here."
       onClose={onClose}
       footer={
         <>
@@ -129,30 +143,15 @@ export function RegisterAccessionModal({
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={!canSubmit}>
-            {createAccession.isPending ? 'Saving…' : 'Register'}
+            {updateAccession.isPending ? 'Saving…' : 'Save changes'}
           </Button>
         </>
       }
     >
-      {createAccession.isError && (
+      {updateAccession.isError && (
         <Banner $tone="error">
-          {(createAccession.error as any)?.response?.data?.detail ??
-            createAccession.error.message}
-        </Banner>
-      )}
-
-      <Banner>
-        Will be created as <strong>{previewCode}</strong>
-      </Banner>
-
-      {/* The one ordering trap in the flow: a medium batch cannot be attached
-          retroactively, so material registered now will permanently have no
-          record of what it grew on. */}
-      {(batchPage?.data ?? []).length === 0 && (
-        <Banner $tone="warning">
-          No medium batches exist yet. You can register this material without one, but
-          it will have no record of what it grew on — and that cannot be added later.
-          Consider pouring a batch under <strong>Media &amp; recipes</strong> first.
+          {(updateAccession.error as any)?.response?.data?.detail ??
+            updateAccession.error.message}
         </Banner>
       )}
 
@@ -175,33 +174,11 @@ export function RegisterAccessionModal({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
           />
+          <Hint>Vessel or head count currently held under this record.</Hint>
         </Field>
         <Field>
           <Label>Unit</Label>
           <Input value={unit} onChange={(e) => setUnit(e.target.value)} />
-        </Field>
-      </FormRow>
-
-      <FormRow $cols={2}>
-        <Field>
-          <Label>Clone generation (G)</Label>
-          <Input
-            type="number"
-            min={0}
-            value={cloneGeneration}
-            onChange={(e) => setCloneGeneration(e.target.value)}
-          />
-          <Hint>0 for fresh founding material.</Hint>
-        </Field>
-        <Field>
-          <Label>Filial generation (F)</Label>
-          <Input
-            type="number"
-            min={0}
-            value={filialGeneration}
-            onChange={(e) => setFilialGeneration(e.target.value)}
-          />
-          <Hint>Leave at 0 unless this arrived as a known F-generation cross.</Hint>
         </Field>
       </FormRow>
 
@@ -240,6 +217,10 @@ export function RegisterAccessionModal({
           />
         </Field>
       </FormRow>
+      <Hint>
+        Mainly meaningful for founding material — propagated accessions carry their origin
+        through their parents instead.
+      </Hint>
 
       <FormRow $cols={2}>
         <Field>
@@ -294,6 +275,16 @@ export function RegisterAccessionModal({
       <Field>
         <Label>Notes</Label>
         <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+
+      <Field>
+        <Label>Tags</Label>
+        <Input
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="fast-colonising, sector-watch"
+        />
+        <Hint>Comma-separated.</Hint>
       </Field>
     </Modal>
   );

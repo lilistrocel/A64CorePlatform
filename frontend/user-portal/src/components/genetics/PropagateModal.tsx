@@ -114,6 +114,19 @@ function isValidVesselNo(value: string, ceiling: number): boolean {
   return Number.isInteger(n) && n >= 1 && n <= ceiling;
 }
 
+/**
+ * Today's date as `YYYY-MM-DD`, built from local date parts (never
+ * `toISOString()`, which reads UTC and can land on the wrong day for
+ * negative-offset zones near midnight).
+ */
+function getToday(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const ROLE_OPTIONS: ParentRole[] = [
   'clone_source',
   'seed_parent',
@@ -189,6 +202,11 @@ interface PropagateModalProps {
   sourceAccession?: Accession;
   /** Restrict the parent pickers to one line; omit to search everything. */
   lineId?: string;
+  /** Pre-fills Parent A's "From vessel #" — used by the scan-to-act flow
+   * (LabelInfoPage's "Propagate from this vessel"), which already knows
+   * exactly which physical vessel was scanned. Ignored without
+   * `sourceAccession`, same as the vessel field it seeds. */
+  initialVesselNo?: number;
   onClose: () => void;
   onDone?: (createdIds: string[]) => void;
 }
@@ -196,6 +214,7 @@ interface PropagateModalProps {
 export function PropagateModal({
   sourceAccession,
   lineId,
+  initialVesselNo,
   onClose,
   onDone,
 }: PropagateModalProps) {
@@ -208,7 +227,9 @@ export function PropagateModal({
   const [method, setMethod] = useState<PropagationMethodValue>('agar_to_agar');
   const [parentAId, setParentAId] = useState(sourceAccession?.id ?? '');
   const [parentARole, setParentARole] = useState<ParentRole>('clone_source');
-  const [parentAVesselNo, setParentAVesselNo] = useState('');
+  const [parentAVesselNo, setParentAVesselNo] = useState(
+    sourceAccession && initialVesselNo ? String(initialVesselNo) : ''
+  );
   const [parentBId, setParentBId] = useState('');
   const [parentBRole, setParentBRole] = useState<ParentRole>('sire');
   const [parentBUnknown, setParentBUnknown] = useState(false);
@@ -220,6 +241,7 @@ export function PropagateModal({
   const [mediumBatchId, setMediumBatchId] = useState('');
   const [targetLineId, setTargetLineId] = useState('');
   const [operatorName, setOperatorName] = useState('');
+  const [performedAt, setPerformedAt] = useState(getToday());
   const [notes, setNotes] = useState('');
 
   // Once the operator picks a result form themselves, stop re-suggesting.
@@ -299,11 +321,14 @@ export function PropagateModal({
     return lines.find((l) => l.id === id)?.code ?? '—';
   }, [targetLineId, parentA, lines]);
 
+  const performedAtValid = !!performedAt && performedAt <= getToday();
+
   const canSubmit =
     !!(parentAId || parentBId || targetLineId) &&
     Number(quantity) >= 1 &&
     parentAVesselValid &&
     parentBVesselValid &&
+    performedAtValid &&
     !propagate.isPending;
 
   const handleSubmit = async () => {
@@ -332,6 +357,10 @@ export function PropagateModal({
     const result = await propagate.mutateAsync({
       method,
       parents,
+      // Sent as a bare YYYY-MM-DD string, never through `new Date(...)` — the
+      // backend's Optional[datetime] parses a date-only string as a naive
+      // midnight on that exact day, with no UTC shift either direction.
+      performedAt,
       operatorName: operatorName || undefined,
       mediumBatchId: mediumBatchId || undefined,
       protocolId: protocolId || undefined,
@@ -584,7 +613,7 @@ export function PropagateModal({
         </Field>
       </FormRow>
 
-      <FormRow $cols={2}>
+      <FormRow $cols={3}>
         <Field>
           <Label>Medium batch</Label>
           <Select value={mediumBatchId} onChange={(e) => setMediumBatchId(e.target.value)}>
@@ -604,7 +633,20 @@ export function PropagateModal({
             placeholder="Technician name"
           />
         </Field>
+        <Field>
+          <Label>Performed on</Label>
+          <Input
+            type="date"
+            value={performedAt}
+            max={getToday()}
+            onChange={(e) => setPerformedAt(e.target.value)}
+          />
+        </Field>
       </FormRow>
+
+      {!performedAtValid && (
+        <Banner $tone="warning">Performed on cannot be in the future.</Banner>
+      )}
 
       {/* Scope follows the method, so switching from a clone to a spore print
           swaps which SOPs are offered. */}

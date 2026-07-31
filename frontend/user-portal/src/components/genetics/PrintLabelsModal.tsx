@@ -30,7 +30,29 @@ import { Banner, Button, Field, FormRow, Hint, Input, Label, Select } from './st
 // mistyped range is obvious before the request round-trips and 400s.
 const MAX_LABELS_PER_REQUEST = 500;
 
-type TapeSize = '62x20' | '29x90' | '17x87';
+// Mirrors `_parse_tape_spec` in src/modules/genetics/api/v1/labels.py:
+// '29x90'/'17x87' are fixed die-cut stock (one physical length each); '62xN'
+// is the one parameterizable family — continuous tape, any integer feed
+// length in mm within this range. These three constants are the ONLY numbers
+// mirrored client-side; the QR density/module-size arithmetic itself
+// (`compute_qr_geometry`) stays server-only — see the low-density hint below.
+const CONTINUOUS_MIN_MM = 12;
+const CONTINUOUS_MAX_MM = 100;
+const CONTINUOUS_DEFAULT_MM = 15; // user-confirmed: prints and scans cleanly on this lab's QL-800.
+
+// Below this length the QR is visibly denser than the confirmed-good 15mm
+// default (spec §6.2: shorter feed length -> fewer mm per QR module for the
+// same payload). This is a qualitative nudge, not a computed threshold — the
+// real module-size math (`compute_qr_geometry`) only exists server-side and
+// is deliberately not duplicated here.
+const DENSITY_HINT_BELOW_MM = 15;
+
+type TapeType = 'continuous' | '29x90' | '17x87';
+
+function composeSize(tapeType: TapeType, continuousLengthMm: number): string {
+  if (tapeType === '29x90' || tapeType === '17x87') return tapeType;
+  return `62x${continuousLengthMm}`;
+}
 
 interface PrintLabelsModalProps {
   accession: Accession;
@@ -61,7 +83,8 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
   // than prefilling a range the server will reject outright.
   const [fromStr, setFromStr] = useState(String(nothingUnprinted ? 1 : naturalFrom));
   const [toStr, setToStr] = useState(String(nothingUnprinted ? Math.max(accession.quantity, 1) : naturalTo));
-  const [size, setSize] = useState<TapeSize>('62x20');
+  const [tapeType, setTapeType] = useState<TapeType>('continuous');
+  const [continuousLengthStr, setContinuousLengthStr] = useState(String(CONTINUOUS_DEFAULT_MM));
   const [lastDownload, setLastDownload] = useState<string | null>(null);
 
   const fromNum = Number(fromStr);
@@ -70,10 +93,22 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
     Number.isInteger(fromNum) && Number.isInteger(toNum) && fromNum >= 1 && toNum >= 1 && fromNum <= toNum;
   const pageCount = rangeValid ? toNum - fromNum + 1 : 0;
   const overCap = rangeValid && pageCount > MAX_LABELS_PER_REQUEST;
-  const canDownload = rangeValid && !overCap && !labelsPdf.isPending;
+
+  const continuousLengthNum = Number(continuousLengthStr);
+  // Mirrors `_TAPE_62_MIN_MM`/`_TAPE_62_MAX_MM` validation in labels.py —
+  // only meaningful for the continuous tape type; the two die-cut sizes have
+  // no length field to validate.
+  const continuousLengthValid =
+    tapeType !== 'continuous' ||
+    (Number.isInteger(continuousLengthNum) &&
+      continuousLengthNum >= CONTINUOUS_MIN_MM &&
+      continuousLengthNum <= CONTINUOUS_MAX_MM);
+
+  const canDownload = rangeValid && !overCap && continuousLengthValid && !labelsPdf.isPending;
 
   const handleDownload = async () => {
     setLastDownload(null);
+    const size = composeSize(tapeType, continuousLengthNum);
     const result = await labelsPdf.mutateAsync({ from: fromNum, to: toNum, size });
     triggerBlobDownload(result.blob, result.filename);
     setLastDownload(result.filename);
@@ -127,14 +162,43 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
         </Field>
       </FormRow>
 
-      <Field>
-        <Label>Tape size</Label>
-        <Select value={size} onChange={(e) => setSize(e.target.value as TapeSize)}>
-          <option value="62x20">62 × 20 mm continuous (recommended)</option>
-          <option value="29x90">29 × 90 mm die-cut</option>
-          <option value="17x87">17 × 87 mm die-cut — not recommended</option>
-        </Select>
-      </Field>
+      <FormRow $cols={2}>
+        <Field>
+          <Label>Tape</Label>
+          <Select value={tapeType} onChange={(e) => setTapeType(e.target.value as TapeType)}>
+            <option value="continuous">62 mm continuous</option>
+            <option value="29x90">29 × 90 mm die-cut</option>
+            <option value="17x87">17 × 87 mm die-cut — not recommended</option>
+          </Select>
+        </Field>
+        <Field>
+          <Label>Length (mm)</Label>
+          <Input
+            type="number"
+            min={CONTINUOUS_MIN_MM}
+            max={CONTINUOUS_MAX_MM}
+            value={continuousLengthStr}
+            onChange={(e) => setContinuousLengthStr(e.target.value)}
+            disabled={tapeType !== 'continuous'}
+          />
+        </Field>
+      </FormRow>
+
+      {tapeType === 'continuous' && !continuousLengthValid && (
+        <Banner $tone="warning">
+          Continuous tape length must be a whole number between {CONTINUOUS_MIN_MM} and{' '}
+          {CONTINUOUS_MAX_MM}mm.
+        </Banner>
+      )}
+
+      {tapeType === 'continuous' &&
+        continuousLengthValid &&
+        continuousLengthNum < DENSITY_HINT_BELOW_MM && (
+          <Hint>
+            Shorter tape packs the QR code denser — test-scan a label before printing a large
+            batch at this length.
+          </Hint>
+        )}
 
       <Hint>
         {rangeValid

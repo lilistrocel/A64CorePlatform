@@ -166,8 +166,14 @@ export function LineFormModal({ line, onClose, onDone }: LineFormModalProps) {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="PO-BLU"
+            disabled={isEdit}
+            style={isEdit ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
           />
-          <Hint>Used to build accession codes, e.g. PO-BLU-G2-014.</Hint>
+          <Hint>
+            {isEdit
+              ? 'Locked after creation — already baked into every accession code minted on this line (e.g. PO-BLU-G2-014) and printed on physical vessel labels. Changing it here would desync those records.'
+              : 'Used to build accession codes, e.g. PO-BLU-G2-014.'}
+          </Hint>
         </Field>
         <Field>
           <Label>Kind *</Label>

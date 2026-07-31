@@ -14,6 +14,19 @@ import { ProtocolPicker } from '../protocols/ProtocolPicker';
 import { PROTOCOL_SCOPES } from '../../types/protocols';
 import { Banner, Button, Field, FormRow, Hint, Input, Label, Select, TextArea } from './styled';
 
+/**
+ * Today's date as `YYYY-MM-DD`, built from local date parts (never
+ * `toISOString()`, which reads UTC and can land on the wrong day for
+ * negative-offset zones near midnight).
+ */
+function getToday(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 interface BatchFormModalProps {
   defaultRecipeId?: string;
   onClose: () => void;
@@ -29,11 +42,14 @@ export function BatchFormModal({ defaultRecipeId, onClose, onDone }: BatchFormMo
   const [vesselCount, setVesselCount] = useState('20');
   const [vesselType, setVesselType] = useState('90mm plates');
   const [sterilizerRun, setSterilizerRun] = useState('');
+  const [preparedAt, setPreparedAt] = useState(getToday());
   const [protocolId, setProtocolId] = useState('');
   const [notes, setNotes] = useState('');
 
   const selected = recipes.find((r) => r.id === recipeId);
-  const canSubmit = !!recipeId && Number(vesselCount) >= 0 && !createBatch.isPending;
+  const preparedAtValid = !!preparedAt && preparedAt <= getToday();
+  const canSubmit =
+    !!recipeId && Number(vesselCount) >= 0 && preparedAtValid && !createBatch.isPending;
 
   const handleSubmit = async () => {
     const result = await createBatch.mutateAsync({
@@ -41,6 +57,10 @@ export function BatchFormModal({ defaultRecipeId, onClose, onDone }: BatchFormMo
       vesselCount: Number(vesselCount),
       vesselType: vesselType.trim() || undefined,
       sterilizerRun: sterilizerRun.trim() || undefined,
+      // Sent as a bare YYYY-MM-DD string, never through `new Date(...)` — the
+      // backend's Optional[datetime] parses a date-only string as a naive
+      // midnight on that exact day, with no UTC shift either direction.
+      preparedAt,
       protocolId: protocolId || undefined,
       notes: notes.trim() || undefined,
     });
@@ -90,7 +110,7 @@ export function BatchFormModal({ defaultRecipeId, onClose, onDone }: BatchFormMo
         </Banner>
       )}
 
-      <FormRow $cols={2}>
+      <FormRow $cols={3}>
         <Field>
           <Label>Vessels poured</Label>
           <Input
@@ -104,7 +124,20 @@ export function BatchFormModal({ defaultRecipeId, onClose, onDone }: BatchFormMo
           <Label>Vessel type</Label>
           <Input value={vesselType} onChange={(e) => setVesselType(e.target.value)} />
         </Field>
+        <Field>
+          <Label>Prepared on</Label>
+          <Input
+            type="date"
+            value={preparedAt}
+            max={getToday()}
+            onChange={(e) => setPreparedAt(e.target.value)}
+          />
+        </Field>
       </FormRow>
+
+      {!preparedAtValid && (
+        <Banner $tone="warning">Prepared on cannot be in the future.</Banner>
+      )}
 
       <Field>
         <Label>Sterilizer run</Label>

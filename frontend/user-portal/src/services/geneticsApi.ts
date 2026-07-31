@@ -176,11 +176,13 @@ export async function splitAccession(
 export interface GetLabelsPdfParams {
   from?: number;
   to?: number;
-  // Mirrors _TAPE_PRINTABLE_PX in src/modules/genetics/api/v1/labels.py.
-  // 62x20 (continuous) is the recommended size: it holds a flat 0.486mm QR
-  // module across every vessel number, where 17x87 drops a QR version at
-  // vessel #10 and falls to 0.340mm mid-batch.
-  size?: '62x20' | '29x90' | '17x87';
+  // Mirrors `_parse_tape_spec` in src/modules/genetics/api/v1/labels.py:
+  // '29x90' / '17x87' (fixed die-cut) or '62xN' (continuous, N = length in
+  // mm, 12-100 inclusive, e.g. '62x15'). Plain `string` rather than a
+  // template-literal type — the caller (PrintLabelsModal) composes this from
+  // a runtime numeric input, so a literal type would not narrow correctly;
+  // the server is the real validator either way (400 on anything invalid).
+  size?: string;
 }
 
 export interface LabelsPdfResult {

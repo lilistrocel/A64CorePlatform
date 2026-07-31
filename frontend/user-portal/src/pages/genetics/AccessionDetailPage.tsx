@@ -9,10 +9,11 @@
  * origin if that is where the trail ends.
  */
 
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { HelpButton } from '../../components/tutorials/HelpButton';
+import { EditAccessionModal } from '../../components/genetics/EditAccessionModal';
 import { LineageTree } from '../../components/genetics/LineageTree';
 import { ObservationModal } from '../../components/genetics/ObservationModal';
 import { PromoteTraitModal } from '../../components/genetics/PromoteTraitModal';
@@ -208,14 +209,38 @@ const STATUSES = Object.keys(STATUS_LABELS) as AccessionStatus[];
 export function AccessionDetailPage() {
   const { accessionId } = useParams<{ accessionId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  const [showEdit, setShowEdit] = useState(false);
   const [showObserve, setShowObserve] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [showPropagate, setShowPropagate] = useState(false);
   const [showPrintLabels, setShowPrintLabels] = useState(false);
   const [promoting, setPromoting] = useState<Observation | null>(null);
+  const [propagateVesselNo, setPropagateVesselNo] = useState<number | undefined>(undefined);
 
   const { data: accession, isLoading } = useAccession(accessionId);
+
+  // Scan-to-act deep link: LabelInfoPage's "Propagate from this vessel"
+  // navigates here as `?propagate=1&vesselNo=N` (this accession and vessel
+  // are already known from the scan, no picker needed). Query params are
+  // stripped immediately after being consumed so a refresh or the browser
+  // back button doesn't reopen the modal.
+  useEffect(() => {
+    if (!accession) return;
+    if (searchParams.get('propagate') !== '1') return;
+
+    const vesselNoParam = searchParams.get('vesselNo');
+    const parsed = vesselNoParam ? Number(vesselNoParam) : NaN;
+    setPropagateVesselNo(Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined);
+    setShowPropagate(true);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('propagate');
+    next.delete('vesselNo');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accession]);
   const { data: line } = useGeneticLine(accession?.lineId);
   const { data: ancestry } = useAncestry(accessionId);
   const { data: graph } = useLineageGraph({ accessionId });
@@ -274,6 +299,9 @@ export function AccessionDetailPage() {
         </div>
 
         <Actions>
+          <Button $variant="ghost" onClick={() => setShowEdit(true)}>
+            Edit
+          </Button>
           <Button $variant="ghost" onClick={() => setShowObserve(true)}>
             Observe
           </Button>
@@ -289,7 +317,14 @@ export function AccessionDetailPage() {
           >
             Split
           </Button>
-          <Button onClick={() => setShowPropagate(true)}>Propagate from this</Button>
+          <Button
+            onClick={() => {
+              setPropagateVesselNo(undefined);
+              setShowPropagate(true);
+            }}
+          >
+            Propagate from this
+          </Button>
           <Button $variant="ghost" onClick={() => setShowPrintLabels(true)}>
             Print labels
           </Button>
@@ -557,6 +592,9 @@ export function AccessionDetailPage() {
         )}
       </Section>
 
+      {showEdit && (
+        <EditAccessionModal accession={accession} onClose={() => setShowEdit(false)} />
+      )}
       {showObserve && (
         <ObservationModal accession={accession} onClose={() => setShowObserve(false)} />
       )}
@@ -570,6 +608,7 @@ export function AccessionDetailPage() {
       {showPropagate && (
         <PropagateModal
           sourceAccession={accession}
+          initialVesselNo={propagateVesselNo}
           onClose={() => setShowPropagate(false)}
           onDone={(ids) => ids[0] && navigate(`/genetics/accessions/${ids[0]}`)}
         />

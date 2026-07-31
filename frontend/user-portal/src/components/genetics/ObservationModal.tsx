@@ -35,6 +35,19 @@ function isValidVesselNo(value: string, ceiling: number): boolean {
   return Number.isInteger(n) && n >= 1 && n <= ceiling;
 }
 
+/**
+ * Today's date as `YYYY-MM-DD`, built from local date parts (never
+ * `toISOString()`, which reads UTC and can land on the wrong day for
+ * negative-offset zones near midnight).
+ */
+function getToday(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 // "Novel trait" is a promotion-candidate flag, not the Harvesting phase —
 // bright.lavender (a decorative, non-gold accent) marks the toggled state
 // instead of gold (spec §3).
@@ -72,6 +85,7 @@ export function ObservationModal({ accession, onClose, onDone }: ObservationModa
   const createObservation = useCreateObservation();
 
   const [type, setType] = useState<ObservationTypeValue>('growth');
+  const [observedAt, setObservedAt] = useState(getToday());
   const [text, setText] = useState('');
   const [growthRate, setGrowthRate] = useState('');
   const [colonization, setColonization] = useState('');
@@ -84,15 +98,22 @@ export function ObservationModal({ accession, onClose, onDone }: ObservationModa
   const ceiling = Math.max(accession.labelledVesselCount, accession.quantity);
   const vesselNoValid = isValidVesselNo(vesselNo, ceiling);
 
+  const observedAtValid = !!observedAt && observedAt <= getToday();
+
   const canSubmit =
     !createObservation.isPending &&
     (text.trim() || growthRate || colonization) &&
-    vesselNoValid;
+    vesselNoValid &&
+    observedAtValid;
 
   const handleSubmit = async () => {
     await createObservation.mutateAsync({
       accessionId: accession.id,
       type,
+      // Sent as a bare YYYY-MM-DD string, never through `new Date(...)` — the
+      // backend's Optional[datetime] parses a date-only string as a naive
+      // midnight on that exact day, with no UTC shift either direction.
+      observedAt,
       text: text.trim() || undefined,
       isNovelTrait,
       traitName: isNovelTrait ? traitName.trim() || undefined : undefined,
@@ -130,16 +151,31 @@ export function ObservationModal({ accession, onClose, onDone }: ObservationModa
         </Banner>
       )}
 
-      <Field>
-        <Label>Type</Label>
-        <Select value={type} onChange={(e) => setType(e.target.value as ObservationTypeValue)}>
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {OBSERVATION_LABELS[t]}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <FormRow $cols={2}>
+        <Field>
+          <Label>Type</Label>
+          <Select value={type} onChange={(e) => setType(e.target.value as ObservationTypeValue)}>
+            {TYPES.map((t) => (
+              <option key={t} value={t}>
+                {OBSERVATION_LABELS[t]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field>
+          <Label>Observed on</Label>
+          <Input
+            type="date"
+            value={observedAt}
+            max={getToday()}
+            onChange={(e) => setObservedAt(e.target.value)}
+          />
+        </Field>
+      </FormRow>
+
+      {!observedAtValid && (
+        <Banner $tone="warning">Observed on cannot be in the future.</Banner>
+      )}
 
       <Field>
         <Label>What did you see?</Label>

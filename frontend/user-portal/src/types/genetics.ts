@@ -306,6 +306,7 @@ export interface CreateAccessionPayload {
   mediumBatchId?: string;
   location?: StorageLocation;
   acquiredAt?: string;
+  colonizedAt?: string;
   label?: string;
   notes?: string;
   tags?: string[];
@@ -324,12 +325,15 @@ export type UpdateAccessionPayload = Partial<
     | 'unit'
     | 'mediumBatchId'
     | 'location'
+    | 'acquiredAt'
+    | 'colonizedAt'
     | 'label'
     | 'notes'
     | 'tags'
     | 'status'
     | 'cloneGeneration'
     | 'filialGeneration'
+    | 'provenance'
   >
 >;
 
@@ -338,6 +342,12 @@ export interface SplitAccessionPayload {
   reason?: string;
   status?: AccessionStatus;
   label?: string;
+  /** Printed vessel ordinals of the parent batch this split holds, e.g. [7].
+   * Mirrors AccessionSplit.vesselNumbers in
+   * src/modules/genetics/models/accession.py — required for the scan-to-act
+   * "mark contaminated" flow so the public resolver routes that ordinal to
+   * the split-off record afterward. */
+  vesselNumbers?: number[];
 }
 
 export interface SplitResult {

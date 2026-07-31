@@ -439,11 +439,15 @@ export function MushroomRoomMonitor() {
 // ============================================================================
 
 // Transparent page container — the fixed sky (mounted once at the app shell)
-// shows through every page; no opaque background here (spec §7).
+// shows through every page; no opaque background here (spec §7). Padding
+// matches MushroomFacilityManager's Container (both live under the same
+// Operations section) — this page was previously missing it entirely.
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  padding: 34px 40px 60px;
+  max-width: 100%;
 `;
 
 const LoadingNote = styled.div`
