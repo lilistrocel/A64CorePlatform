@@ -79,11 +79,19 @@ class GeneticsDatabaseManager:
             # --- genetic_accessions --------------------------------------------
             await db[ACCESSIONS].create_index("accessionId", unique=True)
             await db[ACCESSIONS].create_index("accessionCode", unique=True)
+            # T-804 — opaque key the unauthenticated public label page resolves
+            # through; must be unique so a collision on mint is even possible
+            # to detect (see AccessionService.create_accession retry).
+            await db[ACCESSIONS].create_index("publicToken", unique=True)
             await db[ACCESSIONS].create_index("lineId")
             await db[ACCESSIONS].create_index("status")
             await db[ACCESSIONS].create_index("form")
             await db[ACCESSIONS].create_index("mediumBatchId")
             await db[ACCESSIONS].create_index("sourceEventId")
+            # T-804 — written today (batch split) but never indexed. The public
+            # resolver walk queries it on every scan of a split-off vessel, so
+            # it needs one regardless of the split's own indexing needs.
+            await db[ACCESSIONS].create_index("splitFromAccessionId")
             # Lineage traversal walks children by parent id — the hot path for
             # the graph endpoint, hence a dedicated index on the nested field.
             await db[ACCESSIONS].create_index("parents.accessionId")

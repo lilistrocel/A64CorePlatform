@@ -1,7 +1,14 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-06-10
-> **Tasks:** 5 active · 2 ready · 2 blocked · 0 completed (Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — this session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc`) — remaining Active: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic), T-200.25 (BLA stubs — implementation complete, awaiting commit); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
+> **Updated:** 2026-07-30
+> **Tasks:** 32 active · 14 ready · 1 blocked (counts as of this update; the
+> narrative below predates several waves and is kept for history — see
+> ARCHIVE.md for what has actually shipped). This update: **T-901** (Night
+> Observatory redesign — dark-first glass-panel visual system) completed and
+> moved to ARCHIVE.md, closing out its 4-phase sequencing (foundation → shell
+> → screen sweep → gold audit).
+>
+> Prior note (2026-06-10): Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — that session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc` — remaining Active then: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic), T-200.25 (BLA stubs — implementation complete, awaiting commit); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
 
 ---
 
@@ -91,44 +98,43 @@
 
 ---
 
-### T-900 | A20Core rebrand — "A New Renaissance" (foundation + sweep)
-- **Category:** Frontend · **Priority:** P1
-- **Assigned:** frontend-dev-expert · **Started:** 2026-07-30
-- **Depends on:** none
-- **Blocks:** none (sweep phase depends on foundation phase within this same ticket)
-- **Description:** Rebrand the React frontend from the old Material-blue/purple
-  theme to A20Core "A New Renaissance" — Fresco Cream / Cosmos Ink grounds, Lapis /
-  Gold / Emerald / Terracotta chromatic voices, Hanken Grotesk + Space Mono +
-  Fraunces typography, new logo lockup/emblem, "A20Core" naming. Contract:
-  `Brand_Engineering/Brand/A20Core_BRAND.md`. Engineering translation + frozen
-  token surface: `Docs/2-Working-Progress/a20core-rebrand-spec.md`.
-- **Sequencing:** Phase 1 (this session) = foundation — `theme.ts` token rewrite,
-  self-hosted font vendoring, `GlobalStyles.tsx`, `index.html`, `index.css`,
-  `App.css`, logo asset swap, "A20Core" naming in owned files. Phase 2 (separate
-  fleet, blocked on Phase 1 merging) = sweep the 239 files under
-  `src/pages/**`/`src/components/**` with hardcoded hex colours onto the new
-  tokens, per the hex→token migration table in the spec §3.
+### T-804 | Genetics label & QR system — per-vessel labels + public lineage info page
+- **Category:** genetics · **Priority:** P1
+- **Assigned:** — · **Started:** 2026-07-31 (spec only)
+- **Depends on:** T-800 ✅, T-803 ✅
+- **Blocks:** scan-to-act (mark-contaminated by scan) — not yet ticketed
+- **Spec:** `Docs/2-Working-Progress/genetics-label-qr-spec.md` — read this first, it
+  carries the reasoning for every decision below
+- **Description:** Print a QR label per physical vessel on a Brother QL-800, so
+  scanning it opens a public, menu-less lineage page. Accession stays a batch
+  record; the label carries a vessel ordinal. QR encodes an opaque `publicToken`,
+  never the readable accession code — the page is unauthenticated and a readable
+  code would make the whole library enumerable.
+- **Key constraint:** `split()` decrements `quantity`, so vessel ordinals must come
+  from a `labelledVesselCount` high-water mark that is never decremented. See
+  spec §3 — getting this wrong silently orphans printed labels.
 - **Steps:**
-  1. Rewrite `frontend/shared/src/theme/theme.ts` — same key shape, new Lapis/
-     Gold/Emerald/Terracotta/warm-neutral values; add `canvas`, `onAccent`,
-     `border`, standalone `lapis`/`gold`/`emerald`/`terracotta` ramps,
-     `typography.fontFamily.display`.
-  2. Vendor Hanken Grotesk / Fraunces / Space Mono TTFs (Latin only, no Cairo/
-     Amiri) into `frontend/user-portal/public/fonts/` + licences; write
-     `fonts.css`; link from `index.html` with a preload for Hanken Grotesk.
-  3. `GlobalStyles.tsx`: `body` background → `colors.canvas`; mono bindings for
-     `code/pre/kbd/samp/time`; link/focus colours → new primary.
-  4. `index.html`: title, favicon/touch-icon/PWA icons, `theme-color` meta.
-  5. `index.css` + `App.css`: rebase hardcoded hex onto brand values (App.css is
-     plain CSS with no theme access — literal brand hexes + comment explaining).
-  6. Swap `/a64logo_dark.png` references for the new lockup/emblem across
-     Login/Register/MFASetup/MFAVerify/DivisionSelector/MainLayout; delete old
-     logo + `vite.svg`/`react.svg` once unreferenced.
-  7. "A64 Core (Platform)" → "A20Core" in user-visible strings only (owned files).
-  8. Verify with `npx tsc -b` (not `tsc --noEmit`) in `frontend/user-portal`, and
-     type-check `frontend/shared`. No Playwright — UI is human-verified.
-  9. Leave this ticket **Active** (not archived) until the sweep phase (239 files)
-     also completes — see spec §7 for the two-phase sequencing.
+  1. `database-schema-architect` — `publicToken` / `labelledVesselCount` /
+     `sourceVesselNumbers` fields, unique + `splitFromAccessionId` indexes,
+     idempotent backfill migration
+  2. `backend-dev-expert` — split validation for `vesselNumbers`, split-resolver walk
+  3. `api-developer` — public `/api/v1/public/genetics/i/{token}/{vesselNo}` route,
+     hand-built `PublicAccessionInfo` (allowlist, never `response_model=Accession`),
+     rate limit, `PublicInfoPageConfig` on organization
+  4. `backend-dev-expert` — label PDF endpoint (reportlab + qrcode, both already in
+     requirements.txt)
+  5. `frontend-dev-expert` — public info page at `/i/:token/:vesselNo?` (outside
+     ProtectedRoute/MainLayout, mobile-first) + `PrintLabelsModal`
+  6. `testing-backend-specialist` — leakage allowlist test, ordinal-survives-split
+     test, identical-404 test
+  7. `frontend-testing-playwright` — info page on mobile viewport, print dialog flow
+  8. **Physically scan a printed 17×87 sample before any run >20 labels** — spec §6.2
+     numbers are geometry, scannability is empirical
+  9. `change-guardian` — docs, CHANGELOG, version bump; regenerate CodeMaps
+- **Open item (not blocking):** accession/line/recipe/batch codes carry *global*
+  unique indexes, not per-org. Collides the moment a second tenant creates their
+  own `PO-BLU`. Worth deciding before large print runs — re-coding labelled
+  physical stock is not something to do twice.
 
 ---
 

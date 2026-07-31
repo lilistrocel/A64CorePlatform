@@ -5116,3 +5116,174 @@ All endpoints mount under `/api/v1/finance/master-data/`. JWT Bearer auth.
 - AP_INVOICE: amount ≥ AED 10,000 → accountant
 - OUTGOING_PAYMENT: always required → finance_admin
 ```
+
+## Genetics Repo — Public Label-Info Endpoint (T-804)
+
+**This is the first unauthenticated route in the platform.** Every other
+endpoint in this document requires a JWT or API key; the two below
+deliberately do not, and are mounted as a structurally separate router
+(`src/modules/genetics/api/v1/public.py`, mounted directly by
+`src/modules/genetics/register.py`) rather than inside the authenticated
+`/api/v1/genetics` router, so the unauthenticated surface stays auditable
+as "everything under this one prefix" rather than "whichever routes happen
+not to declare a dependency." See
+`Docs/2-Working-Progress/genetics-label-qr-spec.md` §5.2 for the full
+design rationale.
+
+Base path: `/api/v1/public/genetics`
+
+### Get Public Batch Info
+
+**Endpoint**: `GET /api/v1/public/genetics/i/{token}`
+
+**Purpose**: Resolve a scanned label's opaque token to batch-level accession
+info — the page a QR code on a printed label opens. No vessel ordinal is
+given, so `vessel` is always `null`.
+
+**Authentication**: None (public, unauthenticated). Rate limited instead —
+see below.
+
+**Rate Limit**: 30 requests/minute per IP, enforced independently of the
+platform's per-role guest limit (`enforce_public_rate_limit` in
+`public.py` — deliberately does not couple to `settings.RATE_LIMIT_GUEST`,
+so an operator tuning that value elsewhere cannot silently change this
+route's specified budget).
+
+**Path Parameters**:
+- `token` (string, required) — the accession's `publicToken` (10-character
+  Crockford base32, e.g. `88FN1TQ84M`). Matched **case-insensitively**
+  (normalised to uppercase server-side) — the 17mm-tape QR payload is
+  printed uppercase to fit QR alphanumeric mode.
+
+**Response Schema** (`PublicAccessionInfo`, hand-built — never a dump of
+the internal `Accession` model):
+```json
+{
+  "accessionCode": "string",
+  "vessel": null,
+  "generationLabel": "string",
+  "line": { "code": "string", "commonName": "string", "scientificName": "string | null", "kind": "string" },
+  "form": "string",
+  "status": "string",
+  "acquiredAt": "ISO 8601 | null",
+  "medium": { "batchCode": "string | null", "recipeName": "string | null", "ingredients": "array | null" },
+  "protocol": { "code": "string | null", "title": "string | null", "version": "int | null", "steps": "array | null" },
+  "operator": "string | null",
+  "facility": "string | null",
+  "lineage": [
+    { "depth": 0, "accessionCode": "string", "generationLabel": "string", "method": "string | null", "performedAt": "ISO 8601 | null", "provenance": "string | null" }
+  ]
+}
+```
+
+`medium.ingredients`, `protocol.steps`, `operator` (full name vs.
+initials) and `facility` are gated per-tenant by
+`Organization.modules.publicInfoPage` (`showMediumIngredients`,
+`showProtocolSteps`, `showOperatorName`, `showFacilityName` — see
+`src/models/organization.py`). **All four default to `False`** — a
+deliberate privacy/trade-secret decision, not an oversight. Regardless of
+these flags, the response **never** includes `location.roomId`,
+`location.unit`, `location.position`, `notes`, `tags`, `createdBy`,
+`divisionId`, `organizationId`, any internal UUID, or any accession's
+`publicToken` (including parents in `lineage`).
+
+**Success Response (200 OK)**:
+```json
+{
+  "accessionCode": "PO-BLU-G3-004",
+  "vessel": null,
+  "generationLabel": "G3",
+  "line": { "code": "PO-BLU", "commonName": "Blue Oyster", "scientificName": "Pleurotus ostreatus", "kind": "fungus" },
+  "form": "petri_dish",
+  "status": "active",
+  "acquiredAt": "2026-07-31T00:00:00Z",
+  "medium": { "batchCode": "MEA-AC-2607-03", "recipeName": "Malt Extract Agar + AC", "ingredients": null },
+  "protocol": { "code": "SOP-AGR-001", "title": "Agar-to-Agar Transfer", "version": 2, "steps": null },
+  "operator": "V.A.",
+  "facility": null,
+  "lineage": [
+    { "depth": 0, "accessionCode": "PO-BLU-G3-004", "generationLabel": "G3", "method": "agar_to_agar", "performedAt": "2026-07-31T00:00:00Z", "provenance": null }
+  ]
+}
+```
+
+**Error Responses** — always the same status and byte-identical body,
+regardless of *why* the request failed (unknown token, disabled org,
+malformed input — see "404 for everything" below):
+
+404 Not Found:
+```json
+{ "detail": "No record found for this label." }
+```
+
+429 Too Many Requests:
+```json
+{ "detail": "Rate limit exceeded. Please retry shortly." }
+```
+
+**Status Codes**:
+| Code | Meaning |
+|------|---------|
+| 200 | Token resolved to a live accession on a tenant with the public page enabled |
+| 404 | Unknown token, malformed token, or the owning tenant has `publicInfoPage.enabled=false`. **Never 403** — a disabled page must read identically to a token that never existed, or the status code itself becomes an enumeration oracle. |
+| 429 | More than 30 requests/minute from this IP |
+
+**Headers**: Every response (200, 404, 429 alike) carries
+`Cache-Control: no-store` — lineage and split state change, and a proxy
+caching a stale "not found" is worse than a slow page.
+
+**Usage Example (curl)**:
+```bash
+curl https://a64core.com/api/v1/public/genetics/i/88FN1TQ84M
+```
+
+### Get Public Per-Vessel Info
+
+**Endpoint**: `GET /api/v1/public/genetics/i/{token}/{vesselNo}`
+
+**Purpose**: As above, plus resolves the printed vessel ordinal forward
+through any batch splits (spec §3) to the accession that currently holds
+that physical vessel — e.g. plate #7 of a 120-plate batch, after #7 was
+split off for contamination, still resolves via its original label.
+
+**Authentication**: None. **Rate Limit**: shared 30/min-per-IP budget with
+the batch-level endpoint above.
+
+**Path Parameters**:
+- `token` (string, required) — same as above.
+- `vesselNo` (integer, required) — the ordinal printed on the physical
+  label next to the QR code (e.g. `7`). Must be in `1..labelledVesselCount`
+  for the token's accession; a non-numeric value is treated identically to
+  an out-of-range one (404, not 422 — a validation error that named the
+  reason would itself leak information to an anonymous caller).
+
+**Response Schema**: Identical to the batch-level endpoint, with `vessel`
+populated instead of `null`:
+```json
+{ "vessel": { "number": 7, "of": 120, "splitOff": true } }
+```
+`splitOff` is `true` when the resolver walked forward to a different
+accession than the one the token directly addresses (i.e. this vessel was
+split out after the label was printed).
+
+**Status Codes**: Same as the batch-level endpoint, plus 404 when
+`vesselNo` is outside `1..labelledVesselCount` for the resolved batch.
+
+**Usage Example (curl)**:
+```bash
+curl https://a64core.com/api/v1/public/genetics/i/88FN1TQ84M/7
+```
+
+**Notes**:
+- Every other `/api/v1/genetics/*` endpoint remains fully authenticated —
+  this pair is the *only* unauthenticated surface the genetics module
+  exposes, mounted at its own fixed prefix specifically so that remains
+  true by construction rather than by convention.
+- `Organization.modules.publicInfoPage` (`PublicInfoPageConfig`) exists on
+  the organization model with privacy-safe defaults (`enabled=true`, every
+  `show*` flag `false`) as of T-804 step 3. **Not yet exposed through the
+  `PATCH /api/v1/organizations/{orgId}/modules` admin endpoint** — that
+  endpoint's `OrganizationModulesUpdate` schema currently only accepts
+  `financeEnabled`. Toggling `publicInfoPage` today requires a direct
+  database update; wiring it into the admin endpoint is follow-on work, not
+  part of this step's scope.

@@ -9,6 +9,7 @@ services stay focused on business rules.
 
 import logging
 import re
+import secrets
 from datetime import datetime
 from typing import Any, Dict, Optional, Type, TypeVar
 
@@ -21,6 +22,11 @@ TModel = TypeVar("TModel", bound=BaseModel)
 # Fields that are computed on the model and must never be persisted — they are
 # derived from stored values and would otherwise drift out of sync.
 _COMPUTED_FIELDS = ("generationLabel",)
+
+# Crockford base32 — no I, L, O or U, so a token read aloud off a label or
+# typed from a smudged print cannot be misheard as another valid character.
+_TOKEN_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+PUBLIC_TOKEN_LENGTH = 10
 
 
 def doc_to_model(doc: Dict[str, Any], model_cls: Type[TModel], id_key: str) -> TModel:
@@ -95,6 +101,18 @@ def build_batch_code(recipe_code: str, prepared_at: datetime, sequence: int) -> 
         f"{prepared_at.strftime('%y%m')}-"
         f"{sequence:02d}"
     )
+
+
+def generate_public_token() -> str:
+    """Mint an unguessable public-page key (~1.1e15 space).
+
+    This token is the only thing standing between a stranger holding one
+    printed label and the rest of the genetics library — the public info page
+    (T-804) is unauthenticated and resolves purely off this value, never off
+    ``accessionCode``. MUST use ``secrets``, never ``random``: this is a
+    security boundary, not a display identifier.
+    """
+    return "".join(secrets.choice(_TOKEN_ALPHABET) for _ in range(PUBLIC_TOKEN_LENGTH))
 
 
 def scope_fields(current_user: Any) -> Dict[str, Optional[str]]:

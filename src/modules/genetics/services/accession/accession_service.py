@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import HTTPException, status
+from pymongo.errors import DuplicateKeyError
 
 from ...models.accession import (
     Accession,
@@ -25,6 +26,7 @@ from ...models.enums import AccessionStatus
 from ..common import (
     build_accession_code,
     doc_to_model,
+    generate_public_token,
     generation_label,
     model_to_doc,
     scope_fields,
@@ -39,6 +41,21 @@ _ID_KEY = "accessionId"
 
 # Guard against an unbounded retry loop if code generation keeps colliding.
 _MAX_CODE_ATTEMPTS = 50
+
+# publicToken has a ~1.1e15 space (T-804) — a real collision on insert would
+# be a near-impossible coincidence, but an unhandled 500 on the create path
+# is still not acceptable, so a small bounded retry covers it.
+_MAX_TOKEN_ATTEMPTS = 5
+
+
+def _is_public_token_collision(error: DuplicateKeyError) -> bool:
+    """Distinguish a publicToken unique-index collision from any other
+    duplicate-key error (accessionId, accessionCode) so only the former is
+    retried here — the latter already has its own handling upstream."""
+    key_pattern = (error.details or {}).get("keyPattern", {}) if hasattr(error, "details") else {}
+    if "publicToken" in key_pattern:
+        return True
+    return "publicToken" in str(error)
 
 
 class AccessionService:
@@ -121,14 +138,28 @@ class AccessionService:
             **scope_fields(current_user),
         )
 
-        try:
-            await db[ACCESSIONS].insert_one(model_to_doc(accession, _ID_KEY))
-        except Exception as e:
-            logger.error(f"[AccessionService] insert_one failed: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create accession",
-            )
+        for attempt in range(_MAX_TOKEN_ATTEMPTS):
+            try:
+                await db[ACCESSIONS].insert_one(model_to_doc(accession, _ID_KEY))
+                break
+            except DuplicateKeyError as e:
+                if not _is_public_token_collision(e) or attempt == _MAX_TOKEN_ATTEMPTS - 1:
+                    logger.error(f"[AccessionService] insert_one failed: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to create accession",
+                    )
+                logger.warning(
+                    "[AccessionService] publicToken collision on create "
+                    f"(attempt {attempt + 1}/{_MAX_TOKEN_ATTEMPTS}), regenerating"
+                )
+                accession.publicToken = generate_public_token()
+            except Exception as e:
+                logger.error(f"[AccessionService] insert_one failed: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create accession",
+                )
 
         logger.info(
             f"[AccessionService] Created accession {accession.accessionCode} "
@@ -296,6 +327,58 @@ class AccessionService:
                 ),
             )
 
+        # T-804 — vessel-ordinal validation. vesselNumbers is optional; an
+        # empty list means "unnumbered split" and none of these checks run,
+        # matching the behaviour of every caller that predates this field.
+        # See genetics-label-qr-spec.md §3-4.1 for why the ordinal cannot be
+        # derived from quantity.
+        if data.vesselNumbers:
+            if len(data.vesselNumbers) != data.quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"vesselNumbers {sorted(data.vesselNumbers)} names "
+                        f"{len(data.vesselNumbers)} ordinal(s) but quantity is "
+                        f"{data.quantity} — one ordinal must be named per "
+                        f"vessel being split"
+                    ),
+                )
+
+            out_of_range = sorted(
+                n for n in data.vesselNumbers
+                if n < 1 or n > source.labelledVesselCount
+            )
+            if out_of_range:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Ordinal(s) {out_of_range} are outside the labelled "
+                        f"range 1..{source.labelledVesselCount} for "
+                        f"{source.accessionCode}"
+                    ),
+                )
+
+            claimed = await AccessionService._claimed_vessel_numbers(source.id)
+            already_claimed = sorted(set(data.vesselNumbers) & claimed)
+            if already_claimed:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Ordinal(s) {already_claimed} are already claimed by "
+                        f"a sibling split of {source.accessionCode}"
+                    ),
+                )
+
+            seen: set = set()
+            duplicates = sorted(
+                {n for n in data.vesselNumbers if n in seen or seen.add(n)}
+            )
+            if duplicates:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"vesselNumbers contains duplicate ordinal(s): {duplicates}",
+                )
+
         line = await LineService.get_line(source.lineId)
         db = genetics_db.get_database()
 
@@ -323,6 +406,7 @@ class AccessionService:
             status=data.status or source.status,
             sourceEventId=source.sourceEventId,
             splitFromAccessionId=source.id,
+            sourceVesselNumbers=list(data.vesselNumbers),
             **scope_fields(current_user),
         )
 
@@ -342,6 +426,24 @@ class AccessionService:
 
         updated_source = await AccessionService.get_accession(accession_id)
         return updated_source, child
+
+    @staticmethod
+    async def _claimed_vessel_numbers(source_id: str) -> set:
+        """Union of ``sourceVesselNumbers`` across every existing split of
+        ``source_id`` — the set of ordinals a new sibling split may not reuse.
+
+        T-804: a projection-only query, not ``get_many`` / ``list_children``,
+        because callers here only need the ordinal lists, not full documents.
+        """
+        db = genetics_db.get_database()
+        claimed: set = set()
+        cursor = db[ACCESSIONS].find(
+            {"splitFromAccessionId": source_id},
+            {"sourceVesselNumbers": 1},
+        )
+        async for doc in cursor:
+            claimed.update(doc.get("sourceVesselNumbers") or [])
+        return claimed
 
     # -----------------------------------------------------------------------
     # Room occupancy

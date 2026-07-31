@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from .accessions import router as accessions_router
 from .dashboard import router as dashboard_router
+from .labels import router as labels_router
 from .lineage import router as lineage_router
 from .lines import router as lines_router
 from .media import router as media_router
@@ -30,6 +31,15 @@ api_router.include_router(
 # -------------------------------------------------------------------------
 api_router.include_router(
     accessions_router,
+    prefix="/accessions",
+    tags=["genetics-accessions"],
+)
+
+# -------------------------------------------------------------------------
+# Labels — Brother QL-800 label PDF generation (T-804)
+# -------------------------------------------------------------------------
+api_router.include_router(
+    labels_router,
     prefix="/accessions",
     tags=["genetics-accessions"],
 )

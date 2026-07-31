@@ -15,6 +15,24 @@ Two independent generation counters are carried:
 They are orthogonal. A cross that is then cloned four times reads F1 · G4.
 Both are auto-derived from the propagation method but remain overridable,
 because lab convention beats our defaults.
+
+Label / QR (T-804): the accession also carries ``publicToken`` (the opaque
+key an unauthenticated scan resolves through) and ``labelledVesselCount``, a
+high-water mark of printed vessel ordinals. The latter exists because
+``AccessionService.split()`` decrements ``quantity`` — deriving a vessel
+ordinal from ``quantity`` would retroactively orphan whichever printed label
+corresponds to the vessel that just split off. See
+``Docs/2-Working-Progress/genetics-label-qr-spec.md`` §3 for the full
+reasoning; the field-level docstrings below repeat the essentials.
+
+Vessel-level parentage (T-805): ``ParentRef.vesselNo`` records which physical
+vessel of the parent *batch* material was taken from — an accession is a
+batch, so "parent accessionId X" alone cannot say whether a propagation came
+off plate 1 or plate 6 of a 6-plate batch. It rides on ``ParentRef`` rather
+than the propagation event because a cross has two parents, each potentially
+citing its own vessel. It only means anything because T-804's vessel
+ordinals are stable and never renumbered (spec §3) — otherwise a vessel
+number recorded today could point at the wrong physical plate tomorrow.
 """
 
 from datetime import datetime
@@ -23,6 +41,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, computed_field
 
+from ..services.common import generate_public_token
 from .enums import AccessionStatus, ParentRole, VesselForm
 from .line import Provenance
 
@@ -38,6 +57,15 @@ class ParentRef(BaseModel):
     role: ParentRole = Field(ParentRole.CLONE_SOURCE)
     lineId: Optional[str] = Field(None, description="Denormalised parent line for fast lineage queries")
     note: Optional[str] = Field(None, max_length=500, description="e.g. 'sire unrecorded, purchased litter'")
+    vesselNo: Optional[int] = Field(
+        None, ge=1,
+        description=(
+            "Which physical vessel of the parent batch this material was taken "
+            "from, e.g. plate #4 of a 6-plate batch. Optional: plenty of real "
+            "transfers are genuinely 'from that batch' with nobody noting the "
+            "plate, and forcing a number would only produce fiction."
+        ),
+    )
 
 
 class StorageLocation(BaseModel):
@@ -144,6 +172,18 @@ class AccessionSplit(BaseModel):
         description="Status for the split-off record, e.g. 'contaminated'",
     )
     label: Optional[str] = Field(None, max_length=200)
+    vesselNumbers: List[int] = Field(
+        default_factory=list,
+        description=(
+            "Which printed vessel ordinals of the parent batch this split holds, "
+            "e.g. [7]. Optional; when given, must be within the parent's "
+            "labelledVesselCount and not already claimed by a sibling split. "
+            "This is what lets the public resolver route a scan of the "
+            "physical label numbered 7 to the correct record after it splits "
+            "off — see genetics-label-qr-spec.md §3. Validation of these rules "
+            "is implemented in a later step (T-804 step 2), not here."
+        ),
+    )
 
 
 class Accession(AccessionBase):
@@ -164,6 +204,49 @@ class Accession(AccessionBase):
     # Link back to the propagation that produced this record
     sourceEventId: Optional[str] = Field(None, description="propagation_events id")
     splitFromAccessionId: Optional[str] = Field(None, description="Set when created via a batch split")
+
+    # Label / QR (T-804) — see module docstring below and
+    # Docs/2-Working-Progress/genetics-label-qr-spec.md §3-4 for the reasoning.
+    publicToken: str = Field(
+        default_factory=generate_public_token,
+        max_length=16,
+        description=(
+            "Opaque key for the unauthenticated public info page a scanned "
+            "label resolves to. Not derived from any readable field — "
+            "accessionCode is enumerable (PO-BLU-G3-004, -005, -006 ...) and "
+            "the public page is unauthenticated, so the QR must encode "
+            "something that carries zero information about the rest of the "
+            "library. Minted once at accession creation, never regenerated."
+        ),
+    )
+    labelledVesselCount: int = Field(
+        0,
+        ge=0,
+        description=(
+            "High-water mark of printed vessel ordinals — set (raised) on "
+            "first label print, NEVER decremented. AccessionService.split() "
+            "decrements quantity via `$inc`, so quantity cannot be used to "
+            "derive vessel ordinals: a split would retroactively orphan the "
+            "physical label for the vessel that moved out. Ordinals are "
+            "always 1..labelledVesselCount, independent of the batch's "
+            "current quantity. A vessel that has since split off is still "
+            "counted here — the sticker on the shelf keeps its number."
+        ),
+    )
+    sourceVesselNumbers: List[int] = Field(
+        default_factory=list,
+        description=(
+            "Which physical vessel ordinals of the parent batch this record "
+            "holds, e.g. [7]. Only set when created via a split that named "
+            "them (AccessionSplit.vesselNumbers). Lets the public resolver "
+            "walk forward from a stale label: given (token, n), it finds the "
+            "child accession where splitFromAccessionId points at this batch "
+            "and n is in sourceVesselNumbers, and resolves there instead. "
+            "Empty for founding material and for splits that didn't name "
+            "vessel numbers — the resolver then correctly reports the vessel "
+            "as still part of the parent batch."
+        ),
+    )
 
     discardedAt: Optional[datetime] = None
 

@@ -12,6 +12,13 @@ This is where the G/F rules live:
 The reset is the point. A spore print taken off a G5 fruit produces a fresh
 genetic individual with no accumulated senescence, so it starts again at G0
 one filial generation on. Tissue-cloning that same fruit is G6.
+
+T-805: each ``ParentRef`` may also cite ``vesselNo`` — which physical vessel
+of the parent *batch* the material was taken from, since an accession is a
+batch and not a single plate. ``_validate_vessel_numbers`` checks it against
+``max(parent.labelledVesselCount, parent.quantity)`` once parents are
+resolved; the field is optional and a propagation that omits it behaves
+exactly as it always has.
 """
 
 import logging
@@ -102,6 +109,62 @@ class PropagationService:
                 detail="The same parent accession was supplied twice",
             )
 
+    @staticmethod
+    def _validate_vessel_numbers(
+        parents: List[ParentRef],
+        parent_map: Dict[str, Accession],
+    ) -> None:
+        """Reject a ``vesselNo`` that cannot point at a real physical vessel.
+
+        T-805. Per-parent, not per-event — a cross has two parents and each
+        may cite its own plate. ``vesselNo`` is optional throughout; a
+        ``ParentRef`` without it runs none of these checks, matching every
+        propagation recorded before this field existed.
+        """
+        for ref in parents:
+            if ref.vesselNo is None:
+                continue
+
+            if not ref.accessionId:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"vesselNo {ref.vesselNo} was supplied without an "
+                        f"accessionId — a vessel number only means something "
+                        f"relative to an identified parent batch"
+                    ),
+                )
+
+            # accessionId existence was already checked by the caller (the
+            # 404 'Parent accession(s) not found' path) before this runs, so
+            # a lookup miss here would be a programming error, not user input.
+            parent = parent_map[ref.accessionId]
+
+            # A lab that hand-numbers its plates still has a meaningful
+            # vessel 4 of 6 even if labels were never printed, so the ceiling
+            # is deliberately the larger of the two counters rather than
+            # labelledVesselCount alone.
+            ceiling = max(parent.labelledVesselCount, parent.quantity)
+
+            if ceiling < 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Parent accession '{parent.accessionCode}' has "
+                        f"neither a labelledVesselCount nor a quantity that "
+                        f"could contain vessel {ref.vesselNo}"
+                    ),
+                )
+
+            if not (1 <= ref.vesselNo <= ceiling):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"vesselNo {ref.vesselNo} is outside the valid range "
+                        f"1..{ceiling} for parent '{parent.accessionCode}'"
+                    ),
+                )
+
     # -----------------------------------------------------------------------
     # Perform
     # -----------------------------------------------------------------------
@@ -128,6 +191,8 @@ class PropagationService:
                 detail=f"Parent accession(s) not found: {', '.join(missing)}",
             )
 
+        PropagationService._validate_vessel_numbers(data.parents, parent_map)
+
         parents = list(parent_map.values())
         derived_clone, derived_filial = PropagationService.derive_generations(
             data.method, parents
@@ -144,6 +209,7 @@ class PropagationService:
                     role=ref.role,
                     lineId=ref.lineId or (resolved.lineId if resolved else None),
                     note=ref.note,
+                    vesselNo=ref.vesselNo,
                 )
             )
 

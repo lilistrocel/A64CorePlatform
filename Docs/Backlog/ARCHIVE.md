@@ -1,8 +1,278 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 101 tasks
+> **Total completed:** 105 tasks
 
 ## 2026-07
+
+### T-902 | Fullscreen toggle + PWA manifest (genuine auto-fullscreen on install)
+- **Category:** Frontend · **Priority:** P2
+- **Completed:** 2026-07-31 · **Assigned:** frontend-dev-expert
+- **Depends on:** T-901 ✅ (Night Observatory mixins/tokens this reuses)
+- **Summary:** User originally asked for fullscreen to trigger automatically
+  on page load; verified live in-browser that this is impossible — the
+  Fullscreen API requires transient user activation in every modern browser,
+  so `requestFullscreen()` throws `TypeError: Permissions check failed`
+  without a real gesture. Shipped manual toggle only (no auto-on-load code
+  path, no dead settings entry to control a no-op — YAGNI) plus a PWA
+  manifest, which is the legitimate route to genuine gesture-free fullscreen
+  (via `"display": "fullscreen"` on install).
+  1. **`useFullscreen` hook**
+     (`frontend/user-portal/src/hooks/useFullscreen.ts`) — `{ isFullscreen,
+     toggle, isSupported }`. `isFullscreen` is derived from
+     `document.fullscreenElement`/`webkitFullscreenElement` via a
+     `fullscreenchange`/`webkitfullscreenchange` listener (not local state
+     set by `toggle`), so Esc/F11 exits stay in sync. `isSupported` reflects
+     `document.fullscreenEnabled` (+ webkit), hiding the control on iOS
+     Safari. `toggle()` catches promise rejections and fails quietly. Listener
+     cleaned up on unmount.
+  2. **Toggle button, two mount points** in
+     `frontend/user-portal/src/components/layout/MainLayout.tsx`, both
+     `Maximize`/`Minimize` from `lucide-react`, `aria-label`/`aria-pressed`/
+     `title` reflecting state, rendered only when `isSupported`:
+     - `SidebarFooter` — new `FullscreenChip` beside `FarmingYearDropdown`
+       inside a new `FooterTopRow` flex wrapper; matches `FyTrigger`'s glass
+       chip treatment (`glass.base`/`glass.border`, celeste text, `glass.hi`
+       hover) at the same height via flex `align-items: stretch`.
+     - `MobileHeader` — new `MobileIconButton` in a new `MobileHeaderActions`
+       wrapper beside the existing hamburger `MenuButton`, same 44px WCAG
+       touch target and muted→cream-hi hover treatment as the rest of the
+       header chrome.
+     - Deliberately **not gold** per spec §3 gold-discipline budget (logo,
+       active nav, stat numerals/thread, one CTA, focus rings, section
+       underline, `phase.harvesting` only) — uses the muted/celeste treatment
+       matching existing footer/header chrome instead.
+  3. **PWA manifest** — `frontend/user-portal/public/manifest.webmanifest`:
+     `"display": "fullscreen"`, name/short_name "A20Core", `start_url: "/"`,
+     `background_color: "#0A0E24"` (cosmos-deep), `theme_color: "#0E1330"`
+     (cosmos), referencing the existing `icon-192.png`/`icon-512.png`.
+     Icons shipped `"purpose": "any"` only, **not** `"any maskable"` —
+     checked both PNGs' alpha-channel bounding box with PIL and both are
+     opaque edge-to-edge (0% padding on every side), which a maskable safe
+     zone requires (~safe content within an 80%-diameter circle); marking
+     them maskable would let OS icon masks crop the artwork. Linked via
+     `<link rel="manifest" href="/manifest.webmanifest">` in `index.html`.
+  4. **Stale theme-color fix** — `index.html` carried a light-scheme
+     `#F1E6CC` `theme-color` media query left over from before the app went
+     dark-only (`src/stores/theme.store.ts` forces dark); collapsed both
+     `prefers-color-scheme` variants to a single dark `#0E1330` meta tag.
+- **Verification:** `frontend/shared` build clean; `npx tsc -b` in
+  `frontend/user-portal` held exactly at the pre-existing 238-error baseline
+  (zero delta, no errors in either touched file); `useFullscreen.ts` and
+  `MainLayout.tsx` parse-checked individually with `esbuild`; manifest JSON
+  validated with `python3 -c "import json; json.load(...)"`. Playwright not
+  run — user is driving the browser to verify the rendered result.
+
+### T-901 | Night Observatory redesign — dark-first glass-panel visual system
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-07-30 · **Assigned:** frontend-dev-expert
+- **Depends on:** T-900 ✅ (cream tokenization — the token layer this redesign remapped)
+- **Summary:** Replaced the A20Core "A New Renaissance" cream/light-first skin
+  with "Night Observatory" — a dark-first, glass-panel visual system
+  (cosmos-ink grounds, backdrop-blur glass panels, a fixed starfield/nebula
+  sky layer, a 12-key phase/status colour map, gold used only as a rare
+  accent). Contract: `Docs/2-Working-Progress/night-observatory-spec.md`.
+  Visual ground truth: `Brand_Engineering/Brand/A20Core_NightObservatory_Glass.html`.
+  Shipped in 4 phases per spec §10 (foundation → shell → parallel screen-sweep
+  shards, glass treatment/phase map/Space Mono/emoji→icon across ~126 files →
+  final gold audit), across multiple sessions/agents coding against the
+  frozen token/mixin names in spec §1/§2. Phase 1 (foundation: `darkTheme`
+  rewrite, `mixins.ts`, `GlobalStyles.tsx`, the `Sky` component, forced dark
+  mode, `lucide-react` declared explicitly) is detailed in this ticket's
+  original BACKLOG entry / commit history. Phases 2–3 (shell primitives,
+  per-module screen sweep) landed incrementally across the codebase — see
+  the "Night Observatory (T-901 ...)" comments left at each touched call site
+  for shard-level rationale.
+- **Phase 4 — final cleanup (this session):** closed four loose ends
+  deliberately left by earlier shards because they crossed file-ownership
+  boundaries:
+  1. **Hand-rolled badges → `colorBadge()`.** `mixins.ts` grew a
+     `colorBadge(color)` export (arbitrary-hex entry point that `phaseBadge()`
+     now delegates to) plus a `hexToRgba()` helper safe on both hex and rgba
+     theme tokens. Converted every remaining hand-rolled 16%/45%-tint badge/pill
+     to `colorBadge()` (`BlockAlertsTab.SeverityBadge`, `ResolveAlertModal.
+     AlertSeverity`, `BlockAnalyticsModal.StateBadge`/`GradeBadge`,
+     `CompactBlockCard.StateBadge`/`AlertBadge`, `WasteInventoryList.
+     SourceBadge`/`DisposalBadge` — the last of these had already
+     independently reimplemented the identical recipe as a local
+     `categoricalBadge()`, now deleted in favour of the shared one) and every
+     hex-alpha-suffix (`${color}29`/`${color}1A`/`${color}73`) card/button
+     fill to `hexToRgba()` (`BlockAlertsTab.AlertCard` border,
+     `BlockDetailsModal.GradeCard`, `BlockHarvestEntryModal.GradeButton`,
+     `DashboardFilters.StateChip`) — badges got the full pill+dot recipe,
+     non-badge surfaces (cards/buttons/chips with their own layout) kept
+     their shape and just got a safe alpha helper. All colour values and
+     alpha percentages were preserved exactly, so severity/grade/state
+     perceptual separation is unchanged.
+  2. **Deleted the redundant `ROOM_PHASE_TO_KEY` map.** `components/mushroom/
+     phaseTheme.ts` had its own copy of `types/mushroom.ts`'s
+     `ROOM_PHASE_TO_PHASE_KEY` (values confirmed byte-identical before
+     deletion). Removed the local copy and repointed its three consumers
+     (`MushroomRoomMonitor.tsx`, `GrowingRoomCard.tsx`,
+     `RoomDetailsModal.tsx`) to the canonical export.
+  3. **Repointed 3 icon consumers to the lucide-react component maps**
+     (leaving the emoji-string maps in place as the fallback for any
+     not-yet-repointed consumer): `CompactBlockCard.tsx` → `STATE_ICON_COMPONENTS`
+     (`hooks/farm/useDashboardConfig.ts`), `AddWidgetModal.tsx` → per-widget
+     `WIDGET_ICON_COMPONENTS` (`stores/dashboard.store.ts`, was hardcoded to a
+     single `BarChart3` for every widget), `BlockTaskList.tsx` →
+     `TASK_TYPE_ICON_COMPONENTS` (`types/tasks.ts`). Also removed a dead
+     branch in `CompactBlockCard.tsx` (`config.icons?.metrics?.performance?.[...]`
+     — `DashboardConfig['icons']['metrics']` has no `performance` field, so
+     this always evaluated `undefined` and rendered a bare trailing " • "
+     separator with nothing after it; no replacement invented, just removed).
+  4. **Gold-discipline audit (spec §3, ≤1 primary CTA/view).** Audited all 8
+     files flagged as carrying multiple gold gradient CTAs on one screen
+     (`InputInventoryList`, `AssetInventoryList`, `PeriodsPage`,
+     `FertilizerCostCalculator`, `BlockHarvestsTab`, `BlockAutomationTab`,
+     `FarmMapView`, `BackupCodesModal`) plus `InventoryDashboard`. Found two
+     real violations: `InputInventoryList.tsx` and `AssetInventoryList.tsx`
+     each had a toolbar `AddButton` (gold) *and* an `EmptyAction` (also gold)
+     that render simultaneously whenever the list is empty — demoted
+     `EmptyAction` in both files to the secondary/glass treatment (spec §4),
+     keeping the toolbar button as the sole gold CTA. The other 6 files were
+     already spec-compliant on inspection: their second/third gold definition
+     was either the same button's `:hover` state (not a second element,
+     `FarmMapView`/`BackupCodesModal`), a mutually-exclusive ternary render
+     path (`BlockAutomationTab`'s connect-vs-configured states, confirmed by
+     reading the branch — comments already documented this correctly), a
+     styled component prop-gated to a variant no caller ever passes
+     (`BlockHarvestsTab.Button`'s unused `$variant="primary"` branch), or a
+     modal submit button behind a scrim (`PeriodsPage.ConfirmButton`,
+     `FertilizerCostCalculator`'s `SaveListModal`/`PricebookModal` — spec's
+     explicit exemption: "a modal submit and the page CTA behind a scrim do
+     not both count"). Separately, `InventoryDashboard.tsx` nests
+     `InputInventoryList`/`AssetInventoryList` inside its own content area at
+     `/inventory/input` and `/inventory/assets`, so both the parent's and the
+     child's `PageHeader` (each carrying its own gold stat thread) rendered
+     at once — added an `embedded?: boolean` prop to both list components
+     (default `false`, so any future standalone caller is unaffected) that
+     suppresses the child's own `PageHeader`, and passed `embedded` from
+     `InventoryDashboard`'s two routes.
+- **Verify:** `frontend/shared` `npm run build` — clean. `frontend/user-portal`
+  `npx tsc -b` — **238 errors**, down from the **239**-error pre-session
+  baseline (net delta **-1**; spot-checked several of the "new-looking" line
+  numbers against the pre-existing error set and confirmed they are
+  pre-existing errors in code this session did not touch, just shifted by
+  unrelated lines elsewhere in the same files). Every touched file individually
+  parse-scanned clean via `esbuild --loader:.tsx=tsx`. Repo-wide gold count
+  after: `InputInventoryList.tsx`/`AssetInventoryList.tsx` down from 3→2
+  `linear-gradient(145deg` occurrences each; all other audited files
+  unchanged (already compliant). No CodeMap regeneration needed (visual-only).
+
+---
+
+### T-900 | A20Core rebrand — "A New Renaissance" (foundation + sweep)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-07-30 · **Assigned:** frontend-dev-expert
+- **Depends on:** none
+- **Summary:** Rebranded the React frontend from the old Material-blue/purple
+  theme to A20Core "A New Renaissance" — Fresco Cream / Cosmos Ink grounds,
+  Lapis / Gold / Emerald / Terracotta chromatic voices, Hanken Grotesk +
+  Space Mono + Fraunces typography, new logo lockup/emblem, "A20Core" naming.
+  Routed ~3,190 hardcoded colour literals through `theme.colors.*` across
+  ~250 files (foundation + sweep phases), which is what made the follow-on
+  Night Observatory redesign (T-901) tractable — most screens re-theme from
+  the token layer alone. Contract: `Brand_Engineering/Brand/A20Core_BRAND.md`.
+  Engineering translation: `Docs/2-Working-Progress/a20core-rebrand-spec.md`.
+- **Delivered:** `theme.ts` token rewrite (Lapis/Gold/Emerald/Terracotta
+  ramps, `canvas`/`onAccent`/`border` grounds), self-hosted font vendoring
+  (Hanken Grotesk, Fraunces incl. italic, Space Mono — no external CDN, CSP
+  blocks it), `GlobalStyles.tsx` canvas/mono bindings, logo asset swap,
+  "A20Core" naming sweep, and the 239-file hex→token sweep per the migration
+  table in the spec. Verified with `npx tsc -b` (not the no-op `tsc --noEmit`).
+- **Superseded by:** T-901 (Night Observatory) remaps the same token layer to
+  a dark-first glass-panel system; `lightTheme`/cream values from this task
+  are kept as dead code, not deleted.
+
+### T-805b |  Genetics — surface vessel-level parentage (display half of T-805)
+- **Category:** Frontend + Backend · **Priority:** P2
+- **Completed:** 2026-07-31 · **Assigned:** backend-dev-expert, api-developer, frontend-dev-expert
+- **Depends on:** T-805a ✅ (capture landed, see ARCHIVE.md), T-804 🔵
+- **Description:** `ParentRef.vesselNo` can be stored and read back, but **nothing writes it from
+  the UI and nothing displays it**. Until this ships, the field is dead weight — the capture half
+  alone changes nothing a user can see or do.
+- **Steps:**
+  1. Source-vessel picker in `PropagateModal` — optional, validated against the parent's
+     `max(labelledVesselCount, quantity)`. Optional on purpose: forcing a number where nobody
+     noted one produces fiction, which is worse than an honest blank.
+  2. Label rendering: `PO-BLU-G3-001 · #3 <- #4`. **ASCII arrow only** — U+2190 is not in the PDF
+     base-14 fonts and would print as a blank or a box on thermal output.
+  3. `#3 ← #4` on the accession detail page and the public info page (rich fonts, real arrow fine).
+  4. **`vesselNo` on observations.** `ObservationBase` carries `accessionId` only, so "plate 13 is
+     slow" can only be recorded as "this batch is slow". Same field, same shape as T-805a — this
+     is the gap that blocks per-vessel trait tracking.
+- **Delivered:** all five parts — observation `vesselNo`, label `#3 <- #4` (ASCII, per-tape width drop), public `fromVesselNo` on vessel + ancestry steps + graph edges, and the `PropagateModal`/`ObservationModal` pickers with display on the accession and public pages. 140 genetics tests passing; tsc baseline 238 unchanged.
+- **Note:** graph edges resolve `vesselNo` from the `ParentRef` matching that edge's source node, NOT `parents[0]` — the latter would mis-attribute one parent's vessel to both edges of a cross. Regression test: `test_lineage_graph_cross_edges_carry_distinct_vessel_numbers`.
+
+---
+
+### T-805a | Genetics — record which physical vessel of a parent batch a propagation was taken from (BACKEND CAPTURE ONLY)
+- **Category:** Backend · **Priority:** P2
+- **Completed:** 2026-07-31 · **Assigned:** backend-dev-expert
+- **Depends on:** T-804 🔵 **still Active** — vessel ordinals must be stable/never-renumbered for
+  this to mean anything (spec `Docs/2-Working-Progress/genetics-label-qr-spec.md` §3). T-804's
+  backend has landed but steps 6–8 and the org-config toggle are outstanding, so do NOT read the
+  dependency as satisfied-and-closed.
+- ⚠️ **SCOPE: this is the capture half only.** `vesselNo` can now be stored and read back, but
+  nothing writes it from the UI and nothing displays it. Still outstanding, tracked as **T-805b**
+  in BACKLOG.md:
+  - source-vessel picker in `PropagateModal` (nothing can set the field today)
+  - `#3 <- #4` on the printed label (ASCII arrow — U+2190 is not in the PDF base-14 fonts)
+  - `#3 ← #4` on the accession detail page and the public info page
+  - `vesselNo` on **observations** — `ObservationBase` has `accessionId` only, so "plate 13 is
+    slow" can still only be recorded as "this batch is slow". Same field, same shape, same gap.
+- **Summary:** An accession is a batch, not a single vessel. `parents[0].accessionId` on a child
+  accession said "came from that batch" but not "from plate #4 of its 6 plates" — so if one vessel
+  of a parent batch turns out contaminated or sectoring, there was no way to tell which descendants
+  are suspect. Closes the loop by letting a propagation cite a vessel ordinal per parent.
+- **Delivered:**
+  - `ParentRef.vesselNo: Optional[int]` (`ge=1`) on `src/modules/genetics/models/accession.py`.
+    Lives on `ParentRef` (not the propagation event) because a cross has two parents, each
+    potentially citing its own plate. Optional — most historic transfers never recorded a plate
+    number and forcing one would produce fiction.
+  - `PropagationService._validate_vessel_numbers()` in
+    `src/modules/genetics/services/propagation/propagation_service.py`, run once parents are
+    resolved (after the existing 404-on-missing-parent check): rejects `vesselNo` with no
+    `accessionId`, rejects a parent with `max(labelledVesselCount, quantity) < 1` (distinct
+    message), rejects `vesselNo` outside `1..max(labelledVesselCount, quantity)`. The `max()` is
+    deliberate — a lab that hand-numbers plates without ever printing labels still has a
+    meaningful "vessel 4 of 6".
+  - `vesselNo` carried onto `enriched_parents` in `PropagationService.propagate()`, so it lands on
+    both the stored `PropagationEvent.parents[]` and the child `Accession.parents[]`.
+  - `AccessionService.split_accession()` needed **no code change** — it already copies
+    `source.parents` verbatim (a split is the same material, not a new generation), so `vesselNo`
+    rides along unchanged. Verified with a new test, not by inspection alone.
+  - No route/response_model changes needed: `accessions.py` / `propagations.py` already declare
+    `response_model=SuccessResponse[Accession]` / `[PropagationEvent]`, both of which embed
+    `ParentRef` directly, so the field appears on the read path automatically once the model
+    changed. Confirmed live (see below) rather than assumed, per the repo's `response_model`
+    stale-process gotcha.
+- **Verified end-to-end on the live stack:** `docker restart a64coreplatform-api-1`, then via
+  Playwright MCP (`browser_evaluate` + `fetch`, logged in as the default admin) posted a real
+  propagation off `PO-BLU-G3-001` (`3b36b3e7-7838-4105-aa0a-8be41772754b`, quantity 5,
+  `labelledVesselCount` 6) citing `vesselNo: 4`. Response (201) carried `vesselNo: 4` on both
+  `event.parents[0]` and the new child accession's `parents[0]`. Cross-checked directly in
+  `mongosh` against both `genetic_accessions` and `propagation_events` — stored, not just
+  round-tripped by a stale in-memory model. Verification accession
+  (`41cb41d7-4800-4867-b295-4d84b2d32f47`) and event (`68e97abc-4b12-4b5b-a6fd-38cb9ef7affd`)
+  deleted by exact id afterwards; `PO-BLU-G3-001` confirmed unchanged (`quantity: 5`,
+  `labelledVesselCount: 6`).
+- **Tests:** `tests/unit/test_genetics/test_vessel_no.py` (NEW, 8 tests) — vesselNo stored on
+  propagation (single parent, and per-parent-distinct on a two-parent cross), vesselNo omitted
+  behaves exactly as before (regression guard on the common path), all three validation
+  rejections, `vesselNo` valid against `quantity` alone when `labelledVesselCount` is 0, and a
+  split child inheriting `parents` (including `vesselNo`) verbatim. Full suite
+  `tests/unit/test_genetics`: **120 passed** (112 pre-existing + 8 new), 0 failed, run inside
+  `a64coreplatform-api-1` (tests dir is not bind-mounted; copied in with `docker cp`).
+- **Explicitly not done (by design — out of scope per the ticket):** frontend rendering of
+  "#3 ← #4" on the label/info page, and any change to `labels.py` / `public.py` — both called out
+  as other agents' live work areas and left untouched.
+- **Files changed:**
+  - `src/modules/genetics/models/accession.py` — `ParentRef.vesselNo`, module docstring note
+  - `src/modules/genetics/services/propagation/propagation_service.py` —
+    `_validate_vessel_numbers()`, wired into `propagate()`, `vesselNo` carried onto
+    `enriched_parents`, module docstring note
+  - `tests/unit/test_genetics/test_vessel_no.py` (NEW)
 
 ### T-801 | Link Genetics lines to Strain Library / Plant Library growing profiles
 - **Category:** Full-stack · **Priority:** P2

@@ -51,6 +51,14 @@ class Settings(BaseSettings):
     FROM_EMAIL: str = "noreply@a64core.com"
     # SENDGRID_API_KEY: str = ""  # Add in production
 
+    # Genetics module — public label/QR resolution (T-804)
+    # Host only, no scheme: the QR-payload builder prepends "https://". Kept
+    # here rather than in the genetics module's own config/settings.py
+    # because it mirrors FRONTEND_URL — a public-facing host value, not a
+    # module-internal setting like MAX_LINEAGE_DEPTH. Mid-rebrand default:
+    # dev.a20core.com, NOT a64core.com (see commit 229324a).
+    PUBLIC_BASE_URL: str = "https://dev.a20core.com"  # scheme included; see labels.build_label_payload
+
     # Logging
     LOG_LEVEL: str = "INFO"
 

@@ -45,6 +45,7 @@ class ObservationService:
         current_user: Any,
     ) -> Observation:
         accession = await AccessionService.get_accession(data.accessionId)
+        ObservationService._validate_vessel_no(data.vesselNo, accession)
         db = genetics_db.get_database()
 
         payload = data.model_dump()
@@ -66,6 +67,46 @@ class ObservationService:
             + (" (novel trait)" if observation.isNovelTrait else "")
         )
         return observation
+
+    # -----------------------------------------------------------------------
+    # Validation
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_vessel_no(vessel_no: Optional[int], accession: Accession) -> None:
+        """Reject a ``vesselNo`` that cannot point at a real physical vessel.
+
+        T-805b. Mirrors ``PropagationService._validate_vessel_numbers`` —
+        same field, same shape, same reasoning. ``vesselNo`` is optional; an
+        observation without it runs none of these checks, matching every
+        observation recorded before this field existed. A lab that
+        hand-numbers its plates without ever printing labels still has a
+        meaningful "vessel 4 of 6", so the ceiling is deliberately the larger
+        of the two counters rather than ``labelledVesselCount`` alone.
+        """
+        if vessel_no is None:
+            return
+
+        ceiling = max(accession.labelledVesselCount, accession.quantity)
+
+        if ceiling < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Accession '{accession.accessionCode}' has neither a "
+                    f"labelledVesselCount nor a quantity that could contain "
+                    f"vessel {vessel_no}"
+                ),
+            )
+
+        if not (1 <= vessel_no <= ceiling):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"vesselNo {vessel_no} is outside the valid range "
+                    f"1..{ceiling} for accession '{accession.accessionCode}'"
+                ),
+            )
 
     # -----------------------------------------------------------------------
     # Read

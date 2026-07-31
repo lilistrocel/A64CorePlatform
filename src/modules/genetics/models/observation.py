@@ -8,6 +8,16 @@ Any observation can be flagged ``isNovelTrait``. That flag is what turns a
 passing note into a promotion candidate — the trait that gets spotted on one
 plate becomes its own genetic line, with the ancestry still walking back to
 the original dish.
+
+T-805b: an observation may also cite ``vesselNo`` — which physical vessel of
+the accession's batch it is about, e.g. plate #13 of a 6-plate batch. An
+accession is a batch record, so without this an observation can only ever
+say "this batch is slow", never "plate 13 is slow" — and per-vessel trait
+tracking is the whole point of the ``isNovelTrait`` promote-to-line flow.
+Same field, same shape, same validation as ``ParentRef.vesselNo`` (T-805a,
+see ``accession.py`` and ``ObservationService._validate_vessel_no``).
+Optional throughout: a note about the whole batch is a legitimate, common
+thing to record, and forcing a vessel number would produce fiction.
 """
 
 from datetime import datetime
@@ -56,6 +66,11 @@ class ObservationBase(BaseModel):
         None,
         max_length=120,
         description="Short name for the observed trait, e.g. 'fast rhizomorphic sector'",
+    )
+
+    vesselNo: Optional[int] = Field(
+        None, ge=1,
+        description="Which physical vessel of the batch this observation is about, e.g. plate #13.",
     )
 
 

@@ -11,6 +11,56 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 
+class PublicInfoPageConfig(BaseModel):
+    """
+    What a scanned genetics label is allowed to reveal to the public
+    internet (T-804 §4.4).
+
+    The public label-info page (``GET /api/v1/public/genetics/i/{token}``)
+    is the first unauthenticated route in the platform — anyone with a
+    printed label can reach it, with no login. Every ``show*`` flag below
+    therefore defaults to **False**. This is a deliberate privacy / trade
+    secret decision, not an oversight:
+
+    - ``showOperatorName`` — a technician's full name on a permanently
+      public, crawlable page is a personal-data disclosure they never
+      consented to. Initials are shown regardless; the full name is an
+      explicit tenant opt-in.
+    - ``showMediumIngredients`` — additive ratios are plausibly the most
+      commercially sensitive data in the genetics repo. The recipe *name*
+      alone is shown regardless and is enough to make the page useful.
+    - ``showProtocolSteps`` — the SOP's code/title/version are shown
+      regardless; the step-by-step procedure itself is opt-in.
+    - ``showFacilityName`` — room, unit and position are NEVER shown on
+      this page, opt-in or not; this flag only controls the facility name.
+
+    ``enabled`` defaults True (opposite of the flags above) so the page
+    works out of the box for a new tenant; a tenant that wants the page
+    off entirely flips this one switch rather than disabling every field.
+    """
+
+    enabled: bool = Field(
+        True,
+        description="Master switch for the public label-info page for this tenant.",
+    )
+    showOperatorName: bool = Field(
+        False,
+        description="Show the technician's full name instead of initials.",
+    )
+    showMediumIngredients: bool = Field(
+        False,
+        description="Show the medium's ingredient list instead of just the recipe name.",
+    )
+    showProtocolSteps: bool = Field(
+        False,
+        description="Show the SOP's step text instead of just code/title/version.",
+    )
+    showFacilityName: bool = Field(
+        False,
+        description="Show the facility name. Room, unit and position are never shown.",
+    )
+
+
 class OrganizationModules(BaseModel):
     """
     Per-tenant module toggles (Wave 0 — T-059).
@@ -26,6 +76,10 @@ class OrganizationModules(BaseModel):
             "When false, finance routes/sidebar entries are hidden and "
             "finance domain events skip the outbox."
         ),
+    )
+    publicInfoPage: PublicInfoPageConfig = Field(
+        default_factory=PublicInfoPageConfig,
+        description="T-804 — what a scanned genetics label may reveal publicly.",
     )
 
 
