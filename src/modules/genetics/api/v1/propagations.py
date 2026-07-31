@@ -12,7 +12,12 @@ from pydantic import BaseModel
 
 from ...models.accession import Accession
 from ...models.enums import PropagationMethod, ReproductionMode
-from ...models.propagation import PropagationCreate, PropagationEvent
+from ...models.propagation import (
+    PropagationAmend,
+    PropagationAmendResult,
+    PropagationCreate,
+    PropagationEvent,
+)
 from ...services.propagation.propagation_service import PropagationService
 from ...utils.responses import PaginatedResponse, SuccessResponse, paginate
 
@@ -143,3 +148,44 @@ async def get_propagation(
 ) -> SuccessResponse[PropagationEvent]:
     event = await PropagationService.get_event(event_id)
     return SuccessResponse(data=event)
+
+
+@router.patch(
+    "/{event_id}",
+    response_model=SuccessResponse[PropagationAmendResult],
+    summary="Amend a propagation event's date",
+    description=(
+        "Propagation events are otherwise immutable — this route accepts "
+        "ONLY performedAt, a factual correction of when the work happened "
+        "at the bench (e.g. entered late). Attribution (operatorName, "
+        "performedBy) and every structural field (method, parents, targets, "
+        "resultAccessionIds, generations, reproductionMode) cannot be "
+        "changed through this or any route. The correction cascades to each "
+        "result accession's acquiredAt, but only where it still equals the "
+        "event's OLD performedAt — an accession whose date was already "
+        "corrected by hand is left alone and reported as skipped. The "
+        "amendment itself is always recorded via amendedAt/amendedBy, never "
+        "made invisible. Permission: genetics.edit (bench tier) — the same "
+        "tier that can already update/split an accession; this is the same "
+        "class of correcting an existing bench record, not a curation act."
+    ),
+)
+async def amend_propagation(
+    event_id: str,
+    payload: PropagationAmend,
+    current_user: CurrentUser = Depends(require_permission("genetics.edit")),
+) -> SuccessResponse[PropagationAmendResult]:
+    event, updated, skipped = await PropagationService.amend_event(
+        event_id, payload, current_user
+    )
+    return SuccessResponse(
+        data=PropagationAmendResult(
+            event=event,
+            accessionsUpdated=updated,
+            accessionsSkipped=skipped,
+        ),
+        message=(
+            f"performedAt corrected; cascaded to {updated} accession(s), "
+            f"{skipped} skipped (already diverged)"
+        ),
+    )

@@ -7,7 +7,7 @@ laid out client-side rather than as a nested structure.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -53,7 +53,17 @@ class LineageNode(BaseModel):
 
 
 class LineageEdge(BaseModel):
-    """A propagation link between two accessions."""
+    """A link between two accessions — either a propagation (a new
+    generation was produced) or a split (the same material, no new
+    generation, carved into a separate record — see
+    ``AccessionService.split_accession``).
+
+    ``kind`` is the discriminator the frontend must switch on before
+    drawing an edge: a split is not a generation change and rendering it
+    identically to a propagation edge would misrepresent the biology.
+    Defaults to ``"propagation"`` so every edge built before this field
+    existed keeps its original meaning unchanged.
+    """
 
     fromAccessionId: Optional[str] = Field(
         None,
@@ -61,6 +71,18 @@ class LineageEdge(BaseModel):
     )
     toAccessionId: str
     role: ParentRole = ParentRole.CLONE_SOURCE
+    kind: Literal["propagation", "split"] = Field(
+        "propagation",
+        description=(
+            "'propagation' = a new generation was produced (default, "
+            "unchanged meaning for every edge built before this field "
+            "existed). 'split' = the same material carved into a separate "
+            "record via AccessionService.split_accession — no new "
+            "generation, so eventId/method/reproductionMode/performedAt/"
+            "mediumBatch* are always null on a split edge and `role` is "
+            "not meaningful (left at its default)."
+        ),
+    )
     eventId: Optional[str] = None
     method: Optional[PropagationMethod] = None
     reproductionMode: Optional[ReproductionMode] = None

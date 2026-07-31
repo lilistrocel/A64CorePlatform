@@ -98,6 +98,173 @@
 
 ---
 
+### T-808 | Genetics propagation date amendment — correct `performedAt` only, cascaded
+- **Category:** Backend · **Priority:** P2
+- **Assigned:** backend-dev-expert · **Started:** 2026-07-31
+- **Depends on:** T-800 ✅
+- **Blocks:** —
+- **Description:** Propagation events are immutable by construction (only
+  GET/POST existed). User decision: allow correcting a mis-entered date
+  ("work happened Tuesday, logged Friday") — "no need to edit who, just
+  when." `performedAt` becomes amendable; `operatorName`/`performedBy`
+  (attribution) and the structural fields (`method`, `parents`, `targets`,
+  `resultAccessionIds`, generations, `reproductionMode`) stay immutable. The
+  date is chained: event `performedAt` → child `Accession.acquiredAt` →
+  printed label (`labels.py`) — amending only the event would create a
+  three-way disagreement, so the fix must cascade to child accessions
+  without touching a divergence someone already made by hand.
+- **Steps:**
+  1. `PropagationAmend` model — `performedAt` only, no general-purpose
+     `PropagationUpdate`
+  2. `PATCH /api/v1/genetics/propagations/{id}` — permission `genetics.edit`
+     (bench tier — "update / split an accession" already covers correcting
+     an existing bench record; this is the same class of correction, not a
+     curation act)
+  3. Cascade to `resultAccessionIds`: update `acquiredAt` only where it still
+     equals the event's OLD `performedAt`; report `accessionsUpdated` /
+     `accessionsSkipped`
+  4. `amendedAt`/`amendedBy` stamped on the event — the correction is
+     recorded, not made invisible
+  5. Reject a future `performedAt` with 400
+  6. Tests in `tests/unit/test_genetics/test_propagation_amend.py`
+  7. Verify with mongosh against a throwaway line/accession/propagation only
+
+---
+
+### T-807 | Genetics line purge — refuse-rather-than-cascade hard delete
+- **Category:** Backend · **Priority:** P2
+- **Assigned:** backend-dev-expert · **Started:** 2026-07-31
+- **Depends on:** T-800 ✅
+- **Blocks:** —
+- **Description:** `LineService.deactivate_line()` is soft-delete only; hard
+  deletion was deliberately unsupported because accessions/propagation events
+  reference the line. That leaves no way to remove a line created by mistake,
+  a typo, or a test. Follows the `RoomService.room_dependents()` /
+  `delete_room()` precedent in mushroom_manager: count everything that would
+  be orphaned, refuse rather than cascade.
+- **Steps:**
+  1. `GET /api/v1/genetics/lines/{id}/dependents` — counts accessions,
+     propagation events (source+result), observations, child lines, harvests
+  2. `DELETE /api/v1/genetics/lines/{id}/purge` — hard delete only at zero
+     dependents, else 409 naming what blocks it. Permission: `genetics.delete`
+     (already the strictest tier in the namespace — curation, moderator+).
+  3. `deactivate_line()` unchanged; both docstrings now explain the split
+  4. Tests in `tests/unit/test_genetics/test_line_purge.py`
+  5. Verify with mongosh + Playwright MCP `browser_network_request` against a
+     throwaway line, and confirm `PO-BLU` (has accessions) refuses and survives
+
+---
+
+### T-806 | Scan-to-act — authenticated label-token resolution + act-on-scan UI
+- **Category:** API + Frontend · **Priority:** P1
+- **Assigned:** api-developer (part 1) · **Started:** 2026-07-31
+- **Depends on:** T-804 ✅ (publicToken, labelledVesselCount, resolve_vessel, public info page)
+- **Blocks:** —
+- **Description:** T-804's public label-info page is deliberately unauthenticated and
+  deliberately exposes no internal accession UUID. To let a logged-in bench user act on
+  what they just scanned ("this plate is contaminated"), the app needs an authenticated
+  way to turn `{token, vesselNo}` into an accession id — resolution happens behind auth so
+  the public page never learns the UUID.
+- **Part 1 (this entry) — DONE 2026-07-31:** `GET /api/v1/genetics/accessions/by-token/{token}?vesselNo=N`
+  on the authenticated `accessions` router. Reuses `public._load_accession_by_token`
+  (case-insensitive, uppercase-normalised, plain-equality lookup against the unique
+  `publicToken` index — not a regex) and `vessel_resolver.resolve_vessel` verbatim,
+  no reimplementation. Gated on the existing `require_view` dependency. Returns the
+  full internal `Accession` (`response_model=SuccessResponse[Accession]`) — UUIDs are
+  expected and correct on this side, unlike the public route's hand-built,
+  UUID-free shape. 404 (not 403) for an unknown token or an out-of-range `vesselNo`.
+  - **Files changed:** `src/modules/genetics/api/v1/accessions.py` (new route + imports
+    of `_load_accession_by_token` from `.public` and `resolve_vessel` from
+    `...services.accession.vessel_resolver`; `public.py` itself untouched).
+  - **Tests:** `tests/unit/test_genetics/test_accession_by_token.py` (NEW, 11 cases) —
+    case-insensitive token match, split-off `vesselNo` resolves to the child accession,
+    unclaimed `vesselNo` still resolves to the parent, out-of-range `vesselNo` -> 404,
+    unknown token -> 404, no `Authorization` header -> 401, permitted role succeeds,
+    route-ordering regression guard (`/by-token/{token}` vs `/{accession_id}`).
+    Full suite: **151 passed** (140 baseline + 11 new), 0 regressions.
+  - **Live verification (production data, read-only):** token `14DQRT8S8N` /
+    `PO-BLU-G3-001`, vessel 2 split off contaminated into `PO-BLU-G3-003`.
+    `?vesselNo=2` -> `PO-BLU-G3-003` ✅; `?vesselNo=3` -> `PO-BLU-G3-001` ✅; unknown
+    token -> 404 ✅; `?vesselNo=999` (out of range) -> 404 ✅; no auth header -> 401
+    (`{"detail":"Not authenticated"}`) ✅; `/accessions/{accession_id}` with a real UUID
+    still 200s unaffected by the new route ✅.
+  - **Route ordering:** `/by-token/{token}` declared before `/{accession_id}` in
+    `accessions.py`. Structurally the two never collide (2 path segments vs. 1), but
+    kept explicit and verified live per the `/users/me/tutorials` vs `/users/{user_id}`
+    precedent already on file for this codebase.
+- **Part 2 (not started) — frontend "act on scan":** wire a UI affordance on
+  `LabelInfoPage.tsx` (or a logged-in variant of it) so a bench user who is already
+  authenticated and scans a label can jump straight to an action (mark contaminated,
+  view full accession detail, etc.) using this endpoint instead of the public one.
+  Needs its own frontend-dev-expert pass — out of scope for this entry.
+- **Part 3 — DONE 2026-07-31 (api-developer):** made the public label-info route
+  (`GET /api/v1/public/genetics/i/{token}[/{vesselNo}]`, `public.py` — separate from
+  part 1's authenticated `by-token` route, which is untouched) two-tiered: an
+  anonymous shape (unchanged from T-804/T-805) and a richer authenticated shape,
+  enforced server-side by what gets *assembled*, never by hiding fields in the UI.
+  - **Optional auth, fails closed (`_optional_current_user`):** `HTTPBearer(auto_error=False)`
+    + `get_current_user` (identity only, from `...middleware.auth`) called as a plain
+    function so its `HTTPException`s are catchable locally — every failure (no header,
+    malformed header, expired/invalid token, unknown/inactive user, a DB hiccup) degrades
+    to `None` (anonymous). Deliberately not `require_view`, which raises by design.
+  - **Two hand-built response models**, not one model with nulled fields:
+    `PublicAccessionInfo` (anonymous, unchanged) and new `AuthenticatedAccessionInfo`.
+    Authenticated adds exactly two things anonymous never has at all — `accessionId`
+    and a `token` on every `lineageGraph` node — and additionally ignores the tenant's
+    `PublicInfoPageConfig` show* flags (`showMediumIngredients`/`showProtocolSteps`/
+    `showOperatorName`/`showFacilityName`), always returning the fully-opened content
+    for those four fields regardless of tenant config. Anonymous keeps those flags
+    exactly as before (T-804/T-805 behaviour unchanged).
+  - **`enabled=false` gate is anonymous-only:** a disabled tenant page still 404s an
+    anonymous caller (byte-identical to every other 404) but does NOT 404 an
+    authenticated one — decided and documented as "public-exposure switch, not
+    access-control gate" per the task spec, see the comment at the gate's call site
+    in `_handle_public_info`.
+  - **Files changed:** `src/modules/genetics/api/v1/public.py` (module docstring rule 3
+    rewritten for the two tiers; new `_optional_current_user`, `AuthenticatedLineageGraphNode`,
+    `AuthenticatedLineageGraph`, `AuthenticatedAccessionInfo`, `_assemble_authenticated_info`;
+    `_build_lineage_graph` takes an `authenticated` flag; `_assemble_info` renamed
+    `_assemble_anonymous_info`; both routes now declare `response_model=None` — the two
+    hand-built shapes are the leakage guard, not FastAPI's response filtering — and take
+    `current_user: Optional[CurrentUser] = Depends(_optional_current_user)`).
+    `accessions.py` and `labels.py` untouched.
+  - **Tests:** `tests/unit/test_genetics/test_public_route.py` — 12 new cases: authenticated
+    allowlist, authenticated tier ignores tenant flags (`closed_scenario` fixture, all
+    flags False), anonymous shape verified to exclude every privileged field by name
+    (not just "within the allowlist"), garbage/expired bearer token degrades to
+    anonymous (not 401), non-Bearer auth scheme degrades to anonymous, UUID leakage
+    scoped correctly for both tiers (anonymous: zero UUIDs; authenticated: exactly one,
+    the scanned accession's own `accessionId`, no others), authenticated node token
+    resolves anonymously back to that parent's own limited page (closes the loop),
+    disabled-org 404s anonymous but not authenticated. Full suite:
+    **183 passed** (151 baseline + 21 net new across T-806 parts 1 and 3 — part 1 added
+    11, this part added 12; 0 regressions), full verbatim output captured during review.
+  - **Guard proven to fire:** temporarily added a stray field to `PublicAccessionInfo`,
+    watched `test_response_never_exceeds_the_allowlist` fail with "Unexpected key
+    'temporaryGuardProofField' leaked", reverted, confirmed via `grep` (the file is
+    tracked in git — contrary to earlier assumption — so `git diff`/`git status` also
+    confirmed the clean revert).
+  - **Live verification (production data, read-only, token `14DQRT8S8N` / `PO-BLU-G3-001`,
+    vessel 3):** no header -> anonymous shape, no `accessionId`/`token` anywhere ✅;
+    `Authorization: Bearer <garbage>` -> anonymous shape, status 200 (not 401) ✅; valid
+    bearer (`admin@a64platform.com`) -> full shape, `accessionId` present, node tokens
+    present, `operator: "Super Admin"` (full name despite `show*` flags off) ✅; a
+    parent node's token (`9DZ493MFMA`, `PO-BLU-G0-001`) fetched anonymously at
+    `/i/9DZ493MFMA` -> that parent's own limited page, no `accessionId` ✅.
+  - **Docs:** `Docs/1-Main-Documentation/API-Structure.md` updated with the two-tier
+    contract table, authenticated example response, and updated Notes. Flagged (not
+    fixed, out of scope) a pre-existing staleness in that same section:
+    `fromVesselNo`/`lineageGraph` from T-805 were never added to the JSON examples.
+- **Notes:**
+  - A frontend agent was working in `LabelInfoPage.tsx` concurrently with part 1;
+    that file was deliberately not touched here.
+  - CodeMaps: not regenerated — a new route on an existing router is additive, not a
+    new module/service/collection; flag for `change-guardian` to confirm. Part 3 added
+    no new routes, only response-shape/model changes on the existing two routes — also
+    should not need a CodeMaps regeneration, but flagging for the same reason.
+
+---
+
 ### T-804 | Genetics label & QR system — per-vessel labels + public lineage info page
 - **Category:** genetics · **Priority:** P1
 - **Assigned:** — · **Started:** 2026-07-31 (spec only)
@@ -135,6 +302,648 @@
   unique indexes, not per-org. Collides the moment a second tenant creates their
   own `PO-BLU`. Worth deciding before large print runs — re-coding labelled
   physical stock is not something to do twice.
+- **Step 5 leftover — render `lineageGraph` as a tree — DONE 2026-07-31
+  (frontend-dev-expert):** The public info page rendered `lineage` (the flat
+  breadcrumb) only; the backend has served a real `lineageGraph` (ancestors +
+  descendants, capped 60 nodes / depth 8) for a while with nothing consuming
+  it. Now rendered as generation-row tree with the scanned node highlighted.
+  - **Shape-mismatch decision:** built a lightweight tree renderer local to
+    `LabelInfoPage.tsx` (option b), not an adapter onto the existing
+    `components/genetics/LineageTree.tsx`. That component is sized for the
+    *authenticated* graph (up to 500 nodes, keyed by internal `accessionId`
+    UUID, absolutely-positioned rows + SVG bezier edges, richer node shape
+    with `quantity`/`unit`/`mediumBatchCode`). The public graph is capped far
+    smaller and keyed by `accessionCode` only (never a UUID, spec §5.2 rule
+    3) — adapting would mean fabricating fields the public payload doesn't
+    carry. A plain wrapping generation-row list needs no SVG/measurement pass
+    and reads better one-handed on a 375px phone screen (KISS/YAGNI).
+  - **Highlight contrast:** scanned card uses
+    `` `${theme.colors.primary[500]}29` `` background (never `[50]`/`[100]`,
+    the exact bug already fixed on `AccessionDetailPage`'s current-breadcrumb
+    chip) with text staying `textPrimary`. Measured via Playwright
+    (`getComputedStyle` + composited-background WCAG relative-luminance calc,
+    live page, dark "Night Observatory" theme): **14.08:1** — well above the
+    4.5:1 floor.
+  - **`fromVesselNo` on edges:** shown as `from CODE #N` per incoming edge
+    (two for a cross), vessel number omitted entirely (never "#null") when
+    not recorded — expected on today's live data.
+  - **`truncated`:** surfaced via the existing `Banner $tone="warning"`
+    component, only when true.
+  - **Old flat `lineage` list:** kept, not dropped (still carries
+    method/date-per-hop the graph doesn't), but demoted into a
+    collapsed-by-default `<details>` ("Ancestry details") under the tree so
+    it no longer competes as a second full-size section.
+  - **Files changed:**
+    `frontend/user-portal/src/pages/public/LabelInfoPage.tsx` only (new
+    `PublicLineageGraph`/`Node`/`Edge` local interfaces mirroring
+    `src/modules/genetics/api/v1/public.py` verbatim; new styled components;
+    tree-building/formatting helpers; render logic). No new file — a
+    dedicated component wasn't warranted at this graph size (≤60 nodes).
+  - **Verification (Playwright MCP, live data, `https://dev.a20core.com/i/14DQRT8S8N/3`,
+    5 nodes / 4 edges / `truncated: false`):** exactly one highlighted node
+    (`PO-BLU-G3-001`, "You are here"); 375px width and 1280px desktop both
+    confirmed `document.documentElement.scrollWidth === window.innerWidth`
+    (no body horizontal scroll) via `browser_evaluate`; `localStorage.clear()`
+    + reload still renders correctly; bogus token
+    (`/i/BOGUS000AA`) shows "No record found for this label." and stays on
+    that URL (no redirect to `/login`).
+  - **`tsc -b`:** 238 errors — matches the documented pre-existing baseline
+    exactly, 0 in `LabelInfoPage.tsx` (the only file touched).
+  - Not moving T-804 to ARCHIVE — other sub-items (PrintLabelsModal
+    verification, testing-backend-specialist leakage tests, physical label
+    scan, change-guardian docs pass) are still open per the Steps list above.
+- **Step 4 follow-up — 62mm continuous tape length parameterized, `62x15`
+  added as a proven size — DONE 2026-07-31 (`backend-dev-expert`):** `62x20`
+  was previously the only usable 62mm length, hardcoded as a third literal
+  entry alongside the two genuinely-fixed die-cut sizes (`29x90`, `17x87`).
+  Since 62mm is continuous stock, any feed length is physically valid, so a
+  new hardcoded entry was needed every time a length was tried on real
+  hardware — the user had already scan-confirmed `62x20` and wanted to try
+  `62x15` to save tape, with more lengths likely later.
+  - **What changed:** `size=62xN` now accepts any integer N (mm),
+    12-100 inclusive, parsed via a dedicated `_parse_tape_spec()` /
+    `_tape_dimensions()` pair in `labels.py` — width stays the fixed 696px
+    (58.93mm) printer fact, length in px = `round(N / 25.4 * 300)`. `29x90`
+    and `17x87` are matched verbatim against a small fixed table and were
+    NOT touched by the new parsing path — verified with an explicit
+    regression test that `29xN`/`17xN` variants (`29x50`, `17x100`, ...)
+    still 400 exactly like any other unknown size.
+  - **Validation:** out-of-range N -> 400 naming the 12-100mm range
+    ("62mm tape length must be between 12 and 100mm"); malformed strings
+    (`62x`, `62xabc`, bare `62`) -> 400, never a 500.
+  - **Low-density warning added:** below 0.40mm/module, a new WARNING log
+    fires (`Label PDF: size=62x15 QR module 0.365mm is below the 0.40mm
+    comfort threshold — test-scan before a large run.`) — request still
+    succeeds, this is advisory. Confirmed firing for `62x15` and NOT for
+    `62x20` via caplog-based tests and a live `--log-cli-level` capture.
+  - **Density check, computed (not assumed) against the real `qrcode`
+    library:** `62x15` = version 3, 37 modules, **0.365mm/module** — this is
+    BELOW `17x87`'s 0.381mm/module, the size the spec already marks "not
+    recommended" for density. This is the user's informed call (they have
+    hardware scan-success evidence for `62x20` already and are extending the
+    same approach to `62x15`), but the comparison is real and flagged here,
+    not buried — see spec §6.2, updated with a comparison table.
+  - **Text-column check at 15mm (spec §6.1 font tiers):** 62x15's printable
+    height is 14.99mm, which is MORE vertical room than 17x87's 13.97mm
+    (both fall into the same smallest font tier, `_draw_label_page`'s
+    `else` branch, sizes 6/5.5/5/5pt) — 17x87 already ships successfully at
+    less room, so no font-tier change was needed for 15mm. Not modified.
+  - **Tests:** `tests/unit/test_genetics/test_label_pdf.py` — 20 new cases
+    (parameterized-length geometry, in-range arbitrary length, out-of-range,
+    malformed strings, leading-zero edge case, 29xN/17xN regression guard,
+    QR geometry for 62x15/62x18, low-density warning fires/doesn't-fire).
+    Full suite: 175 passed (`tests/unit/test_genetics`, run inside
+    `a64coreplatform-api-1` via `docker cp` — no local env issues).
+  - **Live verification:** real PDFs generated against `PO-BLU-G3-001`
+    (`3b36b3e7-7838-4105-aa0a-8be41772754b`, token `14DQRT8S8N`) at `62x15`
+    and `62x20`; MediaBox converted to px @ 300dpi matched 696x177 and
+    696x236 exactly; QR decoded (pypdfium2 render + OpenCV
+    `QRCodeDetector`, ad-hoc verification tooling only, not added to
+    requirements.txt) to `https://dev.a20core.com/i/14DQRT8S8N/1` on both.
+  - **Known side effect of this verification:** the `/labels` endpoint's
+    documented side effect (spec §5.1: `labelledVesselCount =
+    max(current, to)`) always `$set`s `updatedAt` even when the count value
+    itself is unchanged (it was 6, requests used `to=1`, so `max(6,1)=6` —
+    unchanged). The live GET calls above therefore did touch
+    `PO-BLU-G3-001.updatedAt` (no other field changed) — this is pre-existing
+    endpoint behaviour, not something this change introduced, and was
+    unavoidable while following the mandated live-verification steps against
+    this real accession.
+  - **Known follow-up gap, NOT done here (out of scope per task instructions):**
+    `PrintLabelsModal.tsx` still hardcodes a 3-option dropdown
+    (`29x90`/`17x87`/fixed `62x20`) — it needs an input for an arbitrary
+    62mm length now that the backend supports it. Flagged, not implemented.
+  - **Files:** `src/modules/genetics/api/v1/labels.py`,
+    `tests/unit/test_genetics/test_label_pdf.py`,
+    `Docs/2-Working-Progress/genetics-label-qr-spec.md` (§6.2 updated).
+  - Not moving T-804 to ARCHIVE — same open sub-items as noted above, plus
+    the new `PrintLabelsModal` 62xN gap.
+- **Follow-up — `PublicInfoPageConfig.enabled` made operable — DONE
+  2026-07-31 (`api-developer`):** `PublicInfoPageConfig.enabled` defaulted
+  `True` with no way to turn it off — `PATCH
+  /api/v1/organizations/{orgId}/modules` only accepted `financeEnabled`.
+  Every tenant's public label page was permanently on, with no admin
+  control, even as the page grew a lineage tree / vessel-level parentage /
+  cross-navigation (step 5/6 above) each widening what a scanned sticker
+  reveals.
+  - **What changed:** `OrganizationModulesUpdate.publicInfoPage` added as
+    `Optional[PublicInfoPageConfigUpdate]` — a new all-Optional partial
+    schema, distinct from `PublicInfoPageConfig` itself. The route
+    (`update_organization_modules`) and `OrganizationService.update_modules`
+    forward it through unchanged; the merge happens in the service, `$set`
+    on `modules.publicInfoPage` as a single sub-document built from
+    `{**PublicInfoPageConfig().model_dump(), **stored, **patch}` (falls
+    back to model defaults for tenants predating the field entirely).
+  - **Why a separate partial schema, not `PublicInfoPageConfig` reused:**
+    parsing `{"enabled": false}` straight into `PublicInfoPageConfig` would
+    coerce every omitted field to that model's own default via Pydantic,
+    silently resetting `showOperatorName`/etc. on every single-flag PATCH.
+    `PublicInfoPageConfigUpdate` defaults every field to `None` ("leave
+    unchanged") instead, and the service only merges keys the caller
+    actually set.
+  - **T-806 two-tier behaviour preserved, not touched:** `public.py` was
+    read, not edited — `enabled=false` still 404s an anonymous caller and
+    still 200s an authenticated one (it always was a public-exposure
+    switch, not an access-control gate; this task just made the switch
+    reachable). Pinned by the pre-existing
+    `test_disabled_org_still_404s_for_anonymous_but_not_for_authenticated`
+    in `test_public_route.py` plus a fresh live check (below).
+  - **GET already returned the field** — `OrganizationResponse` extends
+    `OrganizationBase`, which already declared `modules: OrganizationModules`
+    (`publicInfoPage` included) prior to this change. No response-model
+    change was needed; verified live rather than assumed, per the
+    `response_model`-strips-fields gotcha in `CLAUDE.md`.
+  - **Audit log:** unchanged shape (`details.before`/`details.after` are
+    the *entire* `modules` object, `details.patch` the raw request) already
+    satisfied "record what changed" — confirmed live: a `publicInfoPage`
+    change now shows up correctly in `before`/`after`/`patch` without any
+    audit-code change being needed.
+  - **Tests added:** `tests/unit/test_organizations/` (new dir) —
+    `test_modules_service.py` (5 cases: merge without resetting siblings,
+    inverse — `financeEnabled` patch leaves `publicInfoPage` untouched,
+    merge against a legacy doc with no stored `publicInfoPage` key at all,
+    empty-patch no-op, 404 on unknown org) and `test_modules_route.py` (3
+    cases: non-super_admin 403 with services never called, super_admin
+    toggle 200 + audit log before/after/patch assertions, 404 on unknown
+    org). All 8 pass. Full required suite (run inside
+    `a64coreplatform-api-1` via `docker cp`, `src/` is bind-mounted so no
+    copy needed there): `tests/unit/test_genetics
+    tests/unit/test_finance_bridge/test_tenant_flag.py` → 192 passed, 6
+    failed. The 6 failures are pre-existing/concurrent — all in
+    `test_public_route.py`, all an unexpected `kind` key on
+    `lineageGraph.edges[]` not yet in the allowlist tests' schema, in files
+    (`lineage_service.py`, `public.py`) explicitly out of this task's scope
+    and being edited by another agent concurrently. `test_tenant_flag.py`:
+    14/14 passed.
+  - **Live verification (admin org
+    `00000000-0000-0000-0000-000000000001`, accession `PO-BLU-G3-001` /
+    token `14DQRT8S8N`):** `PATCH .../modules
+    {"publicInfoPage":{"enabled":false}}` → 200, `GET
+    /api/v1/public/genetics/i/14DQRT8S8N/3` with no auth header → 404; same
+    URL with a super_admin bearer token → 200 with full accession detail;
+    `admin_audit_log` entry confirmed with correct before(`enabled:true`)/
+    after(`enabled:false`)/patch; partial-update merge confirmed live —
+    `showOperatorName` etc. stayed `false` (unchanged) across the toggle,
+    only `enabled` moved. Restored `enabled:true` afterward; confirmed
+    anonymous access works again. Tenant's `financeEnabled` untouched
+    (`true`) throughout. Note: the org doc previously had no stored
+    `modules.publicInfoPage` key at all (defaults were computed on read);
+    it now explicitly stores one with the same effective values
+    (`enabled: true`, all `show*` false) — functionally identical, this is
+    the expected permanent effect of exercising the merge path once, not a
+    leftover to clean up.
+  - **Frontend note (not built here, per task scope):** `Settings → Tenant
+    Modules` needs a `publicInfoPage.enabled` switch — currently only
+    renders `financeEnabled`. A frontend agent was concurrently working in
+    `PrintLabelsModal.tsx`/`LabelInfoPage.tsx`; this control was
+    deliberately left for a separate pass.
+  - **Files:** `src/models/organization.py` (added
+    `PublicInfoPageConfigUpdate`, extended `OrganizationModulesUpdate`),
+    `src/services/organization_service.py` (`update_modules` merge logic),
+    `src/api/v1/organizations.py` (route forwards `publicInfoPage`,
+    docstring updated), `tests/unit/test_organizations/` (new),
+    `Docs/1-Main-Documentation/API-Structure.md` (new "Organization Module
+    Toggles" section). Not touched: `labels.py`, `lineage_service.py`,
+    `public.py`, any frontend file, demo data.
+  - Not moving T-804 to ARCHIVE — same open sub-items as noted above.
+- **Label PDF tuning round 2 — collapse blank line + bigger text/QR — DONE
+  2026-07-31 (`backend-dev-expert`, dispatched from main session):**
+  User printed real 62x15 labels on the QL-800 and reported a large gap
+  between the date line and the species line (the medium-batch-code line is
+  empty on most accessions, incl. live `PO-BLU-G3-001`, but still reserved
+  its full line-box height), and asked for bigger text and a bigger QR.
+  Built on round 1's `_derive_text_sizes()` derivation (not reverted to
+  hardcoded tiers).
+  - **1. Collapse blank lines.** `_draw_label_page` now decides
+    `has_batch_line = bool(batch_code)` and `line_count = 4 if has_batch_line
+    else 3` BEFORE calling `_derive_text_sizes`, which took a new
+    `line_count: int` parameter replacing the hardcoded `/ 4`. The
+    batch-code line is skipped entirely (no draw call at all, not an empty
+    one) when absent; vessel/common-name/date lines are unconditional. A
+    3-line label uses the freed vertical space to grow bigger, not to leave
+    the freed quarter empty.
+  - **2. Bigger text.** `_SIZE1_LEADING_RATIO` tightened `1.15 -> 1.05`;
+    `_SIZE1_ABSOLUTE_CEILING_PT` raised `9.0 -> 11.0`. The `stringWidth`
+    width-ceiling guard (`_SIZE1_REFERENCE_LINE`) stayed load-bearing and is
+    what caps `62x18`/`62x20` at their round-1 sizes (see below) — expected,
+    not a bug.
+  - **3. Bigger QR.** `_QR_HEIGHT_FRACTION` raised `0.90 -> 0.93` — chosen
+    so the tightest tape (`17x87`, 13.97mm printable height) keeps
+    `>=0.4mm` QR-to-edge clearance (lands at 0.489mm; 0.94 would have left
+    only 0.419mm, 0.95 would have gone under the floor at 0.349mm).
+  - **New constant, not in the original 3-point plan:** `_TEXT_MARGIN_MM =
+    1.3` (was an inline `margin = 1.5` literal in `_draw_label_page`).
+    Required because the QR is square — a taller QR from point 3 is also a
+    *wider* one, eating into the text column. `62x18`/`62x20` were already
+    width-ceiling-bound in round 1 (not raw-vertical-bound), so raising the
+    QR fraction alone would have mechanically shrunk their available text
+    width and therefore their font size BELOW round 1 — a real regression
+    the task's own "nothing shrinks" constraint forbade. Recovering ~0.2mm
+    of horizontal margin on each of the three gaps (left-edge→QR, QR→text,
+    text→right-edge) exactly offsets the loss; verified no tape's font size
+    or QR module size is smaller than round 1's (see table below).
+  - **Before/after (pt; round 2's "4 lines" column is the fair round-1
+    comparison — all four slots populated, matching how round 1 always
+    sized; "3 lines" is the common no-medium-batch case):**
+
+    | Tape | round 1 (4 lines) | round 2, 4 lines | round 2, 3 lines (no batch) | `_QR_HEIGHT_FRACTION` | QR module (mm) | old module (mm) | QR clearance (mm) |
+    |---|---|---|---|---|---|---|---|
+    | `62x15` | 8.6/7.5/7.0/6.4 | **9.4/8.2/7.6/7.1** | **9.6/8.4/7.8/7.2** | 0.93 | 0.3767 | 0.365 | 0.525 |
+    | `62x18` | 8.9/7.8/7.2/6.7 | **8.9/7.8/7.2/6.7** (width-ceiling bound, unchanged) | same | 0.93 | 0.4533 | 0.439 | 0.631 |
+    | `62x20` | 8.5/7.4/6.9/6.4 | **8.5/7.4/6.9/6.4** (width-ceiling bound, unchanged) | same | 0.93 | 0.5022 | 0.486 | 0.699 |
+    | `29x90` | 9.0/7.9/7.3/6.8 | **11.0/9.6/8.9/8.2** | same | 0.93 | 0.6512 | 0.630 | 0.907 |
+    | `17x87` | 8.0/7.0/6.5/6.0 | **8.8/7.7/7.2/6.6** | **11.0/9.6/8.9/8.2** (width-ceiling bound at lc=3) | 0.93 | 0.3937 | 0.381 | 0.489 |
+
+    Nothing shrank on any tape at either line count. `62x18`/`62x20` stay
+    flat because they are genuinely width-ceiling bound — the guard doing
+    exactly what the task said was acceptable ("fine and expected... just
+    don't have text or QR SHRINK").
+  - **Final constants landed on:** `_QR_HEIGHT_FRACTION = 0.93` (max value
+    that keeps `17x87`'s clearance `>=0.4mm`), `_SIZE1_LEADING_RATIO =
+    1.05` (task's suggested 1.0–1.05 range; kept a touch of breathing room
+    over fully single-spaced), `_SIZE1_ABSOLUTE_CEILING_PT = 11.0` (only
+    ever binds `29x90`, which has abundant vertical room — 11pt is not
+    "absurd" on a >20mm-tall tape), `_TEXT_MARGIN_MM = 1.3` (new, see above).
+  - **Tests:** `tests/unit/test_genetics/test_label_pdf.py` — updated 7
+    existing cases (QR module-size assertions, the suffix-drop long-code
+    scenario re-verified against the new geometry — `29x90` now also drops
+    the pathological synthetic suffix, `17x87` keeps it, matching the new
+    font sizes; `62x14`→`62x12` for the low-density-fires case since round 2
+    pushed `62x14` just over the 0.35mm threshold; `_derive_text_sizes`
+    call sites updated for the new `line_count` param and
+    `_TEXT_MARGIN_MM`) + 12 new cases (`test_blank_medium_line_is_dropped_
+    not_reserved` ×5 tapes — asserts 4 `Tj` draws not 5, and that the gap
+    between species/date lines equals exactly one line-box via the real
+    content-stream y-positions, not the arithmetic;
+    `test_populated_medium_line_keeps_all_four_rows` ×5 tapes — sanity
+    paired test; `test_qr_vertical_clearance_stays_above_the_0_4mm_floor`
+    ×5 tapes; `test_qr_vertical_clearance_matches_round_2_landed_values`
+    pinning the exact clearance figures — 5+5+5+1 new plus +1 from
+    parametrizing the reference-line test over `line_count`, 17 net new
+    cases total). Full suite (`tests/unit/test_genetics`, run inside
+    `a64coreplatform-api-1` via `docker cp tests` — confirmed `tests/` is
+    NOT bind-mounted, matching the prior round's note — plus a stale-
+    `__pycache__` clear before trusting the run): **217 passed**, 0 failed.
+    Baseline (round 1's uncommitted working-tree state, before this round's
+    edits) was **200** for the whole `test_genetics` directory — matches
+    the task dispatch's own "~200 tests currently pass" — 75 of those in
+    `test_label_pdf.py` alone, 92 there after this round (net +17, all in
+    that one file; no other test file in the directory was touched).
+  - **Visual check (poppler `pdftoppm` @ 300dpi, inside the api container):**
+    rendered `62x15` for (a) the live accession `PO-BLU-G3-001` (no medium
+    batch — the real complaint case) and (b) a synthetic fixture with all 4
+    lines populated. (a): the gap between the species line and the date
+    line is visibly gone — 3 evenly-spaced rows fill the label height. (b):
+    all 4 rows render, evenly spaced, nothing clipped or cramped, the
+    suffix (`#3 <- #4`, ASCII arrow) renders correctly. Both images
+    inspected directly (not just "PDF generated without error").
+  - **Live verification (read-only):** 5 real label PDFs (`from=1&to=3`,
+    one per shipped tape size) generated against live accession
+    `PO-BLU-G3-001` (`3b36b3e7-7838-4105-aa0a-8be41772754b`, token
+    `14DQRT8S8N`) via the authenticated endpoint — all 200. `labelledVessel
+    Count` confirmed **still 6** before and after via `mongosh` against
+    `a64core_db.genetic_accessions` (unchanged, since `to=3` stays inside
+    the existing high-water mark — `max(6, 3) = 6`).
+  - **Files changed:** `src/modules/genetics/api/v1/labels.py` (constants
+    block, `_derive_text_sizes` signature, `_draw_label_page` line-building
+    logic), `tests/unit/test_genetics/test_label_pdf.py` (7 updated + 12 new
+    cases, module docstring extended), `Docs/2-Working-Progress/genetics-
+    label-qr-spec.md` (§6.1 blank-line-collapse note, §6.1a round-2
+    subsection + before/after table, §6.2 QR-fraction/module-size/clearance
+    numbers throughout, including the version-boundary-cliff and
+    low-density-threshold callouts). Not touched: `public.py`,
+    `lineage_service.py`, `organization.py`, any frontend file, demo/
+    production data beyond the pre-existing `labelledVesselCount` read-only
+    side effect (confirmed unchanged this run).
+  - **CodeMaps:** not regenerated — this is a sizing/logic change inside an
+    existing endpoint (no new/removed routes, services, components, or
+    collections), matching the "not needed for logic changes" rule in
+    `CLAUDE.md`.
+  - Not moving T-804 to ARCHIVE — same open sub-items as noted elsewhere in
+    this entry (`PrintLabelsModal` 62xN gap, testing-backend-specialist
+    pass, physical-scan step, change-guardian docs pass).
+- **Label PDF tuning round 3 — top padding + brand typefaces + small brand
+  mark — DONE 2026-07-31 (`backend-dev-expert`, dispatched from main
+  session):** User reviewed a real printed round-2 `62x15` label and asked
+  for "a small spacing at the top above the ID... also since we have a
+  proud brand lets also brand the labels a bit, the fonts and if any open
+  space on the right a small logo... but really small."
+  - **1. Genuine top padding.** New `_TOP_MARGIN_FRACTION = 0.05` (5% of
+    `height_mm`, proportional — a flat mm value was rejected since the
+    shipped tapes span 13.97-25.91mm and `62xN` can reach 100mm) wired into
+    `_derive_text_sizes`'s `line_box_mm`, replacing the old `y = height_mm -
+    line_gap_mm * 0.85` formula, which was never a real top margin (0.85
+    was an intra-line-box offset with nothing reserved above it — font size
+    was constrained by the old flat margin but where line 1 actually LANDED
+    never was). Yields ~0.6-0.75mm on the shortest tapes, ~1.3mm on the
+    tallest.
+  - **2. Brand typefaces.** Per `Brand_Engineering/Brand/A20Core_BRAND.md`
+    §4: line 1 (accession code/vessel) now draws in **Space Mono Bold**;
+    lines 2-4 (common name, medium batch, date/operator) in **Hanken
+    Grotesk**. Both embedded via `pdfmetrics.registerFont(TTFont(...))`
+    once at import time from `src/modules/genetics/assets/fonts/ttf/`
+    (vendored — the API container only mounts `src/`/`public/`, confirmed
+    via `Dockerfile`, and cannot see `frontend/` or `Brand_Engineering/`),
+    with try/except fallback to Helvetica/Helvetica-Bold + a WARNING log if
+    an asset is ever missing (an endpoint must never 500 over a font).
+    Hanken Grotesk is a **variable font** — per the task's explicit
+    instruction, tested FIRST before any other code: registered, drew a
+    sample string at label-realistic sizes (down to ~7pt), rendered to PNG
+    at 300dpi, inspected. It registered cleanly at its default named
+    instance (Regular, matching the weight the Helvetica fallback it
+    replaces already used) — **no fallback was actually needed for either
+    font**, both shipped as the real brand typefaces.
+  - **Real, measured, disclosed shrink from the font swap.** Space Mono
+    Bold and Hanken Grotesk have materially taller glyph-box metrics than
+    the base-14 faces rounds 1-2 were tuned against (`getAscentDescent`,
+    not assumed: Space Mono Bold ascent+descent totals 1.481em vs
+    Helvetica-Bold's 0.925em, +60%; Hanken Grotesk 1.303em vs Helvetica's
+    0.925em, +41%). Reusing round 2's flat `_SIZE1_LEADING_RATIO = 1.05`
+    against these produced REAL glyph-box overlap between line 1 and line
+    2 — caught by `test_text_block_lines_do_not_overlap_or_overflow_the_
+    label` against the actual generated PDF bytes, not eyeballed. Fixed by
+    DERIVING the leading ratio from whichever fonts are actually registered
+    (`|line1 descent| + supporting ascent * 0.875 + 0.05em pad` — lands at
+    **1.286**) instead of a second hand-picked constant, and by deriving
+    the y-start's intra-box offset from line 1's own measured ascent
+    instead of the old fixed `0.85` fraction. `_BOTTOM_MARGIN_MM` was also
+    bumped `0.3 -> 0.5` after the same test caught a ~0.055mm bottom
+    overflow on `62x15` (the one raw/vertically-bound case with no
+    width-ceiling slack to absorb Hanken Grotesk's larger descent).
+    Separately, Space Mono Bold is monospace and measurably WIDER per
+    character than Helvetica-Bold at the same point size (`stringWidth` of
+    `_SIZE1_REFERENCE_LINE`: 1.22x wider) — every `stringWidth` call that
+    assumed `"Helvetica-Bold"` (the width-ceiling guard in
+    `_derive_text_sizes`, the suffix-fit guard in `_draw_label_page`) now
+    measures against `_LINE1_FONT_NAME`, the ACTUAL registered font, per
+    the task's explicit requirement. Combined, these two effects
+    (taller leading ratio + wider mono font tightening the width ceiling)
+    genuinely shrink size1 on every tape relative to round 2 — an honest,
+    disclosed consequence of switching to the brand fonts, not a bug, not
+    hidden:
+
+    | Tape | line_count | round 2 (size1/2/3/4, pt) | round 3 (size1/2/3/4, pt) |
+    |---|---|---|---|
+    | `62x15` | 4 | 9.4/8.2/7.6/7.1 | **7.6/6.6/6.2/5.7** |
+    | `62x15` | 3 | 9.6/8.4/7.8/7.2 | **7.8/6.8/6.3/5.8** |
+    | `62x18` | 4 or 3 | 8.9/7.8/7.2/6.7 | **7.3/6.4/5.9/5.5** |
+    | `62x20` | 4 or 3 | 8.5/7.4/6.9/6.4 | **6.9/6.0/5.6/5.2** |
+    | `29x90` | 4 or 3 | 11.0/9.6/8.9/8.2 | **10.7/9.4/8.7/8.0** |
+    | `17x87` | 4 | 8.8/7.7/7.2/6.6 | **7.0/6.1/5.7/5.2** |
+    | `17x87` | 3 | 11.0/9.6/8.9/8.2 | **9.4/8.2/7.6/7.1** |
+
+    The accession code itself is never truncated on any tape (unchanged
+    guarantee) — only the ` <- #N` suffix drops where it would not fit.
+  - **3. Small brand mark.** Sourced from `Brand_Engineering/Brand/Logo/
+    icons/mark-512-transparent.png` (mono orbital-swirl emblem, RGBA,
+    813-colour anti-aliased). No SVG-rendering tool was installed on the
+    host (checked: no rsvg-convert/inkscape/cairosvg) and none was added as
+    a runtime dependency — the existing raster was thresholded OFFLINE
+    (alpha>=128 -> opaque black, else fully transparent; PIL is already a
+    dependency via `qrcode[pil]`) to pure 1-bit (confirmed: exactly 2
+    colors in the result), cropped to its opaque bounding box (+3% pad),
+    and committed as `src/modules/genetics/assets/brand/mark-mono-1bit.png`
+    (430x399px). Drawn bottom-right via `drawImage` ONLY when real,
+    measured spare vertical space exists below the last text line (a
+    width-ceiling-bound tape/line-count consumes less height than its
+    budgeted `line_box_mm`, leaving a genuine, computed gap — never a
+    per-tape guess or a fixed corner reservation), sized between a `5mm`
+    legibility floor and an `8mm` ceiling.
+  - **The `5mm` floor was visually verified, not assumed** — per the task's
+    explicit warning about this exact risk. The mono mark's inner swirl is
+    an intricate multi-stroke illustration (viewBox 100x100, strokes as
+    thin as 0.32-0.49 units) at partial opacity in the source SVG. Rendered
+    the 1-bit asset at 300dpi (the real QL-800 resolution, via `pdftoppm`,
+    not a screen-resolution guess) at 3/4/5/6/7/8mm and inspected each:
+    at 3-4mm the inner swirl is genuine mush, only a blob-like double ring
+    survives; at 5-8mm the double ring reads clearly as a deliberate mark
+    and the inner linework, while soft, is no longer pure mush. 5mm was
+    chosen as the floor on that basis.
+  - **Which tapes actually get the mark, and why:** computed against the
+    final round-3 geometry (not the table above's font-size numbers alone —
+    those interact with the top-margin/leading changes too), the mark
+    draws ONLY on the 3-line (no medium batch) layout of `62x18`, `62x20`,
+    and `29x90`. It does NOT draw on `62x15` or `17x87` at either line
+    count (both are raw/vertically-bound at these settings, leaving no
+    spare room below the text), and does NOT draw on any tape's 4-line
+    layout (round 3's taller, brand-derived leading ratio consumes more of
+    the vertical budget than round 2's flat `1.05` did). Confirmed both by
+    direct computation against `_derive_text_sizes`/`_maybe_draw_brand_mark`
+    and by visually inspecting the real rendered PNGs for all 5 tapes at
+    both line counts (10 renders total) — the mark appears exactly where
+    computed and nowhere else, positioned clear of the QR and every text
+    line with no overlap.
+  - **Harness fix required for testing, not a labels.py bug:** embedded
+    TrueType fonts get their own private single-byte text encoding per PDF
+    (reportlab assigns codes in first-use order, NOT WinAnsi/Latin-1 — e.g.
+    `·` can come back as raw byte `0x01` instead of Latin-1's `0xB7`), so
+    `tests/unit/test_genetics/test_label_pdf.py`'s existing raw-PDF-bytes
+    harness (`_pdf_text_draws`/`_pdf_drawn_strings`, which assumed Latin-1
+    decoding throughout) silently produced wrong or empty results against
+    round-3 PDFs. Fixed by extending the harness — per the task's explicit
+    "extend this harness, don't invent a parallel one" — to parse each
+    embedded font's own `/ToUnicode` CMap object (which reportlab already
+    emits, for copy/paste accessibility) and decode each `Tj` string
+    through whichever font's `Tf` was active; the base-14 fallback path is
+    untouched (no `/ToUnicode` present, raw byte trusted directly, exactly
+    the pre-round-3 behaviour). Also discovered and fixed: `Tf`/`Tm`/`Tj`
+    are no longer always contiguous per line once fonts are embedded
+    (`Tm ... Tf ... Tj` instead of the base-14 path's `Tm (text) Tj`), so
+    the parser was widened from one fused regex to three independently
+    tracked event streams merged by stream position.
+  - **Tests:** `tests/unit/test_genetics/test_label_pdf.py` — 0 new/removed
+    test cases (92 in this file, identical to round 2's own count); the
+    harness extension above plus dynamic font-name assertions (previously
+    hardcoded `"Helvetica-Bold"`/`"Helvetica"`) were needed to make the
+    EXISTING cases pass against the new fonts, not new coverage. Full
+    suite (`tests/unit/test_genetics`, run inside `a64coreplatform-api-1`,
+    stale `__pycache__` cleared first): **247 passed**, 0 failed (net
+    growth beyond round 2's 217 is other concurrent T-806/T-807 work in
+    sibling files in the same directory, not this round — this round's own
+    file stayed flat at 92).
+  - **Restart discipline honored:** `a64coreplatform-api-1` restarted
+    (`docker restart`) after the final edit; restart timestamp
+    (`2026-07-31T19:46:31Z`) confirmed AFTER `labels.py`'s final-edit mtime
+    (`19:45:12`) before any live verification — the exact trap flagged in
+    the task dispatch (a prior session in this same task produced a false
+    "verified" result by skipping this check).
+  - **Visual check (poppler `pdftoppm` @ 300dpi, inside the api container,
+    live accession `PO-BLU-G3-001` for the blank-medium case + a synthetic
+    4-line fixture for the populated case, all 5 tapes, both cases):** top
+    spacing reads as deliberate breathing room on every tape, not touching
+    the printable-area edge; Space Mono Bold/Hanken Grotesk render cleanly
+    and legibly at every landed size down to ~5.2pt; the brand mark (where
+    drawn) sits clear of text/QR with a visible gap, reads as a ring
+    emblem with soft-but-present inner linework, does not overlap
+    anything.
+  - **Live verification (production data, read-only):** 5 real label PDFs
+    (`from=1&to=3`, one per shipped tape size) generated against live
+    accession `PO-BLU-G3-001` (`3b36b3e7-7838-4105-aa0a-8be41772754b`,
+    token `14DQRT8S8N`) via the authenticated endpoint through nginx on
+    port 8000 directly — all 200, no font-registration warnings in the
+    logs. `labelledVesselCount` confirmed **still 6** before and after via
+    `mongosh` against `a64core_db.genetic_accessions` (`from=1&to=3` stays
+    inside the existing high-water mark — `max(6,3)=6`, unchanged).
+  - **Files:** `src/modules/genetics/api/v1/labels.py` (font/mark asset
+    registration block, derived ascent/descent + leading-ratio constants,
+    `_derive_text_sizes` top-margin wiring, `_draw_label_page` y-start/
+    font-name/mark-draw changes, new `_maybe_draw_brand_mark` +
+    `_BRAND_MARK_*` constants), `src/modules/genetics/assets/` (NEW
+    directory: `fonts/ttf/{SpaceMono-Bold,HankenGrotesk-Variable}.ttf`,
+    `fonts/licenses/{OFL-SpaceMono,OFL-HankenGrotesk}.txt`,
+    `brand/mark-mono-1bit.png`), `tests/unit/test_genetics/test_label_pdf.py`
+    (harness extension + dynamic font-name assertions, module docstring
+    extended), `Docs/2-Working-Progress/genetics-label-qr-spec.md` (§6.1a
+    round-3 subsection: top-margin/leading derivation, before/after
+    font-size table, brand-mark placement/legibility-floor rationale, which
+    tapes draw it and why). Not touched: QR geometry/module sizes, page
+    dimensions, the ASCII `<-` arrow, the round-2 blank-line collapse,
+    fail-soft metadata handling, the `labelledVesselCount` write, any
+    frontend file, `public.py`, `lineage_service.py`, `line_service.py`.
+  - **CodeMaps:** not regenerated. This adds a new `src/modules/genetics/
+    assets/` directory of static (non-Python) files and changes logic
+    inside an existing endpoint — no new/removed routes, services,
+    components, or MongoDB collections. Flagging for `change-guardian` to
+    confirm, per the task's explicit instruction, but per CLAUDE.md's own
+    rule ("NOT needed for bug fixes, logic changes, or style updates") this
+    should not require a regeneration.
+  - Not moving T-804 to ARCHIVE — same open sub-items as noted elsewhere in
+    this entry (`PrintLabelsModal` 62xN gap, testing-backend-specialist
+    pass, physical-scan step, change-guardian docs pass).
+- **Label PDF tuning round 4 — brand mark bug fix: it never appeared on the
+  4-line case — DONE 2026-07-31 (`backend-dev-expert`, dispatched from main
+  session):** User report: "i don't see the mark or the logo on the larger
+  labels also." Root-caused (re-verified independently, not trusted as
+  given): round 3's `_maybe_draw_brand_mark` had exactly ONE placement —
+  below the last text line, in whatever vertical budget the text block did
+  NOT consume. That budget is only ever spare when a tape is
+  width-ceiling-bound (font size capped below what the vertical space alone
+  would allow — true for `62x18`/`62x20`/`29x90`'s 3-line layout only).
+  Every tape's 4-line layout consumes its full vertical budget by
+  construction, so the below-placement NEVER fires there — confirmed by
+  direct computation before writing any code (`below_available_mm` came out
+  negative or near-zero on all 5 tapes at `line_count=4`). The user's real
+  production accession, `HE-LMUS-G1-001` (20 physical labels already
+  printed from it), is the only record in the database with a
+  `mediumBatchId`, so every label generated from it is 4-line — exactly the
+  broken case. Every accession that showed the mark in earlier testing was
+  a 3-line record with no medium batch — backwards from what was needed.
+  - **Fix — a second placement, horizontal instead of vertical, tried as a
+    fallback.** Measured with `stringWidth` against the real registered
+    fonts and realistic production-shaped sample text (not estimates):
+    line 1 (Space Mono Bold, width-ceiling-bound by design) fills its
+    column to within 0.4-2.8mm on every tape, but lines 2/3 (Hanken
+    Grotesk, smaller, shorter real-world strings) leave 14-49mm of free
+    width at the right edge on every tape and line count. That free
+    width — read at the ACTUAL rendered end of whichever of line 2/line 3
+    runs longest, never assumed — is where the mark now goes when the
+    below-placement doesn't fit: vertically centered between line 1's own
+    ink and the last line's own ink (the same territory lines 2/3 already
+    occupy; horizontal separation is what prevents overlap, not vertical).
+  - **Why this placement over the task's other two options:** inline after
+    the operator initials on the last line was rejected — that line's
+    right edge is already claimed by the operator initials
+    (`drawRightString`), and the remaining single-row vertical band there
+    measured too short to clear the 5mm legibility floor after clearance
+    on its own. The shipped design IS the task's third option (below-first,
+    horizontal fallback), not a pure "always horizontal" — verified this
+    was the right call by computing the vertical band between line 1's ink
+    and the last line's ink directly (the same y-walk `_draw_label_page`
+    already performs) for both line counts on all 5 tapes: the 4-line case
+    always has MORE band than the 3-line case on the same tape (band scales
+    with `line_count - 1` gaps, and losing a whole gap by dropping to 3
+    lines outweighs each remaining gap being individually larger) —
+    counter-intuitive, but it means the horizontal fallback is exactly
+    right for the case that was broken (every tape's 4-line layout now
+    clears the 5mm floor: 5.08-8.00mm band-derived height across all 5
+    tapes) while correctly leaving `62x15`/`17x87`'s 3-line layout without
+    a mark (2.44mm / 3.14mm — genuinely no room either way, matching
+    round 3's own finding for those two, unchanged).
+  - **`_BRAND_MARK_MAX_SIZE_MM` tightened `8.0 -> 6.0mm`** (separate from
+    the placement fix): user also observed round 3's mark "reads bigger
+    than really small" — the 8mm ceiling only ever bound `29x90`, the most
+    generous tape. Re-verified visually at 300dpi that 5-6mm still reads as
+    a legible double ring with soft inner linework (same conclusion round 3
+    reached across 5-8mm, just capped tighter). `_BRAND_MARK_MIN_SIZE_MM`
+    (5.0mm) unchanged — that number came from an explicit per-mm legibility
+    render/inspect pass in round 3, not open-space arithmetic, and nothing
+    about where the mark is placed changes legibility at a given physical
+    size.
+  - **Coverage table (measured + confirmed via real generated PDFs, all 5
+    tapes x both line counts):**
+
+    | Tape | 3-line | 4-line |
+    |---|---|---|
+    | `62x15` | no mark (disclosed edge case, unchanged from round 3) | **mark (NEW — horizontal band)** |
+    | `62x18` | mark (below-placement, unchanged) | **mark (NEW — horizontal band)** |
+    | `62x20` | mark (below-placement, unchanged) | **mark (NEW — horizontal band)** |
+    | `29x90` | mark (below-placement, unchanged) | **mark (NEW — horizontal band)** |
+    | `17x87` | no mark (disclosed edge case, unchanged from round 3) | **mark (NEW — horizontal band)** |
+
+    Every 4-line label — the shape of the real `HE-LMUS-G1-001` accession,
+    and the exact case the bug report was about — now gets a mark, on every
+    tape. Nothing that worked under round 3 regressed.
+  - **Tests:** `tests/unit/test_genetics/test_label_pdf.py` — 20 new cases:
+    `test_brand_mark_draws_exactly_where_expected` (10 — pins the table
+    above via a new `_pdf_image_draws` helper, which parses the real
+    `<sx> 0 0 <sy> <tx> <ty> cm /<name> Do` sequence reportlab's
+    `drawImage` emits — confirmed by hand against a real round-4 PDF before
+    writing the regex, the same "read the actual content stream" discipline
+    `_pdf_text_draws` already uses for text) and
+    `test_brand_mark_never_overlaps_text_or_exceeds_page_bounds` (10 —
+    whenever a mark draws, its rectangle is checked against every text
+    draw's real glyph box via `getAscentDescent`/`stringWidth`, and against
+    the physical page bounds). API container restarted immediately before
+    the test run (and would have been restarted again had any edit followed
+    it — none did) so no stale process could serve pre-round-4 code; stale
+    `__pycache__` cleared first. Full suite (`tests/unit/test_genetics`,
+    run inside `a64coreplatform-api-1`): **267 passed**, 0 failed (247
+    baseline + 20 net new, matching exactly).
+  - **Visual check (poppler `pdftoppm` @ 300dpi, inside the api container,
+    all 5 tapes x both line counts, 10 renders total, realistic synthetic
+    accession data):** every combination in the coverage table above
+    visually confirmed — the mark reads as a small, discreet double-ring
+    emblem with soft inner linework, clearly separated from the QR and
+    every text line, never crowding or competing with the data. Materially
+    smaller and less prominent than round 3's mark on the most generous
+    tape (`29x90`, was up to 8mm, now capped at 6mm).
+  - **Live verification (production data, the one permitted write):** via
+    an authenticated browser session (Playwright MCP — no curl, per this
+    repo's rule), hit the real endpoint against `HE-LMUS-G1-001`
+    (`d6fd8991-d3e0-470d-a54b-52dca77c08fa`, token `EGT4H5JRVH`,
+    `quantity=20`, `labelledVesselCount=20`) at `62x15`, `from=1&to=1` and
+    `from=1&to=3` — both 200, both inside the existing high-water mark, so
+    `labelledVesselCount` confirmed **20 -> 20** (unchanged) via `mongosh`
+    before and after (`updatedAt` did advance — the pre-existing, already-
+    documented `$set`-always-touches-`updatedAt` behaviour, not introduced
+    by this round). The `from=1&to=1` response's actual bytes were rendered
+    to PNG at 300dpi and inspected: `HE-LMUS-G1-001`'s real common name
+    ("Lion's Mane OG"), real medium batch code ("ELME20-2607-01"), and real
+    operator initials render correctly, and the brand mark now appears —
+    clean, small, no overlap with anything, on the exact accession and tape
+    size the bug report was about.
+  - **Files:** `src/modules/genetics/api/v1/labels.py`
+    (`_BRAND_MARK_MAX_SIZE_MM` tightened, `_maybe_draw_brand_mark` rewritten
+    with the two-placement fallback, `_draw_label_page` now captures line
+    1's baseline and the real rendered end-x of lines 2/3 to feed it),
+    `tests/unit/test_genetics/test_label_pdf.py` (20 new cases,
+    `_pdf_image_draws` helper), `Docs/2-Working-Progress/genetics-label-qr-
+    spec.md` (§6.1, new "Round 4" subsection: bug root cause, placement
+    reasoning with measured numbers, coverage table, tests, live
+    verification). Not touched: QR geometry/module sizing, page dimensions,
+    font sizes (only where/how large the mark may be, never text), the
+    ASCII `<-` arrow, the blank-line collapse, the `labelledVesselCount`
+    write semantics, `public.py`, `lineage_service.py`, `line_service.py`,
+    `propagation_service.py`, any frontend file.
+  - **CodeMaps:** not regenerated. This is a logic/placement change inside
+    an existing endpoint's helper function — no new/removed routes,
+    services, components, or MongoDB collections. Per CLAUDE.md's own rule
+    ("NOT needed for bug fixes, logic changes, or style updates") this
+    should not require a regeneration; flagging for `change-guardian` to
+    confirm per standard practice.
+  - Not moving T-804 to ARCHIVE — same open sub-items as noted throughout
+    this entry (`PrintLabelsModal` 62xN gap, testing-backend-specialist
+    pass, physical-scan step, change-guardian docs pass).
 
 ---
 

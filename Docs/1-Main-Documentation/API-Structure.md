@@ -5117,20 +5117,48 @@ All endpoints mount under `/api/v1/finance/master-data/`. JWT Bearer auth.
 - OUTGOING_PAYMENT: always required → finance_admin
 ```
 
-## Genetics Repo — Public Label-Info Endpoint (T-804)
+## Genetics Repo — Public Label-Info Endpoint (T-804, two-tiered as of T-806 part 3)
 
-**This is the first unauthenticated route in the platform.** Every other
-endpoint in this document requires a JWT or API key; the two below
-deliberately do not, and are mounted as a structurally separate router
+**This is the first unauthenticated route in the platform — it is now also
+the first *optionally* authenticated one.** Every other endpoint in this
+document either requires a JWT/API key or has none at all; this pair
+recognizes a bearer token when one is offered but never requires it. Both
+are mounted as a structurally separate router
 (`src/modules/genetics/api/v1/public.py`, mounted directly by
 `src/modules/genetics/register.py`) rather than inside the authenticated
 `/api/v1/genetics` router, so the unauthenticated surface stays auditable
 as "everything under this one prefix" rather than "whichever routes happen
 not to declare a dependency." See
 `Docs/2-Working-Progress/genetics-label-qr-spec.md` §5.2 for the full
-design rationale.
+design rationale, and `public.py`'s module docstring for the exact two-tier
+contract.
 
 Base path: `/api/v1/public/genetics`
+
+### Two-Tier Contract (T-806 part 3)
+
+**The tier is decided server-side, from the request's own `Authorization`
+header — never by a query parameter, and never by anything the client can
+assert.** A missing header, a malformed header, an expired/invalid token, an
+unknown or inactive user, or any internal failure while checking all
+degrade to the **same** anonymous response — never a 401, never a 500. The
+only way to reach the authenticated tier is a bearer token that resolves to
+a real, active platform user.
+
+| | Anonymous (no valid session) | Authenticated (valid session) |
+|---|---|---|
+| `accessionId` | **absent** — the field does not exist on this shape | present — the resolved accession's own internal id |
+| `medium.ingredients` / `protocol.steps` / `operator` (full name) / `facility` | gated by the tenant's `Organization.modules.publicInfoPage` flags (see below) | **always** fully populated — the tenant's flags are ignored for this tier |
+| `lineageGraph.nodes[].token` | **absent** on every node | present on every node — that node's own `publicToken`, i.e. its own `/i/{token}` address |
+
+Both tiers still return exactly the same `Cache-Control: no-store` header,
+obey the same 30 req/min rate limit, and 404 identically for an unknown
+token / malformed input / out-of-range vessel ordinal — the tier can never
+be inferred from a 404's shape. One exception, deliberate: a tenant with
+`publicInfoPage.enabled=false` still 404s an anonymous caller, but **not**
+an authenticated one — `enabled` is a public-exposure switch (keep this
+label off the open internet), not an access-control gate for the tenant's
+own logged-in staff.
 
 ### Get Public Batch Info
 
@@ -5140,8 +5168,10 @@ Base path: `/api/v1/public/genetics`
 info — the page a QR code on a printed label opens. No vessel ordinal is
 given, so `vessel` is always `null`.
 
-**Authentication**: None (public, unauthenticated). Rate limited instead —
-see below.
+**Authentication**: Optional. No `Authorization` header (or one that fails
+to resolve) returns the anonymous shape; `Authorization: Bearer <JWT>` for
+a real, active user returns the authenticated shape — see "Two-Tier
+Contract" above. Rate limited either way — see below.
 
 **Rate Limit**: 30 requests/minute per IP, enforced independently of the
 platform's per-role guest limit (`enforce_public_rate_limit` in
@@ -5180,12 +5210,18 @@ the internal `Accession` model):
 initials) and `facility` are gated per-tenant by
 `Organization.modules.publicInfoPage` (`showMediumIngredients`,
 `showProtocolSteps`, `showOperatorName`, `showFacilityName` — see
-`src/models/organization.py`). **All four default to `False`** — a
-deliberate privacy/trade-secret decision, not an oversight. Regardless of
-these flags, the response **never** includes `location.roomId`,
+`src/models/organization.py`) **for an anonymous caller only**. **All four
+default to `False`** — a deliberate privacy/trade-secret decision, not an
+oversight. An authenticated caller (see "Two-Tier Contract" above) always
+receives all four fully populated, ignoring these flags.
+
+Regardless of tier, the response **never** includes `location.roomId`,
 `location.unit`, `location.position`, `notes`, `tags`, `createdBy`,
-`divisionId`, `organizationId`, any internal UUID, or any accession's
-`publicToken` (including parents in `lineage`).
+`divisionId`, `organizationId`, or any internal UUID or `publicToken`
+**other than** the two exceptions the authenticated tier deliberately
+introduces: the resolved accession's own `accessionId`, and each
+`lineageGraph` node's own `publicToken` (surfaced as `token`). Both stay
+absent, unconditionally, for an anonymous caller.
 
 **Success Response (200 OK)**:
 ```json
@@ -5232,9 +5268,39 @@ malformed input — see "404 for everything" below):
 `Cache-Control: no-store` — lineage and split state change, and a proxy
 caching a stale "not found" is worse than a slow page.
 
+**Authenticated Success Response (200 OK)** — same token, with
+`Authorization: Bearer <JWT>`:
+```json
+{
+  "accessionId": "3b36b3e7-7838-4105-aa0a-8be41772754b",
+  "accessionCode": "PO-BLU-G3-004",
+  "vessel": null,
+  "generationLabel": "G3",
+  "line": { "code": "PO-BLU", "commonName": "Blue Oyster", "scientificName": "Pleurotus ostreatus", "kind": "fungus" },
+  "form": "petri_dish",
+  "status": "active",
+  "acquiredAt": "2026-07-31T00:00:00Z",
+  "medium": { "batchCode": "MEA-AC-2607-03", "recipeName": "Malt Extract Agar + AC", "ingredients": [{ "name": "Malt extract", "amount": 20.0, "unit": "g_per_l" }] },
+  "protocol": { "code": "SOP-AGR-001", "title": "Agar-to-Agar Transfer", "version": 2, "steps": ["Flame the loop", "Let the agar set before inoculating"] },
+  "operator": "Viet Anh",
+  "facility": "Lab A",
+  "lineage": [
+    { "depth": 0, "accessionCode": "PO-BLU-G3-004", "generationLabel": "G3", "method": "agar_to_agar", "performedAt": "2026-07-31T00:00:00Z", "provenance": null }
+  ]
+}
+```
+Note `medium.ingredients`, `protocol.steps`, `operator` (full name) and
+`facility` are fully populated here even though the tenant's `show*` flags
+are all `False` — the authenticated tier ignores them by design.
+
 **Usage Example (curl)**:
 ```bash
 curl https://a64core.com/api/v1/public/genetics/i/88FN1TQ84M
+
+# Authenticated (richer response, requires a bearer token from
+# POST /api/v1/auth/login):
+curl https://a64core.com/api/v1/public/genetics/i/88FN1TQ84M \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ### Get Public Per-Vessel Info
@@ -5246,8 +5312,9 @@ through any batch splits (spec §3) to the accession that currently holds
 that physical vessel — e.g. plate #7 of a 120-plate batch, after #7 was
 split off for contamination, still resolves via its original label.
 
-**Authentication**: None. **Rate Limit**: shared 30/min-per-IP budget with
-the batch-level endpoint above.
+**Authentication**: Optional — same two-tier contract as the batch-level
+endpoint above. **Rate Limit**: shared 30/min-per-IP budget with the
+batch-level endpoint above.
 
 **Path Parameters**:
 - `token` (string, required) — same as above.
@@ -5276,14 +5343,166 @@ curl https://a64core.com/api/v1/public/genetics/i/88FN1TQ84M/7
 
 **Notes**:
 - Every other `/api/v1/genetics/*` endpoint remains fully authenticated —
-  this pair is the *only* unauthenticated surface the genetics module
-  exposes, mounted at its own fixed prefix specifically so that remains
-  true by construction rather than by convention.
+  this pair is the only surface the genetics module exposes that admits an
+  anonymous caller at all, mounted at its own fixed prefix specifically so
+  that remains true by construction rather than by convention. As of T-806
+  part 3 it also recognizes (never requires) a bearer token — see "Two-Tier
+  Contract" above.
 - `Organization.modules.publicInfoPage` (`PublicInfoPageConfig`) exists on
   the organization model with privacy-safe defaults (`enabled=true`, every
-  `show*` flag `false`) as of T-804 step 3. **Not yet exposed through the
-  `PATCH /api/v1/organizations/{orgId}/modules` admin endpoint** — that
-  endpoint's `OrganizationModulesUpdate` schema currently only accepts
-  `financeEnabled`. Toggling `publicInfoPage` today requires a direct
-  database update; wiring it into the admin endpoint is follow-on work, not
-  part of this step's scope.
+  `show*` flag `false`) as of T-804 step 3, and is now operable — see
+  [Organization Module Toggles](#organization-module-toggles-wave-0--t-804-follow-up)
+  below for the `PATCH /api/v1/organizations/{orgId}/modules` schema that
+  toggles it.
+- **T-806 part 3 — identity resolution, not permission enforcement.** The
+  optional-auth dependency (`_optional_current_user` in `public.py`) reuses
+  `get_current_user` from `...middleware.auth` (identity/JWT decoding only)
+  called as a plain function so its exceptions can be caught locally — it
+  deliberately does NOT reuse `require_view` (genetics' own permission
+  gate), which raises 401/403/500 by design. Any successfully-resolved,
+  active user reaches the authenticated tier; there is no additional
+  `genetics.view`-style role check on top, since this route's own tier
+  split (not RBAC) is the security boundary here.
+- **Known pre-existing documentation gap (unrelated to T-806 part 3):**
+  the response schema/examples above predate T-805's `fromVesselNo` fields
+  and the T-804-follow-up `lineageGraph` object — both are live in the
+  actual response (see `PublicAccessionInfo` in `public.py`) but are not
+  yet reflected in the JSON examples on this page. Not touched here to
+  keep this update scoped to the authentication tiering it was asked to
+  document; flagged for a follow-up documentation pass.
+
+## Organization Module Toggles (Wave 0 / T-804 follow-up)
+
+### Update Tenant Module Toggles
+
+**Endpoint**: `PATCH /api/v1/organizations/{organizationId}/modules`
+
+**Purpose**: Flip per-tenant module switches — `financeEnabled` (Wave 0,
+T-059.4) and `publicInfoPage` (T-804 follow-up: the master switch and
+per-field privacy flags for the public genetics label-info page,
+`GET /api/v1/public/genetics/i/{token}`). Before this follow-up,
+`publicInfoPage.enabled` defaulted `true` with no way to turn it off — a
+privacy control that could not be operated.
+
+**Authentication**: Required (Bearer token)
+
+**Authorization**: `SUPER_ADMIN` role only (same gate as `financeEnabled` —
+tenant-level module toggles are a super-admin operation platform-wide, not
+delegated to regular `admin`).
+
+**Path Parameters**:
+- `organizationId` — UUID of the organization (required)
+
+**Request Body** (all top-level fields optional; `publicInfoPage` is
+itself a *partial* update — see below):
+```json
+{
+  "financeEnabled": false,           // Optional. Omit to leave unchanged.
+  "publicInfoPage": {                // Optional. Omit to leave unchanged.
+    "enabled": false,                // Optional. Master switch for the public page.
+    "showOperatorName": true,        // Optional.
+    "showMediumIngredients": true,   // Optional.
+    "showProtocolSteps": true,       // Optional.
+    "showFacilityName": true         // Optional.
+  }
+}
+```
+
+**`publicInfoPage` is a merge, not a replace.** Every field inside it
+defaults to "leave unchanged" (`null`/omitted), not to
+`PublicInfoPageConfig`'s own defaults. Sending `{"publicInfoPage":
+{"enabled": false}}` flips only the master switch — `showOperatorName` and
+the other privacy flags keep whatever value the tenant had previously set.
+This matters because the naive alternative (parsing the patch straight into
+a full `PublicInfoPageConfig`) would silently reset every sibling flag to
+its model default on every single-flag PATCH.
+
+**Success Response (200 OK)** — the full, updated `Organization`:
+```json
+{
+  "name": "A64 Group",
+  "slug": "a64-group",
+  "industries": ["vegetable_fruits", "mushroom"],
+  "logoUrl": null,
+  "modules": {
+    "financeEnabled": true,
+    "publicInfoPage": {
+      "enabled": false,
+      "showOperatorName": false,
+      "showMediumIngredients": false,
+      "showProtocolSteps": false,
+      "showFacilityName": false
+    }
+  },
+  "organizationId": "00000000-0000-0000-0000-000000000001",
+  "isActive": true,
+  "createdAt": "2026-02-24T15:44:42.669Z",
+  "updatedAt": "2026-07-31T18:28:26.019Z"
+}
+```
+
+`GET /api/v1/organizations/{organizationId}` and `GET /api/v1/organizations/`
+return this same `modules.publicInfoPage` object — the field was already
+declared on `OrganizationResponse` (via `OrganizationBase.modules`) prior
+to this follow-up, so no response-model change was needed there, only the
+write path.
+
+**Status Codes**:
+- `200 OK` — Module toggles updated (or no-op if every field was omitted)
+- `401 Unauthorized` — Missing/invalid bearer token
+- `403 Forbidden` — Authenticated but not `SUPER_ADMIN`
+- `404 Not Found` — `organizationId` does not exist
+
+**Error Example (403 Forbidden)**:
+```json
+{
+  "detail": "Super admin access required for this operation."
+}
+```
+
+**Audit log**: every call writes one entry to `admin_audit_log`:
+```json
+{
+  "action": "organization.modules.updated",
+  "targetOrganizationId": "00000000-0000-0000-0000-000000000001",
+  "performedBy": "bff26b8f-5ce9-49b2-9126-86174eaea823",
+  "performedByEmail": "admin@a64platform.com",
+  "performedByRole": "super_admin",
+  "timestamp": "2026-07-31T18:28:26.022Z",
+  "details": {
+    "before": { "financeEnabled": true, "publicInfoPage": { "enabled": true, "showOperatorName": false, "showMediumIngredients": false, "showProtocolSteps": false, "showFacilityName": false } },
+    "after":  { "financeEnabled": true, "publicInfoPage": { "enabled": false, "showOperatorName": false, "showMediumIngredients": false, "showProtocolSteps": false, "showFacilityName": false } },
+    "patch":  { "publicInfoPage": { "enabled": false } }
+  }
+}
+```
+`before`/`after` are the entire `modules` object, not just the touched
+flag — so a diff (exactly which flag moved, and from what) is
+reconstructable later without guessing from the raw `patch` alone. This is
+deliberate: "switch the lab's public page from on to off" is exactly the
+kind of change someone will need to reconstruct after the fact.
+
+**Side effects**:
+- Invalidates the Redis-cached tenant flag (`invalidate_tenant_flag_cache`)
+  so the outbox writer and capability endpoint pick up a `financeEnabled`
+  change within milliseconds rather than waiting out the 60s cache TTL.
+- A `publicInfoPage.enabled=false` write takes effect on the public route
+  immediately (no cache in that path) — the very next anonymous request to
+  `GET /api/v1/public/genetics/i/{token}` for an accession on this tenant
+  404s. **Authenticated requests to that same route are unaffected** — see
+  "Two-Tier Contract" in the Genetics public-route section above:
+  `enabled` is a public-exposure switch, not an access-control gate.
+
+**Usage Example (curl)**:
+```bash
+curl -X PATCH https://a64core.com/api/v1/organizations/00000000-0000-0000-0000-000000000001/modules \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"publicInfoPage": {"enabled": false}}'
+```
+
+**Notes**:
+- Not yet exposed in the frontend — `Settings → Tenant Modules` currently
+  only renders a `financeEnabled` switch. Adding a `publicInfoPage.enabled`
+  control there (and, longer-term, the per-field `show*` flags) is
+  follow-on frontend work, not part of this change.

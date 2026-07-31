@@ -61,6 +61,43 @@ class PublicInfoPageConfig(BaseModel):
     )
 
 
+class PublicInfoPageConfigUpdate(BaseModel):
+    """
+    Partial-update schema for `PublicInfoPageConfig`.
+
+    Every field is optional and defaults to `None`, meaning "leave
+    unchanged." This exists because `PublicInfoPageConfig` itself carries
+    real (non-`None`) defaults for every field — parsing a caller's
+    `{"enabled": false}` directly into a `PublicInfoPageConfig` would
+    silently coerce `showOperatorName`, `showMediumIngredients`, etc. back
+    to their model defaults, discarding whatever the tenant had previously
+    opted into. `OrganizationService.update_modules` merges only the
+    fields explicitly set here on top of the currently stored config, so a
+    single-flag PATCH can never reset a sibling privacy flag.
+    """
+
+    enabled: Optional[bool] = Field(
+        None,
+        description="Master switch for the public label-info page for this tenant.",
+    )
+    showOperatorName: Optional[bool] = Field(
+        None,
+        description="Show the technician's full name instead of initials.",
+    )
+    showMediumIngredients: Optional[bool] = Field(
+        None,
+        description="Show the medium's ingredient list instead of just the recipe name.",
+    )
+    showProtocolSteps: Optional[bool] = Field(
+        None,
+        description="Show the SOP's step text instead of just code/title/version.",
+    )
+    showFacilityName: Optional[bool] = Field(
+        None,
+        description="Show the facility name. Room, unit and position are never shown.",
+    )
+
+
 class OrganizationModules(BaseModel):
     """
     Per-tenant module toggles (Wave 0 — T-059).
@@ -114,14 +151,27 @@ class OrganizationUpdate(BaseModel):
 
 class OrganizationModulesUpdate(BaseModel):
     """
-    Schema for PATCH /api/v1/organizations/{org_id}/modules (Wave 0).
+    Schema for PATCH /api/v1/organizations/{org_id}/modules (Wave 0;
+    `publicInfoPage` added as the T-804 follow-up that makes the public
+    label-info page's `enabled` switch actually operable).
 
     All fields optional so callers can patch a single toggle without
-    sending the whole modules object.
+    sending the whole modules object. `publicInfoPage`, in turn, is itself
+    a partial-update object (`PublicInfoPageConfigUpdate`) — see that
+    model's docstring for why a nested partial is required rather than
+    accepting a full `PublicInfoPageConfig` here.
     """
     financeEnabled: Optional[bool] = Field(
         None,
         description="Enable / disable the finance module for this tenant",
+    )
+    publicInfoPage: Optional[PublicInfoPageConfigUpdate] = Field(
+        None,
+        description=(
+            "Partial update to the public label-info page config. Only "
+            "the fields explicitly set are changed; omitted fields keep "
+            "their current stored value."
+        ),
     )
 
 

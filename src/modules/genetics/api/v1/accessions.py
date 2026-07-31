@@ -8,7 +8,7 @@ code-lookup endpoint used by label scanning.
 import logging
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from ...models.accession import (
@@ -18,6 +18,7 @@ from ...models.accession import (
     AccessionUpdate,
 )
 from ...services.accession.accession_service import AccessionService
+from ...services.accession.vessel_resolver import resolve_vessel
 from ...utils.responses import PaginatedResponse, SuccessResponse, paginate
 
 from ...middleware.auth import (
@@ -25,6 +26,13 @@ from ...middleware.auth import (
     require_permission,
     require_view,
 )
+
+# Reused verbatim from the public (unauthenticated) label-info route — see
+# public.py's module docstring for why token lookup is case-insensitive
+# (uppercase-normalised) plain-equality, NOT a regex, so the unique index on
+# `publicToken` is used. This module only imports the pure lookup function;
+# public.py's router is mounted separately (register.py) and is untouched.
+from .public import _load_accession_by_token
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +139,58 @@ async def get_accession_by_code(
     current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[Accession]:
     accession = await AccessionService.get_by_code(accession_code)
+    return SuccessResponse(data=accession)
+
+
+@router.get(
+    "/by-token/{token}",
+    response_model=SuccessResponse[Accession],
+    summary="Resolve a scanned label token to its accession (authenticated)",
+    description=(
+        "T-806: the authenticated counterpart to the public label-info page. "
+        "Scanning a printed label opens the unauthenticated page at "
+        "`/i/{token}[/{vesselNo}]`, which deliberately exposes no internal "
+        "UUIDs. To let a logged-in user act on what they just scanned (e.g. "
+        "'mark this plate contaminated'), this route turns the same "
+        "`{token, vesselNo}` pair into the full internal accession record — "
+        "resolution happens behind auth so the public page never learns the "
+        "UUID. Token match is case-insensitive (the label prints its URL "
+        "uppercase for QR alphanumeric mode). When `vesselNo` is supplied, "
+        "it is run through the same split-forward resolver the public route "
+        "uses, so a split-off plate resolves to the child accession that "
+        "currently holds that physical vessel."
+    ),
+    # IMPORTANT — route ordering: this must be declared before
+    # `/{accession_id}` below. It happens to be structurally safe even out
+    # of order here (two path segments vs. one never collide in FastAPI's
+    # routing), but the ordering is kept deliberate and verified live rather
+    # than relied on implicitly — see T-806 and the `/users/me/tutorials` vs
+    # `/users/{user_id}` precedent this codebase has already been bitten by.
+)
+async def get_accession_by_token(
+    token: str,
+    vesselNo: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Printed vessel ordinal. A split-off plate resolves to the child accession that currently holds it.",
+    ),
+    current_user: CurrentUser = Depends(require_view),
+) -> SuccessResponse[Accession]:
+    accession = await _load_accession_by_token(token)
+    if accession is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No accession found for this label token.",
+        )
+
+    if vesselNo is not None:
+        if vesselNo > accession.labelledVesselCount:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Vessel number is out of range for this label.",
+            )
+        accession = await resolve_vessel(accession, vesselNo)
+
     return SuccessResponse(data=accession)
 
 

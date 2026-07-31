@@ -1,23 +1,42 @@
 """
-Unit tests for T-804 step 3 — the public, unauthenticated genetics label-info
-route (``GET /api/v1/public/genetics/i/{token}[/{vesselNo}]``).
+Unit tests for T-804 step 3 / T-806 part 3 — the public genetics label-info
+route (``GET /api/v1/public/genetics/i/{token}[/{vesselNo}]``), which admits
+an anonymous caller by design and, as of T-806 part 3, *optionally*
+recognizes a bearer token for a richer authenticated response.
 
-This is the first unauthenticated route in the platform. Everything here
-exists to pin down the two failure modes that matter for a route like that:
+This was the first unauthenticated route in the platform and is now also
+the first optionally-authenticated one. Everything here exists to pin down
+the failure modes that matter for a route like that:
 
-  1. **Leakage.** ``PublicAccessionInfo`` is hand-built (spec §5.2 rule 1),
-     which only works as a guarantee if something fails the moment a new
-     field reaches the response. ``test_response_never_exceeds_the_allowlist``
-     is that guarantee — it walks the actual JSON response and asserts every
-     key, at every depth, against an explicit allowlist. Add a field to
-     ``Accession`` that this route's assembly code forwards without also
-     adding it to the allowlist below, and this test fails. That is the
-     point.
-  2. **Enumeration.** Every way to fail (unknown token, disabled org,
-     out-of-range ordinal, malformed input) must return the exact same 404
-     — status, headers, and body — so a caller cannot learn anything about
-     *why* a guess failed. ``test_all_failure_modes_return_byte_identical_404``
-     pins that down across all four.
+  1. **Leakage — per tier.** ``PublicAccessionInfo`` (anonymous) and
+     ``AuthenticatedAccessionInfo`` (authenticated) are both hand-built (spec
+     §5.2 rule 1), which only works as a guarantee if something fails the
+     moment a new field reaches either response. ``ALLOWED_SCHEMA`` /
+     ``test_response_never_exceeds_the_allowlist`` is that guarantee for the
+     anonymous shape; ``AUTHENTICATED_ALLOWED_SCHEMA`` /
+     ``test_authenticated_response_never_exceeds_the_allowlist`` is its
+     counterpart. Add a field to either response model without also adding
+     it to the matching allowlist, and the corresponding test fails.
+  2. **Enumeration.** Every way to fail (unknown token, disabled org for an
+     anonymous caller, out-of-range ordinal, malformed input) must return
+     the exact same 404 — status, headers, and body — so a caller cannot
+     learn anything about *why* a guess failed, or which tier they are in.
+     ``test_all_failure_modes_return_byte_identical_404`` pins that down.
+  3. **Fail-closed authentication (T-806 part 3).** A bad, expired, missing,
+     or malformed bearer token must degrade to the anonymous shape — never
+     a 401, never the authenticated shape.
+     ``test_invalid_bearer_token_degrades_to_anonymous_shape`` and
+     ``test_non_bearer_authorization_scheme_degrades_to_anonymous_shape``
+     exercise the real ``_optional_current_user`` dependency end to end,
+     with no dependency override, to prove this.
+  4. **Tenant flags become anonymous-tier-only (T-806 part 3).** An
+     authenticated caller must see ``medium``/``protocol``/``operator``/
+     ``facility`` fully opened *regardless* of the tenant's
+     ``PublicInfoPageConfig`` show* flags.
+     ``test_authenticated_response_ignores_tenant_flags_and_shows_full_detail``
+     (against ``closed_scenario`` — every flag at its real default, False)
+     is the test that actually proves this, as opposed to merely being
+     consistent with an already-open config.
 
 No live database — Motor's AsyncIOMotorCollection is stood in for with a
 small generic fake supporting the query shapes this route's collaborators
@@ -49,6 +68,19 @@ Test cases:
       - lowercase and uppercase tokens both resolve to the same record
   - Reachability
       - the route responds 200 with no Authorization header at all
+  - Two-tier auth (T-806 part 3)
+      - authenticated response stays within its own allowlist and carries
+        accessionId + lineageGraph node tokens
+      - authenticated response ignores the tenant's show* flags entirely
+      - anonymous response is verified, by field name, to exclude every
+        privileged field — not just "within the allowlist"
+      - garbage/expired bearer token and a non-Bearer auth scheme both
+        degrade to the anonymous shape, never 401
+      - UUID leakage is scoped correctly per tier: zero for anonymous,
+        exactly the scanned accession's own accessionId for authenticated
+      - an authenticated lineageGraph node's token resolves anonymously
+        back to that node's own limited page
+      - disabled-org 404s an anonymous caller but not an authenticated one
 """
 
 from __future__ import annotations
@@ -334,6 +366,7 @@ ALLOWED_SCHEMA: Dict[str, Any] = {
         "edges": {
             "from": None,
             "to": None,
+            "kind": None,
             "fromVesselNo": None,
         },
         "truncated": None,
@@ -361,6 +394,91 @@ FORBIDDEN_KEYS = {
     "facilityId",
     "location",
 }
+
+# ---------------------------------------------------------------------------
+# T-806 part 3 — the authenticated-tier allowlist/forbidden-key pair.
+#
+# Deliberately a SEPARATE schema, not `ALLOWED_SCHEMA` with a flag — see
+# public.py's own rule B reasoning: two hand-built shapes need two hand-built
+# allowlists, or the allowlist itself becomes the kind of "one model with
+# conditional nulls" the spec calls out as easy to get wrong. The only diff
+# from `ALLOWED_SCHEMA` is additive: a top-level `accessionId`, and `token`
+# on each lineageGraph node.
+# ---------------------------------------------------------------------------
+
+AUTHENTICATED_ALLOWED_SCHEMA: Dict[str, Any] = {
+    "accessionId": None,
+    "accessionCode": None,
+    "generationLabel": None,
+    "form": None,
+    "status": None,
+    "acquiredAt": None,
+    "operator": None,
+    "facility": None,
+    "vessel": {
+        "number": None,
+        "of": None,
+        "splitOff": None,
+        "fromVesselNo": None,
+    },
+    "line": {
+        "code": None,
+        "commonName": None,
+        "scientificName": None,
+        "kind": None,
+    },
+    "medium": {
+        "batchCode": None,
+        "recipeName": None,
+        "ingredients": {
+            "name": None,
+            "amount": None,
+            "unit": None,
+        },
+    },
+    "protocol": {
+        "code": None,
+        "title": None,
+        "version": None,
+        "steps": None,
+    },
+    "lineage": {
+        "depth": None,
+        "accessionCode": None,
+        "generationLabel": None,
+        "method": None,
+        "performedAt": None,
+        "provenance": None,
+        "fromVesselNo": None,
+    },
+    "lineageGraph": {
+        "nodes": {
+            "code": None,
+            "generationLabel": None,
+            "form": None,
+            "status": None,
+            "isScanned": None,
+            "depth": None,
+            "token": None,
+        },
+        "edges": {
+            "from": None,
+            "to": None,
+            "kind": None,
+            "fromVesselNo": None,
+        },
+        "truncated": None,
+    },
+}
+
+# `accessionId` is the one FORBIDDEN_KEYS entry that becomes legitimate at
+# exactly one position (top-level) once authenticated — the schema walk
+# above is what still catches it leaking anywhere ELSE (e.g. nested inside a
+# lineage step), so it is safe to drop from the raw-text forbidden scan for
+# this tier specifically. Every other forbidden key, including the literal
+# string "publicToken" (the field is renamed `token` on the wire — the raw
+# Mongo field name must still never appear), stays forbidden.
+AUTHENTICATED_FORBIDDEN_KEYS = FORBIDDEN_KEYS - {"accessionId"}
 
 
 def _is_scalar(value: Any) -> bool:
@@ -509,6 +627,118 @@ def full_scenario(fake_db: _FakeGeneticsDB, monkeypatch: pytest.MonkeyPatch) -> 
 
 
 # ---------------------------------------------------------------------------
+# T-806 part 3 fixtures — the authenticated tier
+# ---------------------------------------------------------------------------
+
+
+def _fake_staff_user() -> "public_module.CurrentUser":
+    """A positively-validated identity, standing in for whatever
+    `_optional_current_user` would have resolved from a real bearer token.
+    Tests override the dependency directly with this rather than minting a
+    real JWT — `_optional_current_user`'s own fail-closed *mechanics* (does
+    a bad/missing/expired token degrade to `None`?) are exercised against
+    the real dependency elsewhere in this file; these tests are about what
+    the route does once identity resolution has already succeeded."""
+    return public_module.CurrentUser(
+        userId="staff-1",
+        email="staff@example.com",
+        firstName="Bench",
+        lastName="Staff",
+        role="user",
+        isActive=True,
+        isEmailVerified=True,
+        organizationId="org-1",
+    )
+
+
+@pytest.fixture
+def closed_scenario(fake_db: _FakeGeneticsDB, monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
+    """Same accession/line/medium/protocol data as `full_scenario`, but the
+    tenant's `PublicInfoPageConfig` is at its real-world default — every
+    `show*` flag False. This is the fixture that actually exercises spec
+    rule C: an authenticated request against THIS config must still come
+    back fully open (ingredients, steps, full name, facility), because those
+    flags are anonymous-tier-only. `full_scenario` (all flags True) cannot
+    tell "authenticated ignores the flags" apart from "authenticated just
+    inherited an already-open config" — this fixture can.
+    """
+    root = _make_accession(
+        accessionCode="PO-BLU-G0-005",
+        cloneGeneration=0,
+        publicToken="CLOSEDROOT1",
+        labelledVesselCount=0,
+        provenance=Provenance(type=ProvenanceType.WILD_COLLECTED, sourceNote="Spore print, Aljunied 2025"),
+    )
+    event = PropagationEvent(
+        method=PropagationMethod.AGAR_TO_AGAR,
+        reproductionMode=ReproductionMode.ASEXUAL,
+        resultAccessionIds=[],
+        performedAt=datetime(2026, 7, 31, 0, 0, 0),
+        protocolRef={"protocolId": "prot-closed-1", "code": "SOP-AGR-001", "title": "Agar-to-Agar Transfer", "version": 2},
+    )
+    main = _make_accession(
+        accessionCode="PO-BLU-G3-005",
+        lineId=root.lineId,
+        publicToken="CLOSEDMAIN1",
+        parents=[ParentRef(accessionId=root.id, role=ParentRole.CLONE_SOURCE, lineId=root.lineId)],
+        sourceEventId=event.id,
+        mediumBatchId="batch-closed-1",
+        createdBy="user-closed-1",
+        organizationId="org-1",
+        location=StorageLocation(facility="Lab A", roomId="room-9", unit="fridge-2", position="shelf-3"),
+        acquiredAt=datetime(2026, 7, 31, 0, 0, 0),
+    )
+    event.resultAccessionIds = [main.id]
+
+    line = Line(
+        id=main.lineId,
+        code="PO-BLU",
+        commonName="Blue Oyster",
+        kind=OrganismKind.FUNGUS,
+        scientificName="Pleurotus ostreatus",
+    )
+    batch = Batch(
+        id="batch-closed-1",
+        batchCode="MEA-AC-2607-05",
+        recipeId="recipe-1",
+        recipeName="Malt Extract Agar + AC",
+        type=MediumType.AGAR,
+        ingredientsSnapshot=[Ingredient(name="Malt extract", amount=20.0, unit=IngredientUnit.G_PER_L)],
+    )
+
+    fake_db.seed(ACCESSIONS, [
+        model_to_doc(main, ACCESSION_ID_KEY),
+        model_to_doc(root, ACCESSION_ID_KEY),
+    ])
+    fake_db.seed(LINES, [model_to_doc(line, LINE_ID_KEY)])
+    fake_db.seed(BATCHES, [model_to_doc(batch, BATCH_ID_KEY)])
+    fake_db.seed(PROPAGATIONS, [model_to_doc(event, EVENT_ID_KEY)])
+    fake_db.seed(PROTOCOLS_COLLECTION, [
+        {
+            "protocolId": "prot-closed-1",
+            "steps": [
+                {"order": 1, "text": "Flame the loop"},
+                {"order": 2, "text": "Let the agar set before inoculating"},
+            ],
+        }
+    ])
+
+    # The default-closed config itself — no `show*` flag flipped on.
+    monkeypatch.setattr(
+        public_module.OrganizationService,
+        "get_organization",
+        AsyncMock(return_value=SimpleNamespace(modules=SimpleNamespace(publicInfoPage=PublicInfoPageConfig()))),
+    )
+    monkeypatch.setattr(
+        public_module.UserService,
+        "get_user_by_id",
+        AsyncMock(return_value=SimpleNamespace(firstName="Bench", lastName="Staff")),
+    )
+
+    return {"main": main, "root": root}
+
+
+# ---------------------------------------------------------------------------
 # Leakage tests
 # ---------------------------------------------------------------------------
 
@@ -541,7 +771,9 @@ def test_response_never_exceeds_the_allowlist(client: TestClient, full_scenario:
     scanned_nodes = [n for n in graph["nodes"] if n["isScanned"]]
     assert len(scanned_nodes) == 1, f"expected exactly one isScanned node, got {scanned_nodes}"
     assert scanned_nodes[0]["code"] == "PO-BLU-G3-004"
-    assert graph["edges"] == [{"from": "PO-BLU-G0-001", "to": "PO-BLU-G3-004", "fromVesselNo": None}]
+    assert graph["edges"] == [
+        {"from": "PO-BLU-G0-001", "to": "PO-BLU-G3-004", "kind": "propagation", "fromVesselNo": None}
+    ]
     assert graph["truncated"] is False
 
 
@@ -630,7 +862,15 @@ def test_lineage_graph_descendant_never_leaks_uuid_or_token(
     graph = body["lineageGraph"]
     codes = {n["code"] for n in graph["nodes"]}
     assert codes == {"PO-BLU-G0-001", "PO-BLU-G3-001", "PO-BLU-G3-003"}
-    assert {"from": "PO-BLU-G3-001", "to": "PO-BLU-G3-003", "fromVesselNo": None} in graph["edges"]
+    assert {
+        "from": "PO-BLU-G3-001", "to": "PO-BLU-G3-003", "kind": "propagation", "fromVesselNo": None,
+    } in graph["edges"]
+    # This fixture's `child` also carries `splitFromAccessionId=main.id`
+    # (see comment above) — that must surface as its OWN edge, kind="split",
+    # not be folded into or replace the propagation edge asserted above.
+    assert {
+        "from": "PO-BLU-G3-001", "to": "PO-BLU-G3-003", "kind": "split", "fromVesselNo": None,
+    } in graph["edges"]
 
     # Belt-and-braces beyond the allowlist/forbidden-key scans above: no
     # UUID-shaped string appears anywhere in the raw body, and none of the
@@ -646,6 +886,268 @@ def test_lineage_graph_descendant_never_leaks_uuid_or_token(
         assert token not in text, f"publicToken '{token}' leaked in response"
     for internal_id in (root.id, main.id, child.id):
         assert internal_id not in text, f"internal id '{internal_id}' leaked in response"
+
+
+# ---------------------------------------------------------------------------
+# T-806 part 3 — the authenticated tier
+#
+# `_fake_staff_user` / `closed_scenario` above set up identity and data;
+# these tests exercise the actual two-tier contract: the authenticated
+# allowlist (rule B), that the tenant's `show*` flags stop applying once
+# authenticated (rule C), that the anonymous shape is verifiably missing
+# every privileged field (not just "within the allowlist"), and that a bad
+# bearer token degrades to anonymous rather than erroring (rule A's whole
+# point).
+# ---------------------------------------------------------------------------
+
+
+def test_disabled_org_still_404s_for_anonymous_but_not_for_authenticated(
+    client: TestClient, fake_db: _FakeGeneticsDB, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Spec rule C's decision, pinned down directly: `enabled=False` is a
+    public-exposure switch, not an access-control gate. The exact same
+    token, against the exact same disabled-org config, must 404 for an
+    anonymous caller (unchanged from `test_404_is_never_403`) and MUST NOT
+    404 for an authenticated one — the two requests below differ only in
+    whether `_optional_current_user` resolves an identity."""
+    accession = _make_accession(publicToken="DISABLEDORG", organizationId="org-disabled")
+    fake_db.seed(ACCESSIONS, [model_to_doc(accession, ACCESSION_ID_KEY)])
+    monkeypatch.setattr(
+        public_module.OrganizationService,
+        "get_organization",
+        AsyncMock(return_value=SimpleNamespace(modules=SimpleNamespace(publicInfoPage=PublicInfoPageConfig(enabled=False)))),
+    )
+
+    anon_resp = client.get(f"/i/{accession.publicToken}")
+    assert anon_resp.status_code == 404, anon_resp.text
+
+    client.app.dependency_overrides[public_module._optional_current_user] = _fake_staff_user
+    authed_resp = client.get(
+        f"/i/{accession.publicToken}", headers={"Authorization": "Bearer irrelevant-because-overridden"}
+    )
+    assert authed_resp.status_code == 200, authed_resp.text
+    assert authed_resp.json()["accessionCode"] == accession.accessionCode
+    assert authed_resp.json()["accessionId"] == accession.id
+
+
+def test_authenticated_response_never_exceeds_the_allowlist(
+    client: TestClient, full_scenario: Dict[str, Any]
+) -> None:
+    client.app.dependency_overrides[public_module._optional_current_user] = _fake_staff_user
+    main = full_scenario["main"]
+    root = full_scenario["root"]
+
+    resp = client.get(f"/i/{main.publicToken}", headers={"Authorization": "Bearer irrelevant-because-overridden"})
+    assert resp.status_code == 200, resp.text
+
+    body = resp.json()
+    _assert_within_schema(body, AUTHENTICATED_ALLOWED_SCHEMA, path="$")
+
+    text = resp.content.decode("utf-8")
+    for forbidden in AUTHENTICATED_FORBIDDEN_KEYS:
+        needle = f'"{forbidden}":'
+        assert needle not in text, f"Forbidden key '{forbidden}' found in authenticated response body"
+
+    # Sanity: the two privileged additions actually made it into this
+    # worst-case (every flag on, full lineage) scenario.
+    assert body["accessionId"] == main.id
+    assert body["medium"]["ingredients"], "expected ingredients populated in the authenticated tier"
+    assert body["protocol"]["steps"] == ["Flame the loop", "Let the agar set before inoculating"]
+    assert body["operator"] == "Viet Anh"  # full_scenario mocks UserService with this name
+    assert body["facility"] == "Lab A"
+
+    graph = body["lineageGraph"]
+    tokens_by_code = {n["code"]: n["token"] for n in graph["nodes"]}
+    assert tokens_by_code == {
+        main.accessionCode: main.publicToken,
+        root.accessionCode: root.publicToken,
+    }
+
+
+def test_authenticated_response_ignores_tenant_flags_and_shows_full_detail(
+    client: TestClient, closed_scenario: Dict[str, Any]
+) -> None:
+    """Spec rule C, the load-bearing behaviour of T-806 part 3:
+    `showMediumIngredients` / `showProtocolSteps` / `showOperatorName` /
+    `showFacilityName` are anonymous-tier only. `closed_scenario` configures
+    every one of those flags at its real-world default (False) — the exact
+    data `test_anonymous_shape_excludes_all_privileged_fields` below proves
+    stays gated for an anonymous caller. An authenticated caller against
+    this SAME data must come back fully open regardless."""
+    client.app.dependency_overrides[public_module._optional_current_user] = _fake_staff_user
+    main = closed_scenario["main"]
+
+    resp = client.get(f"/i/{main.publicToken}", headers={"Authorization": "Bearer irrelevant-because-overridden"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    _assert_within_schema(body, AUTHENTICATED_ALLOWED_SCHEMA, path="$")
+    assert body["accessionId"] == main.id
+    assert body["medium"]["ingredients"], "authenticated tier must ignore showMediumIngredients=False"
+    assert body["protocol"]["steps"], "authenticated tier must ignore showProtocolSteps=False"
+    assert body["operator"] == "Bench Staff", "authenticated tier must ignore showOperatorName=False"
+    assert body["facility"] == "Lab A", "authenticated tier must ignore showFacilityName=False"
+
+
+def test_anonymous_shape_excludes_all_privileged_fields(
+    client: TestClient, closed_scenario: Dict[str, Any]
+) -> None:
+    """The forbidden-list companion to the allowlist tests: not just "the
+    allowlist wasn't exceeded", but that every specific privileged field
+    T-806 part 3 introduced is verifiably absent or reduced, checked by
+    name. No dependency override — this is the route's real behaviour for a
+    caller with no Authorization header, against data that (per
+    `closed_scenario`) genuinely has medium/protocol/operator/facility
+    content available, so a null here is proof of gating, not proof of
+    empty upstream data."""
+    main = closed_scenario["main"]
+    resp = client.get(f"/i/{main.publicToken}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    text = resp.content.decode("utf-8")
+
+    assert body["medium"]["ingredients"] is None, "medium.ingredients must stay gated for anonymous"
+    assert body["protocol"]["steps"] is None, "protocol.steps must stay gated for anonymous"
+    assert body["operator"] == "B.S.", "operator must be initials-only for anonymous, never the full name"
+    assert body["facility"] is None, "facility must stay null for anonymous"
+    assert "accessionId" not in body, "accessionId must not exist on the anonymous shape at all"
+    assert '"token":' not in text, "no lineageGraph node token may exist anywhere in the anonymous body"
+    assert '"accessionId":' not in text
+    assert '"publicToken":' not in text
+
+    uuid_pattern = re.compile(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    )
+    assert not uuid_pattern.search(text), f"UUID-shaped value leaked in anonymous response: {text}"
+
+
+def test_invalid_bearer_token_degrades_to_anonymous_shape(
+    client: TestClient, fake_db: _FakeGeneticsDB
+) -> None:
+    """The fail-closed guarantee, exercised end-to-end with NO dependency
+    override — the real `_optional_current_user` chain
+    (`HTTPBearer(auto_error=False)` -> `get_current_user` -> `jose.jwt.decode`
+    -> broad `except Exception` -> `None`) is what is under test. A garbage
+    bearer token must yield exactly the anonymous shape: status 200, never
+    401, and none of the privileged fields."""
+    accession = _make_accession(publicToken="GARBAGEBEA1")
+    fake_db.seed(ACCESSIONS, [model_to_doc(accession, ACCESSION_ID_KEY)])
+
+    resp = client.get(
+        f"/i/{accession.publicToken}",
+        headers={"Authorization": "Bearer this.is.not.a.valid.jwt"},
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.status_code != 401
+    body = resp.json()
+    assert "accessionId" not in body
+    assert '"token":' not in resp.text
+    _assert_within_schema(body, ALLOWED_SCHEMA, path="$")
+
+
+def test_non_bearer_authorization_scheme_degrades_to_anonymous_shape(
+    client: TestClient, fake_db: _FakeGeneticsDB
+) -> None:
+    """`HTTPBearer(auto_error=False)` returns `None` credentials for an
+    `Authorization` header that isn't the `Bearer <token>` shape at all —
+    Basic auth here, a real scheme a stray client could plausibly send,
+    not a contrived string."""
+    accession = _make_accession(publicToken="BASICSCHEM1")
+    fake_db.seed(ACCESSIONS, [model_to_doc(accession, ACCESSION_ID_KEY)])
+
+    resp = client.get(
+        f"/i/{accession.publicToken}",
+        headers={"Authorization": "Basic dXNlcjpwYXNz"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "accessionId" not in body
+
+
+def test_authenticated_shape_leaks_no_uuid_beyond_its_own_declared_accession_id(
+    client: TestClient, fake_db: _FakeGeneticsDB
+) -> None:
+    """The authenticated tier's one deliberate UUID exposure —
+    `accessionId`, the scanned/resolved accession's own id — must never
+    smuggle any OTHER accession's id along with it. Reuses the ancestor +
+    scanned + descendant shape `test_lineage_graph_descendant_never_leaks_
+    uuid_or_token` already exercises for the anonymous tier, so a regression
+    that started forwarding a parent's or child's id (instead of, or in
+    addition to, the scanned node's own) would be caught here. This is the
+    authenticated-tier reading of "no UUID appears in either shape": the
+    ONE UUID this tier is specified to reveal, and nothing beyond it.
+    """
+    root = _make_accession(
+        accessionCode="PO-BLU-G0-006", cloneGeneration=0, publicToken="UUIDROOT001", labelledVesselCount=0
+    )
+    main = _make_accession(
+        accessionCode="PO-BLU-G3-006",
+        lineId=root.lineId,
+        publicToken="UUIDMAIN001",
+        parents=[ParentRef(accessionId=root.id, role=ParentRole.CLONE_SOURCE, lineId=root.lineId)],
+        labelledVesselCount=120,
+    )
+    child = _make_accession(
+        accessionCode="PO-BLU-G3-007",
+        lineId=root.lineId,
+        publicToken="UUIDCHILD01",
+        parents=[ParentRef(accessionId=main.id, role=ParentRole.CLONE_SOURCE, lineId=root.lineId)],
+        splitFromAccessionId=main.id,
+        labelledVesselCount=0,
+        status=AccessionStatus.CONTAMINATED,
+    )
+    fake_db.seed(ACCESSIONS, [
+        model_to_doc(root, ACCESSION_ID_KEY),
+        model_to_doc(main, ACCESSION_ID_KEY),
+        model_to_doc(child, ACCESSION_ID_KEY),
+    ])
+
+    client.app.dependency_overrides[public_module._optional_current_user] = _fake_staff_user
+    resp = client.get(f"/i/{main.publicToken}", headers={"Authorization": "Bearer irrelevant-because-overridden"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["accessionId"] == main.id
+
+    uuid_pattern = re.compile(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    )
+    matches = uuid_pattern.findall(resp.text)
+    assert matches == [main.id], (
+        f"expected the ONLY UUID in the authenticated body to be the scanned "
+        f"accession's own id, found: {matches}"
+    )
+    assert root.id not in resp.text
+    assert child.id not in resp.text
+
+
+def test_authenticated_node_token_resolves_anonymously_to_that_parent(
+    client: TestClient, full_scenario: Dict[str, Any]
+) -> None:
+    """Closes the loop T-806 part 3 exists to open: a `token` on an
+    authenticated `lineageGraph` node is not a new kind of secret — it is
+    just this same route's own `/i/{token}` address for that accession. A
+    logged-in caller can therefore always follow a lineage node to its own
+    (limited, anonymous) page, and that follow-up request needs no
+    authentication of its own."""
+    client.app.dependency_overrides[public_module._optional_current_user] = _fake_staff_user
+    main = full_scenario["main"]
+    root = full_scenario["root"]
+
+    resp = client.get(f"/i/{main.publicToken}", headers={"Authorization": "Bearer irrelevant-because-overridden"})
+    assert resp.status_code == 200, resp.text
+    graph = resp.json()["lineageGraph"]
+    parent_node = next(n for n in graph["nodes"] if n["code"] == root.accessionCode)
+    assert parent_node["token"] == root.publicToken
+
+    # The follow-up request is a genuinely anonymous scan of the parent's
+    # own token — exactly what a client clicking that node would do.
+    client.app.dependency_overrides.pop(public_module._optional_current_user, None)
+    parent_resp = client.get(f"/i/{parent_node['token']}")
+    assert parent_resp.status_code == 200, parent_resp.text
+    parent_body = parent_resp.json()
+    assert parent_body["accessionCode"] == root.accessionCode
+    assert "accessionId" not in parent_body
 
 
 def _seed_single(accession: Accession) -> _FakeGeneticsDB:
@@ -846,7 +1348,9 @@ def test_lineage_graph_edge_carries_from_vessel_no(client: TestClient, fake_db: 
     body = resp.json()
 
     graph = body["lineageGraph"]
-    assert graph["edges"] == [{"from": "PO-BLU-G0-003", "to": "PO-BLU-G1-003", "fromVesselNo": 4}]
+    assert graph["edges"] == [
+        {"from": "PO-BLU-G0-003", "to": "PO-BLU-G1-003", "kind": "propagation", "fromVesselNo": 4}
+    ]
 
 
 def test_lineage_graph_cross_edges_carry_distinct_vessel_numbers(
@@ -906,10 +1410,10 @@ def test_lineage_graph_cross_edges_carry_distinct_vessel_numbers(
     edges_by_from = {edge["from"]: edge for edge in graph["edges"]}
     assert set(edges_by_from) == {"PO-BLU-G1-010", "PO-BLU-G1-011"}
     assert edges_by_from["PO-BLU-G1-010"] == {
-        "from": "PO-BLU-G1-010", "to": "PO-BLU-F1-001", "fromVesselNo": 2,
+        "from": "PO-BLU-G1-010", "to": "PO-BLU-F1-001", "kind": "propagation", "fromVesselNo": 2,
     }
     assert edges_by_from["PO-BLU-G1-011"] == {
-        "from": "PO-BLU-G1-011", "to": "PO-BLU-F1-001", "fromVesselNo": 5,
+        "from": "PO-BLU-G1-011", "to": "PO-BLU-F1-001", "kind": "propagation", "fromVesselNo": 5,
     }
     # The core regression this test exists to catch: neither edge's vessel
     # number leaked onto the other.

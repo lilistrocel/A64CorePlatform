@@ -17,6 +17,8 @@ from ..models.organization import (
     OrganizationModules,
     OrganizationResponse,
     OrganizationUpdate,
+    PublicInfoPageConfig,
+    PublicInfoPageConfigUpdate,
 )
 from .database import mongodb
 
@@ -205,10 +207,14 @@ class OrganizationService:
 
     @staticmethod
     async def update_modules(
-        organization_id: str, financeEnabled: Optional[bool]
+        organization_id: str,
+        financeEnabled: Optional[bool],
+        publicInfoPage: Optional[PublicInfoPageConfigUpdate] = None,
     ) -> OrganizationResponse:
         """
-        Partially update a tenant's per-module toggles (Wave 0 — T-059.4).
+        Partially update a tenant's per-module toggles (Wave 0 — T-059.4;
+        `publicInfoPage` added as the T-804 follow-up making that page's
+        `enabled` switch operable).
 
         Only set fields are applied. Returns the updated organization.
 
@@ -216,6 +222,14 @@ class OrganizationService:
             organization_id: UUID string of the organization.
             financeEnabled: New value for modules.financeEnabled, or None
                 to leave unchanged.
+            publicInfoPage: Partial update for modules.publicInfoPage — only
+                the fields explicitly set on it are merged into the stored
+                config. Fields left `None` keep their current stored value
+                (or the `PublicInfoPageConfig` default for a tenant that
+                predates this field entirely); they are never reset to the
+                model's defaults as a side effect of an unrelated flag
+                changing. See `PublicInfoPageConfigUpdate` for why this
+                can't just be a full `PublicInfoPageConfig`.
 
         Returns:
             Updated OrganizationResponse.
@@ -236,6 +250,25 @@ class OrganizationService:
         set_fields: dict = {"updatedAt": datetime.utcnow()}
         if financeEnabled is not None:
             set_fields["modules.financeEnabled"] = financeEnabled
+
+        if publicInfoPage is not None:
+            patch = publicInfoPage.model_dump(exclude_none=True)
+            if patch:
+                # Reason: merge onto the stored config (falling back to
+                # PublicInfoPageConfig's own defaults for a tenant that
+                # predates this field) so patching one flag can never
+                # silently reset a sibling privacy flag — e.g. sending
+                # {"enabled": false} must not also zero out
+                # showOperatorName.
+                stored_public_info = (
+                    existing.get("modules", {}).get("publicInfoPage") or {}
+                )
+                merged_public_info = {
+                    **PublicInfoPageConfig().model_dump(),
+                    **stored_public_info,
+                    **patch,
+                }
+                set_fields["modules.publicInfoPage"] = merged_public_info
 
         if len(set_fields) == 1:
             # Reason: nothing to change beyond updatedAt — skip the write.

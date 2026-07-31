@@ -30,6 +30,7 @@ from fastapi import HTTPException, status
 from ...models.accession import Accession, ParentRef, StorageLocation
 from ...models.enums import PropagationMethod, ReproductionMode
 from ...models.propagation import (
+    PropagationAmend,
     PropagationCreate,
     PropagationEvent,
     PropagationTarget,
@@ -416,3 +417,117 @@ class PropagationService:
             for acc_id in event.resultAccessionIds:
                 result[acc_id] = event
         return result
+
+    # -----------------------------------------------------------------------
+    # Amend (T-808) — correct performedAt only, cascaded, never invisible
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    async def amend_event(
+        event_id: str,
+        data: PropagationAmend,
+        current_user: Any,
+    ) -> Tuple[PropagationEvent, int, int]:
+        """Correct a propagation event's ``performedAt`` after the fact.
+
+        Propagation events are otherwise immutable: ``method``, ``parents``,
+        ``targets``/``resultAccessionIds``, the generation counters and
+        ``reproductionMode`` describe what biologically happened, and
+        ``operatorName``/``performedBy`` are a claim about who did it.
+        Rewriting either would rewrite lineage or attribution under labels
+        already stuck on vessels. The date is different in kind: "work
+        happened at the bench Tuesday, got entered Friday" is a data-entry
+        lag, not a claim about identity or lineage, and refusing to ever fix
+        it would make the log less trustworthy, not more — a log that cannot
+        record an honest correction just accumulates known-wrong dates.
+
+        THE COHERENCE TRAP this closes: ``performed_at`` at propagation time
+        becomes ``Accession.acquiredAt`` on every child
+        (``_build_child``), and ``labels.py`` prints ``acquiredAt`` on the
+        vessel label. Amending only the event would leave the event saying
+        one date, its children another, and already-printed labels a third —
+        worse than not correcting anything. So this cascades ``acquiredAt``
+        to every accession in ``resultAccessionIds`` — but ONLY where that
+        accession's ``acquiredAt`` still equals the event's OLD
+        ``performedAt``. If it does not, somebody already changed that
+        accession's date by hand for a reason of their own (e.g. the batch
+        was actually inoculated on a different day than the rest of the
+        event's targets); overwriting that silently would destroy a
+        deliberate, more-specific correction in favour of a less-specific
+        one. Such accessions are left untouched and reported as skipped so
+        the caller can decide whether to reconcile them by hand.
+
+        Finally, the correction itself is never made invisible:
+        ``amendedAt``/``amendedBy`` are always stamped on the event. The
+        point of keeping an otherwise-immutable log is trustworthiness; the
+        honest way to allow a correction is to record that one happened, not
+        to quietly overwrite history and leave no trace that it moved.
+
+        Returns:
+            (updated_event, accessions_updated, accessions_skipped)
+
+        Raises:
+            HTTPException: 404 if the event does not exist, 400 if the
+            corrected date is in the future.
+        """
+        event = await PropagationService.get_event(event_id)
+
+        now = datetime.utcnow()
+        if data.performedAt > now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "performedAt cannot be in the future — a propagation "
+                    "cannot have been performed tomorrow. Check the year and "
+                    "date if this was a typo."
+                ),
+            )
+
+        old_performed_at = event.performedAt
+        scope = scope_fields(current_user)
+        amended_by = scope.get("createdBy")
+
+        db = genetics_db.get_database()
+        await db[PROPAGATIONS].update_one(
+            {_ID_KEY: event_id},
+            {
+                "$set": {
+                    "performedAt": data.performedAt,
+                    "amendedAt": now,
+                    "amendedBy": amended_by,
+                }
+            },
+        )
+
+        # Cascade to children, but only the ones nobody has since diverged by
+        # hand — see the docstring above for why this guard must not be
+        # relaxed to an unconditional update_many.
+        accessions_updated = 0
+        accessions_skipped = 0
+        if event.resultAccessionIds:
+            cascade_result = await db[ACCESSIONS].update_many(
+                {
+                    _ACCESSION_ID_KEY: {"$in": event.resultAccessionIds},
+                    "acquiredAt": old_performed_at,
+                },
+                {"$set": {"acquiredAt": data.performedAt}},
+            )
+            # Reason: matched_count, not modified_count. "Skipped" must mean
+            # "this accession's acquiredAt no longer equalled the event's old
+            # performedAt" (the divergence guard), not "MongoDB happened to
+            # no-op the $set because the new value equals the old one" — that
+            # second case is a real, matched cascade (e.g. re-submitting an
+            # identical correction) and modified_count silently drops to 0
+            # for it, which would mislabel an eligible accession as diverged.
+            accessions_updated = cascade_result.matched_count
+            accessions_skipped = len(event.resultAccessionIds) - accessions_updated
+
+        logger.info(
+            f"[PropagationService] Amended event {event_id} performedAt "
+            f"{old_performed_at.isoformat()} -> {data.performedAt.isoformat()} "
+            f"by {amended_by}; cascaded to {accessions_updated} accession(s), "
+            f"skipped {accessions_skipped} already-diverged"
+        )
+
+        updated_event = await PropagationService.get_event(event_id)
+        return updated_event, accessions_updated, accessions_skipped

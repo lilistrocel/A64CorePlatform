@@ -13,7 +13,7 @@ from fastapi import HTTPException, status
 
 from ...models.line import Line, LineCreate, LineStats, LineUpdate, LineWithStats
 from ..common import doc_to_model, model_to_doc, scope_fields, slugify_code
-from ..database import ACCESSIONS, LINES, genetics_db
+from ..database import ACCESSIONS, LINES, OBSERVATIONS, PROPAGATIONS, genetics_db
 
 logger = logging.getLogger(__name__)
 
@@ -254,11 +254,18 @@ class LineService:
 
     @staticmethod
     async def deactivate_line(line_id: str) -> Line:
-        """Soft-delete a line.
+        """Soft-delete a line that HAS material on it.
 
-        Hard deletion is deliberately unsupported: accessions and propagation
-        events reference the line, and losing it would break traceability
-        chains that may span years.
+        Sets ``isActive: false`` and keeps the document — the normal
+        retirement path for a line carrying accessions, propagation history,
+        observations or anything else, because hard-deleting it would break
+        traceability chains that may span years. This is unchanged by, and
+        deliberately kept separate from, ``purge_line`` below: that method is
+        for the opposite case — a line that never accumulated any material at
+        all (a typo, a duplicate, a test) — and it refuses outright rather
+        than falling back to this soft path when something IS attached. Do
+        not merge the two; they answer different questions ("retire" vs.
+        "this should never have existed").
         """
         await LineService.get_line(line_id)
         db = genetics_db.get_database()
@@ -268,6 +275,96 @@ class LineService:
         )
         logger.info(f"[LineService] Deactivated line {line_id}")
         return await LineService.get_line(line_id)
+
+    # -----------------------------------------------------------------------
+    # Hard delete (purge) — refuse rather than cascade
+    #
+    # Mirrors RoomService.room_dependents() / delete_room() in
+    # mushroom_manager: count everything that would be orphaned, and only
+    # allow the delete when that count is zero across the board. See
+    # purge_line's docstring for why the zero-dependents gate is load-bearing
+    # for accession-code safety, not just a convenience check.
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    async def line_dependents(line_id: str) -> Dict[str, int]:
+        """Count everything that would be orphaned by purging this line.
+
+        Lets a UI explain a refusal before the user even tries ("this line
+        has 6 accessions and 5 propagation events") rather than a bare 409.
+        Deliberately does not check that the line itself exists first — it
+        mirrors ``RoomService.room_dependents`` exactly, which does the same:
+        an unknown id simply counts zero dependents everywhere.
+        """
+        db = genetics_db.get_database()
+        return {
+            "accessions": await db[ACCESSIONS].count_documents({"lineId": line_id}),
+            "propagationEvents": await db[PROPAGATIONS].count_documents(
+                {"$or": [{"sourceLineIds": line_id}, {"resultLineIds": line_id}]}
+            ),
+            "observations": await db[OBSERVATIONS].count_documents({"lineId": line_id}),
+            "childLines": await db[LINES].count_documents({"parentLineId": line_id}),
+            # mushroom_harvests belongs to mushroom_manager, not this module,
+            # but both share one MongoDB — the same cross-module reach
+            # RoomService.room_dependents already relies on (it queries
+            # genetic_accessions directly). lineId is denormalised onto the
+            # harvest document precisely so this kind of rollup doesn't need
+            # a join back through the accession.
+            "harvests": await db.mushroom_harvests.count_documents({"lineId": line_id}),
+        }
+
+    @staticmethod
+    async def purge_line(line_id: str, current_user: Any) -> Dict[str, str]:
+        """Hard-delete a line, but only when nothing has ever used it.
+
+        Deliberately refuses rather than cascading — same posture as
+        ``RoomService.delete_room``. This is not an escalation of
+        ``deactivate_line``; it exists for the opposite case, a line that
+        never accumulated any accessions, propagation events, observations,
+        child lines or harvests (created by mistake, a typo, or a test). A
+        line that HAS material must go through ``deactivate_line`` instead —
+        purge will refuse it, never cascade through it.
+
+        Why the zero-dependents gate must never be relaxed: ``code`` is
+        globally unique (enforced in ``create_line``) and is baked into every
+        accession code minted from this line, e.g. ``PO-BLU-G3-001``, which is
+        also what gets printed on the physical vessel label. Purging a line
+        frees its ``code`` for reuse. Because purge only ever succeeds at zero
+        accessions, no accession code can exist that was minted under this
+        line's code — there is nothing left for a future line's reused code to
+        collide with. If this gate is ever loosened (e.g. to permit purging a
+        line whose accessions are all "discarded" or "contaminated" rather
+        than requiring zero), that guarantee breaks: a future line reusing the
+        freed code would mint accession codes that either collide with the
+        unique ``accessionCode`` index on records still in the database, or —
+        worse, if those old records were also removed — leave a stale printed
+        label on a vessel that now resolves to entirely unrelated material.
+        Re-derive this reasoning before changing the gate; do not just widen
+        the condition to make a particular purge request succeed.
+        """
+        line = await LineService.get_line(line_id)
+        blocking = await LineService.line_dependents(line_id)
+
+        if any(blocking.values()):
+            parts = [f"{v} {k}" for k, v in blocking.items() if v]
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Line '{line.code}' still has {', '.join(parts)} attached. "
+                    f"Purging it would orphan those records and free its code "
+                    f"for reuse while old labels may still carry it. Deactivate "
+                    f"the line instead to retire it while keeping its history, "
+                    f"or remove/reassign the attached records first."
+                ),
+            )
+
+        db = genetics_db.get_database()
+        await db[LINES].delete_one({_ID_KEY: line_id})
+        logger.info(
+            f"[LineService] Purged line {line.code} ({line_id}) "
+            f"by user {getattr(current_user, 'userId', None)}"
+        )
+        return {"code": line.code, "lineId": line_id}
 
     # -----------------------------------------------------------------------
     # Growing-profile links

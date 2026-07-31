@@ -25,17 +25,55 @@ each is enforced below:
 2. **Rate limited** — 30 req/min per IP, enforced explicitly in this module
    rather than relying on the platform-wide per-role limiter (see
    ``enforce_public_rate_limit`` below for why).
-3. **Never returns** internal ids, ``location.roomId``/``unit``/``position``,
-   ``notes``, ``tags``, ``createdBy``, ``divisionId``, ``organizationId``, or
-   any accession's ``publicToken`` — including parents in the lineage array
-   *and* every node/edge in ``lineageGraph`` (T-804 follow-up), which is
-   keyed by ``accessionCode`` rather than the internal UUIDs the underlying
-   ``LineageGraph`` model carries — see ``_build_lineage_graph``.
-4. **404 for everything** — unknown token, disabled org, out-of-range
-   vessel number, malformed input. Always the same status and body; never
-   403, never a message that lets a caller distinguish *why* it failed.
-   Anything that varies is an enumeration oracle against a token space that
-   is otherwise only ~1.1e15 wide.
+3. **Two tiers; anonymous stays absolute (T-806 part 3).** This route now
+   resolves an *optional* bearer token (``_optional_current_user`` below)
+   and assembles one of two hand-built shapes accordingly — never one shape
+   with fields nulled out, per rule 1's own reasoning applied twice over.
+
+   For an **anonymous** caller — no bearer token, or one that fails to
+   resolve for *any* reason (expired, malformed, unknown user, a database
+   hiccup while checking) — the rule is exactly what it always was: this
+   route never returns internal ids, ``location.roomId``/``unit``/
+   ``position``, ``notes``, ``tags``, ``createdBy``, ``divisionId``,
+   ``organizationId``, or any accession's ``publicToken`` — including
+   parents in the ``lineage`` array *and* every node/edge in
+   ``lineageGraph``, which is keyed by ``accessionCode`` rather than the
+   internal UUIDs the underlying ``LineageGraph`` model carries. This is
+   unconditional: there is no code path, tenant config, or malformed input
+   that reaches an anonymous caller with a token or an internal id in it.
+
+   For an **authenticated** caller — meaning ``_optional_current_user``
+   resolved a real, active platform user, the *only* positive outcome its
+   fail-closed design allows — two fields become visible that never exist on
+   the anonymous shape at all: the resolved accession's own ``accessionId``
+   (so the client can act on what it just scanned), and each
+   ``lineageGraph`` node's own ``publicToken`` (so the rendered tree is
+   clickable — that token is just this same route's own address for that
+   node). Both stay inside the graph's existing ``PUBLIC_LINEAGE_DEPTH`` /
+   ``PUBLIC_LINEAGE_NODES`` caps — authentication widens *what* one scan
+   reveals, never removes the bound on *how much* of the tree it can
+   reveal. Separately, ``medium``/``protocol``/``operator``/``facility`` —
+   fields that already exist on *both* shapes, gated for an anonymous
+   caller by the tenant's own ``PublicInfoPageConfig`` flags — are always
+   fully opened (ingredients, steps, full name, facility name) for an
+   authenticated caller, ignoring those flags entirely: they exist to gate
+   what a stranger on the public internet sees, not what the tenant's own
+   logged-in staff sees. That is a content difference within fields both
+   tiers already have, distinct from ``accessionId``/tokens, which are
+   fields the anonymous shape structurally does not carry at all.
+   ``lineageGraph.edges[].kind`` (``"propagation"`` vs ``"split"`` —
+   whether a batch split off a sibling record with no new generation, see
+   ``AccessionService.split_accession``) is structural, not sensitive, and
+   is carried on *both* tiers identically.
+4. **404 for everything** — unknown token, disabled org (for an *anonymous*
+   caller — see the ``enabled``-gate reasoning at its call site for why an
+   authenticated one is deliberately exempted), out-of-range vessel number,
+   malformed input. Always the same status and body; never 403, never a
+   message that lets a caller distinguish *why* it failed. Anything that
+   varies is an enumeration oracle against a token space that is otherwise
+   only ~1.1e15 wide — and this holds for an authenticated caller too, for
+   every failure mode that still applies to them, so the 404 shape itself
+   can never be used to fingerprint which tier a caller is in.
 5. **Cache-Control: no-store** on every response this router returns,
    success or error — lineage changes, and a proxy holding a stale tree (or
    a stale "not found") is worse than a slow page.
@@ -43,9 +81,10 @@ each is enforced below:
 
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import RedisError
@@ -55,6 +94,7 @@ from src.models.organization import PublicInfoPageConfig
 from src.services.organization_service import OrganizationService
 from src.services.user_service import UserService
 
+from ...middleware.auth import CurrentUser, get_current_user
 from ...models.accession import Accession
 from ...models.lineage import AncestryStep, LineageGraph
 from ...services.accession.accession_service import AccessionService
@@ -149,6 +189,72 @@ async def enforce_public_rate_limit(request: Request) -> None:
             detail="Rate limit exceeded. Please retry shortly.",
             headers={**_NO_STORE_HEADERS, "Retry-After": "60"},
         )
+
+
+# ---------------------------------------------------------------------------
+# Optional authentication — the two-tier gate (T-806 part 3, spec §5.2 rule 3)
+#
+# CARDINAL RULE: this route is scanned off a physical label by anyone, so it
+# must degrade gracefully with no login — but it must never rely on the UI to
+# hide the privileged tier's fields. The enforcement point is here, in what
+# gets *assembled and returned*, not in what a client chooses to render.
+# ---------------------------------------------------------------------------
+
+# `auto_error=False` is the whole trick: the bare `HTTPBearer()` every other
+# authenticated route in this codebase uses (see `security` in
+# `...middleware.auth`) raises 403 itself, inside FastAPI's dependency
+# resolution, the moment the header is missing — before this module's own
+# code would ever get a chance to catch it. This instance returns `None`
+# instead, for a missing header AND for a header that isn't a well-formed
+# `Bearer <token>` — both fold into the same "no credentials offered" case
+# handled below.
+_optional_bearer = HTTPBearer(auto_error=False)
+
+
+async def _optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_bearer),
+) -> Optional[CurrentUser]:
+    """Best-effort identity resolution for this route's two tiers. Never
+    raises — every failure mode degrades to ``None`` (the anonymous tier),
+    which is the entire reason this dependency exists rather than reusing
+    ``require_view`` (genetics' own permission gate) or even bare
+    ``get_current_user`` wired through the normal ``Depends`` chain.
+    ``require_view`` raises 403/500 by design — correct for every other
+    route in this module, exactly wrong here, where "the token was garbage"
+    must look identical to "there was no token at all", never a 401 page.
+
+    The mechanism: ``get_current_user`` (identity resolution, reused
+    verbatim from ``...middleware.auth`` — this module still does not own
+    or reimplement JWT decoding) is called here as a **plain function call**,
+    not through its own nested ``Depends(...)``. That distinction matters —
+    a dependency that raises inside FastAPI's own resolution graph propagates
+    before this function's body ever runs, so it could not be caught here.
+    Calling it directly makes any ``HTTPException`` it raises an ordinary
+    Python exception at this call site, which the blanket ``except Exception``
+    below catches. That one call site is deliberately the *only* branch that
+    can produce a non-``None`` result — a malformed token, an expired token,
+    an unknown or inactive user, or an unrelated failure (e.g. the user
+    database being unreachable) all fall through the same except clause to
+    the same outcome. There is exactly one way out of this function with a
+    real identity: a positively-validated, active user. Everything else,
+    including bugs in ``get_current_user`` itself, fails closed to
+    anonymous — never a 401, never a 500, never partial credit.
+    """
+    if credentials is None:
+        return None
+    try:
+        return await get_current_user(credentials=credentials)
+    except Exception:
+        # Logged, not raised — an invalid token on a public route is routine
+        # traffic (a stale session, a copy-pasted header, a scanner with no
+        # login at all), not something worth alarming on. Server-side detail
+        # only; the caller just sees the anonymous tier.
+        logger.info(
+            "[public.genetics] bearer token present but did not resolve to "
+            "an active user — degrading to the anonymous tier",
+            exc_info=True,
+        )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +374,13 @@ class PublicLineageGraphEdge(BaseModel):
 
     from_: str = Field(..., alias="from")
     to: str
+    # Structural, not sensitive — carried on BOTH tiers (unlike accessionId /
+    # node tokens, which are authenticated-only). Straight passthrough of
+    # `LineageEdge.kind`; see that model for what distinguishes the two.
+    kind: str = Field(
+        "propagation",
+        description="'propagation' (new generation) or 'split' (same material, no new generation, carved off via AccessionService.split_accession).",
+    )
     # T-805b (graph half): which vessel of the `from` node the `to` node's
     # material was actually taken from — same meaning and same exposure
     # judgement as `PublicVesselInfo.fromVesselNo` / `PublicLineageStep.
@@ -321,6 +434,91 @@ class PublicAccessionInfo(BaseModel):
             "Bounded lineage graph (ancestors + descendants) for drawing a real "
             "tree with the scanned vessel highlighted. Supplements `lineage`, "
             "does not replace it — see genetics-label-qr-spec.md §5.2."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Authenticated-tier response models (T-806 part 3) — deliberately NOT
+# ``PublicAccessionInfo`` with extra ``Optional`` fields bolted on. Spec
+# rule B: "two payloads, explicitly assembled — not one payload with fields
+# blanked... a single model with conditional nulls is harder to test and
+# easier to get wrong." Anything shared between tiers with zero token/UUID
+# risk (line, vessel, medium, protocol, lineage steps, graph edges) is reused
+# as-is; only the two genuinely privileged additions — a node's own
+# ``publicToken`` and the resolved accession's own ``accessionId`` — get
+# their own explicit types, so the leakage test's forbidden-key scan has
+# exactly one model to check for each and cannot be fooled by a shared type.
+# ---------------------------------------------------------------------------
+
+
+class AuthenticatedLineageGraphNode(BaseModel):
+    """Same six fields as ``PublicLineageGraphNode``, plus ``token`` — the
+    node's own ``publicToken``, present only because the caller carries a
+    positively-validated session (see ``_optional_current_user``). This is
+    what makes the rendered tree clickable: `token` is exactly the path
+    segment this same route's ``/i/{token}`` already accepts, so a client
+    can jump straight to any ancestor or descendant's own page. Bounded by
+    the same ``PUBLIC_LINEAGE_DEPTH`` / ``PUBLIC_LINEAGE_NODES`` caps as the
+    anonymous graph — see ``_build_lineage_graph``.
+    """
+    code: str
+    generationLabel: str
+    form: str
+    status: str
+    isScanned: bool
+    depth: int
+    token: str
+
+
+class AuthenticatedLineageGraph(BaseModel):
+    """``PublicLineageGraph``'s authenticated counterpart — same edges (an
+    edge never carried a token to begin with), nodes carry ``token`` too."""
+    nodes: List[AuthenticatedLineageGraphNode] = Field(default_factory=list)
+    edges: List[PublicLineageGraphEdge] = Field(default_factory=list)
+    truncated: bool = Field(
+        False,
+        description="True when the underlying tree extends beyond what is shown here",
+    )
+
+
+class AuthenticatedAccessionInfo(BaseModel):
+    """The authenticated-tier label-info response (T-806 part 3).
+
+    Every field ``PublicAccessionInfo`` carries, PLUS exactly two fields that
+    only exist on this shape (``accessionId`` — so an authenticated client
+    can act on what it scanned, see T-806 part 1's
+    ``GET .../accessions/by-token/{token}`` — and ``lineageGraph`` nodes that
+    carry their own ``token``), AND the *content* of ``medium``/``protocol``/
+    ``operator``/``facility`` is always the fully-opened version — ingredients,
+    steps, the operator's full name, and the facility name — regardless of
+    the tenant's ``PublicInfoPageConfig`` flags. Spec rule C: those flags
+    exist to gate what a stranger on the public internet sees; a logged-in
+    member of the tenant's own staff sees their own lab's data regardless of
+    how that tenant chose to configure its public page. See
+    ``_assemble_authenticated_info`` for where those flags are overridden.
+    """
+
+    accessionId: str = Field(..., description="Internal accession id — safe once the caller is authenticated")
+    accessionCode: str
+    vessel: Optional[PublicVesselInfo] = Field(
+        None, description="null when the request omitted a vessel ordinal (batch-level info)"
+    )
+    generationLabel: str
+    line: PublicLineInfo
+    form: str
+    status: str
+    acquiredAt: Optional[datetime] = None
+    medium: Optional[PublicMediumInfo] = None
+    protocol: Optional[PublicProtocolInfo] = None
+    operator: Optional[str] = Field(None, description="Initials unless the tenant enabled showOperatorName")
+    facility: Optional[str] = Field(None, description="null unless the tenant enabled showFacilityName")
+    lineage: List[PublicLineageStep] = Field(default_factory=list)
+    lineageGraph: AuthenticatedLineageGraph = Field(
+        default_factory=AuthenticatedLineageGraph,
+        description=(
+            "Bounded lineage graph, same shape as the anonymous tier's, but "
+            "each node also carries its own `token` for a clickable tree."
         ),
     )
 
@@ -596,7 +794,9 @@ PUBLIC_LINEAGE_DEPTH = 8
 PUBLIC_LINEAGE_NODES = 60
 
 
-async def _build_lineage_graph(accession: Accession) -> PublicLineageGraph:
+async def _build_lineage_graph(
+    accession: Accession, authenticated: bool = False
+) -> Union[PublicLineageGraph, AuthenticatedLineageGraph]:
     """Bounded lineage DAG centred on the resolved (scanned) accession.
 
     Reuses ``LineageService.build_graph`` verbatim — no new traversal code —
@@ -608,12 +808,20 @@ async def _build_lineage_graph(accession: Accession) -> PublicLineageGraph:
     UUID -> code translation (the part that matters): ``LineageNode`` /
     ``LineageEdge`` carry internal accession UUIDs so a cross's second parent
     can be referenced by graph identity. Those UUIDs must never reach this
-    public route (spec §5.2 rule 3). ``accessionCode`` is already public — it
-    is printed on the label — so it becomes the public node key instead, and
-    every edge endpoint is rewritten through a ``{uuid: code}`` map built
-    from the (possibly truncated) node set. An edge whose endpoint fails to
-    translate — dropped by the node cap, or a null "unknown parent" stub — is
-    dropped rather than emitted with a dangling id.
+    public route in either tier (spec §5.2 rule 3). ``accessionCode`` is
+    already public — it is printed on the label — so it becomes the public
+    node key instead, and every edge endpoint is rewritten through a
+    ``{uuid: code}`` map built from the (possibly truncated) node set. An
+    edge whose endpoint fails to translate — dropped by the node cap, or a
+    null "unknown parent" stub — is dropped rather than emitted with a
+    dangling id.
+
+    ``authenticated=True`` (T-806 part 3) returns the
+    ``AuthenticatedLineageGraph`` shape instead — same nodes and edges, plus
+    each node's own ``publicToken`` — via one additional batched fetch of the
+    surviving nodes' own ``Accession`` records. That fetch only ever runs for
+    an authenticated caller; an anonymous request never queries, let alone
+    returns, a single ``publicToken`` beyond the one it already presented.
     """
     try:
         graph: LineageGraph = await LineageService.build_graph(
@@ -624,7 +832,7 @@ async def _build_lineage_graph(accession: Accession) -> PublicLineageGraph:
         )
     except Exception:
         logger.warning("[public.genetics] lineage graph build failed for %s", accession.id)
-        return PublicLineageGraph()
+        return AuthenticatedLineageGraph() if authenticated else PublicLineageGraph()
 
     nodes = graph.nodes
     truncated = graph.truncated
@@ -641,17 +849,49 @@ async def _build_lineage_graph(accession: Accession) -> PublicLineageGraph:
 
     code_by_id: Dict[str, str] = {n.accessionId: n.accessionCode for n in nodes}
 
-    public_nodes = [
-        PublicLineageGraphNode(
-            code=n.accessionCode,
-            generationLabel=n.generationLabel,
-            form=n.form.value,
-            status=n.status.value,
-            isScanned=n.isRoot,
-            depth=n.depth,
-        )
-        for n in nodes
-    ]
+    # T-806 part 3: authenticated only — every surviving node's own Accession
+    # record, fetched once in a batch, purely to read `publicToken` off it.
+    # `LineageNode` is deliberately trimmed (spec §5.2 rule 3) and carries no
+    # token; this is the only place in the whole route that reads
+    # `publicToken` off anything other than the caller's own scanned token,
+    # and it never runs unless `authenticated` is True.
+    tokens_by_id: Dict[str, str] = {}
+    if authenticated and code_by_id:
+        try:
+            node_accessions = await AccessionService.get_many(list(code_by_id.keys()))
+        except Exception:
+            logger.warning(
+                "[public.genetics] batched node fetch for lineage-graph tokens failed for %s",
+                accession.id,
+            )
+            node_accessions = {}
+        tokens_by_id = {aid: acc.publicToken for aid, acc in node_accessions.items()}
+
+    if authenticated:
+        public_nodes: List[BaseModel] = [
+            AuthenticatedLineageGraphNode(
+                code=n.accessionCode,
+                generationLabel=n.generationLabel,
+                form=n.form.value,
+                status=n.status.value,
+                isScanned=n.isRoot,
+                depth=n.depth,
+                token=tokens_by_id.get(n.accessionId, ""),
+            )
+            for n in nodes
+        ]
+    else:
+        public_nodes = [
+            PublicLineageGraphNode(
+                code=n.accessionCode,
+                generationLabel=n.generationLabel,
+                form=n.form.value,
+                status=n.status.value,
+                isScanned=n.isRoot,
+                depth=n.depth,
+            )
+            for n in nodes
+        ]
 
     # T-805b (graph half): `LineageNode` is deliberately trimmed and carries
     # no `parents` — `build_graph` reads full `Accession` objects internally
@@ -688,29 +928,37 @@ async def _build_lineage_graph(accession: Accession) -> PublicLineageGraph:
             PublicLineageGraphEdge(
                 from_=from_code,
                 to=to_code,
+                kind=edge.kind,
                 fromVesselNo=_vessel_no_cited_by_child(
                     children_by_id.get(edge.toAccessionId), edge.fromAccessionId
                 ),
             )
         )
 
+    if authenticated:
+        return AuthenticatedLineageGraph(nodes=public_nodes, edges=public_edges, truncated=truncated)
     return PublicLineageGraph(nodes=public_nodes, edges=public_edges, truncated=truncated)
 
 
-async def _assemble_info(
+async def _assemble_anonymous_info(
     accession: Accession,
     vessel_no: Optional[int],
     labelled_vessel_count: int,
     split_off: bool,
     config: PublicInfoPageConfig,
 ) -> PublicAccessionInfo:
+    """Assembles the anonymous-tier shape — unchanged from T-804/T-805.
+    ``medium``/``protocol``/``operator``/``facility`` remain gated by the
+    tenant's own ``PublicInfoPageConfig`` flags exactly as before. See
+    ``_assemble_authenticated_info`` for the tier that ignores those flags.
+    """
     line_info = await _build_line_info(accession.lineId)
     medium_info = await _build_medium_info(accession.mediumBatchId, config.showMediumIngredients)
     protocol_info = await _build_protocol_info(accession.sourceEventId, config.showProtocolSteps)
     operator = await _build_operator(accession.createdBy, config.showOperatorName)
     facility = accession.location.facility if config.showFacilityName else None
     lineage = await _build_lineage(accession)
-    lineage_graph = await _build_lineage_graph(accession)
+    lineage_graph = await _build_lineage_graph(accession, authenticated=False)
 
     vessel = None
     if vessel_no is not None:
@@ -738,12 +986,68 @@ async def _assemble_info(
     )
 
 
+async def _assemble_authenticated_info(
+    accession: Accession,
+    vessel_no: Optional[int],
+    labelled_vessel_count: int,
+    split_off: bool,
+) -> AuthenticatedAccessionInfo:
+    """Assembles the authenticated-tier shape (T-806 part 3).
+
+    Deliberately takes no ``PublicInfoPageConfig`` — spec rule C: those flags
+    gate what a stranger on the public internet sees, not what a logged-in
+    member of the tenant's own staff sees. Every gated builder below is
+    called with its flag forced ``True`` (or, for ``facility``, read
+    unconditionally rather than behind a flag at all), which is the whole of
+    what distinguishes this function from ``_assemble_anonymous_info`` aside
+    from ``accessionId`` and the lineage graph's node tokens.
+    """
+    line_info = await _build_line_info(accession.lineId)
+    medium_info = await _build_medium_info(accession.mediumBatchId, True)
+    protocol_info = await _build_protocol_info(accession.sourceEventId, True)
+    operator = await _build_operator(accession.createdBy, True)
+    facility = accession.location.facility
+    lineage = await _build_lineage(accession)
+    lineage_graph = await _build_lineage_graph(accession, authenticated=True)
+
+    vessel = None
+    if vessel_no is not None:
+        vessel = PublicVesselInfo(
+            number=vessel_no,
+            of=labelled_vessel_count,
+            splitOff=split_off,
+            fromVesselNo=_primary_from_vessel_no(accession),
+        )
+
+    return AuthenticatedAccessionInfo(
+        accessionId=accession.id,
+        accessionCode=accession.accessionCode,
+        vessel=vessel,
+        generationLabel=accession.generationLabel,
+        line=line_info,
+        form=accession.form.value,
+        status=accession.status.value,
+        acquiredAt=accession.acquiredAt,
+        medium=medium_info,
+        protocol=protocol_info,
+        operator=operator,
+        facility=facility,
+        lineage=lineage,
+        lineageGraph=lineage_graph,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Route handlers
 # ---------------------------------------------------------------------------
 
 
-async def _handle_public_info(token: str, vessel_no_raw: Optional[str], response: Response) -> PublicAccessionInfo:
+async def _handle_public_info(
+    token: str,
+    vessel_no_raw: Optional[str],
+    response: Response,
+    current_user: Optional[CurrentUser],
+) -> Union[PublicAccessionInfo, AuthenticatedAccessionInfo]:
     response.headers["Cache-Control"] = "no-store"
 
     accession = await _load_accession_by_token(token)
@@ -751,7 +1055,22 @@ async def _handle_public_info(token: str, vessel_no_raw: Optional[str], response
         raise _not_found()
 
     config = await _get_public_config(accession.organizationId)
-    if not config.enabled:
+
+    # `enabled=False` is a *public-exposure* switch, not an access-control
+    # gate — spec rule C. It exists so a tenant can pull its labels off the
+    # open internet (e.g. a compliance concern, or a lab that decides QR
+    # scanning was a mistake) without that decision also locking its own
+    # logged-in staff out of a page they use operationally. An anonymous
+    # caller gets the exact same 404 as an unknown token, byte for byte
+    # (rule 4); an authenticated one is deliberately exempted from this
+    # check entirely and falls through to the range/resolution logic below
+    # like any other request. This is the one place the two tiers can
+    # diverge on whether a 404 happens at all — everything else in this
+    # function (unknown token above; range/parse checks below) applies
+    # identically regardless of `current_user`, so that divergence can never
+    # be used to fingerprint *why* a request failed, only *whether* the
+    # tenant has opted this specific label out of public exposure.
+    if not config.enabled and current_user is None:
         raise _not_found()
 
     vessel_no: Optional[int] = None
@@ -770,7 +1089,20 @@ async def _handle_public_info(token: str, vessel_no_raw: Optional[str], response
             resolved = await resolve_vessel(accession, vessel_no)
             split_off = resolved.id != accession.id
 
-        return await _assemble_info(
+        # The tier split (spec §5.2 rule 3 / T-806 part 3): two distinct
+        # assembly functions, two distinct response models — never one
+        # shape with fields conditionally nulled. `current_user` reaching
+        # here already means `_optional_current_user` positively validated
+        # an active session; anything short of that is `None` and takes the
+        # anonymous branch, no matter what the caller's request looked like.
+        if current_user is not None:
+            return await _assemble_authenticated_info(
+                resolved,
+                vessel_no,
+                accession.labelledVesselCount,
+                split_off,
+            )
+        return await _assemble_anonymous_info(
             resolved,
             vessel_no,
             accession.labelledVesselCount,
@@ -783,42 +1115,56 @@ async def _handle_public_info(token: str, vessel_no_raw: Optional[str], response
         # Anything unexpected while assembling the response degrades to the
         # same 404 the client sees for an unknown token — the full detail is
         # logged server-side only (see api-developer error-handling rule:
-        # generic message to the client, specifics in the log). This is a
-        # public, unauthenticated route; nothing beyond "not found" should
-        # ever reach an anonymous caller.
+        # generic message to the client, specifics in the log). This route
+        # has no auth *requirement* even though it now recognises a session
+        # when one is offered; nothing beyond "not found" should ever reach
+        # a caller in either tier.
         logger.exception("[public.genetics] failed to assemble public info for a valid token")
         raise _not_found()
 
 
 @router.get(
     "/i/{token}",
-    response_model=PublicAccessionInfo,
-    summary="Public batch-level label info (unauthenticated)",
+    response_model=None,
+    summary="Two-tier batch-level label info (public, richer when authenticated)",
     description=(
         "Resolves a scanned label's opaque token to batch-level accession "
-        "info. No vessel ordinal -> `vessel` is null. See "
-        "genetics-label-qr-spec.md §5.2. No auth dependency by design — see "
-        "the module docstring for why this router is mounted separately."
+        "info. No vessel ordinal -> `vessel` is null. Reachable with no "
+        "Authorization header at all (anonymous tier); a valid bearer token "
+        "additionally unlocks medium/protocol/operator/facility detail "
+        "ignoring the tenant's public-page flags, the resolved "
+        "`accessionId`, and a `token` on every lineageGraph node. See "
+        "genetics-label-qr-spec.md §5.2 and this module's docstring (T-806 "
+        "part 3) for the exact tier boundary. `response_model` is "
+        "deliberately unset — the two hand-built shapes below are the "
+        "leakage guard, not FastAPI's response filtering (spec rule 1)."
     ),
     dependencies=[Depends(enforce_public_rate_limit)],
 )
 async def get_public_batch_info(
     token: str,
     response: Response,
-) -> PublicAccessionInfo:
-    return await _handle_public_info(token, None, response)
+    current_user: Optional[CurrentUser] = Depends(_optional_current_user),
+) -> Union[PublicAccessionInfo, AuthenticatedAccessionInfo]:
+    return await _handle_public_info(token, None, response, current_user)
 
 
 @router.get(
     "/i/{token}/{vessel_no}",
-    response_model=PublicAccessionInfo,
-    summary="Public per-vessel label info (unauthenticated)",
+    response_model=None,
+    summary="Two-tier per-vessel label info (public, richer when authenticated)",
     description=(
         "Resolves a scanned label's opaque token + printed vessel ordinal, "
         "following any batch splits forward to the accession that currently "
-        "holds that physical vessel. See genetics-label-qr-spec.md §5.2 and §3. "
-        "No auth dependency by design — see the module docstring for why this "
-        "router is mounted separately."
+        "holds that physical vessel. Reachable with no Authorization header "
+        "at all (anonymous tier); a valid bearer token additionally unlocks "
+        "medium/protocol/operator/facility detail ignoring the tenant's "
+        "public-page flags, the resolved `accessionId`, and a `token` on "
+        "every lineageGraph node. See genetics-label-qr-spec.md §5.2 and §3, "
+        "and this module's docstring (T-806 part 3) for the exact tier "
+        "boundary. `response_model` is deliberately unset — the two "
+        "hand-built shapes below are the leakage guard, not FastAPI's "
+        "response filtering (spec rule 1)."
     ),
     dependencies=[Depends(enforce_public_rate_limit)],
 )
@@ -826,8 +1172,9 @@ async def get_public_vessel_info(
     token: str,
     vessel_no: str,
     response: Response,
-) -> PublicAccessionInfo:
-    return await _handle_public_info(token, vessel_no, response)
+    current_user: Optional[CurrentUser] = Depends(_optional_current_user),
+) -> Union[PublicAccessionInfo, AuthenticatedAccessionInfo]:
+    return await _handle_public_info(token, vessel_no, response, current_user)
 
 
-__all__ = ["router", "PublicAccessionInfo"]
+__all__ = ["router", "PublicAccessionInfo", "AuthenticatedAccessionInfo"]

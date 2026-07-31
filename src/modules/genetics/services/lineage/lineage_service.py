@@ -128,42 +128,65 @@ class LineageService:
         include_descendants: bool,
         depth_cap: int,
     ) -> Tuple[List[Accession], Dict[str, int], bool]:
-        """Breadth-first walk out from a root accession in both directions."""
+        """Breadth-first walk out from a root accession in both directions.
+
+        Follows two distinct edge types outward, both under the same
+        ``depth_cap`` / ``MAX_LINEAGE_NODES`` budget — a split hop is not a
+        separate allowance, just another hop:
+
+        - propagation: a child's ``parents[].accessionId`` cites the parent.
+        - split: a child's ``splitFromAccessionId`` cites the batch it was
+          carved out of with no new generation (``AccessionService.
+          split_accession``). Without this, a split-off record is a sibling
+          sharing the same parents as the batch it came from — reachable
+          from neither direction — which is exactly the blind spot this
+          traversal exists to close.
+        """
         db = genetics_db.get_database()
 
         collected: Dict[str, Accession] = {root.id: root}
         depths: Dict[str, int] = {root.id: 0}
         truncated = False
 
-        # --- Descendants: children reference the parent by nested id --------
+        # --- Descendants: children reference the parent by nested id, or by
+        # splitFromAccessionId when the child is a split-off record ---------
         if include_descendants:
             frontier: List[str] = [root.id]
             depth = 0
             while frontier and depth < depth_cap:
                 depth += 1
-                cursor = db[ACCESSIONS].find(
+                propagated_cursor = db[ACCESSIONS].find(
                     {"parents.accessionId": {"$in": frontier}}
                 )
+                split_cursor = db[ACCESSIONS].find(
+                    {"splitFromAccessionId": {"$in": frontier}}
+                )
                 next_frontier: List[str] = []
-                async for doc in cursor:
-                    child = doc_to_model(doc, Accession, _ACCESSION_ID_KEY)
-                    if child.id in collected:
-                        continue
-                    if len(collected) >= settings.MAX_LINEAGE_NODES:
-                        truncated = True
+                for cursor in (propagated_cursor, split_cursor):
+                    async for doc in cursor:
+                        child = doc_to_model(doc, Accession, _ACCESSION_ID_KEY)
+                        if child.id in collected:
+                            continue
+                        if len(collected) >= settings.MAX_LINEAGE_NODES:
+                            truncated = True
+                            break
+                        collected[child.id] = child
+                        depths[child.id] = depth
+                        next_frontier.append(child.id)
+                    if truncated:
                         break
-                    collected[child.id] = child
-                    depths[child.id] = depth
-                    next_frontier.append(child.id)
                 if truncated:
                     break
                 frontier = next_frontier
 
-        # --- Ancestors: follow the parent refs upward -----------------------
+        # --- Ancestors: follow the parent refs upward, plus a split's own
+        # splitFromAccessionId (the batch it was carved out of) -------------
         if include_ancestors:
             frontier = [
                 p.accessionId for p in root.parents if p.accessionId
             ]
+            if root.splitFromAccessionId:
+                frontier.append(root.splitFromAccessionId)
             # Ancestors get negative depths (normalised to 0 further down), so
             # the cap is counted on a separate positive step counter.
             depth = 0
@@ -184,6 +207,8 @@ class LineageService:
                     next_frontier.extend(
                         p.accessionId for p in parent.parents if p.accessionId
                     )
+                    if parent.splitFromAccessionId:
+                        next_frontier.append(parent.splitFromAccessionId)
                 if truncated:
                     break
                 frontier = next_frontier
@@ -261,6 +286,7 @@ class LineageService:
                         fromAccessionId=parent.accessionId,
                         toAccessionId=accession.id,
                         role=parent.role,
+                        kind="propagation",
                         eventId=event.id if event else None,
                         method=event.method if event else None,
                         reproductionMode=event.reproductionMode if event else None,
@@ -269,6 +295,21 @@ class LineageService:
                         mediumBatchCode=(
                             batch_codes.get(event.mediumBatchId) if event else None
                         ),
+                    )
+                )
+
+            # A split is not a propagation — no new generation, no event, no
+            # medium. Emitted as its own edge, kind="split", so the frontend
+            # can draw the batch this record was carved out of without
+            # mistaking it for a generation change. Dropped, like the
+            # propagation edges above, when the source fell outside the
+            # collected set (depth/node cap truncation).
+            if accession.splitFromAccessionId and accession.splitFromAccessionId in present:
+                edges.append(
+                    LineageEdge(
+                        fromAccessionId=accession.splitFromAccessionId,
+                        toAccessionId=accession.id,
+                        kind="split",
                     )
                 )
 

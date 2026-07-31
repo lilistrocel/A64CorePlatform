@@ -191,10 +191,12 @@ async def update_organization(
     status_code=status.HTTP_200_OK,
     summary="Update tenant module toggles",
     description=(
-        "Wave 0 (T-059.4) — toggle the per-tenant module flags. "
-        "Currently only `financeEnabled` is supported. Super admin only. "
-        "Writes an audit log entry and invalidates the Redis cache so the "
-        "outbox writer + capability endpoint pick up the change within ms."
+        "Wave 0 (T-059.4) — toggle the per-tenant module flags. Supports "
+        "`financeEnabled` and `publicInfoPage` (T-804 follow-up — the "
+        "master switch and per-field privacy flags for the public genetics "
+        "label-info page). Super admin only. Writes an audit log entry "
+        "and invalidates the Redis cache so the outbox writer + "
+        "capability endpoint pick up the change within ms."
     ),
 )
 async def update_organization_modules(
@@ -211,8 +213,18 @@ async def update_organization_modules(
     users in this tenant on their next page load (capability endpoint is
     cached 60s but the cache is invalidated on this write).
 
+    Toggling `publicInfoPage.enabled=false` immediately 404s the public
+    genetics label-info page (`GET /api/v1/public/genetics/i/{token}`) for
+    anonymous callers on this tenant's accessions; authenticated callers
+    are unaffected by design (T-806 part 3 — `enabled` is a public-exposure
+    switch, not an access-control gate). `publicInfoPage` is a **partial**
+    update — only the fields sent are changed, so `{"enabled": false}`
+    alone does not reset `showOperatorName` or the other privacy flags.
+
     **Audit log:** entry written to `admin_audit_log` with the before/
-    after values, the actor's userId/email/role, and timestamp.
+    after values of the *entire* `modules` object (so the diff — exactly
+    which flags changed and from what — is reconstructable later), plus
+    the raw patch, the actor's userId/email/role, and timestamp.
     """
     _require_super_admin(current_user)
 
@@ -227,6 +239,7 @@ async def update_organization_modules(
     updated = await organization_service.update_modules(
         organization_id=organization_id,
         financeEnabled=data.financeEnabled,
+        publicInfoPage=data.publicInfoPage,
     )
 
     # Audit log

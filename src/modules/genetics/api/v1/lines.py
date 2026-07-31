@@ -144,9 +144,12 @@ async def update_line(
     response_model=SuccessResponse[Line],
     summary="Deactivate a genetic line",
     description=(
-        "Soft-delete a line. Hard deletion is unsupported: accessions and "
-        "propagation events reference it, and removing it would break "
-        "traceability chains."
+        "Soft-delete a line that HAS material on it (accessions, propagation "
+        "history, observations, ...) — sets isActive: false and keeps the "
+        "document so traceability chains stay unbroken. For a line that never "
+        "accumulated any material (a typo, a duplicate, a test), use "
+        "DELETE /{line_id}/purge instead, which hard-deletes but only refuses "
+        "rather than cascades."
     ),
 )
 async def deactivate_line(
@@ -155,3 +158,40 @@ async def deactivate_line(
 ) -> SuccessResponse[Line]:
     line = await LineService.deactivate_line(line_id)
     return SuccessResponse(data=line, message="Genetic line deactivated")
+
+
+@router.get(
+    "/{line_id}/dependents",
+    response_model=SuccessResponse[dict],
+    summary="What would block purging this line",
+    description=(
+        "Counts accessions, propagation events, observations, child lines and "
+        "harvests referencing this line, so the UI can explain a refusal "
+        "before offering the purge action."
+    ),
+)
+async def line_dependents(
+    line_id: str,
+    current_user: CurrentUser = Depends(require_view),
+) -> SuccessResponse[dict]:
+    return SuccessResponse(data=await LineService.line_dependents(line_id))
+
+
+@router.delete(
+    "/{line_id}/purge",
+    response_model=SuccessResponse[dict],
+    summary="Hard-delete a line with zero dependents",
+    description=(
+        "Permanently removes a line, but only when nothing references it — no "
+        "accessions, propagation events, observations, child lines or "
+        "harvests. Refuses with 409 and names what is blocking otherwise; "
+        "never cascades. For a line that HAS material, use the deactivate "
+        "endpoint (DELETE /{line_id}) instead."
+    ),
+)
+async def purge_line(
+    line_id: str,
+    current_user: CurrentUser = Depends(require_permission("genetics.delete")),
+) -> SuccessResponse[dict]:
+    result = await LineService.purge_line(line_id, current_user)
+    return SuccessResponse(data=result, message=f"Line {result['code']} purged")

@@ -82,6 +82,28 @@ class PropagationCreate(BaseModel):
     notes: Optional[str] = Field(None, max_length=2000)
 
 
+class PropagationAmend(BaseModel):
+    """Payload to correct a propagation event's recorded date (T-808).
+
+    Deliberately carries exactly one field. Propagation events are otherwise
+    immutable: ``method``, ``parents``, ``targets``/``resultAccessionIds``,
+    the generation counters and ``reproductionMode`` describe what
+    biologically happened and rewriting them would rewrite lineage under
+    labels already stuck on vessels. Attribution (``operatorName``,
+    ``performedBy``) is a claim about a person and is likewise not amendable
+    here — per the product decision, a correction may fix *when* something
+    happened, never *who* did it. A model with more fields than the route
+    accepts is an invitation for someone to wire the rest up later, so this
+    model does not grow beyond ``performedAt`` even though it would be easy
+    to add more.
+    """
+
+    performedAt: datetime = Field(
+        ...,
+        description="Corrected date/time the propagation actually happened",
+    )
+
+
 class PropagationEvent(BaseModel):
     """Complete propagation document stored in ``propagation_events``."""
 
@@ -116,6 +138,17 @@ class PropagationEvent(BaseModel):
 
     createdAt: datetime = Field(default_factory=datetime.utcnow)
 
+    # T-808: set only when performedAt has been corrected after the fact. The
+    # event log stays honest by recording that a correction happened rather
+    # than silently rewriting performedAt with no trace — see
+    # PropagationService.amend_event's docstring for the full reasoning.
+    amendedAt: Optional[datetime] = Field(
+        None, description="When performedAt was last corrected, if ever"
+    )
+    amendedBy: Optional[str] = Field(
+        None, description="userId of whoever made the correction"
+    )
+
 
 class PropagationResult(BaseModel):
     """What the propagation endpoint hands back: the event plus its children."""
@@ -123,4 +156,26 @@ class PropagationResult(BaseModel):
     accessions: List[dict] = Field(
         default_factory=list,
         description="Newly created accession documents",
+    )
+
+
+class PropagationAmendResult(BaseModel):
+    """What amending a propagation event hands back.
+
+    Surfaces the cascade outcome explicitly rather than leaving the caller to
+    infer it — the whole point of the "only where still equal to the old
+    date" guard is that some accessions may legitimately be skipped, and that
+    needs to be visible, not silent.
+    """
+
+    event: PropagationEvent
+    accessionsUpdated: int = Field(
+        ..., description="Result accessions whose acquiredAt was cascaded"
+    )
+    accessionsSkipped: int = Field(
+        ...,
+        description=(
+            "Result accessions left untouched because their acquiredAt had "
+            "already diverged from the event's old performedAt"
+        ),
     )
