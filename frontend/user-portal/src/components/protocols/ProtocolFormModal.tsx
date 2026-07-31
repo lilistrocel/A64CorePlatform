@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { Star } from 'lucide-react';
 import { useCreateProtocol, useUpdateProtocol } from '../../hooks/protocols/useProtocols';
 import type {
   Consumable,
@@ -20,7 +21,6 @@ import type {
   ProtocolStep,
 } from '../../types/protocols';
 import {
-  PROTOCOL_CATEGORY_ICONS,
   PROTOCOL_CATEGORY_LABELS,
   PROTOCOL_SCOPES,
 } from '../../types/protocols';
@@ -48,28 +48,33 @@ const StepNum = styled.span`
   padding-top: 10px;
   font-size: 12px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: right;
 `;
 
+// Same critical-step alert cue as ProtocolPicker's CriticalTag —
+// bright.coral, not gold (spec §3).
 const CriticalToggle = styled.button<{ $on: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 8px 10px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   border: 1px solid
-    ${({ $on, theme }) => ($on ? theme.colors.warning : theme.colors.neutral[300])};
-  background: ${({ $on, theme }) => ($on ? theme.colors.warningBg : 'transparent')};
-  color: ${({ $on, theme }) => ($on ? theme.colors.gold[800] : theme.colors.textSecondary)};
+    ${({ $on, theme }) => ($on ? theme.colors.bright.coral : theme.colors.glass.border)};
+  background: ${({ $on, theme }) => ($on ? `${theme.colors.bright.coral}29` : 'transparent')};
+  color: ${({ $on, theme }) => ($on ? theme.colors.bright.coral : theme.colors.muted)};
 `;
 
 const RemoveBtn = styled.button`
   background: none;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 6px;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   font-size: 15px;
   padding: 7px 9px;
@@ -228,7 +233,7 @@ export function ProtocolFormModal({ protocol, onClose }: ProtocolFormModalProps)
           >
             {(Object.keys(PROTOCOL_CATEGORY_LABELS) as ProtocolCategory[]).map((c) => (
               <option key={c} value={c}>
-                {PROTOCOL_CATEGORY_ICONS[c]} {PROTOCOL_CATEGORY_LABELS[c]}
+                {PROTOCOL_CATEGORY_LABELS[c]}
               </option>
             ))}
           </Select>
@@ -293,7 +298,8 @@ export function ProtocolFormModal({ protocol, onClose }: ProtocolFormModalProps)
               onClick={() => patchStep(i, { isCritical: !s.isCritical })}
               title="Mark as a critical step"
             >
-              {s.isCritical ? '★ critical' : '☆ critical'}
+              <Star size={12} strokeWidth={1.8} fill={s.isCritical ? 'currentColor' : 'none'} />
+              critical
             </CriticalToggle>
             <RemoveBtn
               type="button"

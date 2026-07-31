@@ -13,6 +13,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styled, { useTheme } from 'styled-components';
+import { BarChart3, AlertTriangle, Ruler, TrendingUp, X, Check } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { farmApi, getSpacingCategories } from '../../services/farmApi';
 import { getActivePlants } from '../../services/plantDataEnhancedApi';
 import type {
@@ -66,6 +68,7 @@ type DensityUnit = 'per100m2' | 'perm2';
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers").
 const Overlay = styled.div<{ $isOpen: boolean }>`
   display: ${({ $isOpen }) => ($isOpen ? 'flex' : 'none')};
   position: fixed;
@@ -73,39 +76,39 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: ${({ theme }) => theme.zIndex.modal};
   padding: 20px;
   pointer-events: auto;
 `;
 
 const ModalContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 800px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 `;
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -113,8 +116,7 @@ const ModalTitle = styled.h2`
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 28px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -122,11 +124,12 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background 150ms ease-in-out;
+  border-radius: 8px;
+  transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -141,9 +144,9 @@ const FormSection = styled.div`
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px 0;
 `;
 
@@ -151,16 +154,16 @@ const SectionTitle = styled.h3`
 
 const AreaBudgetSection = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 8px;
+  border: 1px solid rgba(107, 138, 224, 0.35);
+  border-radius: 10px;
   padding: 20px;
   margin-bottom: 24px;
 `;
 
 const AreaBudgetTitle = styled.h3`
   font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.onDark};
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -169,27 +172,31 @@ const AreaBudgetTitle = styled.h3`
 
 const AreaBudgetText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.onDark};
   text-align: center;
   margin-bottom: 8px;
 `;
 
 const AreaBudgetWarning = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.bright.terra};
   text-align: center;
-  font-weight: 500;
+  font-weight: 700;
 `;
 
 const AreaBudgetError = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
-  border-radius: 6px;
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 8px;
   padding: 10px 14px;
   margin-top: 8px;
-  font-weight: 500;
+  font-weight: 600;
 `;
 
 /* ---- Over-budget approval ---- */
@@ -212,7 +219,7 @@ const ApprovalCheckbox = styled.input`
   margin-top: 1px;
   cursor: pointer;
   flex-shrink: 0;
-  accent-color: ${({ theme }) => theme.colors.terracotta[600]};
+  accent-color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 /* ---- Derived area preview ---- */
@@ -223,11 +230,11 @@ const DerivedAreaPreview = styled.div`
   gap: 8px;
   padding: 10px 14px;
   background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.success};
+  border: 1px solid rgba(84, 211, 155, 0.4);
   border-radius: 8px;
   margin: 12px 0 20px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.emerald[600]};
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 /* ---- Form primitives ---- */
@@ -237,74 +244,72 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
+  ${monoLabel}
   display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
 const RequiredMark = styled.span`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-left: 4px;
 `;
 
 const Input = styled.input`
+  ${glassControl}
   width: 100%;
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   width: 100%;
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const HelpText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
 const ErrorText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-top: 4px;
 `;
 
@@ -319,8 +324,8 @@ const DensityCustomRow = styled.div`
 
 const DensityUnitToggle = styled.div`
   display: flex;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   overflow: hidden;
   flex-shrink: 0;
 `;
@@ -329,17 +334,17 @@ const DensityUnitButton = styled.button<{ $active: boolean }>`
   padding: 12px 14px;
   border: none;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   white-space: nowrap;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : 'inherit')};
+    $active ? 'rgba(180, 200, 220, 0.14)' : 'transparent'};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
 
   &:hover:not([disabled]) {
-    background: ${({ $active, theme }) =>
-      $active ? theme.colors.primary[700] : theme.colors.surface};
+    background: rgba(180, 200, 220, 0.1);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -348,16 +353,16 @@ const DensityUnitButton = styled.button<{ $active: boolean }>`
 const PreviewSection = styled.div<{ $visible: boolean }>`
   display: ${({ $visible }) => ($visible ? 'block' : 'none')};
   background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.success}60;
-  border-radius: 8px;
+  border: 1px solid rgba(84, 211, 155, 0.4);
+  border-radius: 10px;
   padding: 20px;
   margin-top: 24px;
 `;
 
 const PreviewTitle = styled.h3`
   font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.onDark};
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -371,29 +376,27 @@ const PreviewGrid = styled.div`
 `;
 
 const PreviewItem = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 6px;
+  background: rgba(23, 29, 64, 0.5);
+  border-radius: 10px;
   padding: 16px;
 `;
 
 const PreviewLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 6px;
 `;
 
 const PreviewValue = styled.div`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const PreviewSubtext = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
@@ -401,47 +404,57 @@ const PreviewSubtext = styled.div`
 
 const ModalFooter = styled.div`
   padding: 20px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 `;
 
+// "success" (the final "Confirm & Add Crop" action) carries this view's one
+// gold-gradient CTA (spec §3); "primary" (the intermediate Preview step)
+// uses lapis instead so only one gold element shows at a time.
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
-  border: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  border: 1px solid transparent;
 
   ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
         return `
-          background: ${theme.colors.primary[500]};
-          color: ${theme.colors.onAccent};
+          background: rgba(107, 138, 224, 0.18);
+          border-color: rgba(107, 138, 224, 0.4);
+          color: ${theme.colors.bright.lapis};
           &:hover:not(:disabled) {
-            background: ${theme.colors.primary[600]};
+            background: rgba(107, 138, 224, 0.3);
           }
         `;
       case 'success':
         return `
-          background: ${theme.colors.success};
+          background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
           color: ${theme.colors.onAccent};
+          box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
           &:hover:not(:disabled) {
-            background: ${theme.colors.emerald[600]};
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
           }
         `;
       default:
         return `
-          background: ${theme.colors.surface};
-          color: ${theme.colors.textSecondary};
+          background: transparent;
+          color: ${theme.colors.celeste};
+          border-color: ${theme.colors.glass.border};
           &:hover:not(:disabled) {
-            background: ${theme.colors.neutral[300]};
+            background: rgba(180, 200, 220, 0.07);
+            color: ${theme.colors.textPrimary};
           }
         `;
     }
@@ -450,35 +463,36 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
 const LoadingText = styled.div`
   text-align: center;
   padding: 40px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const VirtualBlockCodePreview = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 6px;
+  background: rgba(180, 200, 220, 0.05);
+  border-radius: 10px;
   padding: 16px;
   margin-top: 16px;
-  border: 2px dashed ${({ theme }) => theme.colors.primary[500]};
+  border: 2px dashed ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const CodeLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
 const CodeValue = styled.div`
   font-size: 20px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const NoSpacingWarning = styled.div`
@@ -486,12 +500,12 @@ const NoSpacingWarning = styled.div`
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
+  background: rgba(232, 147, 95, 0.12);
+  border: 1px solid rgba(232, 147, 95, 0.4);
   border-radius: 8px;
   margin: 8px 0 20px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.onDark};
 `;
 
 // ============================================================================
@@ -889,7 +903,9 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
           <ModalTitle>
             {block.state === 'empty' ? 'Add Planting to Block' : 'Add Additional Crop to Block'}
           </ModalTitle>
-          <CloseButton onClick={handleClose} aria-label="Close modal">×</CloseButton>
+          <CloseButton onClick={handleClose} aria-label="Close modal">
+            <X size={20} strokeWidth={1.8} />
+          </CloseButton>
         </ModalHeader>
 
         <ModalBody>
@@ -900,7 +916,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
               {/* ---- Area Budget Bar ---- */}
               <AreaBudgetSection>
                 <AreaBudgetTitle>
-                  <span>📊</span>
+                  <BarChart3 size={16} strokeWidth={1.8} />
                   <span>Area Budget (Current)</span>
                 </AreaBudgetTitle>
 
@@ -915,7 +931,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                 {/* Low-area nudge */}
                 {availableArea < totalArea * 0.2 && totalArea > 0 && (
                   <AreaBudgetWarning>
-                    ⚠️ Limited area remaining — consider block utilization
+                    <AlertTriangle size={13} strokeWidth={1.8} /> Limited area remaining — consider block utilization
                   </AreaBudgetWarning>
                 )}
               </AreaBudgetSection>
@@ -1064,7 +1080,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                 {/* Warning if no density was prefilled from plant */}
                 {selectedPlantId && densityMode === 'none' && (
                   <NoSpacingWarning>
-                    <span>⚠️</span>
+                    <AlertTriangle size={14} strokeWidth={1.8} />
                     <span>
                       This plant has no default density configured. Select a preset category or enter
                       a custom value above.
@@ -1075,7 +1091,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                 {/* Live derived area display */}
                 {derivedAreaM2 !== null && (
                   <DerivedAreaPreview>
-                    <span>📐</span>
+                    <Ruler size={15} strokeWidth={1.8} />
                     <span>
                       <strong>Derived area:</strong> {derivedAreaM2.toFixed(2)} m²
                       {' '}({plantCount} plants ÷ {plantsPer100m2} plants/100 m² × 100)
@@ -1104,7 +1120,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                 {preview && (
                   <>
                     <PreviewTitle>
-                      <span>📈</span>
+                      <TrendingUp size={17} strokeWidth={1.8} />
                       <span>Virtual Crop Preview</span>
                     </PreviewTitle>
 
@@ -1162,7 +1178,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                         red new + overflow). The top widget shows current/committed only. */}
                     <AreaBudgetSection style={{ marginTop: '20px', marginBottom: 0 }}>
                       <AreaBudgetTitle>
-                        <span>📊</span>
+                        <BarChart3 size={16} strokeWidth={1.8} />
                         <span>Projected Area Budget</span>
                       </AreaBudgetTitle>
 
@@ -1177,7 +1193,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                       <AreaBudgetText>
                         {availableArea.toFixed(1)} m² available · {usedArea.toFixed(1)} m² used ·{' '}
                         {totalArea.toFixed(1)} m² total
-                        <span style={{ color: overBudget ? theme.colors.terracotta[600] : theme.colors.emerald[600] }}>
+                        <span style={{ color: overBudget ? theme.colors.bright.coral : theme.colors.bright.emerald }}>
                           {' '}— new crop needs {preview.derivedAreaM2.toFixed(1)} m²
                         </span>
                       </AreaBudgetText>
@@ -1185,7 +1201,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                       {overBudget && (
                         <>
                           <AreaBudgetError>
-                            ⚠️ Over budget by {overByM2.toFixed(1)} m² — required{' '}
+                            <AlertTriangle size={13} strokeWidth={1.8} style={{ verticalAlign: '-2px' }} /> Over budget by {overByM2.toFixed(1)} m² — required{' '}
                             {preview.derivedAreaM2.toFixed(1)} m², only {availableArea.toFixed(1)} m² available.
                             {overflowPct > 0 && ` (${overflowPct.toFixed(0)}% overflow)`}
                           </AreaBudgetError>
@@ -1242,7 +1258,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
               submitting
             }
           >
-            📊 Preview
+            <BarChart3 size={14} strokeWidth={1.8} /> Preview
           </Button>
 
           {showPreview && (
@@ -1257,7 +1273,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                   : undefined
               }
             >
-              {submitting ? 'Adding...' : '✅ Confirm & Add Crop'}
+              {submitting ? 'Adding...' : (<><Check size={14} strokeWidth={2} /> Confirm & Add Crop</>)}
             </Button>
           )}
         </ModalFooter>

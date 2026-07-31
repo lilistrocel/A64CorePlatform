@@ -246,6 +246,7 @@ export interface ParentRef {
   role: ParentRole;
   lineId?: string | null;
   note?: string | null;
+  vesselNo?: number | null;
 }
 
 export interface StorageLocation {
@@ -287,6 +288,14 @@ export interface Accession {
   discardedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * High-water mark of printed vessel ordinals (T-804 §4.1) — never
+   * decremented by a split, so it can exceed `quantity`. Drives the default
+   * "from"/"to" range on the label-print dialog: `from = labelledVesselCount
+   * + 1`, `to = max(labelledVesselCount, quantity)` (spec §5.1), mirroring
+   * `src/modules/genetics/api/v1/labels.py`'s own defaulting exactly.
+   */
+  labelledVesselCount: number;
 }
 
 export interface CreateAccessionPayload {
@@ -543,6 +552,7 @@ export interface CreateObservationPayload {
   metrics?: ObservationMetrics;
   isNovelTrait?: boolean;
   traitName?: string;
+  vesselNo?: number;
 }
 
 export interface PromoteTraitPayload {

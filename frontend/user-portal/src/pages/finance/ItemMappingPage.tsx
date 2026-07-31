@@ -31,7 +31,7 @@ import {
   useEffect,
 } from 'react';
 import styled from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { PageHeader, glassPanel, glassControl, monoLabel, type Theme } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast } from '../../stores/toast.store';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
@@ -39,6 +39,7 @@ import { useItemMappings, useUpdateItemMapping } from '../../hooks/queries/useIt
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
 import { AccountCombobox } from '../../components/finance/AccountCombobox';
+import { StatusBadge } from '../../components/finance/StatusBadge';
 import { parseApiErrors } from '../../utils/apiErrors';
 import type { ApiErrorItem } from '../../utils/apiErrors';
 import type { GLAccount } from '../../services/financeAccountsService';
@@ -160,38 +161,6 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
-const PageHeaderRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-`;
-
-const PageTitleBlock = styled.div``;
-
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 6px 0 0;
-  max-width: 680px;
-  line-height: 1.55;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  margin: 20px 0 24px;
-`;
-
 // ─── Toolbar ───────────────────────────────────────────────────────────────────
 
 const ToolbarRow = styled.div`
@@ -203,51 +172,48 @@ const ToolbarRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   max-width: 320px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1a;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   white-space: nowrap;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const BadgeChip = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 99px;
   padding: 4px 12px;
   white-space: nowrap;
@@ -304,10 +270,8 @@ const BannerError = styled(BannerBase)`
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
+  ${glassPanel}
   overflow-x: auto;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const Table = styled.table`
@@ -318,18 +282,16 @@ const Table = styled.table`
 `;
 
 const THead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 12px 14px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   white-space: nowrap;
 `;
 
@@ -338,10 +300,14 @@ interface TrProps {
   $dirty?: boolean;
 }
 
+// Row wash colours were previously built by string-concatenating a hex alpha
+// suffix onto `infoBg`/`warningBg` (e.g. `${theme.colors.infoBg}55`) — those
+// tokens are now `rgba(...)` strings (spec §1.1), so the suffix trick
+// produced invalid CSS (`rgba(...)55`). Replaced with explicit rgba washes.
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   background: ${({ $warning, $dirty, theme }) => {
-    if ($dirty) return `${theme.colors.infoBg}55`;
+    if ($dirty) return 'rgba(107, 138, 224, 0.12)';
     if ($warning) return theme.colors.warningBg;
     return 'transparent';
   }};
@@ -352,10 +318,10 @@ const Tr = styled.tr<TrProps>`
   }
 
   &:hover {
-    background: ${({ $dirty, $warning, theme }) => {
-      if ($dirty) return `${theme.colors.infoBg}88`;
-      if ($warning) return `${theme.colors.warningBg}cc`;
-      return theme.colors.neutral[50];
+    background: ${({ $dirty, $warning }) => {
+      if ($dirty) return 'rgba(107, 138, 224, 0.20)';
+      if ($warning) return 'rgba(232, 200, 106, 0.24)';
+      return 'rgba(180, 200, 220, 0.05)';
     }};
   }
 `;
@@ -393,13 +359,21 @@ interface TypePillProps {
 }
 
 // Four purchase-item categories, mapped one-per-brand-voice so no two
-// categories share a hue (spec: lapis/gold/emerald/terracotta are the
-// standalone categorical ramps for non-semantic, non-status use).
-const typePillColors = (theme: Theme): Record<NonNullable<PurchaseItemType>, { bg: string; text: string }> => ({
-  raw_material: { bg: theme.colors.emerald[50], text: theme.colors.emerald[800] },
-  consumable: { bg: theme.colors.gold[50], text: theme.colors.gold[800] },
-  service: { bg: theme.colors.lapis[50], text: theme.colors.lapis[800] },
-  fixed_asset_acquisition: { bg: theme.colors.terracotta[50], text: theme.colors.terracotta[800] },
+// categories share a hue. Was `theme.colors.emerald[50]`/`[800]`-style
+// literal ramp steps (near-white bg + dark text) tuned for a light page —
+// on the Cosmos Ink ground that reads as a stark white chip, breaking the
+// glass-tint aesthetic used everywhere else. Rebuilt as the same
+// tint/border/text badge recipe as PaymentsPage's MethodPill, using
+// `bright.*` tokens. Deliberately excludes `bright.gold` — this pill repeats
+// once per row in an unbounded list, and gold discipline (spec §3, ≤4 per
+// view) cannot survive a column of gold chips.
+const typePillColors = (
+  theme: Theme
+): Record<NonNullable<PurchaseItemType>, { bg: string; border: string; text: string }> => ({
+  raw_material: { bg: 'rgba(84, 211, 155, 0.16)', border: 'rgba(84, 211, 155, 0.45)', text: theme.colors.bright.emerald },
+  consumable: { bg: 'rgba(201, 203, 164, 0.18)', border: 'rgba(201, 203, 164, 0.45)', text: theme.colors.bright.laurel },
+  service: { bg: 'rgba(107, 138, 224, 0.16)', border: 'rgba(107, 138, 224, 0.45)', text: theme.colors.bright.lapis },
+  fixed_asset_acquisition: { bg: 'rgba(232, 147, 95, 0.16)', border: 'rgba(232, 147, 95, 0.45)', text: theme.colors.bright.terra },
 });
 
 const TypePill = styled.span<TypePillProps>`
@@ -410,27 +384,11 @@ const TypePill = styled.span<TypePillProps>`
   font-weight: 600;
   white-space: nowrap;
   background: ${({ $type, theme }) =>
-    $type ? typePillColors(theme)[$type]?.bg ?? theme.colors.neutral[100] : theme.colors.neutral[100]};
+    $type ? typePillColors(theme)[$type]?.bg ?? theme.colors.glass.base : theme.colors.glass.base};
+  border: 1px solid ${({ $type, theme }) =>
+    $type ? typePillColors(theme)[$type]?.border ?? theme.colors.glass.border : theme.colors.glass.border};
   color: ${({ $type, theme }) =>
-    $type ? typePillColors(theme)[$type]?.text ?? theme.colors.textSecondary : theme.colors.textSecondary};
-`;
-
-// ─── Status pill ───────────────────────────────────────────────────────────────
-
-interface StatusPillProps {
-  $active: boolean;
-}
-
-const StatusPill = styled.span<StatusPillProps>`
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.success : theme.colors.textDisabled};
+    $type ? typePillColors(theme)[$type]?.text ?? theme.colors.celeste : theme.colors.celeste};
 `;
 
 // ─── Inline editable controls ──────────────────────────────────────────────────
@@ -455,24 +413,22 @@ const NarrowEditCell = styled.td`
 `;
 
 const SmallSelect = styled.select`
+  ${glassControl}
   width: 100%;
   padding: 7px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 7px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}1a;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 2px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[50]};
     opacity: 0.6;
     cursor: not-allowed;
   }
@@ -486,6 +442,10 @@ const ActionCell = styled.td`
   white-space: nowrap;
 `;
 
+// Per-row save action — deliberately NOT gold. This can render once per row
+// in an unbounded table; a column of gold buttons would blow the ≤4-per-view
+// budget (spec §3). Stays a lapis fill (informational "you can act here"),
+// with `onDark` replacing the old literal 'white'.
 const RowSaveButton = styled.button<{ $dirty: boolean }>`
   padding: 6px 14px;
   border: none;
@@ -497,13 +457,13 @@ const RowSaveButton = styled.button<{ $dirty: boolean }>`
   opacity: ${({ $dirty }) => ($dirty ? 1 : 0.35)};
   pointer-events: ${({ $dirty }) => ($dirty ? 'auto' : 'none')};
   background: ${({ $dirty, theme }) =>
-    $dirty ? theme.colors.primary[500] : theme.colors.neutral[200]};
-  color: ${({ $dirty }) => ($dirty ? 'white' : 'inherit')};
+    $dirty ? theme.colors.primary[500] : theme.colors.glass.base};
+  color: ${({ $dirty, theme }) => ($dirty ? theme.colors.onDark : theme.colors.muted)};
   transition: background 150ms ease-in-out, opacity 150ms ease-in-out;
 
   &:hover {
     background: ${({ $dirty, theme }) =>
-      $dirty ? theme.colors.primary[700] : theme.colors.neutral[200]};
+      $dirty ? theme.colors.primary[700] : theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -515,7 +475,7 @@ const RowSaveButton = styled.button<{ $dirty: boolean }>`
 
 const RowSavingIndicator = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   padding: 0 4px;
 `;
 
@@ -536,33 +496,39 @@ const FooterRow = styled.div`
   margin-bottom: 48px;
 `;
 
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Was a solid `primary[500]` (lapis) fill with `onAccent`
+// text — dark-on-lapis, near invisible.
 const SaveAllButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
 const EmptyState = styled.div`
   padding: 64px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   line-height: 1.6;
 `;
@@ -571,7 +537,7 @@ const EmptyState = styled.div`
 
 const MutedCell = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
@@ -579,7 +545,7 @@ const MutedCell = styled.span`
 
 const UnassignedText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ─── Main component ────────────────────────────────────────────────────────────
@@ -956,20 +922,11 @@ export function ItemMappingPage() {
 
   return (
     <PageContainer>
-      {/* ── Page header ── */}
-      <PageHeaderRow>
-        <PageTitleBlock>
-          <PageTitle>Item GL Account Mapping</PageTitle>
-          <PageSubtitle>
-            Assign inventory and COGS accounts to each purchase item. The posting
-            engine uses these assignments when goods receipts produce journal
-            entries. Items with no inventory account assigned (amber highlight)
-            will block posting once goods receipt is live.
-          </PageSubtitle>
-        </PageTitleBlock>
-      </PageHeaderRow>
-
-      <Divider />
+      <PageHeader
+        breadcrumb="FINANCE · ITEM MAPPING"
+        title="Item GL Account Mapping"
+        description="Assign inventory and COGS accounts to each purchase item. The posting engine uses these assignments when goods receipts produce journal entries. Items with no inventory account assigned (amber highlight) will block posting once goods receipt is live."
+      />
 
       {/* ── Banners ── */}
       {bulkAssignBanner && (
@@ -1247,9 +1204,10 @@ function ItemRow({
 
       {/* Active status */}
       <Td>
-        <StatusPill $active={item.isActive}>
-          {item.isActive ? 'Active' : 'Inactive'}
-        </StatusPill>
+        <StatusBadge
+          status={item.isActive ? 'active' : 'inactive'}
+          label={item.isActive ? 'Active' : 'Inactive'}
+        />
       </Td>
 
       {/* Actions — per-row Save */}

@@ -7,6 +7,7 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
 import styled from 'styled-components';
 import maplibregl from 'maplibre-gl';
+import { glassPanel, glassOpaque, monoLabel } from '@a64core/shared';
 import type { Farm, FarmUpdate, GeoJSONPolygon } from '../../types/farm';
 import { useMapDrawing } from '../../hooks/map/useMapDrawing';
 
@@ -18,22 +19,26 @@ const DrawingControls = lazy(() => import('../map/DrawingControls').then(m => ({
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers"): glassPanel at
+// blur 24px over a rgba(10,14,36,.6) scrim, 20px radius.
 const Overlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 32px;
   max-width: 800px;
   width: 95%;
@@ -47,31 +52,34 @@ const Header = styled.div`
 
 const Title = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
 const MapSection = styled.div`
   margin-bottom: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 12px;
   overflow: hidden;
 `;
 
+// A map placeholder sitting inside an already-glass Modal — per the two-glass-
+// layer rule (spec §2) this drops to glassOpaque rather than stacking a third
+// translucent layer.
 const MapLoadingFallback = styled.div`
+  ${glassOpaque}
   display: flex;
   align-items: center;
   justify-content: center;
   height: 450px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -80,20 +88,22 @@ const InfoRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const InfoLabel = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const InfoValue = styled.span`
   font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.success};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 const ButtonGroup = styled.div`
@@ -102,35 +112,39 @@ const ButtonGroup = styled.div`
   justify-content: flex-end;
 `;
 
+// Primary: the one gold-gradient CTA (spec §3). Secondary: glass ghost.
+// Danger: coral-tinted glass, never solid red (spec §4 "Buttons").
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
-  border: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  border: 1px solid transparent;
 
   ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
         return `
-          background: ${theme.colors.primary[500]};
-          color: white;
-          &:hover:not(:disabled) { background: ${theme.colors.primary[700]}; }
+          background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
+          color: ${theme.colors.onAccent};
+          box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+          &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25); }
         `;
       case 'danger':
         return `
           background: ${theme.colors.errorBg};
-          color: ${theme.colors.error};
-          &:hover:not(:disabled) { background: ${theme.colors.neutral[200]}; }
+          border-color: rgba(240, 138, 112, 0.4);
+          color: ${theme.colors.bright.coral};
+          &:hover:not(:disabled) { background: rgba(240, 138, 112, 0.24); }
         `;
       default:
         return `
           background: transparent;
-          color: ${theme.colors.textSecondary};
-          border: 1px solid ${theme.colors.neutral[300]};
-          &:hover:not(:disabled) { background: ${theme.colors.surface}; }
+          color: ${theme.colors.celeste};
+          border-color: ${theme.colors.glass.border};
+          &:hover:not(:disabled) { background: rgba(180, 200, 220, 0.07); color: ${theme.colors.textPrimary}; }
         `;
     }
   }}
@@ -138,22 +152,23 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
 const ErrorMessage = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   margin-bottom: 16px;
 `;
 
 const HelpText = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 16px 0;
   line-height: 1.5;
 `;

@@ -6,6 +6,20 @@
  */
 
 import styled, { useTheme } from 'styled-components';
+import {
+  Wheat,
+  TreeDeciduous,
+  Leaf,
+  Apple,
+  Carrot,
+  Flower2,
+  Sprout,
+  Eye,
+  Pencil,
+  Copy,
+  Trash2,
+} from 'lucide-react';
+import { glassPanelHover, monoLabel, phaseBadge } from '@a64core/shared';
 import type { PlantDataEnhanced } from '../../types/farm';
 import { formatFarmType, getFarmTypeColor } from '../../services/plantDataEnhancedApi';
 
@@ -26,24 +40,15 @@ export interface PlantDataCardProps {
 // ============================================================================
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanelHover}
   padding: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-  cursor: pointer;
-  position: relative;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.lg};
-    transform: translateY(-2px);
-  }
 `;
 
 const PlantIcon = styled.div`
-  font-size: 48px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 16px;
 `;
 
@@ -71,7 +76,7 @@ const FarmTypeBadges = styled.div`
   justify-content: center;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const FarmTypeBadge = styled.span<{ $color: string }>`
@@ -98,17 +103,18 @@ const StatItem = styled.div`
 `;
 
 const StatLabel = styled.span`
-  font-size: 11px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
 const StatValue = styled.span`
-  font-size: 16px;
-  font-weight: 600;
+  ${monoLabel}
+  text-transform: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -143,12 +149,16 @@ const Actions = styled.div`
   }
 `;
 
+// Quick row actions are generic CRUD, not status pills — they follow the
+// spec §4 Button vocabulary directly (Secondary for non-destructive actions,
+// Destructive coral-tinted glass for delete) rather than inventing a
+// per-action colour each. "Edit" in particular must NOT be gold (spec §3:
+// gold is never an ordinary button) — it previously used theme.colors.warning.
 const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'delete' }>`
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   display: flex;
@@ -156,49 +166,22 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
   gap: 4px;
 
   ${({ $variant, theme }) => {
-    if ($variant === 'view') {
-      return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
-        &:hover {
-          background: ${theme.colors.primary[600]};
-        }
-      `;
-    }
-    if ($variant === 'edit') {
-      return `
-        background: ${theme.colors.warning};
-        color: ${theme.colors.onAccent};
-        &:hover {
-          background: ${theme.colors.gold[600]};
-        }
-      `;
-    }
-    if ($variant === 'clone') {
-      return `
-        background: ${theme.colors.success};
-        color: ${theme.colors.onAccent};
-        &:hover {
-          background: ${theme.colors.emerald[600]};
-        }
-      `;
-    }
     if ($variant === 'delete') {
       return `
-        background: transparent;
+        background: ${theme.colors.errorBg};
         color: ${theme.colors.error};
         border: 1px solid ${theme.colors.error};
         &:hover {
-          background: ${theme.colors.errorBg};
+          filter: brightness(1.15);
         }
       `;
     }
     return `
-      background: ${theme.colors.background};
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      background: ${theme.colors.glass.base};
+      color: ${theme.colors.textPrimary};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.infoBg};
+        background: ${theme.colors.glass.hi};
       }
     `;
   }}
@@ -209,16 +192,11 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
   }
 `;
 
-const InactiveBadge = styled.div`
+const InactiveBadge = styled.div<{ $phase: 'decommissioned' }>`
+  ${({ $phase }) => phaseBadge($phase)}
   position: absolute;
   top: 12px;
   right: 12px;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 500;
-  background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
 `;
 
 // ============================================================================
@@ -260,23 +238,27 @@ export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: Plan
 
   // Get plant icon based on plant type
   const getPlantIcon = () => {
-    const iconMap: Record<string, string> = {
-      crop: '🌾',
-      tree: '🌳',
-      herb: '🌿',
-      fruit: '🍎',
-      vegetable: '🥕',
-      ornamental: '🌺',
-      medicinal: '🌱',
+    const iconMap: Record<string, typeof Sprout> = {
+      crop: Wheat,
+      tree: TreeDeciduous,
+      herb: Leaf,
+      fruit: Apple,
+      vegetable: Carrot,
+      ornamental: Flower2,
+      medicinal: Sprout,
     };
-    return iconMap[plant.plantType] || '🌱';
+    return iconMap[plant.plantType] || Sprout;
   };
+
+  const PlantTypeIcon = getPlantIcon();
 
   return (
     <Card onClick={handleCardClick}>
-      {!plant.isActive && <InactiveBadge>Inactive</InactiveBadge>}
+      {!plant.isActive && <InactiveBadge $phase="decommissioned">Inactive</InactiveBadge>}
 
-      <PlantIcon>{getPlantIcon()}</PlantIcon>
+      <PlantIcon>
+        <PlantTypeIcon size={40} strokeWidth={1.4} />
+      </PlantIcon>
 
       <PlantName>{plant.plantName}</PlantName>
       <ScientificName>{plant.scientificName || '\u00A0'}</ScientificName>
@@ -331,22 +313,22 @@ export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: Plan
       <Actions>
         {onView && (
           <ActionButton $variant="view" onClick={handleView}>
-            👁️ View
+            <Eye size={13} strokeWidth={1.6} /> View
           </ActionButton>
         )}
         {onEdit && (
           <ActionButton $variant="edit" onClick={handleEdit}>
-            ✏️ Edit
+            <Pencil size={13} strokeWidth={1.6} /> Edit
           </ActionButton>
         )}
         {onClone && (
           <ActionButton $variant="clone" onClick={handleClone}>
-            📋 Clone
+            <Copy size={13} strokeWidth={1.6} /> Clone
           </ActionButton>
         )}
         {onDelete && (
           <ActionButton $variant="delete" onClick={handleDelete}>
-            🗑️ Delete
+            <Trash2 size={13} strokeWidth={1.6} /> Delete
           </ActionButton>
         )}
       </Actions>

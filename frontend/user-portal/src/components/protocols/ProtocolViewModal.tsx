@@ -14,12 +14,15 @@
  */
 
 import styled, { createGlobalStyle } from 'styled-components';
+import { HardHat } from 'lucide-react';
+import { phaseBadge } from '@a64core/shared';
 import type { Protocol } from '../../types/protocols';
 import {
-  PROTOCOL_CATEGORY_ICONS,
   PROTOCOL_CATEGORY_LABELS,
   PROTOCOL_STATUS_LABELS,
 } from '../../types/protocols';
+import { PROTOCOL_CATEGORY_ICON_COMPONENTS } from './categoryIcons';
+import { PROTOCOL_STATUS_TO_PHASE } from './statusPhase';
 import { Modal } from '../genetics/Modal';
 import { Banner, Button, Hint } from '../genetics/styled';
 
@@ -62,20 +65,29 @@ const MetaRow = styled.div`
   align-items: center;
 `;
 
-const Chip = styled.span<{ $tone?: 'active' | 'draft' | 'retired' }>`
+// Protocol status routes through the phase map (PROTOCOL_STATUS_TO_PHASE);
+// a plain info chip (category, step count) gets a neutral glass tint;
+// "N critical" is a dedicated alert cue — bright.coral, not gold (spec §3).
+const Chip = styled.span<{ $tone?: 'active' | 'draft' | 'retired'; $critical?: boolean }>`
   display: inline-flex;
-  padding: 3px 9px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: 11.5px;
-  font-weight: 700;
-  background: ${({ $tone, theme }) =>
-    $tone === 'active'
-      ? theme.colors.successBg
-      : $tone === 'draft'
-      ? theme.colors.warningBg
-      : theme.colors.surface};
-  color: ${({ $tone, theme }) =>
-    $tone === 'active' ? theme.colors.emerald[700] : $tone === 'draft' ? theme.colors.gold[800] : theme.colors.neutral[700]};
+  align-items: center;
+  gap: 5px;
+
+  ${({ $tone }) =>
+    $tone
+      ? phaseBadge(PROTOCOL_STATUS_TO_PHASE[$tone])
+      : ''}
+
+  ${({ $tone, $critical, theme }) =>
+    !$tone &&
+    `
+    padding: 3px 9px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: ${$critical ? `${theme.colors.bright.coral}29` : theme.colors.glass.base};
+    color: ${$critical ? theme.colors.bright.coral : theme.colors.muted};
+  `}
 `;
 
 const Section = styled.section`
@@ -90,7 +102,7 @@ const SectionLabel = styled.h3`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Body = styled.p`
@@ -116,7 +128,7 @@ const Item = styled.li`
 `;
 
 const Qty = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Steps = styled.ol`
@@ -128,16 +140,18 @@ const Steps = styled.ol`
   gap: 10px;
 `;
 
+// Same critical-step alert cue as ProtocolPicker's CriticalTag —
+// bright.coral, not gold (spec §3).
 const Step = styled.li<{ $critical: boolean }>`
   display: flex;
   gap: 12px;
   align-items: flex-start;
   padding: ${({ $critical }) => ($critical ? '10px 12px' : '0')};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   background: ${({ $critical, theme }) =>
-    $critical ? theme.colors.warningBg : 'transparent'};
+    $critical ? `${theme.colors.bright.coral}1f` : 'transparent'};
   border-left: ${({ $critical, theme }) =>
-    $critical ? `3px solid ${theme.colors.warning}` : 'none'};
+    $critical ? `3px solid ${theme.colors.bright.coral}` : 'none'};
 `;
 
 const StepNum = styled.span`
@@ -145,7 +159,7 @@ const StepNum = styled.span`
   min-width: 22px;
   font-size: 13px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const StepText = styled.div`
@@ -159,13 +173,13 @@ const StepMeta = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-left: 8px;
 `;
 
 const Duration = styled.span`
   font-size: 11.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-left: 6px;
 `;
 
@@ -180,22 +194,22 @@ const RefList = styled.ol`
 const Ref = styled.li`
   font-size: 12px;
   line-height: 1.5;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   word-break: break-word;
 `;
 
 const ImageNote = styled.div`
   padding: 10px 12px;
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px dashed ${({ theme }) => theme.colors.line};
   font-size: 12.5px;
   line-height: 1.55;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Divider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.line};
 `;
 
 interface ProtocolViewModalProps {
@@ -246,11 +260,14 @@ export function ProtocolViewModal({ protocol, onClose, onEdit }: ProtocolViewMod
           <MetaRow>
             <Chip $tone={protocol.status}>{PROTOCOL_STATUS_LABELS[protocol.status]}</Chip>
             <Chip>
-              {PROTOCOL_CATEGORY_ICONS[protocol.category]}{' '}
+              {(() => {
+                const CategoryIcon = PROTOCOL_CATEGORY_ICON_COMPONENTS[protocol.category];
+                return <CategoryIcon size={12} strokeWidth={1.8} />;
+              })()}
               {PROTOCOL_CATEGORY_LABELS[protocol.category]}
             </Chip>
             <Chip>{protocol.steps.length} steps</Chip>
-            {criticalCount > 0 && <Chip $tone="draft">{criticalCount} critical</Chip>}
+            {criticalCount > 0 && <Chip $critical>{criticalCount} critical</Chip>}
           </MetaRow>
 
           {protocol.status === 'draft' && (
@@ -262,7 +279,8 @@ export function ProtocolViewModal({ protocol, onClose, onEdit }: ProtocolViewMod
 
           {protocol.ppe.length > 0 && (
             <Banner $tone="warning" style={{ marginTop: 14 }}>
-              🦺 <strong>PPE required:</strong> {protocol.ppe.join(', ')}
+              <HardHat size={13} strokeWidth={1.8} style={{ verticalAlign: 'text-bottom' }} />{' '}
+              <strong>PPE required:</strong> {protocol.ppe.join(', ')}
             </Banner>
           )}
 

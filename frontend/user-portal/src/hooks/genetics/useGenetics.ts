@@ -158,6 +158,21 @@ export function useSplitAccession(accessionId: string) {
   });
 }
 
+/**
+ * Label PDF generation (T-804 §5.1). A GET in verb but not in effect — a
+ * successful call raises `labelledVesselCount` server-side, so it goes
+ * through `useMutation` (like every other genetics write in this file) and
+ * invalidates broadly on success so the accession detail page's own
+ * `useAccession` refetches the new high-water mark.
+ */
+export function useGetLabelsPdf(accessionId: string) {
+  const invalidate = useInvalidateGenetics();
+  return useMutation<api.LabelsPdfResult, Error, api.GetLabelsPdfParams>({
+    mutationFn: (params) => api.getLabelsPdf(accessionId, params),
+    onSuccess: invalidate,
+  });
+}
+
 // ============================================================================
 // PROPAGATIONS
 // ============================================================================

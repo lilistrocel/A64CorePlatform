@@ -5,9 +5,23 @@
  * matching the backend API response structures.
  */
 
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Sprout,
+  Flower2,
+  Search,
+  ShoppingBasket,
+  Check,
+  Sparkles,
+  ClipboardList,
+  Pause,
+  Play,
+  X,
+} from 'lucide-react';
 
-const c = lightTheme.colors;
+const c = theme.colors;
 
 // ============================================================================
 // ENUMS & CONSTANTS
@@ -250,15 +264,35 @@ export interface HarvestEntryFormData {
 // COLOR CONSTANTS
 // ============================================================================
 
-export const TASK_TYPE_COLORS: Record<TaskType, string> = {
-  planting: c.success,              // emerald (was green)
-  fruiting_check: c.secondary[600], // gold — was purple, categorical judgement call, spec §3
-  harvest_readiness: c.warning,     // gold (was orange)
-  daily_harvest: c.warning,         // gold — matches harvest_readiness, as the original hex did
-  harvest_completion: c.primary[500], // lapis (was blue)
-  cleaning: c.error,                // terracotta (was red)
-  custom: c.textSecondary,          // (was gray)
+// Night Observatory (T-901): these task types each correspond to a point in
+// the room/crop lifecycle, so — unlike a generic categorical map — they're
+// routed onto colors.phase.* rather than colors.bright.*. `daily_harvest`
+// and `harvest_completion` share phase.harvesting deliberately (both are
+// literally the harvest phase, same precedent the pre-redesign map already
+// used pairing harvest_readiness/daily_harvest). `fruiting_check` previously
+// (mis)used the raw gold ramp — moved to phase.fruitingInit, since gold is
+// reserved for the literal Harvesting phase (spec §3).
+//
+// Consolidation pass (T-901 shard NON-UI-CLEANUP): the hex map below is now
+// DERIVED from TASK_TYPE_PHASE_KEYS rather than hand-written twice — the
+// `PhaseKey` export is what call sites composing `phaseBadge()` (which takes
+// a PhaseKey, not a colour string) should use instead of re-deriving a key
+// from this hex map.
+export const TASK_TYPE_PHASE_KEYS: Record<TaskType, PhaseKey> = {
+  planting: 'preparing',
+  fruiting_check: 'fruitingInit',
+  harvest_readiness: 'fruiting',
+  daily_harvest: 'harvesting',
+  harvest_completion: 'harvesting',
+  cleaning: 'cleaning',
+  custom: 'empty',
 };
+
+export const TASK_TYPE_COLORS: Record<TaskType, string> = Object.fromEntries(
+  (Object.entries(TASK_TYPE_PHASE_KEYS) as Array<[TaskType, PhaseKey]>).map(
+    ([type, key]) => [type, c.phase[key]]
+  )
+) as Record<TaskType, string>;
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   planting: 'Planting',
@@ -270,12 +304,24 @@ export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   custom: 'Custom Task',
 };
 
-export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  pending: c.textSecondary,     // (was gray)
-  in_progress: c.primary[500],  // lapis (was blue)
-  completed: c.success,         // emerald (was green)
-  cancelled: c.error,           // terracotta (was red)
+// Night Observatory (T-901): routed onto colors.phase.* per spec §5.2's
+// normative table (pending→fruitingInit, open/in-progress→inoculated,
+// closed/completed→resting, cancelled/void→decommissioned).
+//
+// Consolidation pass: hex derived from TASK_STATUS_PHASE_KEYS (see
+// TASK_TYPE_PHASE_KEYS above for the same pattern applied to task type).
+export const TASK_STATUS_PHASE_KEYS: Record<TaskStatus, PhaseKey> = {
+  pending: 'fruitingInit',
+  in_progress: 'inoculated',
+  completed: 'resting',
+  cancelled: 'decommissioned',
 };
+
+export const TASK_STATUS_COLORS: Record<TaskStatus, string> = Object.fromEntries(
+  (Object.entries(TASK_STATUS_PHASE_KEYS) as Array<[TaskStatus, PhaseKey]>).map(
+    ([status, key]) => [status, c.phase[key]]
+  )
+) as Record<TaskStatus, string>;
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   pending: 'Pending',
@@ -319,4 +365,26 @@ export const TASK_STATUS_ICONS: Record<TaskStatus, string> = {
   in_progress: '▶️',
   completed: '✅',
   cancelled: '❌',
+};
+
+// Night Observatory (T-901) lucide-react replacements for TASK_TYPE_ICONS /
+// TASK_STATUS_ICONS above (spec §6 removes every icon emoji). The string
+// maps are left in place for any consumer this shard could not reach —
+// route new/updated consumers (e.g. BlockTaskList.tsx's <TaskTypeIcon>)
+// through these component maps instead.
+export const TASK_TYPE_ICON_COMPONENTS: Record<TaskType, LucideIcon> = {
+  planting: Sprout,
+  fruiting_check: Flower2,
+  harvest_readiness: Search,
+  daily_harvest: ShoppingBasket,
+  harvest_completion: Check,
+  cleaning: Sparkles,
+  custom: ClipboardList,
+};
+
+export const TASK_STATUS_ICON_COMPONENTS: Record<TaskStatus, LucideIcon> = {
+  pending: Pause,
+  in_progress: Play,
+  completed: Check,
+  cancelled: X,
 };

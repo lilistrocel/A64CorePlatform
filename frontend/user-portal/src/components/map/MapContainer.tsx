@@ -10,6 +10,7 @@
 import React, { useCallback, useState, useRef, useEffect, lazy, Suspense } from 'react';
 import maplibregl from 'maplibre-gl';
 import styled from 'styled-components';
+import { Globe, Map as MapIcon } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import {
@@ -277,9 +278,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           aria-label={mapStyle === 'street' ? 'Switch to Satellite View' : 'Switch to Street View'}
         >
           {mapStyle === 'street' ? (
-            <SatelliteIcon />
+            <Globe size={16} strokeWidth={1.8} />
           ) : (
-            <StreetIcon />
+            <MapIcon size={16} strokeWidth={1.8} />
           )}
           <span>{mapStyle === 'street' ? 'Satellite' : 'Street'}</span>
         </StyleToggleButton>
@@ -359,8 +360,8 @@ const LoadingOverlay = styled.div`
 const LoadingSpinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.celeste};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -410,7 +411,8 @@ const ErrorText = styled.p`
 const RetryButton = styled.button`
   padding: 8px 16px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* lapis fill — onDark (cream), not onAccent (gold-fill only, spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -422,6 +424,9 @@ const RetryButton = styled.button`
   }
 `;
 
+// Opaque (not translucent glass.surface) — floats over unpredictable map
+// imagery, not the sky, and needs reliable contrast regardless of the tile
+// underneath (shard note, spec §8).
 const StyleToggleButton = styled.button`
   position: absolute;
   bottom: 10px;
@@ -432,7 +437,7 @@ const StyleToggleButton = styled.button`
   gap: 6px;
   padding: 8px 12px;
   background: ${({ theme }) => theme.colors.background};
-  border: none;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 6px;
   box-shadow: ${({ theme }) => theme.shadows.md};
   font-size: 13px;
@@ -442,7 +447,7 @@ const StyleToggleButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.neutral[300]};
     box-shadow: ${({ theme }) => theme.shadows.lg};
   }
 
@@ -454,24 +459,6 @@ const StyleToggleButton = styled.button`
     flex-shrink: 0;
   }
 `;
-
-// Satellite icon (globe/earth)
-const SatelliteIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <path d="M2 12h20" />
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-  </svg>
-);
-
-// Street/map icon
-const StreetIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-    <line x1="8" y1="2" x2="8" y2="18" />
-    <line x1="16" y1="6" x2="16" y2="22" />
-  </svg>
-);
 
 export default MapContainer;
 

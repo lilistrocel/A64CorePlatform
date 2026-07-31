@@ -9,7 +9,9 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { Factory, Plus, X } from 'lucide-react';
+import type { PhaseKey } from '@a64core/shared';
+import { PageHeader as SharedPageHeader, glassPanel, glassOpaque, monoLabel, phaseBadge } from '@a64core/shared';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { useFacilities, useCreateFacility } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms, useCreateRoom } from '../../hooks/mushroom/useRoomData';
@@ -27,12 +29,25 @@ import type {
   CreateFacilityPayload,
   CreateRoomPayload,
   RoomType,
+  SubstrateStatus as SubstrateStatusType,
 } from '../../types/mushroom';
 import {
   ROOM_TYPE_LABELS,
-  ROOM_TYPE_ICONS,
   isBatchRoom,
 } from '../../types/mushroom';
+
+// Substrate batch status mirrors the room-phase lifecycle closely enough to
+// extrapolate directly onto it (spec §5.2) rather than inventing a parallel
+// vocabulary — several names even match literally (colonizing, inoculating).
+const SUBSTRATE_STATUS_TO_PHASE: Record<SubstrateStatusType, PhaseKey> = {
+  mixing: 'preparing',
+  sterilizing: 'cleaning',
+  inoculating: 'inoculated',
+  colonizing: 'colonizing',
+  ready: 'fruiting',
+  depleted: 'resting',
+  discarded: 'quarantined',
+};
 
 // ============================================================================
 // CREATE FACILITY FORM STATE
@@ -133,17 +148,18 @@ export function MushroomFacilityManager() {
   return (
     <Container>
       {/* Header */}
-      <PageHeader>
-        <TitleSection>
-          <PageTitle>Facility Manager<HelpButton topic="mushroom.facilities" /></PageTitle>
-          <PageSubtitle>
-            Manage your growing facilities, rooms, and substrate batches
-          </PageSubtitle>
-        </TitleSection>
+      <HeaderRow>
+        <SharedPageHeader
+          breadcrumb="Operations · Live"
+          title="Facility Manager"
+          emphasizeLastWord
+          description="Manage your growing facilities, rooms, and substrate batches"
+        />
+        <HelpButton topic="mushroom.facilities" />
         <AddFacilityBtn onClick={() => setShowCreateFacility(true)}>
-          + New Facility
+          <Plus size={15} strokeWidth={2} /> New Facility
         </AddFacilityBtn>
-      </PageHeader>
+      </HeaderRow>
 
       {/* Loading */}
       {facilitiesLoading && (
@@ -156,11 +172,11 @@ export function MushroomFacilityManager() {
       {/* Empty state */}
       {!facilitiesLoading && facilities.length === 0 && (
         <EmptyState>
-          <EmptyIcon>🏭</EmptyIcon>
-          <EmptyTitle>No Facilities Yet</EmptyTitle>
+          <EmptyIcon><Factory size={40} strokeWidth={1.4} /></EmptyIcon>
+          <EmptyTitle>No facilities yet</EmptyTitle>
           <EmptyText>Create your first growing facility to get started.</EmptyText>
           <AddFacilityBtn onClick={() => setShowCreateFacility(true)}>
-            + Create Facility
+            <Plus size={15} strokeWidth={2} /> Create Facility
           </AddFacilityBtn>
         </EmptyState>
       )}
@@ -216,7 +232,7 @@ export function MushroomFacilityManager() {
                 onClick={() => setSelectedFacility(null)}
                 aria-label="Close facility detail"
               >
-                &#10005;
+                <X size={16} strokeWidth={2} />
               </CloseDetailBtn>
             </DetailActions>
           </DetailPanelHeader>
@@ -272,7 +288,7 @@ export function MushroomFacilityManager() {
                 onClick={() => setShowCreateFacility(false)}
                 aria-label="Close create facility form"
               >
-                &#10005;
+                <X size={16} strokeWidth={2} />
               </CloseModalBtn>
             </ModalHeader>
 
@@ -386,7 +402,7 @@ export function MushroomFacilityManager() {
                 onClick={() => setShowCreateRoom(false)}
                 aria-label="Close add room form"
               >
-                &#10005;
+                <X size={16} strokeWidth={2} />
               </CloseModalBtn>
             </ModalHeader>
 
@@ -433,7 +449,7 @@ export function MushroomFacilityManager() {
                 >
                   {(Object.keys(ROOM_TYPE_LABELS) as RoomType[]).map((rt) => (
                     <option key={rt} value={rt}>
-                      {ROOM_TYPE_ICONS[rt]} {ROOM_TYPE_LABELS[rt]}
+                      {ROOM_TYPE_LABELS[rt]}
                     </option>
                   ))}
                 </Select>
@@ -489,54 +505,43 @@ export function MushroomFacilityManager() {
 // STYLED COMPONENTS
 // ============================================================================
 
+// Transparent page container — the fixed sky shows through (spec §7).
 const Container = styled.div`
-  padding: 24px;
+  padding: 34px 40px 60px;
   max-width: 100%;
-  min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
-const PageHeader = styled.div`
+const HeaderRow = styled.div`
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
 `;
 
-const TitleSection = styled.div``;
-
-const PageTitle = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
+// Reused in two places at once (header + empty state) — kept as a glass
+// secondary control rather than the gold primary CTA so a screen never shows
+// two gold buttons for the same action at once (spec §3 one-CTA budget).
 const AddFacilityBtn = styled.button`
+  ${glassOpaque}
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  border-radius: 11px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms;
+  transition: all 150ms;
   white-space: nowrap;
+  margin-top: 2px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -544,16 +549,13 @@ const AddFacilityBtn = styled.button`
 const FacilitiesGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  gap: 18px;
   margin-bottom: 24px;
 `;
 
 const DetailPanel = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 14px;
+  ${glassPanel}
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 2px solid ${({ theme }) => theme.colors.primary[50]};
   margin-top: 8px;
 `;
 
@@ -567,8 +569,8 @@ const DetailPanelHeader = styled.div`
 `;
 
 const DetailPanelTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -581,40 +583,43 @@ const DetailActions = styled.div`
 
 const AddRoomBtn = styled.button`
   padding: 8px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const CloseDetailBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  padding: 4px 8px;
-  border-radius: 6px;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textSecondary};
+    background: rgba(180, 200, 220, 0.1);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
   }
 `;
 
@@ -623,9 +628,9 @@ const DetailSection = styled.div`
 `;
 
 const DetailSectionTitle = styled.h3`
-  font-size: 15px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -636,8 +641,8 @@ const InlineSpinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -657,13 +662,14 @@ const SubstrateRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   flex-wrap: wrap;
 `;
 
 const SubstrateBatchCode = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 13px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -672,46 +678,21 @@ const SubstrateBatchCode = styled.span`
 
 const SubstrateType = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-transform: capitalize;
   flex: 1;
 `;
 
-interface SubstrateStatusProps {
-  $status: string;
-}
-
-// Purple in the old palette marked "mixing"/"inoculating" but gold (secondary)
-// is reserved for nav/CTA/highlight use, not ordinary status row accents
-// (brand contract §1.4) — so these categorical states borrow distinct shades
-// off the lapis/terracotta ramps instead of the semantic tokens already
-// spoken for by ready/colonizing/sterilizing/discarded.
-function getSubstrateStatusColor(theme: Theme, status: string): string {
-  const map: Record<string, string> = {
-    ready: theme.colors.success,
-    colonizing: theme.colors.warning,
-    sterilizing: theme.colors.info,
-    mixing: theme.colors.primary[700],
-    depleted: theme.colors.neutral[500],
-    discarded: theme.colors.error,
-    inoculating: theme.colors.terracotta[300],
-  };
-  return map[status] ?? theme.colors.neutral[500];
-}
-
-const SubstrateStatus = styled.span<SubstrateStatusProps>`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.onAccent};
-  background: ${({ $status, theme }) => getSubstrateStatusColor(theme, $status)};
-  border-radius: 20px;
-  padding: 2px 8px;
-  text-transform: capitalize;
+// Substrate status routes through the phase map (SUBSTRATE_STATUS_TO_PHASE
+// above) via the standard badge pattern — same vocabulary as room phases.
+const SubstrateStatus = styled.span<{ $status: SubstrateStatusType }>`
+  ${({ $status }) => phaseBadge(SUBSTRATE_STATUS_TO_PHASE[$status])}
 `;
 
 const SubstrateWeight = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // Shared form elements
@@ -742,12 +723,11 @@ const LoadingText = styled.div`
   color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
+// Empty state — Fraunces italic celeste headline, muted sentence, one
+// primary button (spec §4 "Empty states"). No dashed box, no emoji.
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   max-width: 480px;
   margin: 48px auto;
   display: flex;
@@ -757,29 +737,35 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 56px;
-  opacity: 0.6;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
+  opacity: 0.7;
+  margin-bottom: 4px;
 `;
 
 const EmptyTitle = styled.h3`
-  font-size: 22px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.4rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
-// Modal styles
+// Modal styles — glassPanel at blur 24px over an rgba(10,14,36,.6) scrim,
+// 20px radius (spec §4 "Modals/drawers").
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -788,9 +774,10 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
@@ -806,28 +793,31 @@ const ModalHeader = styled.div`
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const CloseModalBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 150ms;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 150ms, color 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
@@ -850,8 +840,8 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -861,48 +851,47 @@ const Required = styled.span`
 `;
 
 const Input = styled.input`
+  ${glassOpaque}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   outline: none;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const SelectField = styled.select`
+  ${glassOpaque}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const DeleteFacilityBtn = styled.button`
   padding: 8px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -916,53 +905,51 @@ const DeleteFacilityBtn = styled.button`
   &:not(:disabled):hover {
     background: ${({ theme }) => theme.colors.errorBg};
     border-color: ${({ theme }) => theme.colors.error};
-    color: ${({ theme }) => theme.colors.terracotta[700]};
+    color: ${({ theme }) => theme.colors.error};
   }
 `;
 
 const Select = styled.select`
+  ${glassOpaque}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   font-family: inherit;
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FieldHint = styled.span`
   font-size: 12px;
   line-height: 1.5;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
 const TextArea = styled.textarea`
+  ${glassOpaque}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   font-family: inherit;
   outline: none;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -970,8 +957,8 @@ const FormError = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.error};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.error}66;
+  border-radius: 10px;
   padding: 10px 12px;
 `;
 
@@ -983,44 +970,50 @@ const FormActions = styled.div`
 
 const CancelBtn = styled.button`
   padding: 10px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
+// The modal's one primary CTA — gold gradient fill (spec §3/§4 "Buttons").
+// The page-level AddFacilityBtn stays a glass secondary specifically so this
+// stays the only gold button visible while a modal is open.
 const SubmitBtn = styled.button`
   padding: 10px 24px;
   border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  border-radius: 11px;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms;
+  transition: transform 150ms, box-shadow 150ms;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;

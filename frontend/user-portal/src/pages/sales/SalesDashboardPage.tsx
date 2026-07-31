@@ -2,11 +2,19 @@
  * SalesDashboardPage Component
  *
  * Overview dashboard with sales statistics, orders, and inventory tracking.
+ *
+ * Night Observatory (T-901): page header now uses the shared PageHeader
+ * (breadcrumb + title + stat tiles) wired to the dashboard stats this page
+ * already fetches — no new data sources added. StatCard/Widget are glass
+ * panels; OrderItem/InventoryItem sit one level inside a glass panel so they
+ * use a plain line-bordered surface rather than nesting a second glass layer
+ * (spec §2 two-layer limit).
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { glassPanel, monoLabel, PageHeader } from '@a64core/shared';
 import { salesApi } from '../../services/salesService';
 import { formatNumber, formatCurrency } from '../../utils';
 import type { SalesDashboardStats } from '../../types/sales';
@@ -23,37 +31,6 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 32px;
-`;
-
-const HeaderLeft = styled.div`
-  flex: 1;
-`;
-
-const FarmingYearBadge = styled.span`
-  display: inline-block;
-  background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.lapis[700]};
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  margin-left: 8px;
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 8px 0;
-`;
-
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -62,32 +39,27 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
 `;
 
 const StatLabel = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
 const StatValue = styled.div`
   font-size: 36px;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const CurrencyValue = styled.div`
   font-size: 24px;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
   word-break: break-word;
 
@@ -108,10 +80,8 @@ const WidgetsRow = styled.div`
 `;
 
 const Widget = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const WidgetTitle = styled.h3`
@@ -127,18 +97,21 @@ const OrderList = styled.div`
   gap: 12px;
 `;
 
+// One level inside the Widget glass panel — plain line-bordered surface
+// rather than a second nested glassPanel (spec §2 two-layer limit).
 const OrderItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.04);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
@@ -152,7 +125,8 @@ const OrderCode = styled.span`
 const OrderAmount = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.success};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 const InventoryList = styled.div`
@@ -179,7 +153,8 @@ const ProductName = styled.span`
 
 const ExpiryDate = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme }) => theme.colors.bright.gold};
 `;
 
 const LoadingContainer = styled.div`
@@ -188,22 +163,22 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const EmptyText = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -261,16 +236,16 @@ export function SalesDashboardPage() {
 
   return (
     <Container>
-      <Header>
-        <HeaderLeft>
-          <Title>
-            Sales Management
-            {selectedFarmingYear && (
-              <FarmingYearBadge>Year {selectedFarmingYear}</FarmingYearBadge>
-            )}
-          </Title>
-        </HeaderLeft>
-      </Header>
+      <PageHeader
+        breadcrumb={`SALES${selectedFarmingYear ? ` · YEAR ${selectedFarmingYear}` : ''}`}
+        title="Sales Management"
+        emphasizeLastWord
+        stats={[
+          { value: formatNumber(stats.totalOrders), label: 'Total Orders' },
+          { value: formatCurrency(stats.totalRevenue, 'AED'), label: 'Revenue', alive: true },
+          { value: formatNumber(stats.deliveredOrders), label: 'Delivered', alive: true },
+        ]}
+      />
 
       <SalesActionTiles />
 
@@ -282,12 +257,12 @@ export function SalesDashboardPage() {
 
         <StatCard>
           <StatLabel>Confirmed</StatLabel>
-          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.confirmedOrders)}</StatValue>
+          <StatValue style={{ color: theme.colors.bright.lapis }}>{formatNumber(stats.confirmedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Shipped</StatLabel>
-          <StatValue style={{ color: theme.colors.secondary[500] }}>{formatNumber(stats.shippedOrders)}</StatValue>
+          <StatValue style={{ color: theme.colors.bright.terra }}>{formatNumber(stats.shippedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
@@ -318,7 +293,7 @@ export function SalesDashboardPage() {
 
         <StatCard>
           <StatLabel>Reserved Stock</StatLabel>
-          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.reservedInventory)}</StatValue>
+          <StatValue style={{ color: theme.colors.bright.lapis }}>{formatNumber(stats.reservedInventory)}</StatValue>
         </StatCard>
       </StatsGrid>
 

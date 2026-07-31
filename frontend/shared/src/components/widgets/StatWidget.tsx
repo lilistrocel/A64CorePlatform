@@ -1,5 +1,7 @@
 import styled from 'styled-components';
+import { RefreshCw } from 'lucide-react';
 import { WidgetProps, StatWidgetData } from '../../types/widget.types';
+import { monoLabel } from '../../theme/mixins';
 import { Card } from '../common/Card';
 import { Spinner } from '../common/Spinner';
 
@@ -32,7 +34,7 @@ export function StatWidget({ widget, data, loading, error, onRefresh }: WidgetPr
       {onRefresh && (
         <RefreshRow>
           <StatRefreshButton onClick={onRefresh} aria-label={`Refresh ${widget.title}`}>
-            🔄
+            <RefreshCw size={13} strokeWidth={1.8} />
           </StatRefreshButton>
         </RefreshRow>
       )}
@@ -75,18 +77,20 @@ const StatContainer = styled.div`
 `;
 
 const StatValue = styled.div`
+  /* Primary stat numerals are on the gold budget (spec §3) with the mockup's
+     signature glow (l.127). */
   font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.secondary[500]};
+  text-shadow: 0 0 22px rgba(220, 185, 79, 0.4);
   line-height: ${({ theme }) => theme.typography.lineHeight.tight};
 `;
 
 const StatLabel = styled.div`
-  font-size: ${({ theme}) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-top: ${({ theme }) => theme.spacing.sm};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 `;
 
 const TrendContainer = styled.div`
@@ -115,7 +119,7 @@ const TrendValue = styled.span``;
 
 const TrendLabel = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const SecondaryMetrics = styled.div`
@@ -123,7 +127,7 @@ const SecondaryMetrics = styled.div`
   gap: ${({ theme }) => theme.spacing.xl};
   margin-top: ${({ theme }) => theme.spacing.lg};
   padding-top: ${({ theme }) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const SecondaryMetric = styled.div`
@@ -133,6 +137,7 @@ const SecondaryMetric = styled.div`
 `;
 
 const SecondaryValue = styled.div`
+  /* Secondary emphasis is celeste, never gold (spec §3). */
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -140,7 +145,7 @@ const SecondaryValue = styled.div`
 
 const SecondaryLabel = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
@@ -165,7 +170,7 @@ const ErrorText = styled.div`
 const RetryLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
   padding: 0.25rem 0.5rem;
@@ -173,7 +178,7 @@ const RetryLink = styled.button`
   text-decoration: underline;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[600]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -184,20 +189,20 @@ const RefreshRow = styled.div`
 `;
 
 const StatRefreshButton = styled.button`
+  display: flex;
   background: none;
   border: none;
-  font-size: 1rem;
   cursor: pointer;
   padding: 0.25rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   transition: color 0.2s ease;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.celeste};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
     border-radius: 4px;
   }

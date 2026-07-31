@@ -2,10 +2,21 @@
  * Harvest Inventory List
  *
  * Lists and manages harvested products inventory
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls, Space Mono metadata, shared
+ * PageHeader/Button, lucide icons in place of emoji. Logic, routes,
+ * data-fetching, props and state are unchanged. Always rendered `embedded`
+ * from StockPage today (see StockPage.tsx) — PageHeader is gated on
+ * `!embedded` so a future standalone route still gets one, without
+ * duplicating StockPage's own header in the current usage.
  */
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { Inbox, Plus, Pencil, Trash2, X } from 'lucide-react';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import {
   listHarvestInventory,
   createHarvestInventory,
@@ -34,6 +45,24 @@ function deriveStatus(item: HarvestInventory): HarvestStockStatus {
   return 'sold';
 }
 
+// Quality-grade -> phase colour map (spec §5.2 extrapolation). Quality grade
+// is a QC rating applied to stock that is already harvested, not a literal
+// "in harvest phase" event, so `phase.harvesting` (gold) is deliberately NOT
+// used here — gold stays reserved for the PageHeader and the page's one
+// primary CTA (spec §3 gold budget). `rejected` -> quarantined and
+// `processing` -> cleaning are direct semantic matches from §5.2; the
+// remaining four tiers are ordered highest-to-lowest along the same
+// lifecycle-ish ramp used elsewhere (fruiting -> resting -> colonizing ->
+// empty) so all six grades stay perceptually distinct in a dense table.
+const QUALITY_GRADE_PHASE: Record<QualityGrade, PhaseKey> = {
+  premium: 'fruiting',
+  grade_a: 'resting',
+  grade_b: 'colonizing',
+  grade_c: 'empty',
+  processing: 'cleaning',
+  rejected: 'quarantined',
+};
+
 interface Props {
   onUpdate?: () => void;
   farmingYear?: number | null;
@@ -48,6 +77,7 @@ type SortOrder = 'asc' | 'desc';
 
 export function HarvestInventoryList({ onUpdate, farmingYear, embedded = false, statusFilter = null }: Props) {
   const [inventory, setInventory] = useState<HarvestInventory[]>([]);
+  const [total, setTotal] = useState(0);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [plantDataList, setPlantDataList] = useState<PlantDataEnhanced[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +107,7 @@ export function HarvestInventoryList({ onUpdate, farmingYear, embedded = false, 
         getPlantDataEnhancedList({ perPage: 100 }), // Load all plant data for dropdown
       ]);
       setInventory(inventoryData.items);
+      setTotal(inventoryData.total);
       setTotalPages(inventoryData.totalPages);
       setFarms(farmsData.items || []);
       setPlantDataList(plantData.items || []);
@@ -158,8 +189,25 @@ export function HarvestInventoryList({ onUpdate, farmingYear, embedded = false, 
     ? inventory.filter((item) => deriveStatus(item) === statusFilter)
     : inventory;
 
+  // Page-level stat for the PageHeader — derived from the currently loaded
+  // page of results, same data the table itself renders.
+  const availableCount = inventory.filter((item) => deriveStatus(item) === 'available').length;
+
   return (
     <Container $embedded={embedded}>
+      {!embedded && (
+        <PageHeader
+          breadcrumb="Inventory · Live"
+          title="Harvest Inventory"
+          emphasizeLastWord
+          description="Track harvested product lots from picking through sale or expiry."
+          stats={[
+            { value: total, label: 'Total Lots' },
+            { value: availableCount, label: 'Available', alive: true },
+          ]}
+        />
+      )}
+
       <Toolbar>
         <SearchInput
           type="text"
@@ -168,120 +216,135 @@ export function HarvestInventoryList({ onUpdate, farmingYear, embedded = false, 
           onChange={(e) => setSearch(e.target.value)}
         />
         <ToolbarButtons>
-          <ExportButton onClick={handleExport} disabled={exporting}>
-            {exporting ? 'Exporting...' : '📥 Export CSV'}
-          </ExportButton>
-          <AddButton onClick={() => setShowAddModal(true)}>+ Add Harvest</AddButton>
+          <Button variant="secondary" size="small" onClick={handleExport} disabled={exporting}>
+            <Inbox size={16} strokeWidth={1.8} />
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </Button>
+          <Button variant="primary" size="small" onClick={() => setShowAddModal(true)}>
+            <Plus size={16} strokeWidth={2} />
+            Add Harvest
+          </Button>
         </ToolbarButtons>
       </Toolbar>
 
       {loading ? (
-        <LoadingMessage>Loading inventory...</LoadingMessage>
+        <LoadingMessage>Loading inventory…</LoadingMessage>
       ) : visibleInventory.length === 0 ? (
-        <EmptyMessage>
-          <EmptyIcon>📦</EmptyIcon>
-          <EmptyText>No harvest inventory items found</EmptyText>
-          <EmptySubtext>Add harvested products to track your inventory</EmptySubtext>
-        </EmptyMessage>
+        <EmptyState>
+          <EmptyHeadline>No harvest inventory found</EmptyHeadline>
+          <EmptyBody>Add harvested products to start tracking lots through sale or expiry.</EmptyBody>
+          <Button variant="secondary" size="small" onClick={() => setShowAddModal(true)}>
+            <Plus size={16} strokeWidth={2} />
+            Add Harvest
+          </Button>
+        </EmptyState>
       ) : (
         <>
-          <Table aria-label="Harvest inventory table">
-            <thead>
-              <tr>
-                <ThSortable
-                  scope="col"
-                  $active={sortBy === 'plantName'}
-                  onClick={() => handleSort('plantName')}
-                  aria-sort={sortBy === 'plantName' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  Product<span aria-hidden="true">{getSortIndicator('plantName')}</span>
-                </ThSortable>
-                <Th scope="col">Farm</Th>
-                <ThSortable
-                  scope="col"
-                  $active={sortBy === 'quantity'}
-                  onClick={() => handleSort('quantity')}
-                  aria-sort={sortBy === 'quantity' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  Quantity<span aria-hidden="true">{getSortIndicator('quantity')}</span>
-                </ThSortable>
-                <ThSortable
-                  scope="col"
-                  $active={sortBy === 'qualityGrade'}
-                  onClick={() => handleSort('qualityGrade')}
-                  aria-sort={sortBy === 'qualityGrade' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  Grade<span aria-hidden="true">{getSortIndicator('qualityGrade')}</span>
-                </ThSortable>
-                <ThSortable
-                  scope="col"
-                  $active={sortBy === 'harvestDate'}
-                  onClick={() => handleSort('harvestDate')}
-                  aria-sort={sortBy === 'harvestDate' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  Harvest Date<span aria-hidden="true">{getSortIndicator('harvestDate')}</span>
-                </ThSortable>
-                <Th scope="col">Expiry</Th>
-                <Th scope="col">Price</Th>
-                <Th scope="col">Actions</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleInventory.map((item) => (
-                <Tr key={item.inventoryId}>
-                  <Td>
-                    <ProductInfo>
-                      <ProductName>{item.plantName}</ProductName>
-                      <ProductType>{PRODUCT_TYPE_LABELS[item.productType]}</ProductType>
-                      {item.variety && <ProductVariety>{item.variety}</ProductVariety>}
-                    </ProductInfo>
-                  </Td>
-                  <Td>{getFarmName(item.farmId)}</Td>
-                  <Td>
-                    <QuantityInfo>
-                      <QuantityValue>{formatNumber(item.availableQuantity, { decimals: 2 })} {item.unit}</QuantityValue>
-                      {item.reservedQuantity > 0 && (
-                        <ReservedBadge>{formatNumber(item.reservedQuantity, { decimals: 2 })} reserved</ReservedBadge>
+          <TableWrapper>
+            <Table aria-label="Harvest inventory table">
+              <thead>
+                <tr>
+                  <ThSortable
+                    scope="col"
+                    $active={sortBy === 'plantName'}
+                    onClick={() => handleSort('plantName')}
+                    aria-sort={sortBy === 'plantName' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Product<span aria-hidden="true">{getSortIndicator('plantName')}</span>
+                  </ThSortable>
+                  <Th scope="col">Farm</Th>
+                  <ThSortable
+                    scope="col"
+                    $active={sortBy === 'quantity'}
+                    onClick={() => handleSort('quantity')}
+                    aria-sort={sortBy === 'quantity' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Quantity<span aria-hidden="true">{getSortIndicator('quantity')}</span>
+                  </ThSortable>
+                  <ThSortable
+                    scope="col"
+                    $active={sortBy === 'qualityGrade'}
+                    onClick={() => handleSort('qualityGrade')}
+                    aria-sort={sortBy === 'qualityGrade' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Grade<span aria-hidden="true">{getSortIndicator('qualityGrade')}</span>
+                  </ThSortable>
+                  <ThSortable
+                    scope="col"
+                    $active={sortBy === 'harvestDate'}
+                    onClick={() => handleSort('harvestDate')}
+                    aria-sort={sortBy === 'harvestDate' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Harvest Date<span aria-hidden="true">{getSortIndicator('harvestDate')}</span>
+                  </ThSortable>
+                  <Th scope="col">Expiry</Th>
+                  <Th scope="col">Price</Th>
+                  <Th scope="col">Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleInventory.map((item) => (
+                  <Tr key={item.inventoryId}>
+                    <Td>
+                      <ProductInfo>
+                        <ProductName>{item.plantName}</ProductName>
+                        <ProductType>{PRODUCT_TYPE_LABELS[item.productType]}</ProductType>
+                        {item.variety && <ProductVariety>{item.variety}</ProductVariety>}
+                      </ProductInfo>
+                    </Td>
+                    <Td>{getFarmName(item.farmId)}</Td>
+                    <Td>
+                      <QuantityInfo>
+                        <QuantityValue>{formatNumber(item.availableQuantity, { decimals: 2 })} {item.unit}</QuantityValue>
+                        {item.reservedQuantity > 0 && (
+                          <ReservedBadge>{formatNumber(item.reservedQuantity, { decimals: 2 })} reserved</ReservedBadge>
+                        )}
+                      </QuantityInfo>
+                    </Td>
+                    <Td>
+                      <GradeBadge $grade={item.qualityGrade}>
+                        {QUALITY_GRADE_LABELS[item.qualityGrade]}
+                      </GradeBadge>
+                    </Td>
+                    <Td>
+                      <MonoText>{formatDate(item.harvestDate)}</MonoText>
+                    </Td>
+                    <Td>
+                      {item.expiryDate ? (
+                        <ExpiryDate
+                          $expired={isExpired(item.expiryDate)}
+                          $expiringSoon={isExpiringSoon(item.expiryDate)}
+                        >
+                          {formatDate(item.expiryDate)}
+                          {isExpired(item.expiryDate) && ' (Expired)'}
+                          {isExpiringSoon(item.expiryDate) && ' (Soon)'}
+                        </ExpiryDate>
+                      ) : (
+                        '-'
                       )}
-                    </QuantityInfo>
-                  </Td>
-                  <Td>
-                    <GradeBadge $grade={item.qualityGrade}>
-                      {QUALITY_GRADE_LABELS[item.qualityGrade]}
-                    </GradeBadge>
-                  </Td>
-                  <Td>{formatDate(item.harvestDate)}</Td>
-                  <Td>
-                    {item.expiryDate ? (
-                      <ExpiryDate
-                        $expired={isExpired(item.expiryDate)}
-                        $expiringSoon={isExpiringSoon(item.expiryDate)}
-                      >
-                        {formatDate(item.expiryDate)}
-                        {isExpired(item.expiryDate) && ' (Expired)'}
-                        {isExpiringSoon(item.expiryDate) && ' (Soon)'}
-                      </ExpiryDate>
-                    ) : (
-                      '-'
-                    )}
-                  </Td>
-                  <Td>
-                    {item.unitPrice
-                      ? `${formatCurrency(item.unitPrice, item.currency)}/${item.unit}`
-                      : '-'}
-                  </Td>
-                  <Td>
-                    <ActionButtons>
-                      <ActionButton onClick={() => setEditItem(item)}>Edit</ActionButton>
-                      <ActionButton $variant="danger" onClick={() => handleDelete(item)}>
-                        Delete
-                      </ActionButton>
-                    </ActionButtons>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+                    </Td>
+                    <Td>
+                      <MonoText>
+                        {item.unitPrice
+                          ? `${formatCurrency(item.unitPrice, item.currency)}/${item.unit}`
+                          : '-'}
+                      </MonoText>
+                    </Td>
+                    <Td>
+                      <ActionButtons>
+                        <ActionButton onClick={() => setEditItem(item)} aria-label={`Edit ${item.plantName}`}>
+                          <Pencil size={13} strokeWidth={1.8} /> Edit
+                        </ActionButton>
+                        <ActionButton $variant="danger" onClick={() => handleDelete(item)} aria-label={`Delete ${item.plantName}`}>
+                          <Trash2 size={13} strokeWidth={1.8} /> Delete
+                        </ActionButton>
+                      </ActionButtons>
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrapper>
 
           {totalPages > 1 && (
             <Pagination>
@@ -391,7 +454,9 @@ function AddHarvestModal({
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Add Harvest Inventory</ModalTitle>
-          <CloseButton onClick={onClose}>&times;</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={20} strokeWidth={1.8} />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           <Form onSubmit={handleSubmit}>
@@ -532,10 +597,10 @@ function AddHarvestModal({
             </FormGroup>
 
             <ModalFooter>
-              <CancelButton type="button" onClick={onClose}>Cancel</CancelButton>
-              <SubmitButton type="submit" disabled={submitting}>
+              <Button type="button" variant="secondary" size="small" onClick={onClose}>Cancel</Button>
+              <Button type="submit" variant="primary" size="small" disabled={submitting}>
                 {submitting ? 'Saving...' : 'Add to Inventory'}
-              </SubmitButton>
+              </Button>
             </ModalFooter>
           </Form>
         </ModalBody>
@@ -584,7 +649,9 @@ function EditHarvestModal({
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Edit: {item.plantName}</ModalTitle>
-          <CloseButton onClick={onClose}>&times;</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={20} strokeWidth={1.8} />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           <Form onSubmit={handleSubmit}>
@@ -633,10 +700,10 @@ function EditHarvestModal({
             </FormGroup>
 
             <ModalFooter>
-              <CancelButton type="button" onClick={onClose}>Cancel</CancelButton>
-              <SubmitButton type="submit" disabled={submitting}>
+              <Button type="button" variant="secondary" size="small" onClick={onClose}>Cancel</Button>
+              <Button type="submit" variant="primary" size="small" disabled={submitting}>
                 {submitting ? 'Saving...' : 'Save Changes'}
-              </SubmitButton>
+              </Button>
             </ModalFooter>
           </Form>
         </ModalBody>
@@ -645,13 +712,20 @@ function EditHarvestModal({
   );
 }
 
-// Styled Components
+// ============================================================================
+// STYLED COMPONENTS
+// ============================================================================
+
 interface ContainerProps {
   $embedded?: boolean;
 }
 
+const containerPadding = css`
+  padding: ${({ theme }) => theme.spacing.lg};
+`;
+
 const Container = styled.div<ContainerProps>`
-  ${({ $embedded, theme }) => !$embedded && `padding: ${theme.spacing.lg};`}
+  ${({ $embedded }) => !$embedded && containerPadding}
 `;
 
 const Toolbar = styled.div`
@@ -664,23 +738,22 @@ const Toolbar = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   max-width: 400px;
-  padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  background: ${({ theme }) => theme.colors.background};
+  padding: 10px 14px;
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -690,115 +763,95 @@ const ToolbarButtons = styled.div`
   align-items: center;
 `;
 
-const ExportButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const AddButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
-  }
-`;
-
 const LoadingMessage = styled.div`
+  ${monoLabel}
   text-align: center;
-  padding: ${({ theme }) => theme.spacing['2xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 48px;
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const EmptyMessage = styled.div`
+const EmptyState = styled.div`
   text-align: center;
-  padding: ${({ theme }) => theme.spacing['3xl']};
+  padding: 64px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
 `;
 
-const EmptyIcon = styled.div`
-  font-size: 4rem;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0;
 `;
 
-const EmptyText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin-bottom: ${({ theme }) => theme.spacing.sm};
+const EmptyBody = styled.p`
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 360px;
 `;
 
-const EmptySubtext = styled.div`
-  color: ${({ theme }) => theme.colors.textSecondary};
+const TableWrapper = styled.div`
+  ${glassPanel}
+  overflow: hidden;
+  padding: 4px;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   text-align: left;
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: 14px 16px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  white-space: nowrap;
+`;
+
+const thActive = css`
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 700;
 `;
 
 const ThSortable = styled(Th)<{ $active?: boolean }>`
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
-  ${({ $active, theme }) => $active && `
-    background: ${theme.colors.neutral[200]};
-    color: ${theme.colors.primary[600]};
-  `}
+  ${({ $active }) => $active && thActive}
 `;
 
 const Tr = styled.tr`
+  transition: background 0.15s ease;
+
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const Td = styled.td`
-  padding: ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  padding: 14px 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const MonoText = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.82rem;
 `;
 
 const ProductInfo = styled.div``;
@@ -810,24 +863,32 @@ const ProductName = styled.div`
 
 const ProductType = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ProductVariety = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
 const QuantityInfo = styled.div``;
 
 const QuantityValue = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.85rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+// Reserved qty reads as "pending allocation", not a warning — routed through
+// the pending phase colour (terra) rather than `theme.colors.warning`, which
+// is gold-b (the same hex as `phase.harvesting`); using it here would spend
+// the page's gold budget once per row with a reservation.
 const ReservedBadge = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.warning};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.phase.fruitingInit};
 `;
 
 interface GradeBadgeProps {
@@ -835,31 +896,7 @@ interface GradeBadgeProps {
 }
 
 const GradeBadge = styled.span<GradeBadgeProps>`
-  display: inline-block;
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme, $grade }) => {
-    switch ($grade) {
-      case 'premium': return theme.colors.primary[100];
-      case 'grade_a': return theme.colors.success + '20';
-      case 'grade_b': return theme.colors.warning + '20';
-      case 'grade_c': return theme.colors.neutral[200];
-      case 'processing': return theme.colors.neutral[300];
-      case 'rejected': return theme.colors.error + '20';
-      default: return theme.colors.neutral[200];
-    }
-  }};
-  color: ${({ theme, $grade }) => {
-    switch ($grade) {
-      case 'premium': return theme.colors.primary[700];
-      case 'grade_a': return theme.colors.success;
-      case 'grade_b': return theme.colors.warning;
-      case 'rejected': return theme.colors.error;
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $grade }) => phaseBadge(QUALITY_GRADE_PHASE[$grade])}
 `;
 
 interface ExpiryDateProps {
@@ -867,38 +904,60 @@ interface ExpiryDateProps {
   $expiringSoon: boolean;
 }
 
+// expired -> quarantined (spec §5.2 lists "expired" directly under this
+// phase); expiringSoon -> fruitingInit (needs attention, not yet failed).
 const ExpiryDate = styled.span<ExpiryDateProps>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.82rem;
   color: ${({ theme, $expired, $expiringSoon }) =>
-    $expired ? theme.colors.error : $expiringSoon ? theme.colors.warning : 'inherit'};
-  font-weight: ${({ $expired, $expiringSoon }) =>
-    $expired || $expiringSoon ? '500' : 'normal'};
+    $expired
+      ? theme.colors.phase.quarantined
+      : $expiringSoon
+        ? theme.colors.phase.fruitingInit
+        : theme.colors.textPrimary};
+  font-weight: ${({ $expired, $expiringSoon }) => ($expired || $expiringSoon ? 700 : 400)};
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: 6px;
 `;
 
 interface ActionButtonProps {
   $variant?: 'danger';
 }
 
-const ActionButton = styled.button<ActionButtonProps>`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme, $variant }) =>
-    $variant === 'danger' ? theme.colors.error + '10' : theme.colors.neutral[100]};
-  color: ${({ theme, $variant }) =>
-    $variant === 'danger' ? theme.colors.error : theme.colors.textSecondary};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  cursor: pointer;
-  transition: all 0.2s;
+const dangerAction = css`
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border-color: rgba(240, 138, 112, 0.4);
 
   &:hover {
-    background: ${({ theme, $variant }) =>
-      $variant === 'danger' ? theme.colors.error + '20' : theme.colors.neutral[200]};
+    background: rgba(240, 138, 112, 0.22);
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
+`;
+
+const ActionButton = styled.button<ActionButtonProps>`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  ${({ $variant }) => $variant === 'danger' && dangerAction}
 `;
 
 const Pagination = styled.div`
@@ -910,31 +969,34 @@ const Pagination = styled.div`
 `;
 
 const PageButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  ${glassControl}
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
+  transition: all 0.15s ease;
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const PageInfo = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-// Modal Styles
+// ── Modal styles ────────────────────────────────────────────────────────────
+
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -943,8 +1005,10 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
@@ -956,24 +1020,30 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ModalTitle = styled.h2`
   margin: 0;
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 1.5rem;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 4px;
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.muted};
+  transition: color 0.15s ease;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 `;
 
@@ -1005,104 +1075,66 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
+  ${monoLabel}
   display: block;
   margin-bottom: ${({ theme }) => theme.spacing.xs};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 10px 14px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  background-color: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[600]};
+    color: ${({ theme }) => theme.colors.muted};
     opacity: 1;
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 10px 14px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  background-color: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   option {
-    background-color: ${({ theme }) => theme.colors.background};
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const TextArea = styled.textarea`
+  ${glassControl}
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 10px 14px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  background-color: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[600]};
+    color: ${({ theme }) => theme.colors.muted};
     opacity: 1;
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-  }
-`;
-
-const CancelButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  cursor: pointer;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-  }
-`;
-
-const SubmitButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;

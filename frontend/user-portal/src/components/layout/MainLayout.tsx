@@ -1,68 +1,119 @@
 import { useState, useEffect, useRef, useContext, useCallback, useMemo, type ReactNode } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
+import type { LucideIcon } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Home,
+  Factory,
+  Dna,
+  ClipboardList,
+  Wrench,
+  Droplet,
+  FlaskConical,
+  ShoppingCart,
+  Package,
+  CreditCard,
+  FileEdit,
+  Inbox,
+  Receipt,
+  CheckCircle2,
+  CircleDollarSign,
+  FileStack,
+  Truck,
+  Megaphone,
+  Banknote,
+  Undo2,
+  RefreshCw,
+  TrendingDown,
+  Tag,
+  BookOpen,
+  FolderCog,
+  PenLine,
+  Scale,
+  Landmark,
+  TrendingUp,
+  Wallet,
+  Calendar,
+  Shield,
+  Construction,
+  Users,
+  Contact,
+  Bot,
+  User,
+  Settings,
+  Leaf,
+  Mountain,
+  ArrowUp,
+  ChevronDown,
+  Maximize,
+  Minimize,
+} from 'lucide-react';
+import { monoLabel } from '@a64core/shared';
+import { useFullscreen } from '../../hooks/useFullscreen';
 import { useAuthStore } from '../../stores/auth.store';
 import { useDivisionStore } from '../../stores/division.store';
-import { useThemeStore } from '../../stores/theme.store';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
 import { useFinanceEnabled } from '../../hooks/useCapabilities';
 import { getPendingTaskCount } from '../../services/tasksApi';
-import { Button } from '@a64core/shared';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
 import { DivisionSwitcher } from './DivisionSwitcher';
 import { AIAssistantPanel, AIAssistantFAB } from '../ai-assistant';
 
 // ─── Navigation item definitions ────────────────────────────────────────────
+// Night Observatory (T-901, spec §6): every nav icon is a lucide-react line
+// icon, not an emoji. Rendered at 17px, currentColor, 1.6px stroke.
 
 interface NavItemDef {
   to?: string;              // optional — parent groups don't navigate
-  icon: string;
+  icon: LucideIcon;
   label: string;
   showBadge?: boolean;
+  sectionLabel?: string;    // optional Space Mono divider rendered ABOVE this item (spec §4 "Sidebar")
   children?: NavItemDef[];  // group children
   defaultExpanded?: boolean;
 }
 
 // Navigation shown for every industry type
 const SHARED_NAV_ITEMS: NavItemDef[] = [
-  { to: '/dashboard', icon: '📊', label: 'Dashboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', sectionLabel: 'Operations' },
 ];
 
 const SHARED_BOTTOM_NAV_ITEMS: NavItemDef[] = [
-  { to: '/crm/customers', icon: '👥', label: 'CRM' },
-  { to: '/hr', icon: '👔', label: 'HR' },
-  { to: '/ai', icon: '🤖', label: 'AI Hub' },
-  { to: '/profile', icon: '👤', label: 'Profile' },
-  { to: '/settings', icon: '⚙️', label: 'Settings' },
+  { to: '/crm/customers', icon: Users, label: 'CRM' },
+  { to: '/hr', icon: Contact, label: 'HR' },
+  { to: '/ai', icon: Bot, label: 'AI Hub' },
+  { to: '/profile', icon: User, label: 'Profile' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 // Industry-specific navigation items
 // Note: Operations and Inventory are NOT here — they live inside OPERATIONS_NAV_GROUP
 const VEGETABLE_FRUITS_NAV: NavItemDef[] = [
-  { to: '/farm/dashboard', icon: '🏞️', label: 'Farm Manager' },
-  { to: '/farm/plants', icon: '🌿', label: 'Plant Library' },
+  { to: '/farm/dashboard', icon: Mountain, label: 'Farm Manager' },
+  { to: '/farm/plants', icon: Leaf, label: 'Plant Library' },
 ];
 
 // No dashboard entry here: /dashboard already resolves to the mushroom
 // dashboard for a mushroom division, so listing it again was two nav items for
 // one screen. The /mushroom/dashboard route still exists for direct links.
 const MUSHROOM_NAV: NavItemDef[] = [
-  { to: '/mushroom/rooms', icon: '🏠', label: 'Room Monitor' },
-  { to: '/mushroom/facilities', icon: '🏭', label: 'Facilities' },
-  { to: '/mushroom/strains', icon: '🧬', label: 'Strain Library' },
+  { to: '/mushroom/rooms', icon: Home, label: 'Room Monitor' },
+  { to: '/mushroom/facilities', icon: Factory, label: 'Facilities' },
+  { to: '/mushroom/strains', icon: Dna, label: 'Strain Library' },
 ];
 
 // Genetics Repo — shared across all industry types. The lab is common to every
 // department (vegetables, mushrooms, animals), so this sits outside the
 // industry-specific nav rather than inside MUSHROOM_NAV / VEGETABLE_FRUITS_NAV.
 const GENETICS_NAV_GROUP: NavItemDef = {
-  icon: '🧬',
+  icon: Dna,
   label: 'Genetics Repo',
   defaultExpanded: false,
   children: [
-    { to: '/genetics', icon: '🧬', label: 'Lines' },
-    { to: '/genetics/media', icon: '🧪', label: 'Media & Recipes' },
+    { to: '/genetics', icon: Dna, label: 'Lines' },
+    { to: '/genetics/media', icon: FlaskConical, label: 'Media & Recipes' },
   ],
 };
 
@@ -70,93 +121,94 @@ const GENETICS_NAV_GROUP: NavItemDef = {
 // used together: the procedure and the record of having followed it.
 const PROTOCOLS_NAV_ITEM: NavItemDef = {
   to: '/protocols',
-  icon: '📋',
+  icon: ClipboardList,
   label: 'Protocols',
+  sectionLabel: 'Library',
 };
 
 // Tools group — shared across all industry types
 const TOOLS_NAV_GROUP: NavItemDef = {
-  icon: '🧰',
+  icon: Wrench,
   label: 'Tools',
   defaultExpanded: false,
   children: [
-    { to: '/tools/fertilizer-calculator', icon: '💧', label: 'Fertilizer Calculator' },
-    { to: '/tools/chemicals', icon: '🧪', label: 'Chemicals Catalog' },
+    { to: '/tools/fertilizer-calculator', icon: Droplet, label: 'Fertilizer Calculator' },
+    { to: '/tools/chemicals', icon: FlaskConical, label: 'Chemicals Catalog' },
   ],
 };
 
 // Purchasing group — visible to procurement + admin roles
 const PURCHASING_NAV_GROUP: NavItemDef = {
-  icon: '🛒',
+  icon: ShoppingCart,
   label: 'Purchasing',
   defaultExpanded: false,
   children: [
-    { to: '/purchasing/vendors', icon: '📋', label: 'Vendors' },
-    { to: '/purchasing/items', icon: '📦', label: 'Purchase Items' },
-    { to: '/purchasing/payment-terms', icon: '💳', label: 'Payment Terms' },
-    { to: '/purchasing/pr', icon: '📝', label: 'Purchase Requests' },
-    { to: '/purchasing/po', icon: '🛒', label: 'Purchase Orders' },
-    { to: '/purchasing/gr', icon: '📥', label: 'Goods Receipts' },
-    { to: '/purchasing/ap', icon: '🧾', label: 'AP Invoices' },
-    { to: '/purchasing/approvals', icon: '✅', label: 'Approval Inbox' },
+    { to: '/purchasing/vendors', icon: ClipboardList, label: 'Vendors' },
+    { to: '/purchasing/items', icon: Package, label: 'Purchase Items' },
+    { to: '/purchasing/payment-terms', icon: CreditCard, label: 'Payment Terms' },
+    { to: '/purchasing/pr', icon: FileEdit, label: 'Purchase Requests' },
+    { to: '/purchasing/po', icon: ShoppingCart, label: 'Purchase Orders' },
+    { to: '/purchasing/gr', icon: Inbox, label: 'Goods Receipts' },
+    { to: '/purchasing/ap', icon: Receipt, label: 'AP Invoices' },
+    { to: '/purchasing/approvals', icon: CheckCircle2, label: 'Approval Inbox' },
   ],
 };
 
 // Sales group — full Wave 3 surface (Wave 3 rebuild closed by T-200.11; the
 // legacy flat /sales entry has been folded in as Dashboard).
 const SALES_NAV_GROUP: NavItemDef = {
-  icon: '💰',
+  icon: CircleDollarSign,
   label: 'Sales',
   defaultExpanded: false,
   children: [
     // Overview
-    { to: '/sales', icon: '📊', label: 'Dashboard' },
+    { to: '/sales', icon: LayoutDashboard, label: 'Dashboard' },
     // Forward cycle (Quote → Receipt) — in document-chain order
-    { to: '/sales/quotes', icon: '📋', label: 'Quotes' },
-    { to: '/sales/orders-v2', icon: '📑', label: 'Sales Orders' },
-    { to: '/sales/deliveries', icon: '📦', label: 'Deliveries' },
-    { to: '/sales/ar-invoices', icon: '🧾', label: 'AR Invoices' },
-    { to: '/sales/customer-receipts', icon: '💵', label: 'Customer Receipts' },
+    { to: '/sales/quotes', icon: ClipboardList, label: 'Quotes' },
+    { to: '/sales/orders-v2', icon: FileStack, label: 'Sales Orders' },
+    { to: '/sales/deliveries', icon: Package, label: 'Deliveries' },
+    { to: '/sales/ar-invoices', icon: Receipt, label: 'AR Invoices' },
+    { to: '/sales/customer-receipts', icon: Banknote, label: 'Customer Receipts' },
     // Returns cycle (RR → RTN → ARC)
-    { to: '/sales/return-requests', icon: '↩️', label: 'Return Requests' },
-    { to: '/sales/returns-v2', icon: '🔄', label: 'Returns' },
-    { to: '/sales/ar-credit-notes', icon: '📝', label: 'AR Credit Notes' },
+    { to: '/sales/return-requests', icon: Undo2, label: 'Return Requests' },
+    { to: '/sales/returns-v2', icon: RefreshCw, label: 'Returns' },
+    { to: '/sales/ar-credit-notes', icon: FileEdit, label: 'AR Credit Notes' },
     // Reports + reference + admin
-    { to: '/sales/reports/ar-aging', icon: '📉', label: 'AR Aging' },
-    { to: '/sales/stock', icon: '📦', label: 'Stock' },
-    { to: '/sales/items', icon: '🏷️', label: 'Sales Items Config' },
+    { to: '/sales/reports/ar-aging', icon: TrendingDown, label: 'AR Aging' },
+    { to: '/sales/stock', icon: Package, label: 'Stock' },
+    { to: '/sales/items', icon: Tag, label: 'Sales Items Config' },
   ],
 };
 
 // Finance group — accountant, finance_admin, auditor, admin, super_admin
 const FINANCE_NAV_GROUP: NavItemDef = {
-  icon: '📒',
+  icon: BookOpen,
   label: 'Finance',
   defaultExpanded: false,
   children: [
-    { to: '/finance/chart-of-accounts', icon: '📋', label: 'Chart of Accounts' },
-    { to: '/finance/approval-rules', icon: '✅', label: 'Approval Rules' },
-    { to: '/finance/posting-setup', icon: '🗂️', label: 'Posting Setup' },
-    { to: '/finance/item-mapping', icon: '🏷️', label: 'Item GL Mapping' },
-    { to: '/finance/journal-entries', icon: '📒', label: 'Journal Entries' },
-    { to: '/finance/journal-entries/new', icon: '✍️', label: 'New Manual JE' },
-    { to: '/finance/trial-balance', icon: '⚖️', label: 'Trial Balance' },
-    { to: '/finance/balance-sheet', icon: '🏛️', label: 'Balance Sheet' },
-    { to: '/finance/income-statement', icon: '📊', label: 'Income Statement' },
-    { to: '/finance/cash-flow', icon: '💰', label: 'Cash Flow' },
-    { to: '/finance/payments', icon: '💸', label: 'Vendor Payments' },
-    { to: '/finance/ap-aging', icon: '📉', label: 'AP Aging' },
-    { to: '/finance/vendor-sub-ledger', icon: '📑', label: 'Vendor Sub-Ledger' },
-    { to: '/finance/periods', icon: '📅', label: 'Fiscal Periods' },
-    { to: '/operations/pnl', icon: '📈', label: 'Operational P&L' },
-    { to: '/finance/incoming', icon: '📥', label: 'Incoming Preview' },
+    { to: '/finance/chart-of-accounts', icon: ClipboardList, label: 'Chart of Accounts' },
+    { to: '/finance/approval-rules', icon: CheckCircle2, label: 'Approval Rules' },
+    { to: '/finance/posting-setup', icon: FolderCog, label: 'Posting Setup' },
+    { to: '/finance/item-mapping', icon: Tag, label: 'Item GL Mapping' },
+    { to: '/finance/journal-entries', icon: BookOpen, label: 'Journal Entries' },
+    { to: '/finance/journal-entries/new', icon: PenLine, label: 'New Manual JE' },
+    { to: '/finance/trial-balance', icon: Scale, label: 'Trial Balance' },
+    { to: '/finance/balance-sheet', icon: Landmark, label: 'Balance Sheet' },
+    { to: '/finance/income-statement', icon: TrendingUp, label: 'Income Statement' },
+    { to: '/finance/cash-flow', icon: Wallet, label: 'Cash Flow' },
+    { to: '/finance/payments', icon: Wallet, label: 'Vendor Payments' },
+    { to: '/finance/ap-aging', icon: TrendingDown, label: 'AP Aging' },
+    { to: '/finance/vendor-sub-ledger', icon: FileStack, label: 'Vendor Sub-Ledger' },
+    { to: '/finance/periods', icon: Calendar, label: 'Fiscal Periods' },
+    { to: '/operations/pnl', icon: TrendingUp, label: 'Operational P&L' },
+    { to: '/finance/incoming', icon: Inbox, label: 'Incoming Preview' },
   ],
 };
 
 // Admin-only navigation (super_admin role required)
 const ADMIN_NAV_ITEMS: NavItemDef[] = [
-  { to: '/admin/users', icon: '🛡️', label: 'User Management' },
-  { to: '/admin/tenant-setup', icon: '🏗️', label: 'Tenant Setup' },
+  { to: '/admin/users', icon: Shield, label: 'User Management' },
+  { to: '/admin/tenant-setup', icon: Construction, label: 'Tenant Setup' },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -164,7 +216,6 @@ const ADMIN_NAV_ITEMS: NavItemDef[] = [
 export function MainLayout() {
   const { user, logout } = useAuthStore();
   const { currentDivision } = useDivisionStore();
-  const { mode, toggleTheme } = useThemeStore();
   const { selectedYear, setYear, initialize } = useFarmingYearStore();
   const { data: farmingYearsData } = useFarmingYearsList(5, true);
   // Wave 0 — hide the entire Finance sidebar group when the tenant has
@@ -174,6 +225,7 @@ export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const unsavedChanges = useContext(UnsavedChangesContext);
+  const { isFullscreen, toggle: toggleFullscreen, isSupported: isFullscreenSupported } = useFullscreen();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingTaskCount, setPendingTaskCount] = useState(0);
 
@@ -290,7 +342,8 @@ export function MainLayout() {
     // Reset window scroll too — on layouts where the window is the actual
     // scroll container (no overflow constraint on MainContent), this is the
     // only one that matters. Doesn't move the sidebar because it's
-    // position:fixed and its inner SidebarScroll is its own scroll container.
+    // position:fixed and its inner SidebarNavScroll is its own scroll
+    // container (SidebarFooter sits outside it and never scrolls).
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname, location.search]);
 
@@ -321,16 +374,16 @@ export function MainLayout() {
     () => {
       // Operations group children — Purchasing sub-group is role-gated
       const operationsChildren: NavItemDef[] = [
-        { to: '/operations', icon: '📋', label: 'Task Manager', showBadge: true },
-        { to: '/inventory', icon: '📦', label: 'Inventory' },
+        { to: '/operations', icon: ClipboardList, label: 'Task Manager', showBadge: true },
+        { to: '/inventory', icon: Package, label: 'Inventory' },
         ...(_PURCHASING_ROLES.has(user?.role ?? '') ? [PURCHASING_NAV_GROUP] : []),
         SALES_NAV_GROUP,
-        { to: '/logistics', icon: '🚚', label: 'Logistics' },
-        { to: '/marketing', icon: '📢', label: 'Marketing' },
+        { to: '/logistics', icon: Truck, label: 'Logistics' },
+        { to: '/marketing', icon: Megaphone, label: 'Marketing' },
       ];
 
       const OPERATIONS_NAV_GROUP: NavItemDef = {
-        icon: '🏭',
+        icon: Factory,
         label: 'Operations',
         defaultExpanded: false,
         children: operationsChildren,
@@ -375,12 +428,22 @@ export function MainLayout() {
   };
 
   const renderNavItem = (item: NavItemDef, depth: number): ReactNode => {
+    const ItemIcon = item.icon;
+    const label = (
+      <>
+        {item.sectionLabel && (
+          <SectionLabel key={`${item.sectionLabel}-label`}>{item.sectionLabel}</SectionLabel>
+        )}
+      </>
+    );
+
     // ── Group item (has children) ──────────────────────────────────────────
     if (item.children) {
       const isExpanded = expandedGroups[item.label] ?? (item.defaultExpanded ?? false);
       const isChildActive = hasActiveDescendant(item);
       return (
         <div key={item.label}>
+          {label}
           <NavGroupHeader
             $childActive={isChildActive}
             $depth={depth}
@@ -389,12 +452,11 @@ export function MainLayout() {
             aria-label={`${item.label} navigation group`}
             style={{ paddingLeft: `calc(${depth} * 14px + 1rem)` }}
           >
-            {depth === 0
-              ? <NavIcon>{item.icon}</NavIcon>
-              : <NavChildIcon>{item.icon}</NavChildIcon>
-            }
+            <NavIcon><ItemIcon size={17} strokeWidth={1.6} /></NavIcon>
             <NavGroupLabel>{item.label}</NavGroupLabel>
-            <NavGroupCaret $expanded={isExpanded} aria-hidden="true">▾</NavGroupCaret>
+            <NavGroupCaret $expanded={isExpanded} aria-hidden="true">
+              <ChevronDown size={13} strokeWidth={1.8} />
+            </NavGroupCaret>
           </NavGroupHeader>
           {isExpanded && (
             <NavGroupChildren $depth={depth}>
@@ -407,25 +469,24 @@ export function MainLayout() {
 
     // ── Leaf item ─────────────────────────────────────────────────────────
     return (
-      <NavItem
-        key={item.to ?? item.label}
-        to={item.to!}
-        onClick={(e) => handleNavClick(e, item.to!)}
-        style={{ paddingLeft: `calc(${depth} * 14px + 1rem)` }}
-      >
-        {depth === 0
-          ? <NavIcon>{item.icon}</NavIcon>
-          : <NavChildIcon>{item.icon}</NavChildIcon>
-        }
-        {item.showBadge ? (
-          <NavContent>
+      <div key={item.to ?? item.label}>
+        {label}
+        <NavItem
+          to={item.to!}
+          onClick={(e) => handleNavClick(e, item.to!)}
+          style={{ paddingLeft: `calc(${depth} * 14px + 1rem)` }}
+        >
+          <NavIcon><ItemIcon size={17} strokeWidth={1.6} /></NavIcon>
+          {item.showBadge ? (
+            <NavContent>
+              <span>{item.label}</span>
+              {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
+            </NavContent>
+          ) : (
             <span>{item.label}</span>
-            {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
-          </NavContent>
-        ) : (
-          <span>{item.label}</span>
-        )}
-      </NavItem>
+          )}
+        </NavItem>
+      </div>
     );
   };
 
@@ -433,84 +494,101 @@ export function MainLayout() {
     <LayoutContainer>
       {/* Mobile Header */}
       <MobileHeader>
-        <Logo>
-          {/* Mobile header is 64px tall; LogoImg clamps to a 40px floor there
-              (~116px wide at the ~2.9:1 lockup ratio) — below the brand's
-              120px min lockup width, so this "small chrome" site uses the
-              emblem alone per spec §5 / brand contract §2. */}
-          <MarkImg src="/brand/mark_mono.svg" alt="A20Core" />
-        </Logo>
-        <MenuButton
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </MenuButton>
+        <MobileLogo>
+          <Emblem>
+            <img src="/brand/mark_mono.svg" alt="A20Core" />
+          </Emblem>
+        </MobileLogo>
+        <MobileHeaderActions>
+          {isFullscreenSupported && (
+            <MobileIconButton
+              onClick={toggleFullscreen}
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              aria-pressed={isFullscreen}
+              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? <Minimize size={20} strokeWidth={1.8} /> : <Maximize size={20} strokeWidth={1.8} />}
+            </MobileIconButton>
+          )}
+          <MenuButton
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </MenuButton>
+        </MobileHeaderActions>
       </MobileHeader>
 
       {/* Sidebar */}
       <Sidebar $isOpen={isMobileMenuOpen} aria-label="Sidebar">
-        {/* Single scroll region for the whole sidebar column (header +
-            farming-year + nav). SidebarHeader is position:sticky inside it,
-            so on tall viewports it visually reads as "pinned" exactly like
-            before, while on short viewports the header simply scrolls back
-            into view like the rest of the content instead of being force-
-            squeezed against Nav — see SidebarScroll definition for details. */}
-        <SidebarScroll>
+        {/* Scroll region for header + nav ONLY. SidebarFooter is a sibling
+            below this, outside the scroll region, so it always stays
+            visible/pinned to the bottom of the sidebar regardless of how
+            long the nav list grows — see SidebarNavScroll definition for
+            details. SidebarHeader is position:sticky inside it, so it reads
+            as "pinned" at the top of the scroll region while Nav scrolls
+            beneath it. */}
+        <SidebarNavScroll>
           <SidebarHeader>
-            <Logo>
-              {/* Sidebar (280px) has plenty of width for the full lockup, but
-                  the asset ships as separate cream/cosmos-text SVGs, not a
-                  single currentColor file — pick per theme (spec §5) since
-                  Sidebar's background follows theme.colors.surface. */}
-              <LogoImg
-                src={mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg'}
-                alt="A20Core"
-              />
-            </Logo>
-            <UserCard>
-              <UserCardTop>
-                <UserAvatar>
-                  {user?.firstName?.[0] || ''}{user?.lastName?.[0] || ''}
-                </UserAvatar>
-                <UserCardInfo>
-                  <UserName>{user?.firstName} {user?.lastName}</UserName>
-                  <UserRole>{user?.role?.replace(/_/g, ' ') || 'User'}</UserRole>
-                </UserCardInfo>
-              </UserCardTop>
-              <UserCardActions>
-                <ThemeToggleSmall
-                  onClick={toggleTheme}
-                  aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                  {mode === 'dark' ? '☀️' : '🌙'}
-                </ThemeToggleSmall>
-                <LogoutSmall onClick={handleLogout} title="Logout">
-                  Logout
-                </LogoutSmall>
-              </UserCardActions>
-            </UserCard>
+            <LogoRow>
+              <Emblem>
+                {/* Official brand mark (never redrawn — brand contract §2) inside
+                    the Night Observatory gold-glow ring per spec §4/mockup l.77-79. */}
+                <img src="/brand/mark_mono.svg" alt="" />
+              </Emblem>
+              <Wordmark>
+                <b>A20</b>
+                <span>Core</span>
+              </Wordmark>
+            </LogoRow>
 
-            {/* Division switcher sits between user info and the main nav */}
-            <DivisionSwitcherWrapper>
-              <DivisionSwitcher />
-            </DivisionSwitcherWrapper>
+            {/* Org / workspace chip — spec §4 "Sidebar" — restyled in DivisionSwitcher.tsx */}
+            <DivisionSwitcher />
           </SidebarHeader>
-
-          {/* Global farming year selector */}
-          <FarmingYearDropdown
-            years={farmingYearsData?.years ?? []}
-            selectedYear={selectedYear}
-            onSelect={setYear}
-          />
 
           <Nav aria-label="Main navigation">
             {navItems.map((item) => renderNavItem(item, 0))}
           </Nav>
-        </SidebarScroll>
+        </SidebarNavScroll>
+
+        {/* Footer — FY selector chip + user chip, per mockup l.103-109.
+            Sibling of SidebarNavScroll (not nested inside it) so it is
+            always in view, never scrolled off with the nav list — this is
+            the fix for the footer being unreachable when the nav overflows
+            the viewport. */}
+        <SidebarFooter>
+          <FooterTopRow>
+            <FarmingYearDropdown
+              years={farmingYearsData?.years ?? []}
+              selectedYear={selectedYear}
+              onSelect={setYear}
+            />
+            {isFullscreenSupported && (
+              <FullscreenChip
+                onClick={toggleFullscreen}
+                aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                aria-pressed={isFullscreen}
+                title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              >
+                {isFullscreen ? <Minimize size={14} strokeWidth={1.8} /> : <Maximize size={14} strokeWidth={1.8} />}
+              </FullscreenChip>
+            )}
+          </FooterTopRow>
+          <UserChip>
+            <UserAvatar>
+              {user?.firstName?.[0] || ''}{user?.lastName?.[0] || ''}
+            </UserAvatar>
+            <UserChipInfo>
+              <UserName>{user?.firstName} {user?.lastName}</UserName>
+              <UserRole>{user?.role?.replace(/_/g, ' ') || 'User'}</UserRole>
+            </UserChipInfo>
+            <LogoutSmall onClick={handleLogout} title="Logout" aria-label="Logout">
+              Logout
+            </LogoutSmall>
+          </UserChip>
+        </SidebarFooter>
       </Sidebar>
 
       {/* Overlay for mobile menu */}
@@ -528,10 +606,12 @@ export function MainLayout() {
         aria-label="Scroll to top"
         title="Back to top"
       >
-        ↑
+        <ArrowUp size={18} strokeWidth={2} />
       </BackToTopButton>
 
-      {/* AI Assistant — slide-out panel available on every authenticated page */}
+      {/* AI Assistant — slide-out panel available on every authenticated page.
+          This is the app's one floating action affordance (spec deliverable F) —
+          restyled to the gold FAB treatment in AIAssistantFAB.tsx itself. */}
       <AIAssistantFAB />
       <AIAssistantPanel />
     </LayoutContainer>
@@ -539,12 +619,17 @@ export function MainLayout() {
 }
 
 // ─── Styled Components ───────────────────────────────────────────────────────
+// Night Observatory (T-901 Phase 2, spec §4 "Sidebar"). Visual ground truth:
+// Brand_Engineering/Brand/A20Core_NightObservatory_Glass.html lines 69-109,250-283.
 
 const LayoutContainer = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  /* Night Observatory sky-blocker fix (spec §7): NO opaque background here.
+     The fixed Sky layer is mounted once at the app shell (App.tsx AppShell,
+     z-index:1) and must show through every routed page — an opaque
+     LayoutContainer background paints over it on every screen. */
   /* Reason: do NOT set overflow-x here. LayoutContainer is the sidebar's
      parent, and overflow on a sticky element's ancestor breaks sticky.
      Horizontal clipping is done on MainContent (sibling of Sidebar) instead. */
@@ -559,8 +644,10 @@ const MobileHeader = styled.header`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(14, 19, 48, 0.55);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   height: 64px;
   position: fixed;
   top: 0;
@@ -568,8 +655,54 @@ const MobileHeader = styled.header`
   right: 0;
   z-index: 40;
 
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.glass.opaque};
+  }
+
   @media (min-width: 1024px) {
     display: none;
+  }
+`;
+
+const MobileLogo = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const MobileHeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+`;
+
+/* Muted icon button beside the hamburger — not gold (spec §3 budget is
+   already spent on logo/active-nav/stat-thread/CTA/focus-ring/section
+   underline/harvesting; this is ordinary chrome, celeste/cream on hover
+   like the rest of the header). */
+const MobileIconButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: ${({ theme }) => theme.spacing.sm};
+  min-width: 44px; /* WCAG touch target minimum */
+  min-height: 44px; /* WCAG touch target minimum */
+  color: ${({ theme }) => theme.colors.textSecondary};
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
@@ -604,9 +737,11 @@ interface SidebarProps {
 }
 
 const Sidebar = styled.aside<SidebarProps>`
-  width: 280px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-right: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  width: 248px;
+  background: rgba(14, 19, 48, 0.55);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-right: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -616,9 +751,22 @@ const Sidebar = styled.aside<SidebarProps>`
   z-index: 50;
   transform: translateX(${({ $isOpen }) => ($isOpen ? '0' : '-100%')});
   transition: transform 0.3s ease-in-out;
-  /* Reason: no overflow here — SidebarScroll (the sole child) is the ONLY
-     scroll container. Having overflow-y:auto on both this aside AND the
-     inner nav produced two competing/nested scrollbars on short viewports. */
+  /* Reason: no overflow here — SidebarNavScroll (the flex:1 child wrapping
+     header+nav) is the ONLY scroll container. Having overflow-y:auto on
+     both this aside AND the inner nav produced two competing/nested
+     scrollbars on short viewports. Setting overflow-y on an ANCESTOR of a
+     position:sticky element can neutralise that stickiness (see
+     GlobalStyles.tsx html-rule comment for the general mechanism); this
+     aside is itself the sticky element, but the scroll boundary is kept
+     one level down regardless, on a plain descendant div, to stay clear of
+     that class of bug entirely. SidebarFooter is a second,
+     flex-shrink:0 child of this aside (sibling of SidebarNavScroll, not
+     nested inside it) so it is never part of the scrollable region and
+     always stays visible at the bottom of the sidebar. */
+
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.glass.opaque};
+  }
 
   @media (min-width: 1024px) {
     /* Reason: was 'position: static' which made the sidebar scroll with the
@@ -627,32 +775,53 @@ const Sidebar = styled.aside<SidebarProps>`
        which visually scrolled the sidebar back to the top because it was
        part of the normal flow.
        Sticky + height:100vh + flex-shrink:0 pins the sidebar to the viewport.
-       SidebarScroll (flex:1, min-height:0, overflow-y:auto) fills that
-       height and is the single scroll region. Window scroll only affects
-       MainContent now. */
+       SidebarNavScroll (flex:1, min-height:0, overflow-y:auto) fills the
+       space left over after SidebarFooter's natural height and is the sole
+       scroll region — SidebarFooter (flex-shrink:0) is pinned below it and
+       always stays on-screen. Window scroll only affects MainContent now. */
     position: sticky;
     top: 0;
     height: 100vh;
     transform: translateX(0);
     flex-shrink: 0;
   }
+
+  /* Mockup breakpoint (spec §4 "Sidebar" / brief l.243): sidebar hides under
+     900px. The app's own mobile-menu breakpoint is 1024px (desktop kicks in
+     above it) — preserved as-is; this rule only affects the narrow band
+     between 900-1024px is unaffected since $isOpen/transform already governs
+     visibility below 1024px via the mobile menu toggle. No behaviour change. */
 `;
 
-// Single scroll region for the sidebar column. SidebarHeader inside it is
-// position:sticky, so on tall/normal viewports (content shorter than the
-// available height, or the header hasn't scrolled past yet) it reads
-// identically to the old "pinned header" behavior. On short viewports it
-// guarantees every nav link is still reachable via ONE scroll gesture — the
-// header no longer force-shrinks Nav down to an unusable sliver, it simply
-// participates in the same scrollable flow. min-height:0 is required so
-// this flex child can actually shrink to fit inside Sidebar's height:100vh
-// rather than overflowing it (flex items default to min-height:auto).
-const SidebarScroll = styled.div`
+// Scroll region for header + nav ONLY — SidebarFooter is a sibling of this
+// component in the JSX (inside Sidebar, after this element), not a child of
+// it, so the footer (farming-year selector, fullscreen toggle, user chip) is
+// never part of the scrollable content and can't be scrolled out of view.
+// SidebarHeader inside here is position:sticky, so it reads as a "pinned
+// header" while Nav scrolls beneath it.
+// flex:1 + min-height:0 together are what let this element actually shrink
+// to fit inside Sidebar's height:100vh (a bare flex:1 is not enough — flex
+// items default to min-height:auto, which floors this element's height at
+// its content size and lets it overflow the sticky aside instead of
+// clipping/scrolling internally; min-height:0 removes that floor). Without
+// min-height:0 here, a full nav (mushroom + operations + purchasing + sales
+// + logistics + marketing + finance) overflows the aside, the aside itself
+// never becomes a scroll container (overflow-y stays 'visible' by design —
+// see the Sidebar comment above), and neither the sidebar nor the page
+// scrolls: everything below the overflow point, including SidebarFooter,
+// becomes permanently unreachable. That was the actual bug this component
+// fixes.
+const SidebarNavScroll = styled.div`
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  padding: 26px 16px 22px;
+
+  /* Thin, cosmosHi-thumb scrollbar (night-observatory-spec.md §9) is already
+     applied globally via the universal-selector rule in GlobalStyles.tsx —
+     no per-component override needed here. */
 `;
 
 const Overlay = styled.div`
@@ -668,191 +837,271 @@ const Overlay = styled.div`
 `;
 
 const SidebarHeader = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
-  /* Sticky within SidebarScroll — stays pinned at the top while Nav content
-     scrolls beneath it (matches the previous "pinned header" look). Needs
-     its own opaque background since scrolled nav content passes behind it. */
+  gap: 12px;
+  /* Sticky within SidebarNavScroll — stays pinned at the top while Nav
+     content scrolls beneath it (matches the previous "pinned header" look).
+     Needs its own opaque-ish background since scrolled nav content passes
+     behind it — the glass base tint keeps the sky consistent instead of an
+     opaque block. The negative margin below cancels out SidebarNavScroll's
+     own 26px/16px top/side padding so this header sits flush with the
+     scroll region's edges, then padding re-adds equivalent inset for its
+     own content. */
   position: sticky;
   top: 0;
   z-index: 1;
-  background: ${({ theme }) => theme.colors.surface};
-`;
+  background: rgba(14, 19, 48, 0.55);
+  padding-bottom: 14px;
+  margin: -26px -16px 6px;
+  padding: 26px 16px 14px;
 
-const Logo = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.primary[500]};
-
-  @media (min-width: 1024px) {
-    font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.glass.opaque};
   }
 `;
 
-const LogoImg = styled.img`
-  /* Sidebar logo — banner ~2.9:1, sidebar width ~240-280px so cap height
-     at 70px (-> ~200px wide, fits with breathing room). Floor raised from
-     40px to 44px (was ~116px wide on narrow viewports where the 5vw term
-     bottoms out) to keep rendered width >= the brand's 120px minimum
-     lockup width at all times (44 * 2.9 ~= 128px) — see spec §5 /
-     brand contract §2. */
-  height: clamp(44px, 5vw, 70px);
-  width: auto;
-  display: block;
-  margin: 0 auto;
-`;
-
-const MarkImg = styled.img`
-  /* Mobile header emblem — square-ish mark, not the banner lockup (see
-     usage site: mobile chrome is narrower than the 120px min lockup
-     width). Sized to match the header's 64px height with breathing room. */
-  height: 40px;
-  width: 40px;
-  display: block;
-  margin: 0 auto;
-`;
-
-const UserCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.md};
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const UserCardTop = styled.div`
+const LogoRow = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: 14px;
+  padding: 4px 10px;
+`;
+
+const Emblem = styled.span`
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid ${({ theme }) => theme.colors.secondary[500]};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  /* The ONE logo gold glow — spec §3 gold-discipline budget item #1. */
+  box-shadow: 0 0 24px rgba(220, 185, 79, 0.4), inset 0 0 10px rgba(220, 185, 79, 0.22);
+
+  img {
+    width: 68%;
+    height: 68%;
+    display: block;
+  }
+`;
+
+const Wordmark = styled.span`
+  font-size: 1.55rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  display: flex;
+
+  b {
+    font-weight: 800;
+  }
+
+  span {
+    font-weight: 600;
+  }
+`;
+
+// ── Footer: FY chip + user chip (mockup l.103-109) ─────────────────────────
+
+const SidebarFooter = styled.div`
+  /* flex-shrink:0 — this is a direct sibling of SidebarNavScroll (flex:1)
+     inside Sidebar, not nested inside it, so it is never part of the
+     scrollable nav region and always stays visible pinned to the bottom of
+     the viewport-height aside. No margin-top:auto needed to "push" it down
+     the way the static mockup does: SidebarNavScroll's flex:1 already grows
+     to consume all space Sidebar has left over, which puts this element
+     immediately after it — i.e. at the bottom — automatically.
+     Horizontal/bottom padding (16px/22px) reproduces what SidebarNavScroll's
+     own padding used to give this element for free back when it was nested
+     inside that scroll region. */
+  flex-shrink: 0;
+  padding: 16px 16px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const FooterTopRow = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+`;
+
+/* Fullscreen toggle — glass chip matching FyTrigger's treatment (spec §4
+   generic control pattern), deliberately NOT gold: this is ordinary footer
+   chrome, not one of the spec §3 gold-budget items. Height matches
+   FyTrigger's natural height via FooterTopRow's default flex
+   align-items:stretch. */
+const FullscreenChip = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
+  }
+`;
+
+const UserChip = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px;
 `;
 
 const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.bright.lapis}, ${({ theme }) => theme.colors.bright.lavender});
+  color: ${({ theme }) => theme.colors.onDark};
+  font-size: 0.66rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 `;
 
-const UserCardInfo = styled.div`
+const UserChipInfo = styled.div`
   flex: 1;
   min-width: 0;
 `;
 
 const UserName = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: 0.8rem;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
+  line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
 
 const UserRole = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
   text-transform: capitalize;
 `;
 
-const UserCardActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-  padding-top: ${({ theme }) => theme.spacing.xs};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-`;
-
-const ThemeToggleSmall = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 150ms ease;
-  flex-shrink: 0;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
-  }
-`;
-
 const LogoutSmall = styled.button`
-  flex: 1;
-  padding: 6px 0;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.muted};
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
-  transition: all 150ms ease;
+  transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.error};
+    color: ${({ theme }) => theme.colors.bright.coral};
+    border-color: ${({ theme }) => theme.colors.bright.coral};
   }
 `;
 
-const DivisionSwitcherWrapper = styled.div`
-  /* Provides consistent vertical spacing between user info and the switcher */
-`;
+// ── Nav ──────────────────────────────────────────────────────────────────
 
 const Nav = styled.nav`
-  /* No flex:1/overflow here — SidebarScroll (ancestor) is the single scroll
-     container and sizes this naturally within its scrollable content. */
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  /* No flex:1/overflow here — SidebarNavScroll (ancestor) is the single
+     scroll container and sizes this naturally within its scrollable
+     content. */
+  padding: 4px 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+`;
+
+const SectionLabel = styled.div`
+  ${monoLabel}
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 14px 12px 6px;
 `;
 
 const NavItem = styled(NavLink)`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.md};
+  gap: 12px;
+  padding: 10px 12px;
   min-height: 36px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.muted};
   text-decoration: none;
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  position: relative;
+  transition: all 0.18s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
+  /* Active state — the ONE nav gold treatment (spec §3 gold-discipline budget
+     item #2): gold-hi text on a gold-tinted gradient with a gold border and
+     the 3px glowing edge bar, per mockup l.97-102. */
   &.active {
-    background: ${({ theme }) => `${theme.colors.secondary[500]}15`};
-    color: ${({ theme }) => theme.colors.secondary[600]};
+    color: ${({ theme }) => theme.colors.secondary[500]};
+    background: linear-gradient(90deg, rgba(220, 185, 79, 0.14), rgba(220, 185, 79, 0.04));
+    border-color: rgba(220, 185, 79, 0.3);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(220, 185, 79, 0.15);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 20%;
+      bottom: 20%;
+      width: 3px;
+      border-radius: 3px;
+      background: ${({ theme }) => theme.colors.secondary[500]};
+      box-shadow: 0 0 10px ${({ theme }) => theme.colors.secondary[500]};
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `;
 
 const NavIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
 `;
 
 const NavContent = styled.div`
@@ -870,53 +1119,10 @@ const Badge = styled.span`
   height: 20px;
   padding: 0 ${({ theme }) => theme.spacing.xs};
   background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   border-radius: ${({ theme }) => theme.borderRadius.full};
-`;
-
-const SidebarFooter = styled.div`
-  padding: ${({ theme }) => theme.spacing.xl};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const ThemeToggleButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  width: 100%;
-  padding: ${({ theme }) => theme.spacing.md};
-  min-height: 44px; /* WCAG touch target minimum */
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: none;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
-  }
-`;
-
-const ThemeToggleIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  line-height: 1;
 `;
 
 // ── Farming Year Custom Dropdown ──────────────────────────────────────────
@@ -952,10 +1158,11 @@ function FarmingYearDropdown({ years, selectedYear, onSelect }: FarmingYearDropd
 
   return (
     <FyWrapper ref={ref}>
-      <FyLabel>📅 Farming Year</FyLabel>
       <FyTrigger onClick={() => setOpen((o) => !o)} $open={open}>
         <span>{selectedLabel}</span>
-        <FyArrow $open={open}>▾</FyArrow>
+        <FyArrow $open={open} aria-hidden="true">
+          <ChevronDown size={12} strokeWidth={1.8} />
+        </FyArrow>
       </FyTrigger>
       {open && (
         <FyMenu>
@@ -981,22 +1188,10 @@ function FarmingYearDropdown({ years, selectedYear, onSelect }: FarmingYearDropd
   );
 }
 
-// ── Farming Year Dropdown Styles ──────────────────────────────────────────
+// ── Farming Year Dropdown Styles — glass chip per mockup `.fy` (l.104-105) ──
 
 const FyWrapper = styled.div`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  flex-shrink: 0;
   position: relative;
-`;
-
-const FyLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin-bottom: 6px;
 `;
 
 const FyTrigger = styled.button<{ $open: boolean }>`
@@ -1004,40 +1199,39 @@ const FyTrigger = styled.button<{ $open: boolean }>`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  min-height: 36px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ $open, theme }) => ($open ? theme.colors.surface : 'transparent')};
-  border: 1px solid ${({ $open, theme }) => ($open ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme, $open }) => ($open ? theme.colors.secondary[500] : theme.colors.glass.border)};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
-  font-family: inherit;
   transition: all 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    border-color: ${({ theme }) => theme.colors.glass.border};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const FyArrow = styled.span<{ $open: boolean }>`
-  font-size: 12px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   transition: transform 0.15s ease;
   transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'rotate(0)')};
-  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const FyMenu = styled.div`
   position: absolute;
-  top: 100%;
-  left: ${({ theme }) => theme.spacing.lg};
-  right: ${({ theme }) => theme.spacing.lg};
-  margin-top: 4px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: ${({ theme }) => theme.colors.cosmosHi};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(4, 6, 18, 0.5);
   z-index: ${({ theme }) => theme.zIndex.dropdown};
   max-height: 240px;
   overflow-y: auto;
@@ -1048,11 +1242,11 @@ const FyItem = styled.button<{ $active: boolean }>`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ $active, theme }) => ($active ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.regular)};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textPrimary)};
-  background: ${({ $active, theme }) => ($active ? theme.colors.infoBg : 'transparent')};
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: ${({ $active }) => ($active ? 700 : 400)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.textPrimary)};
+  background: transparent;
   border: none;
   cursor: pointer;
   text-align: left;
@@ -1060,15 +1254,7 @@ const FyItem = styled.button<{ $active: boolean }>`
   transition: background 0.1s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-  }
-
-  &:first-child {
-    border-radius: ${({ theme }) => `${theme.borderRadius.md} ${theme.borderRadius.md} 0 0`};
-  }
-
-  &:last-child {
-    border-radius: ${({ theme }) => `0 0 ${theme.borderRadius.md} ${theme.borderRadius.md}`};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
@@ -1080,14 +1266,13 @@ const FyItemLabel = styled.span`
 `;
 
 // keyframes are compiled statically and cannot read the theme via props, so the
-// glow is retinted off emerald[500] (#1B8A5A -> rgb(27, 138, 90)) rather than
-// the old Material green. The steady-state fill below still reads from theme.
+// glow is tinted off emerald-b (#54D39B -> rgb(84, 211, 155)) directly.
 const ledPulse = keyframes`
   0%, 100% {
-    box-shadow: 0 0 4px 1px rgba(27, 138, 90, 0.4);
+    box-shadow: 0 0 4px 1px rgba(84, 211, 155, 0.4);
   }
   50% {
-    box-shadow: 0 0 8px 3px rgba(27, 138, 90, 0.7);
+    box-shadow: 0 0 8px 3px rgba(84, 211, 155, 0.7);
   }
 `;
 
@@ -1111,40 +1296,35 @@ interface NavGroupHeaderProps {
 const NavGroupHeader = styled.button<NavGroupHeaderProps>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: 12px;
   /* Horizontal padding is overridden inline via style prop for depth-based indentation;
      vertical padding and min-height remain constant for touch target compliance. */
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: 10px 12px;
   min-height: 36px;
   width: 100%;
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ $childActive, theme }) =>
-    $childActive ? `${theme.colors.primary[500]}0d` : 'transparent'};
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: ${({ $childActive }) => ($childActive ? 'rgba(180, 200, 220, 0.07)' : 'transparent')};
   color: ${({ $childActive, theme }) =>
-    $childActive ? theme.colors.primary[500] : theme.colors.textSecondary};
+    $childActive ? theme.colors.textPrimary : theme.colors.muted};
   /* All depths use base font-size to match leaf NavItem siblings. Top-level
      groups (depth 0) use semibold to stand out as parent containers; sub-
      groups (depth 1+) use medium so they look identical to their leaf
      siblings — the caret differentiates them as expandable. */
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ $depth, theme }) =>
-    $depth >= 1
-      ? theme.typography.fontWeight.medium
-      : theme.typography.fontWeight.semibold};
+  font-size: 0.9rem;
+  font-weight: ${({ $depth }) => ($depth >= 1 ? 500 : 700)};
   font-family: inherit;
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `;
 
@@ -1153,10 +1333,10 @@ const NavGroupLabel = styled.span`
 `;
 
 const NavGroupCaret = styled.span<{ $expanded: boolean }>`
-  font-size: 12px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   transition: transform 0.15s ease;
   transform: ${({ $expanded }) => ($expanded ? 'rotate(0deg)' : 'rotate(-90deg)')};
-  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const NavGroupChildren = styled.div<{ $depth: number }>`
@@ -1167,9 +1347,7 @@ const NavGroupChildren = styled.div<{ $depth: number }>`
   padding-left: ${({ $depth }) => 16 + $depth * 14}px;
 `;
 
-const NavChildIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-`;
+// ── Back to top ────────────────────────────────────────────────────────────
 
 const BackToTopButton = styled.button<{ $visible: boolean }>`
   position: fixed;
@@ -1178,29 +1356,42 @@ const BackToTopButton = styled.button<{ $visible: boolean }>`
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  font-size: 20px;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  box-shadow: 0 12px 32px rgba(4, 6, 18, 0.5);
   z-index: ${({ theme }) => theme.zIndex.sticky};
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 200ms ease, transform 200ms ease;
+  transition: opacity 200ms ease, transform 200ms ease, border-color 150ms ease;
   opacity: ${({ $visible }) => ($visible ? 1 : 0)};
   transform: ${({ $visible }) => ($visible ? 'translateY(0)' : 'translateY(16px)')};
   pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
 
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.glass.opaque};
+  }
+
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    border-color: rgba(180, 200, 220, 0.4);
+    color: ${({ theme }) => theme.colors.textPrimary};
     transform: translateY(-2px);
   }
 
   &:active {
     transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 200ms ease;
+
+    &:hover {
+      transform: none;
+    }
   }
 
   @media (max-width: 640px) {
@@ -1224,7 +1415,22 @@ const MainContent = styled.main`
   /* Account for mobile header on mobile */
   margin-top: 64px;
 
+  /* Reserve space so the fixed gold AIAssistantFAB (position:fixed,
+     bottom-right, z-index 895 — see AIAssistantFAB.tsx) never sits on top
+     of the last piece of routed content. LayoutContainer/body is the
+     actual scroll axis (min-height:100vh, no overflow set — see the
+     back-to-top comment above), but MainContent is where routed page
+     content lives, so padding-bottom here — not moving the FAB — is what
+     lets a user scroll every page clear of it. Values mirror
+     AIAssistantFAB's own two size/offset breakpoints exactly:
+     52px + 88px offset desktop, 48px + 24px offset at its <=640px query. */
+  padding-bottom: 140px;
+
   @media (min-width: 1024px) {
     margin-top: 0;
+  }
+
+  @media (max-width: 640px) {
+    padding-bottom: 72px;
   }
 `;

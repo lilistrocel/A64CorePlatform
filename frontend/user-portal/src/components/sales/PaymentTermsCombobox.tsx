@@ -28,6 +28,7 @@ import {
   useId,
 } from 'react';
 import styled from 'styled-components';
+import { glassControl, glassOpaque } from '@a64core/shared';
 import { usePaymentTerms } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import type { PaymentTerms } from '../../services/purchasingApi';
@@ -73,47 +74,43 @@ const Wrapper = styled.div`
 `;
 
 const ComboInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
     opacity: 0.7;
   }
 `;
 
 const SelectedChip = styled.div<{ $hasError?: boolean; $disabled?: boolean }>`
+  ${glassControl}
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 10px 10px 10px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
-  background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.surface : theme.colors.primary[50]};
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
@@ -134,12 +131,13 @@ const ChipLabel = styled.span`
 
 const NetDaysBadge = styled.span`
   flex-shrink: 0;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 11px;
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 10px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: rgba(180, 200, 220, 0.07);
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const ClearButton = styled.button`
@@ -160,24 +158,24 @@ const ClearButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.error};
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.error};
+    outline: 2px solid ${({ theme }) => theme.colors.bright.coral};
     outline-offset: 2px;
   }
 `;
 
+/* Dropdown/menu popup — glassOpaque, the "opaque menu popping out of a glass
+   panel" pattern that stays under the spec §2 two-glass-layer limit. */
 const Dropdown = styled.ul`
+  ${glassOpaque}
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   max-height: 260px;
   overflow-y: auto;
   z-index: 1200;
@@ -186,18 +184,19 @@ const Dropdown = styled.ul`
   padding: 4px 0;
 `;
 
+/* Selected/highlighted item — subtle neutral tint, never gold (spec §3). */
 const DropdownItem = styled.li<{ $highlighted?: boolean }>`
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
   cursor: pointer;
-  background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+  background: ${({ $highlighted }) =>
+    $highlighted ? 'rgba(180, 200, 220, 0.07)' : 'transparent'};
   transition: background 80ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
@@ -208,15 +207,16 @@ const TermDescription = styled.span`
 `;
 
 const TermNetDays = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   flex-shrink: 0;
 `;
 
 const DropdownState = styled.li`
   padding: 12px 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
 `;
 
@@ -224,8 +224,8 @@ const Spinner = styled.span`
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   vertical-align: middle;

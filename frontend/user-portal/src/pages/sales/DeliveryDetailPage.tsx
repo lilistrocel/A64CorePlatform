@@ -27,6 +27,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
 import { ExternalLink, FileText } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   useDelivery,
   useTransitionDelivery,
@@ -35,6 +36,7 @@ import {
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { DeliveryStatus, DeliveryLine, DocumentLinkRef } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -79,29 +81,12 @@ const Title = styled.h1`
   margin: 0;
 `;
 
+const DocNo = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
 const StatusBadge = styled.span<{ $status: DeliveryStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const ActionBar = styled.div`
@@ -111,61 +96,67 @@ const ActionBar = styled.div`
   align-items: center;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 9px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primary[600]}; }
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
+  transition: background 150ms ease;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 9px 18px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
+  transition: background 150ms ease;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.errorBg}; }
+  &:hover:not(:disabled) { background: rgba(240, 138, 112, 0.26); }
 `;
 
 const GhostButton = styled.button`
   padding: 9px 18px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -190,11 +181,8 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const InfoValue = styled.span`
@@ -209,47 +197,47 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
+// Repeats per-row — kept off gold (spec §3 gold-discipline budget) even
+// though it flags an "attention" state. bright.terra reads as an amber-ish
+// highlight without spending the gold budget.
 const ReturnedBadge = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: ${({ theme }) => theme.colors.gold[50]};
-  color: ${({ theme }) => theme.colors.gold[700]};
+  background: rgba(232, 147, 95, 0.16);
+  color: ${({ theme }) => theme.colors.bright.terra};
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
   margin-left: 6px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 /**
  * Badge for the per-line Invoiced Qty column.
- * Zero → muted grey dash; any positive → neutral display.
+ * Zero → muted grey dash; any positive → lapis-tinted display.
  */
 const InvoicedBadge = styled.span<{ $zero: boolean }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: ${({ $zero, theme }) => ($zero ? 'transparent' : theme.colors.primary[50])};
-  color: ${({ $zero, theme }) => ($zero ? theme.colors.border : theme.colors.primary[700])};
+  background: ${({ $zero }) => ($zero ? 'transparent' : 'rgba(107, 138, 224, 0.16)')};
+  color: ${({ $zero, theme }) => ($zero ? theme.colors.muted : theme.colors.bright.lapis)};
   border-radius: 99px;
   font-size: 11px;
   font-weight: ${({ $zero }) => ($zero ? 400 : 600)};
@@ -258,24 +246,25 @@ const InvoicedBadge = styled.span<{ $zero: boolean }>`
 
 /**
  * Badge for the per-line Open to Invoice column.
- * full open (= delivered qty) → green; partial → amber; zero → muted grey.
+ * full open (= delivered qty) → emerald; partial → terra (NOT gold — this
+ * repeats per row, see spec §3 gold-discipline); zero → muted grey.
  */
 const OpenInvoiceBadge = styled.span<{ $state: 'full' | 'partial' | 'zero' }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: ${({ $state, theme }) => {
+  background: ${({ $state }) => {
     switch ($state) {
-      case 'full':    return theme.colors.emerald[100];
-      case 'partial': return theme.colors.warningBg;
+      case 'full':    return 'rgba(84, 211, 155, 0.16)';
+      case 'partial': return 'rgba(232, 147, 95, 0.16)';
       case 'zero':    return 'transparent';
     }
   }};
   color: ${({ $state, theme }) => {
     switch ($state) {
-      case 'full':    return theme.colors.emerald[700];
-      case 'partial': return theme.colors.gold[800];
-      case 'zero':    return theme.colors.border;
+      case 'full':    return theme.colors.bright.emerald;
+      case 'partial': return theme.colors.bright.terra;
+      case 'zero':    return theme.colors.muted;
     }
   }};
   border-radius: 99px;
@@ -286,31 +275,27 @@ const OpenInvoiceBadge = styled.span<{ $state: 'full' | 'partial' | 'zero' }>`
 
 /** Muted chip shown in the action bar when all lines are fully invoiced. */
 const FullyInvoicedChip = styled.span`
+  ${glassControl}
   display: inline-flex;
   align-items: center;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
   font-weight: 500;
 `;
 
 const DocChainItem = styled.button`
+  ${glassControl}
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   cursor: pointer;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
-    border-color: ${({ theme }) => theme.colors.primary[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -326,7 +311,7 @@ const DocChainRow = styled.div`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -334,8 +319,10 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px;
   max-width: 420px;
   width: 90%;
@@ -501,7 +488,7 @@ export function DeliveryDetailPage() {
 
       <TitleRow>
         <TitleGroup>
-          <Title>Delivery Note {dn.docNumber}</Title>
+          <Title>Delivery Note <DocNo>{dn.docNumber}</DocNo></Title>
           <StatusBadge $status={dn.status}>{statusLabel(dn.status)}</StatusBadge>
         </TitleGroup>
 
@@ -555,11 +542,11 @@ export function DeliveryDetailPage() {
       {actionError && (
         <div style={{
           background: theme.colors.errorBg,
-          border: `1px solid ${theme.colors.terracotta[200]}`,
-          borderRadius: 8,
+          border: '1px solid rgba(240, 138, 112, 0.45)',
+          borderRadius: 10,
           padding: '12px 16px',
           fontSize: 14,
-          color: theme.colors.terracotta[700],
+          color: theme.colors.bright.coral,
           marginBottom: 16,
         }}>
           {actionError}

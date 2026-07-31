@@ -27,6 +27,8 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import type { PlantDataEnhanced } from '../../types/farm';
 
 // ─── Public interface ─────────────────────────────────────────────────────────
@@ -57,27 +59,24 @@ const Wrapper = styled.div`
 `;
 
 const ComboInput = styled.input<{ $hasError?: boolean }>`
-  padding: 7px 8px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 6px;
+  ${glassControl}
+  padding: 7px 10px;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}26` : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
@@ -89,16 +88,13 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
 
 /** Read-only chip shown when a plant is selected. */
 const SelectedChip = styled.div<{ $hasError?: boolean; $disabled?: boolean }>`
+  ${glassControl}
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 6px 8px 6px 10px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 6px;
-  background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.surface : (theme.colors.primary as Record<string, string>)['50'] ?? theme.colors.primary[50]};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
@@ -127,13 +123,12 @@ const ClearButton = styled.button`
   border-radius: 4px;
   background: transparent;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   transition: background 120ms ease-in-out, color 120ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => `${theme.colors.error}1A`};
+    background: ${({ theme }) => theme.colors.errorBg};
     color: ${({ theme }) => theme.colors.error};
   }
 
@@ -155,17 +150,18 @@ interface DropdownPanelStyle {
   bottom?: number;
 }
 
+// Opaque menu popping out of a glass control — the spec §2 pattern for
+// staying under the "never stack more than two glass layers" limit instead
+// of a translucent panel floating over a translucent input.
 const Dropdown = styled.ul<{ $style: DropdownPanelStyle }>`
+  ${glassOpaque}
   position: fixed;
   top: ${({ $style }) => ($style.bottom !== undefined ? 'auto' : `${$style.top}px`)};
   bottom: ${({ $style }) =>
     $style.bottom !== undefined ? `${$style.bottom}px` : 'auto'};
   left: ${({ $style }) => `${$style.left}px`};
   width: ${({ $style }) => `${$style.width}px`};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
   max-height: 260px;
   overflow-y: auto;
   z-index: 9999;
@@ -177,15 +173,14 @@ const Dropdown = styled.ul<{ $style: DropdownPanelStyle }>`
 const DropdownItem = styled.li<{ $highlighted?: boolean }>`
   padding: 8px 12px;
   cursor: pointer;
-  background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+  background: ${({ $highlighted }) => ($highlighted ? 'rgba(180, 200, 220, 0.09)' : 'transparent')};
   display: flex;
   flex-direction: column;
   gap: 2px;
   transition: background 80ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.09);
   }
 `;
 
@@ -198,15 +193,30 @@ const PlantName = styled.strong`
 
 /** Secondary muted line: cycle days + yield info. */
 const PlantMeta = styled.span`
-  font-size: 12px;
+  ${monoLabel}
+  text-transform: none;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const DropdownState = styled.li`
-  padding: 12px;
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 20px 12px;
   text-align: center;
+`;
+
+const DropdownStateTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 15px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 4px;
+`;
+
+const DropdownStateDescription = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -388,11 +398,21 @@ export function PlantCombobox({
 
   const renderDropdownContent = () => {
     if (plants.length === 0) {
-      return <DropdownState>No plant data available.</DropdownState>;
+      return (
+        <DropdownState>
+          <DropdownStateTitle>No plant data</DropdownStateTitle>
+          <DropdownStateDescription>Add plant records to search them here.</DropdownStateDescription>
+        </DropdownState>
+      );
     }
 
     if (displayItems.length === 0) {
-      return <DropdownState>No crops match "{query}".</DropdownState>;
+      return (
+        <DropdownState>
+          <DropdownStateTitle>No matches</DropdownStateTitle>
+          <DropdownStateDescription>No crops match "{query}".</DropdownStateDescription>
+        </DropdownState>
+      );
     }
 
     return displayItems.map((plant, index) => (
@@ -443,7 +463,7 @@ export function PlantCombobox({
               aria-label={`Clear selected crop ${selectedPlant?.plantName ?? ''}`}
               title="Clear selection"
             >
-              ×
+              <X size={13} strokeWidth={1.8} />
             </ClearButton>
           )}
         </SelectedChip>

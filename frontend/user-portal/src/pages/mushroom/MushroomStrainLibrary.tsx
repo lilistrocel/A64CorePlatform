@@ -10,6 +10,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { Sprout, Search, Plus, X } from 'lucide-react';
+import { PageHeader as SharedPageHeader, glassPanel, glassOpaque, monoLabel } from '@a64core/shared';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { useMushroomStrains, useCreateStrain, useUpdateStrain } from '../../hooks/mushroom/useMushroomStrains';
 import { useLinkedProfileCounts } from '../../hooks/genetics/useGenetics';
@@ -222,25 +224,31 @@ export function MushroomStrainLibrary() {
   return (
     <Container>
       {/* Header */}
-      <PageHeader>
-        <TitleSection>
-          <PageTitle>Strain Library<HelpButton topic="mushroom.strains" /></PageTitle>
-          <PageSubtitle>
-            Manage your mushroom strain catalogue with growing parameters
-          </PageSubtitle>
-        </TitleSection>
-        <AddStrainBtn onClick={openCreate}>+ New Strain</AddStrainBtn>
-      </PageHeader>
+      <HeaderRow>
+        <SharedPageHeader
+          breadcrumb="Library"
+          title="Strain Library"
+          emphasizeLastWord
+          description="Manage your mushroom strain catalogue with growing parameters"
+        />
+        <HelpButton topic="mushroom.strains" />
+        <AddStrainBtn onClick={openCreate}>
+          <Plus size={15} strokeWidth={2} /> New Strain
+        </AddStrainBtn>
+      </HeaderRow>
 
       {/* Filters */}
       <FiltersRow>
-        <SearchInput
-          type="search"
-          placeholder="Search strains..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="Search strains by name or species"
-        />
+        <SearchWrap>
+          <SearchIcon><Search size={15} strokeWidth={1.8} /></SearchIcon>
+          <SearchInput
+            type="search"
+            placeholder="Search strains..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search strains by name or species"
+          />
+        </SearchWrap>
 
         <FilterGroup>
           <FilterLabel htmlFor="difficulty-filter">Difficulty</FilterLabel>
@@ -276,20 +284,22 @@ export function MushroomStrainLibrary() {
       {/* Empty state */}
       {!isLoading && strains.length === 0 && (
         <EmptyState>
-          <EmptyIcon>🍄</EmptyIcon>
-          <EmptyTitle>No Strains in Library</EmptyTitle>
+          <EmptyIcon><Sprout size={40} strokeWidth={1.4} /></EmptyIcon>
+          <EmptyTitle>No strains in library</EmptyTitle>
           <EmptyText>
             Add your first mushroom strain to start tracking grow parameters.
           </EmptyText>
-          <AddStrainBtn onClick={openCreate}>+ Add First Strain</AddStrainBtn>
+          <AddStrainBtn onClick={openCreate}>
+            <Plus size={15} strokeWidth={2} /> Add First Strain
+          </AddStrainBtn>
         </EmptyState>
       )}
 
       {/* No results */}
       {!isLoading && strains.length > 0 && filteredStrains.length === 0 && (
         <EmptyState>
-          <EmptyIcon>🔍</EmptyIcon>
-          <EmptyTitle>No Strains Found</EmptyTitle>
+          <EmptyIcon><Search size={36} strokeWidth={1.4} /></EmptyIcon>
+          <EmptyTitle>No strains found</EmptyTitle>
           <EmptyText>No strains match your current filters.</EmptyText>
         </EmptyState>
       )}
@@ -320,7 +330,7 @@ export function MushroomStrainLibrary() {
                 {editingStrain ? `Edit: ${editingStrain.commonName}` : 'New Strain'}
               </ModalTitle>
               <CloseModalBtn onClick={handleClose} aria-label="Close strain form">
-                &#10005;
+                <X size={16} strokeWidth={2} />
               </CloseModalBtn>
             </ModalHeader>
 
@@ -591,54 +601,41 @@ export function MushroomStrainLibrary() {
 // STYLED COMPONENTS
 // ============================================================================
 
+// Transparent page container — the fixed sky shows through (spec §7).
 const Container = styled.div`
-  padding: 24px;
+  padding: 34px 40px 60px;
   max-width: 100%;
-  min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
-const PageHeader = styled.div`
+const HeaderRow = styled.div`
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
-  gap: 16px;
-  flex-wrap: wrap;
 `;
 
-const TitleSection = styled.div``;
-
-const PageTitle = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
-// This is the one primary CTA on the Strain Library view, so gold (secondary)
-// is the deliberate choice here (brand contract §1.4) rather than a departure
-// from "ordinary interactive colour is primary".
+// Reused in two places at once (header + empty state) — kept as a glass
+// secondary control so the modal's SubmitBtn stays the screen's one gold CTA
+// (spec §3 one-CTA budget); previously both this and SubmitBtn were gold,
+// which could render two gold buttons on screen at once (empty-state case).
 const AddStrainBtn = styled.button`
+  ${glassOpaque}
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.secondary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  border-radius: 11px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms;
+  transition: all 150ms;
   white-space: nowrap;
+  margin-top: 2px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.secondary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
@@ -654,24 +651,37 @@ const FiltersRow = styled.div`
   flex-wrap: wrap;
 `;
 
+const SearchWrap = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 12px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
+  pointer-events: none;
+`;
+
 const SearchInput = styled.input`
-  padding: 9px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassOpaque}
+  padding: 9px 14px 9px 36px;
+  border-radius: 11px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   outline: none;
   min-width: 240px;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[400]};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -682,41 +692,39 @@ const FilterGroup = styled.div`
 `;
 
 const FilterLabel = styled.label`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  ${monoLabel}
+  font-size: 0.58rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const FilterSelect = styled.select`
+  ${glassOpaque}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 11px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const ResultsCount = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
   align-self: flex-end;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
 `;
 
 const StrainsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: 18px;
 `;
 
 const LoadingContainer = styled.div`
@@ -731,7 +739,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
   border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -743,15 +751,14 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+// Empty state — Fraunces italic celeste headline, muted sentence, one
+// primary button (spec §4 "Empty states"). No box, no emoji.
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   max-width: 480px;
   margin: 48px auto;
   display: flex;
@@ -761,29 +768,35 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 56px;
-  opacity: 0.6;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
+  opacity: 0.7;
+  margin-bottom: 4px;
 `;
 
 const EmptyTitle = styled.h3`
-  font-size: 22px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.4rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
-// Modal styles
+// Modal styles — glassPanel at blur 24px over rgba(10,14,36,.6) scrim,
+// 20px radius (spec §4 "Modals/drawers").
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -793,9 +806,10 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 640px;
   padding: 24px;
@@ -810,28 +824,30 @@ const ModalHeader = styled.div`
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const CloseModalBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 150ms;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 150ms, color 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
   }
 `;
 
@@ -848,14 +864,12 @@ const FormSection = styled.div`
 `;
 
 const FormSectionTitle = styled.h3`
-  font-size: 13px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
   padding-bottom: 6px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TwoColForm = styled.div`
@@ -886,23 +900,22 @@ const Required = styled.span`
 `;
 
 const Input = styled.input`
+  ${glassOpaque}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   outline: none;
   transition: border-color 150ms;
   width: 100%;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -914,46 +927,44 @@ const TwoInputRow = styled.div`
 
 const RangeSep = styled.span`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   flex-shrink: 0;
 `;
 
 const SelectField = styled.select`
+  ${glassOpaque}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const TextArea = styled.textarea`
+  ${glassOpaque}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   font-family: inherit;
   outline: none;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -961,8 +972,8 @@ const FormError = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.error};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.error}66;
+  border-radius: 10px;
   padding: 10px 12px;
 `;
 
@@ -975,39 +986,43 @@ const FormActions = styled.div`
 
 const CancelBtn = styled.button`
   padding: 10px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
-// Matches AddStrainBtn: this modal's submit is the same "create/save a
-// strain" action, so it carries the same reserved gold CTA treatment.
+// The modal's one primary CTA — gold gradient fill (spec §3/§4 "Buttons").
+// AddStrainBtn (page-level) stays a glass secondary specifically so this
+// stays the only gold button visible while a modal is open.
 const SubmitBtn = styled.button`
   padding: 10px 24px;
   border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.secondary[500]};
+  border-radius: 11px;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms;
+  transition: transform 150ms, box-shadow 150ms;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.secondary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.6;

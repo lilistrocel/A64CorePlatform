@@ -8,9 +8,11 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-180.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#F1E6CC" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0E1330" media="(prefers-color-scheme: dark)" />
+    <!-- App is dark-only (see src/stores/theme.store.ts) — a single dark
+         theme-color, no light-scheme variant. -->
+    <meta name="theme-color" content="#0E1330" />
     <!-- Self-hosted A20Core type system (Hanken Grotesk / Fraunces / Space
          Mono) — no Google Fonts CDN, per brand contract §4/§9.3 sovereign-
          build rule and this app's CSP (no external font hosts allowed). -->

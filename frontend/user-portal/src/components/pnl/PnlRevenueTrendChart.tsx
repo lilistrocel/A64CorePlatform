@@ -16,6 +16,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { glassPanel } from '@a64core/shared';
 import type { PnlMonthlyDataPoint } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,11 +50,8 @@ const shimmer = keyframes`
 `;
 
 const Section = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
 `;
 
@@ -77,9 +75,9 @@ const SkeletonBar = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.md};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.glass.base} 25%,
+    ${({ theme }) => theme.colors.glass.hi} 50%,
+    ${({ theme }) => theme.colors.glass.base} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -90,7 +88,7 @@ const EmptyState = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
@@ -104,10 +102,11 @@ const ErrorState = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
+// `primary[500]` is a lapis-b fill — needs `onDark` (cream), not `onAccent`.
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -119,7 +118,7 @@ const RetryButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -140,11 +139,12 @@ function CustomTooltip({
   return (
     <div
       style={{
-        background: theme.colors.background,
-        border: `1px solid ${theme.colors.border}`,
+        // glassOpaque recipe (mixins.ts), inlined for recharts' tooltip.
+        background: theme.colors.cosmosHi,
+        border: `1px solid ${theme.colors.glass.border}`,
         borderRadius: '8px',
         padding: '12px',
-        boxShadow: theme.shadows.md,
+        boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
       }}
     >
       <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: theme.colors.textPrimary }}>
@@ -153,7 +153,12 @@ function CustomTooltip({
       {payload.map((entry) => (
         <div
           key={entry.name}
-          style={{ color: entry.color, fontSize: '13px', marginBottom: '4px' }}
+          style={{
+            color: entry.color,
+            fontFamily: theme.typography.fontFamily.mono,
+            fontSize: '13px',
+            marginBottom: '4px',
+          }}
         >
           {entry.name}: {formatTooltipValue(entry.value)}
         </div>
@@ -206,25 +211,28 @@ export function PnlRevenueTrendChart({
               margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
             >
               <defs>
+                {/* Chart series order (spec §4): celeste, then bright.lapis
+                    for the second line — area fills capped at the spec's
+                    15% ceiling (opacity 0.15, not the previous 0.3). */}
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={theme.colors.success} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={theme.colors.success} stopOpacity={0} />
+                  <stop offset="5%" stopColor={theme.colors.celeste} stopOpacity={0.15} />
+                  <stop offset="95%" stopColor={theme.colors.celeste} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorNetProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={theme.colors.primary[500]} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={theme.colors.primary[500]} stopOpacity={0} />
+                  <stop offset="5%" stopColor={theme.colors.bright.lapis} stopOpacity={0.15} />
+                  <stop offset="95%" stopColor={theme.colors.bright.lapis} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.line} />
               <XAxis
                 dataKey="yearMonth"
-                tick={{ fontSize: 12, fill: theme.colors.textSecondary }}
+                tick={{ fontSize: 12, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.muted }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 tickFormatter={formatYAxis}
-                tick={{ fontSize: 12, fill: theme.colors.textSecondary }}
+                tick={{ fontSize: 12, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.muted }}
                 tickLine={false}
                 axisLine={false}
                 width={55}
@@ -237,7 +245,7 @@ export function PnlRevenueTrendChart({
                 type="monotone"
                 dataKey="revenue"
                 name="Revenue"
-                stroke={theme.colors.success}
+                stroke={theme.colors.celeste}
                 strokeWidth={2}
                 fill="url(#colorRevenue)"
                 dot={false}
@@ -247,7 +255,7 @@ export function PnlRevenueTrendChart({
                 type="monotone"
                 dataKey="netProfit"
                 name="Net Profit"
-                stroke={theme.colors.primary[500]}
+                stroke={theme.colors.bright.lapis}
                 strokeWidth={2}
                 fill="url(#colorNetProfit)"
                 dot={false}

@@ -5,9 +5,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import styled, { useTheme } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
+import { Plus, X, Star } from 'lucide-react';
 import { hrApi, formatDate } from '../../services/hrService';
 import type { PerformanceReview, PerformanceReviewCreate, PerformanceReviewUpdate } from '../../types/hr';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -38,18 +40,22 @@ const Title = styled.h3`
 `;
 
 const AddButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -60,9 +66,8 @@ const CardList = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanel}
+  border-radius: 16px;
   padding: 16px;
 `;
 
@@ -85,9 +90,18 @@ const RatingContainer = styled.div`
   gap: 8px;
 `;
 
+/* Rating stars use celeste, not gold — gold is reserved for the Harvesting
+   phase / primary CTA / stat numerals (spec §3); a per-card rating widget is
+   not on that allow-list. */
 const RatingStars = styled.div`
-  font-size: 18px;
-  color: ${({ theme }) => theme.colors.warning};
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  color: ${({ theme }) => theme.colors.celeste};
+
+  svg:not(.filled) {
+    color: ${({ theme }) => theme.colors.muted};
+  }
 `;
 
 const RatingText = styled.span`
@@ -119,9 +133,10 @@ const DetailLabel = styled.span`
 
 const HappinessBar = styled.div<{ $score: number }>`
   width: 200px;
-  height: 8px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 4px;
+  height: 10px;
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 99px;
   overflow: hidden;
   position: relative;
 
@@ -133,11 +148,16 @@ const HappinessBar = styled.div<{ $score: number }>`
     height: 100%;
     width: ${({ $score }) => ($score / 10) * 100}%;
     background: ${({ $score, theme }) => {
-      if ($score >= 8) return theme.colors.success;
-      if ($score >= 5) return theme.colors.warning;
-      return theme.colors.error;
+      if ($score >= 8) return theme.colors.bright.emerald;
+      if ($score >= 5) return theme.colors.bright.terra;
+      return theme.colors.bright.coral;
     }};
-    border-radius: 4px;
+    box-shadow: 0 0 8px ${({ $score, theme }) => {
+      if ($score >= 8) return 'rgba(84, 211, 155, 0.5)';
+      if ($score >= 5) return 'rgba(232, 147, 95, 0.5)';
+      return 'rgba(240, 138, 112, 0.5)';
+    }};
+    border-radius: 99px;
   }
 `;
 
@@ -147,57 +167,56 @@ const TagList = styled.div`
   gap: 6px;
 `;
 
-const Tag = styled.span<{ $color?: string }>`
+const Tag = styled.span<{ $color: string }>`
   display: inline-block;
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $color, theme }) => $color || theme.colors.primary[50]};
-  color: ${({ $color, theme }) => ($color ? theme.colors.onAccent : theme.colors.primary[600])};
+  background: ${({ $color }) => `${$color}29`};
+  color: ${({ $color }) => $color};
+  border: 1px solid ${({ $color }) => `${$color}73`};
 `;
 
 const Actions = styled.div`
   display: flex;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const dangerVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+  }
+`;
+
+const defaultVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'danger') {
-      return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
-        &:hover {
-          background: ${theme.colors.errorBg};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
-      &:hover {
-        background: ${theme.colors.primary[50]};
-      }
-    `;
-  }}
+  ${({ $variant }) => ($variant === 'danger' ? dangerVariant : defaultVariant)}
 `;
 
 const EmptyText = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Modal = styled.div<{ $isOpen: boolean }>`
@@ -207,21 +226,23 @@ const Modal = styled.div<{ $isOpen: boolean }>`
   left: 0;
   width: 100%;
   height: 100%;
-  background: ${({ theme }) => `${theme.colors.neutral[900]}80`};
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   justify-content: center;
   align-items: center;
-  z-index: 1100;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
   padding: 32px;
   max-width: 700px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 `;
 
 const ModalHeader = styled.div`
@@ -239,16 +260,18 @@ const ModalTitle = styled.h3`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
   line-height: 1;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -265,37 +288,45 @@ const FormField = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   min-height: 80px;
   resize: vertical;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -306,39 +337,38 @@ const FormActions = styled.div`
   margin-top: 16px;
 `;
 
+const primaryVariant = css`
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
+  color: ${({ theme }) => theme.colors.onAccent};
+  font-weight: 700;
+  border: none;
+  &:hover {
+    filter: brightness(1.05);
+  }
+`;
+
+const secondaryVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+  }
+`;
+
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'primary') {
-      return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
-        border: none;
-        &:hover {
-          background: ${theme.colors.primary[600]};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
-      &:hover {
-        background: ${theme.colors.surface};
-      }
-    `;
-  }}
+  ${({ $variant }) => ($variant === 'primary' ? primaryVariant : secondaryVariant)}
 `;
 
 const HelpText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -356,10 +386,20 @@ function getToday(): string {
 // HELPER FUNCTIONS
 // ============================================================================
 
-function renderStars(rating: number): string {
-  const fullStar = '★';
-  const emptyStar = '☆';
-  return fullStar.repeat(rating) + emptyStar.repeat(5 - rating);
+function RatingStarRow({ rating }: { rating: number }) {
+  return (
+    <RatingStars aria-label={`${rating} out of 5`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <Star
+          key={i}
+          size={16}
+          strokeWidth={1.6}
+          className={i < rating ? 'filled' : undefined}
+          fill={i < rating ? 'currentColor' : 'none'}
+        />
+      ))}
+    </RatingStars>
+  );
 }
 
 // ============================================================================
@@ -479,7 +519,9 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
     <Container>
       <Header>
         <Title>Performance Reviews</Title>
-        <AddButton onClick={handleAdd}>+ Add Review</AddButton>
+        <AddButton onClick={handleAdd}>
+          <Plus size={14} strokeWidth={2} /> Add Review
+        </AddButton>
       </Header>
 
       {reviews.length === 0 ? (
@@ -491,7 +533,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
               <CardHeader>
                 <CardTitle>Review - {formatDate(review.reviewDate)}</CardTitle>
                 <RatingContainer>
-                  <RatingStars>{renderStars(review.rating)}</RatingStars>
+                  <RatingStarRow rating={review.rating} />
                   <RatingText>{review.rating}/5</RatingText>
                 </RatingContainer>
               </CardHeader>
@@ -514,7 +556,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Strengths:</DetailLabel>
                     <TagList>
                       {review.strengths.map((strength, idx) => (
-                        <Tag key={idx} $color={theme.colors.success}>
+                        <Tag key={idx} $color={theme.colors.bright.emerald}>
                           {strength}
                         </Tag>
                       ))}
@@ -526,7 +568,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Areas for Improvement:</DetailLabel>
                     <TagList>
                       {review.areasForImprovement.map((area, idx) => (
-                        <Tag key={idx} $color={theme.colors.warning}>
+                        <Tag key={idx} $color={theme.colors.bright.terra}>
                           {area}
                         </Tag>
                       ))}
@@ -538,7 +580,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Goals:</DetailLabel>
                     <TagList>
                       {review.goals.map((goal, idx) => (
-                        <Tag key={idx} $color={theme.colors.primary[500]}>
+                        <Tag key={idx} $color={theme.colors.bright.lapis}>
                           {goal}
                         </Tag>
                       ))}
@@ -567,7 +609,9 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
         <ModalContent>
           <ModalHeader>
             <ModalTitle>{editingReview ? 'Edit Performance Review' : 'Add Performance Review'}</ModalTitle>
-            <CloseButton onClick={() => setModalOpen(false)}>×</CloseButton>
+            <CloseButton onClick={() => setModalOpen(false)} aria-label="Close">
+              <X size={20} strokeWidth={1.8} />
+            </CloseButton>
           </ModalHeader>
 
           <Form onSubmit={handleSubmit}>

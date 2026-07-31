@@ -38,6 +38,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { X, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast, showWarningToast, showErrorToast } from '../../stores/toast.store';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
@@ -129,7 +131,9 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const PageTitle = styled.h1`
+// Access-denied fallback heading only — the real page identity is the
+// shared PageHeader rendered in the main return below.
+const DeniedTitle = styled.h1`
   font-size: 24px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -137,11 +141,8 @@ const PageTitle = styled.h1`
 `;
 
 const FormCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 28px 32px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const FieldGrid = styled.div`
@@ -165,75 +166,66 @@ const FieldGroup = styled.div`
   gap: 6px;
 `;
 
+// Space Mono uppercase micro-label, spec §4 Inputs.
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const StyledInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 8px 10px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   transition: border-color 150ms ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ $hasError, theme }) =>
-      $hasError ? `${theme.colors.error}26` : `${theme.colors.primary[500]}26`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 `;
 
 const StyledTextarea = styled.textarea<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 8px 10px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 72px;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   transition: border-color 150ms ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ $hasError, theme }) =>
-      $hasError ? `${theme.colors.error}26` : `${theme.colors.primary[500]}26`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 `;
 
 const StyledSelect = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 8px 10px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 `;
 
 const CharCount = styled.div<{ $warn: boolean }>`
   font-size: 11px;
   text-align: right;
-  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.textDisabled)};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.muted)};
   margin-top: 2px;
 `;
 
@@ -244,18 +236,33 @@ const ErrorText = styled.div`
 `;
 
 const SectionDivider = styled.div`
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   margin: 24px 0 20px;
   padding-top: 20px;
 `;
 
+// Spec §3 allows a "short gold underline on section headers" — this is the
+// one section header on this page, so it is a deliberate, budgeted gold spend.
 const SectionTitle = styled.h2`
-  font-size: 14px;
+  ${monoLabel}
+  position: relative;
+  display: inline-block;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0 0 16px;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 18px;
+  padding-bottom: 8px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 28px;
+    height: 2px;
+    border-radius: 2px;
+    background: ${({ theme }) => theme.colors.secondary[500]};
+  }
 `;
 
 // ─── Lines table ───────────────────────────────────────────────────────────────
@@ -270,15 +277,13 @@ const LinesTable = styled.table`
 const LinesColGroup = styled.colgroup``;
 
 const LinesTh = styled.th`
+  ${monoLabel}
   padding: 8px 6px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const LinesTd = styled.td`
@@ -293,38 +298,38 @@ const LineNumber = styled.span`
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: rgba(180, 200, 220, 0.12);
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 11px;
   font-weight: 700;
   margin-top: 6px;
 `;
 
+// Debit/credit amount cells are intentionally NEUTRAL — per standard
+// double-entry-accounting convention, neither column is "good" or "bad";
+// only the balance-check state below (BalanceStatus) carries polarity
+// colour (spec judgment call: don't colour debit/credit columns as if one
+// side were negative).
 const AmountInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   width: 100%;
   box-sizing: border-box;
   padding: 8px 8px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   text-align: right;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   transition: border-color 150ms ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ $hasError, theme }) =>
-      $hasError ? `${theme.colors.error}26` : `${theme.colors.primary[500]}26`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 `;
@@ -337,16 +342,15 @@ const RemoveButton = styled.button`
   height: 24px;
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-radius: 4px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
   margin-top: 6px;
   transition: background 150ms ease, color 150ms ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.terracotta[100]};
-    color: ${({ theme }) => theme.colors.error};
+    background: rgba(240, 138, 112, 0.14);
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 
   &:disabled {
@@ -360,53 +364,57 @@ const DescToggle = styled.button`
   border: none;
   padding: 0;
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   margin-top: 4px;
   text-decoration: underline dotted;
   display: block;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[600] ?? theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const DescInput = styled.input`
+  ${glassControl}
   width: 100%;
   box-sizing: border-box;
   padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 4px;
   font-size: 12px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-top: 4px;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Ghost button — spec §4 Buttons: transparent, celeste text/border.
 const AddLineButton = styled.button`
   margin-top: 12px;
   padding: 7px 14px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px dashed ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition: background 150ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 // ─── Balance bar ───────────────────────────────────────────────────────────────
 
+// Balance-check indicator — the ONE place on this page where debit/credit
+// polarity colour applies (spec judgment call): balanced -> bright.emerald,
+// imbalanced -> bright.coral. The DR/CR amount columns themselves stay
+// neutral (see AmountInput above) — standard double-entry convention.
 const BalanceBar = styled.div<{ $balanced: boolean }>`
   display: flex;
   justify-content: flex-end;
@@ -415,14 +423,14 @@ const BalanceBar = styled.div<{ $balanced: boolean }>`
   margin-top: 16px;
   padding: 12px 16px;
   border-radius: 8px;
-  background: ${({ $balanced, theme }) => ($balanced ? theme.colors.successBg : theme.colors.errorBg)};
-  border: 1px solid ${({ $balanced, theme }) => ($balanced ? theme.colors.emerald[300] : theme.colors.terracotta[300])};
+  background: ${({ $balanced }) => ($balanced ? 'rgba(84, 211, 155, 0.12)' : 'rgba(240, 138, 112, 0.12)')};
+  border: 1px solid ${({ $balanced }) => ($balanced ? 'rgba(84, 211, 155, 0.4)' : 'rgba(240, 138, 112, 0.4)')};
   font-size: 13px;
 `;
 
 const BalanceItem = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   span {
     font-weight: 700;
     font-family: ${({ theme }) => theme.typography.fontFamily.mono};
@@ -432,11 +440,18 @@ const BalanceItem = styled.div`
 `;
 
 const BalanceStatus = styled.div<{ $balanced: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 700;
-  color: ${({ $balanced, theme }) => ($balanced ? theme.colors.emerald[800] : theme.colors.terracotta[800])};
+  color: ${({ $balanced, theme }) => ($balanced ? theme.colors.bright.emerald : theme.colors.bright.coral)};
 `;
 
 // ─── Period warning ────────────────────────────────────────────────────────────
+// Uses the semantic `warning` token directly (bright.gold's warning/toast
+// twin per mixins.ts — NOT `secondary[500]` "decorative" gold, and not
+// counted against the page's CTA/section-underline gold budget since it
+// only renders conditionally when a period problem exists).
 
 const PeriodWarning = styled.div`
   display: flex;
@@ -447,7 +462,7 @@ const PeriodWarning = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   margin-bottom: 20px;
 `;
 
@@ -459,43 +474,51 @@ const FormFooter = styled.div`
   gap: 12px;
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
+// Secondary — spec §4 Buttons: glass + glass.border + cream text.
 const CancelButton = styled.button`
+  ${glassControl}
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-  }
-`;
-
-const SubmitButton = styled.button`
-  padding: 10px 28px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
 
+  &:hover {
+    background: ${({ theme }) => theme.colors.glass.hi};
+  }
+`;
+
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Submitting the JE is the page's single primary action.
+const SubmitButton = styled.button`
+  padding: 10px 28px;
+  background: linear-gradient(
+    145deg,
+    ${({ theme }) => theme.colors.secondary[500]},
+    ${({ theme }) => theme.colors.secondary[600]}
+  );
+  color: ${({ theme }) => theme.colors.onAccent};
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -504,7 +527,7 @@ const SubmitButton = styled.button`
 const ModalBackdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 1100;
   display: flex;
   align-items: center;
@@ -512,12 +535,13 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 14px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px 32px;
   width: 100%;
   max-width: 520px;
-  box-shadow: 0 20px 40px rgba(59, 44, 24, 0.18);
 `;
 
 const ModalTitle = styled.h2`
@@ -529,7 +553,7 @@ const ModalTitle = styled.h2`
 
 const ModalBody = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px;
   line-height: 1.55;
 `;
@@ -538,7 +562,7 @@ const ModalWarningList = styled.ul`
   margin: 0 0 20px;
   padding-left: 20px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   background: ${({ theme }) => theme.colors.warningBg};
   border-radius: 8px;
   padding: 12px 12px 12px 28px;
@@ -554,28 +578,35 @@ const ModalFooter = styled.div`
 `;
 
 const ModalCancelBtn = styled.button`
+  ${glassControl}
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[200]}; }
-`;
-
-const ModalContinueBtn = styled.button`
-  padding: 9px 20px;
-  background: ${({ theme }) => theme.colors.gold[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  color: ${({ theme }) => theme.colors.textPrimary};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.gold[700]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
+`;
+
+const ModalContinueBtn = styled.button`
+  padding: 9px 20px;
+  background: linear-gradient(
+    145deg,
+    ${({ theme }) => theme.colors.secondary[500]},
+    ${({ theme }) => theme.colors.secondary[600]}
+  );
+  color: ${({ theme }) => theme.colors.onAccent};
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
+  &:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 `;
 
 // ─── Role guard ────────────────────────────────────────────────────────────────
@@ -857,7 +888,7 @@ export function ManualJournalEntryPage() {
   if (!ALLOWED_ROLES.has(user?.role ?? '')) {
     return (
       <Container>
-        <PageTitle>Access Denied</PageTitle>
+        <DeniedTitle>Access Denied</DeniedTitle>
         <p>Only finance_admin and super_admin can create manual journal entries.</p>
       </Container>
     );
@@ -865,11 +896,15 @@ export function ManualJournalEntryPage() {
 
   return (
     <Container>
-      <PageTitle>New Manual Journal Entry</PageTitle>
+      <PageHeader
+        breadcrumb="FINANCE · JOURNAL ENTRIES"
+        title="New Manual Journal Entry"
+        description="Post a correcting or adjusting journal entry — every line is recorded in the audit log."
+      />
 
       {periodError && (
         <PeriodWarning role="alert">
-          <span>⚠</span>
+          <AlertTriangle size={16} strokeWidth={1.8} aria-hidden="true" />
           <span>{periodError}</span>
         </PeriodWarning>
       )}
@@ -1140,7 +1175,7 @@ export function ManualJournalEntryPage() {
                             aria-label={`Remove line ${idx + 1}`}
                             title={fields.length <= 2 ? 'At least 2 lines required' : 'Remove line'}
                           >
-                            ×
+                            <X size={14} strokeWidth={1.8} aria-hidden="true" />
                           </RemoveButton>
                         </LinesTd>
                       </tr>
@@ -1225,9 +1260,16 @@ export function ManualJournalEntryPage() {
               Total CR: <span>{formatCurrency(totalCr)}</span>
             </BalanceItem>
             <BalanceStatus $balanced={isBalanced}>
-              {isBalanced
-                ? '✓ Balanced'
-                : `✗ Imbalanced — Δ ${formatCurrency(balanceDelta)}`}
+              {isBalanced ? (
+                <>
+                  <CheckCircle2 size={15} strokeWidth={1.8} aria-hidden="true" /> Balanced
+                </>
+              ) : (
+                <>
+                  <AlertCircle size={15} strokeWidth={1.8} aria-hidden="true" /> Imbalanced — Δ{' '}
+                  {formatCurrency(balanceDelta)}
+                </>
+              )}
             </BalanceStatus>
           </BalanceBar>
 

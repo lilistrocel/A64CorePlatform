@@ -7,6 +7,28 @@
 
 import { useState } from 'react';
 import styled, { useTheme } from 'styled-components';
+import {
+  Square,
+  ClipboardList,
+  Sprout,
+  Leaf,
+  Grape,
+  Wheat,
+  Sparkles,
+  Trophy,
+  Target,
+  Star,
+  Check,
+  CircleDot,
+  AlertCircle,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, hexToRgba } from '@a64core/shared';
 import type { Theme } from '@a64core/shared';
 import type { DashboardBlockStatus, PerformanceCategory } from '../../../types/farm';
 import type { SortOption, SortDirection } from '../../../hooks/farm/useDashboardFilters';
@@ -38,27 +60,28 @@ interface DashboardFiltersProps {
   filteredCount: number;
 }
 
-// Theme-aware — built inside the component via getStateOptions(theme) since
-// 'empty' resolves to textSecondary, which differs between light/dark.
-function getStateOptions(theme: Theme): { value: DashboardBlockStatus; label: string; icon: string; color: string }[] {
+// Theme-aware — built inside the component via getStateOptions(theme).
+// Colours trace to the phase map (spec §5.2 extrapolated vocabulary); gold
+// (phase.harvesting) is used only for the literal Harvesting state (spec §3).
+function getStateOptions(theme: Theme): { value: DashboardBlockStatus; label: string; icon: LucideIcon; color: string }[] {
   return [
-    { value: 'empty', label: 'Empty', icon: '⚪', color: theme.colors.textSecondary },
-    { value: 'planned', label: 'Planned', icon: '🔵', color: theme.colors.primary[500] },
-    { value: 'planted', label: 'Planted', icon: '🟢', color: theme.colors.success },
-    { value: 'growing', label: 'Growing', icon: '🌿', color: theme.colors.emerald[400] },
-    { value: 'fruiting', label: 'Fruiting', icon: '🍇', color: theme.colors.gold[300] },
-    { value: 'harvesting', label: 'Harvesting', icon: '🧺', color: theme.colors.warning },
-    { value: 'cleaning', label: 'Cleaning', icon: '🧹', color: theme.colors.secondary[500] },
+    { value: 'empty', label: 'Empty', icon: Square, color: theme.colors.phase.empty },
+    { value: 'planned', label: 'Planned', icon: ClipboardList, color: theme.colors.phase.fruitingInit },
+    { value: 'planted', label: 'Planted', icon: Sprout, color: theme.colors.phase.inoculated },
+    { value: 'growing', label: 'Growing', icon: Leaf, color: theme.colors.phase.colonizing },
+    { value: 'fruiting', label: 'Fruiting', icon: Grape, color: theme.colors.phase.fruiting },
+    { value: 'harvesting', label: 'Harvesting', icon: Wheat, color: theme.colors.phase.harvesting },
+    { value: 'cleaning', label: 'Cleaning', icon: Sparkles, color: theme.colors.phase.cleaning },
   ];
 }
 
-const PERFORMANCE_OPTIONS: { value: PerformanceCategory; label: string; icon: string }[] = [
-  { value: 'exceptional', label: 'Exceptional', icon: '🏆' },
-  { value: 'exceeding', label: 'Exceeding', icon: '🎯' },
-  { value: 'excellent', label: 'Excellent', icon: '⭐' },
-  { value: 'good', label: 'Good', icon: '✅' },
-  { value: 'acceptable', label: 'Acceptable', icon: '🟡' },
-  { value: 'poor', label: 'Poor', icon: '🔴' },
+const PERFORMANCE_OPTIONS: { value: PerformanceCategory; label: string; icon: LucideIcon }[] = [
+  { value: 'exceptional', label: 'Exceptional', icon: Trophy },
+  { value: 'exceeding', label: 'Exceeding', icon: Target },
+  { value: 'excellent', label: 'Excellent', icon: Star },
+  { value: 'good', label: 'Good', icon: Check },
+  { value: 'acceptable', label: 'Acceptable', icon: CircleDot },
+  { value: 'poor', label: 'Poor', icon: AlertCircle },
 ];
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
@@ -128,13 +151,13 @@ export function DashboardFilters({
                 </option>
               ))}
             </SortSelect>
-            <SortDirectionButton onClick={onSortDirectionToggle}>
-              {sortDirection === 'asc' ? '↑' : '↓'}
+            <SortDirectionButton onClick={onSortDirectionToggle} aria-label="Toggle sort direction">
+              {sortDirection === 'asc' ? <ArrowUp size={14} strokeWidth={2} /> : <ArrowDown size={14} strokeWidth={2} />}
             </SortDirectionButton>
           </SortControl>
 
           <ExpandButton onClick={() => setIsExpanded(!isExpanded)}>
-            {isExpanded ? '▼' : '▶'} Filters
+            {isExpanded ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />} Filters
             {hasActiveFilters && <ActiveIndicator />}
           </ExpandButton>
 
@@ -157,7 +180,7 @@ export function DashboardFilters({
                   $color={option.color}
                   onClick={() => onStateToggle(option.value)}
                 >
-                  <ChipIcon>{option.icon}</ChipIcon>
+                  <ChipIcon as={option.icon} size={14} strokeWidth={1.8} aria-hidden="true" />
                   <ChipLabel>{option.label}</ChipLabel>
                 </StateChip>
               ))}
@@ -174,7 +197,7 @@ export function DashboardFilters({
                   $isSelected={selectedPerformance.has(option.value)}
                   onClick={() => onPerformanceToggle(option.value)}
                 >
-                  <ChipIcon>{option.icon}</ChipIcon>
+                  <ChipIcon as={option.icon} size={14} strokeWidth={1.8} aria-hidden="true" />
                   <ChipLabel>{option.label}</ChipLabel>
                 </PerformanceChip>
               ))}
@@ -189,13 +212,13 @@ export function DashboardFilters({
                 $isActive={showDelayedOnly}
                 onClick={() => onDelayedToggle(!showDelayedOnly)}
               >
-                🔴 Delayed Only
+                <AlertCircle size={14} strokeWidth={1.8} /> Delayed Only
               </ToggleChip>
               <ToggleChip
                 $isActive={showAlertsOnly}
                 onClick={() => onAlertsToggle(!showAlertsOnly)}
               >
-                ⚠️ With Alerts Only
+                <AlertTriangle size={14} strokeWidth={1.8} /> With Alerts Only
               </ToggleChip>
             </ToggleGrid>
           </FilterGroup>
@@ -210,10 +233,8 @@ export function DashboardFilters({
 // ============================================================================
 
 const Container = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 24px;
 `;
 
@@ -235,22 +256,21 @@ const SearchSection = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   width: 100%;
   padding: 10px 16px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -262,9 +282,9 @@ const ControlsSection = styled.div`
 `;
 
 const ResultsCount = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 500;
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
 `;
 
@@ -276,54 +296,48 @@ const SortControl = styled.div`
 
 const SortLabel = styled.label`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-weight: 500;
 `;
 
 const SortSelect = styled.select`
+  ${glassControl}
   padding: 8px 12px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const SortDirectionButton = styled.button`
+  ${glassControl}
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: 16px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.infoBg};
+    border-color: ${({ theme }) => theme.colors.celeste};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const ExpandButton = styled.button`
+  ${glassControl}
   padding: 8px 16px;
-  border: 2px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -332,7 +346,8 @@ const ExpandButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -340,7 +355,8 @@ const ActiveIndicator = styled.div`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.bright.coral};
+  box-shadow: 0 0 6px ${({ theme }) => theme.colors.bright.coral};
   position: absolute;
   top: -2px;
   right: -2px;
@@ -348,24 +364,24 @@ const ActiveIndicator = styled.div`
 
 const ClearButton = styled.button`
   padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 10px;
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[700]};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
 const ExpandedFilters = styled.div`
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 2px solid ${({ theme }) => theme.colors.surface};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const FilterGroup = styled.div`
@@ -377,11 +393,9 @@ const FilterGroup = styled.div`
 `;
 
 const FilterGroupTitle = styled.h4`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 8px 0;
 `;
 
@@ -396,16 +410,17 @@ const StateChip = styled.button<{ $isSelected: boolean; $color: string }>`
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: 20px;
-  border: 2px solid ${(props) => (props.$isSelected ? props.$color : props.theme.colors.neutral[300])};
-  background: ${(props) => (props.$isSelected ? `${props.$color}15` : 'transparent')};
+  border-radius: 99px;
+  border: 1px solid ${(props) => (props.$isSelected ? props.$color : props.theme.colors.glass.border)};
+  background: ${(props) => (props.$isSelected ? hexToRgba(props.$color, 0.16) : 'rgba(23, 29, 64, 0.35)')};
+  color: ${(props) => (props.$isSelected ? props.$color : props.theme.colors.muted)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   font-size: 13px;
 
   &:hover {
     border-color: ${(props) => props.$color};
-    background: ${(props) => `${props.$color}10`};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -414,27 +429,27 @@ const PerformanceChip = styled.button<{ $isSelected: boolean }>`
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: 20px;
-  border: 2px solid ${(props) => (props.$isSelected ? props.theme.colors.primary[500] : props.theme.colors.neutral[300])};
-  background: ${(props) => (props.$isSelected ? props.theme.colors.infoBg : 'transparent')};
+  border-radius: 99px;
+  border: 1px solid ${(props) => (props.$isSelected ? props.theme.colors.celeste : props.theme.colors.glass.border)};
+  background: ${(props) => (props.$isSelected ? 'rgba(180, 200, 220, 0.14)' : 'rgba(23, 29, 64, 0.35)')};
+  color: ${(props) => (props.$isSelected ? props.theme.colors.textPrimary : props.theme.colors.muted)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   font-size: 13px;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.infoBg};
+    border-color: ${({ theme }) => theme.colors.celeste};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const ChipIcon = styled.span`
-  font-size: 14px;
+  display: inline-flex;
 `;
 
 const ChipLabel = styled.span`
   font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 600;
 `;
 
 const ToggleGrid = styled.div`
@@ -443,20 +458,25 @@ const ToggleGrid = styled.div`
   flex-wrap: wrap;
 `;
 
+// Toggle "on" state uses celeste, not gold — these are ordinary filter
+// toggles, not the view's primary CTA (spec §3).
 const ToggleChip = styled.button<{ $isActive: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px;
-  border-radius: 6px;
-  border: 2px solid ${(props) => (props.$isActive ? props.theme.colors.primary[500] : props.theme.colors.neutral[300])};
-  background: ${(props) => (props.$isActive ? props.theme.colors.primary[500] : 'transparent')};
-  color: ${(props) => (props.$isActive ? props.theme.colors.onAccent : props.theme.colors.textPrimary)};
+  border-radius: 10px;
+  border: 1px solid ${(props) => (props.$isActive ? props.theme.colors.celeste : props.theme.colors.glass.border)};
+  background: ${(props) => (props.$isActive ? 'rgba(180, 200, 220, 0.14)' : 'transparent')};
+  color: ${(props) => (props.$isActive ? props.theme.colors.textPrimary : props.theme.colors.muted)};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${(props) => (props.$isActive ? props.theme.colors.primary[700] : props.theme.colors.infoBg)};
-    color: ${(props) => (props.$isActive ? props.theme.colors.onAccent : props.theme.colors.textPrimary)};
+    border-color: ${({ theme }) => theme.colors.celeste};
+    background: rgba(180, 200, 220, 0.14);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;

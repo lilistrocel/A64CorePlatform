@@ -7,11 +7,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { Search, Users, Plus, LayoutGrid, TableProperties } from 'lucide-react';
 import { EmployeeTable } from '../../components/hr/EmployeeTable';
 import { EmployeeCard } from '../../components/hr/EmployeeCard';
 import { hrApi } from '../../services/hrService';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Employee, EmployeeStatus } from '../../types/hr';
+import { PageHeader, glassControl, glassPanel, monoLabel } from '@a64core/shared';
 
 // Mobile breakpoint for responsive view switching
 const MOBILE_BREAKPOINT = 768;
@@ -26,29 +28,11 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
 const Actions = styled.div`
   display: flex;
   gap: 16px;
+  justify-content: flex-end;
+  margin-bottom: 24px;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -56,39 +40,54 @@ const Actions = styled.div`
   }
 `;
 
-const SearchInput = styled.input`
-  padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
+const SearchWrap = styled.div`
+  position: relative;
   width: 300px;
-  background: ${({ theme }) => theme.colors.background};
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
+  pointer-events: none;
+`;
+
+const SearchInput = styled.input`
+  ${glassControl}
+  padding: 12px 16px 12px 38px;
+  min-height: 44px;
+  font-size: 14px;
+  width: 100%;
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.colors.primary[500]}1a`};
-  }
-
-  @media (max-width: 768px) {
-    width: 100%;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  min-height: 44px;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   display: flex;
@@ -97,7 +96,8 @@ const CreateButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    filter: brightness(1.05);
+    transform: translateY(-1px);
   }
 
   &:disabled {
@@ -111,9 +111,11 @@ const FilterBar = styled.div`
   gap: 16px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+  align-items: center;
 
   @media (max-width: 768px) {
     flex-direction: column;
+    align-items: stretch;
   }
 `;
 
@@ -124,41 +126,46 @@ const FilterGroup = styled.div`
 `;
 
 const FilterLabel = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+/* Active state uses celeste, not gold — gold is budgeted for the breadcrumb
+   kicker + primary CTA only on this screen (spec §3). */
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 8px;
+  min-height: 44px;
+  background: ${({ $active }) => ($active ? 'rgba(180, 200, 220, 0.1)' : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.celeste)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.glass.border : 'transparent')};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 8px 32px 8px 12px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   appearance: none;
+  /* Night Observatory: this arrow sits on a dark glass ground, so it needs a
+     light stroke colour — celeste, not the old light-theme neutral[700]
+     (which was tuned for a cream background and would be near-invisible
+     here). */
   background-image: ${({ theme }) =>
     `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='${encodeURIComponent(
-      theme.colors.neutral[700]
+      theme.colors.celeste
     )}' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`};
   background-repeat: no-repeat;
   background-position: right 10px center;
@@ -166,37 +173,44 @@ const FilterSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
+    background-color: ${({ theme }) => theme.colors.glass.hi};
+  }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const ViewToggle = styled.div`
+  ${glassControl}
   display: flex;
-  gap: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  gap: 4px;
   padding: 4px;
-  border-radius: 8px;
 `;
 
 const ViewButton = styled.button<{ $active: boolean }>`
-  padding: 8px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  min-height: 36px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.glass.hi : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  box-shadow: ${({ $active, theme }) => ($active ? theme.shadows.sm : 'none')};
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -218,15 +232,16 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   gap: 16px;
 `;
 
+/* Lapis, not gold — spinners are not on the spec §3 gold allow-list. */
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 4px solid ${({ theme }) => theme.colors.glass.border};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -239,10 +254,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
@@ -255,18 +270,17 @@ const Pagination = styled.div`
 `;
 
 const PageButton = styled.button`
+  ${glassControl}
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  min-height: 44px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -276,70 +290,81 @@ const PageButton = styled.button`
 `;
 
 const PageInfo = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.7rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const EmptyStateContainer = styled.div`
+  ${glassPanel}
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 64px 32px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 18px;
 `;
 
 const EmptyStateIcon = styled.div`
-  font-size: 48px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 16px;
 `;
 
 const EmptyStateTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 8px 0;
 `;
 
 const EmptyStateMessage = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 24px 0;
   text-align: center;
   max-width: 400px;
 `;
 
+/* Secondary (glass), not gold — the header's CreateButton is already this
+   view's one primary CTA (spec §3) and stays mounted behind this empty
+   state, so a second gold gradient here would put two gold CTAs on screen
+   at once. */
 const ClearSearchButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
+/* Secondary (glass), not gold — same reasoning as ClearSearchButton above. */
 const CreateActionButton = styled.button`
   padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -348,7 +373,7 @@ const ClearFiltersButton = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.colors.error};
   border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -495,25 +520,33 @@ export function EmployeeListPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Employee Management</Title>
-        <Actions>
+      <PageHeader
+        breadcrumb="HR · LIVE"
+        title="Employee Management"
+        emphasizeLastWord
+        description="Track headcount, status and departments in one place."
+        stats={[{ value: total, label: 'Total Employees', alive: true }]}
+      />
+
+      <Actions>
+        <SearchWrap>
+          <SearchIcon><Search size={15} strokeWidth={1.8} /></SearchIcon>
           <SearchInput
             type="text"
             placeholder="Search employees..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
           />
-          <CreateButton onClick={handleCreateEmployee}>
-            <span>+</span>
-            New Employee
-          </CreateButton>
-        </Actions>
-      </Header>
+        </SearchWrap>
+        <CreateButton onClick={handleCreateEmployee}>
+          <Plus size={15} strokeWidth={2} />
+          New Employee
+        </CreateButton>
+      </Actions>
 
       <FilterBar>
         <FilterGroup>
-          <FilterLabel>Status:</FilterLabel>
+          <FilterLabel>Status</FilterLabel>
           <FilterButton $active={statusFilter === 'all'} onClick={() => handleStatusFilter('all')}>
             All
           </FilterButton>
@@ -529,7 +562,7 @@ export function EmployeeListPage() {
         </FilterGroup>
 
         <FilterGroup>
-          <FilterLabel>Department:</FilterLabel>
+          <FilterLabel>Department</FilterLabel>
           <FilterSelect
             value={departmentFilter}
             onChange={(e) => handleDepartmentFilter(e.target.value)}
@@ -544,9 +577,11 @@ export function EmployeeListPage() {
 
         <ViewToggle>
           <ViewButton $active={viewMode === 'table'} onClick={() => setViewMode('table')}>
+            <TableProperties size={14} strokeWidth={1.8} />
             Table
           </ViewButton>
           <ViewButton $active={viewMode === 'grid'} onClick={() => setViewMode('grid')}>
+            <LayoutGrid size={14} strokeWidth={1.8} />
             Grid
           </ViewButton>
         </ViewToggle>
@@ -567,7 +602,7 @@ export function EmployeeListPage() {
         </LoadingContainer>
       ) : !loading && employees.length === 0 && searchQuery ? (
         <EmptyStateContainer>
-          <EmptyStateIcon>🔍</EmptyStateIcon>
+          <EmptyStateIcon><Search size={40} strokeWidth={1.4} /></EmptyStateIcon>
           <EmptyStateTitle>No results found</EmptyStateTitle>
           <EmptyStateMessage>
             No employees match your search for &ldquo;{searchQuery.length > 50 ? searchQuery.slice(0, 50) + '...' : searchQuery}&rdquo;. Try adjusting your search or filters.
@@ -578,13 +613,14 @@ export function EmployeeListPage() {
         </EmptyStateContainer>
       ) : !loading && employees.length === 0 && !searchQuery ? (
         <EmptyStateContainer>
-          <EmptyStateIcon>👔</EmptyStateIcon>
+          <EmptyStateIcon><Users size={40} strokeWidth={1.4} /></EmptyStateIcon>
           <EmptyStateTitle>No employees yet</EmptyStateTitle>
           <EmptyStateMessage>
             Get started by adding your first employee to the HR system.
           </EmptyStateMessage>
           <CreateActionButton onClick={handleCreateEmployee}>
-            + Add Your First Employee
+            <Plus size={15} strokeWidth={2} />
+            Add Your First Employee
           </CreateActionButton>
         </EmptyStateContainer>
       ) : viewMode === 'table' ? (

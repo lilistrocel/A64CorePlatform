@@ -11,6 +11,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { FlaskConical, Tractor, AlertTriangle } from 'lucide-react';
+import { PageHeader, glassPanel, monoLabel } from '@a64core/shared';
 import { getInventorySummary } from '../../services/inventoryApi';
 import { formatNumber } from '../../utils';
 import type { InventorySummary } from '../../types/inventory';
@@ -51,28 +53,33 @@ export function InventoryDashboard() {
     }
   };
 
+  const totalAlerts =
+    (summary?.lowStockAlerts || 0) + (summary?.expiringItems || 0) + (summary?.maintenanceOverdue || 0);
+
   return (
     <Container>
-      <Header>
-        <HeaderLeft>
-          <Title>
-            Inventory Management
-            {selectedFarmingYear && (
-              <FarmingYearBadge>Year {selectedFarmingYear}</FarmingYearBadge>
-            )}
-          </Title>
-          <Subtitle>
-            {selectedFarmingYear
-              ? `Filtered statistics for farming year ${selectedFarmingYear}`
-              : 'Manage farm inputs and assets'}
-          </Subtitle>
-        </HeaderLeft>
-      </Header>
+      <PageHeader
+        breadcrumb="OPERATIONS · INVENTORY"
+        title="Inventory Management"
+        emphasizeLastWord
+        description={
+          selectedFarmingYear
+            ? `Filtered statistics for farming year ${selectedFarmingYear}`
+            : 'Manage farm inputs and assets'
+        }
+        stats={[
+          { value: loading ? '...' : formatNumber(summary?.inputInventory.totalItems || 0), label: 'Input Items' },
+          { value: loading ? '...' : formatNumber(summary?.assetInventory.totalItems || 0), label: 'Assets' },
+          { value: loading ? '...' : formatNumber(totalAlerts), label: 'Alerts' },
+        ]}
+      />
 
       {/* Summary Cards — Inputs and Assets only (Harvest & Waste moved to Sales > Stock) */}
       <SummaryGrid>
         <SummaryCard $variant="input">
-          <CardIcon>🧪</CardIcon>
+          <CardIcon $variant="input">
+            <FlaskConical size={26} strokeWidth={1.6} />
+          </CardIcon>
           <CardContent>
             <CardLabel>Input Inventory</CardLabel>
             <CardValue>{loading ? '...' : formatNumber(summary?.inputInventory.totalItems || 0)}</CardValue>
@@ -87,7 +94,9 @@ export function InventoryDashboard() {
         </SummaryCard>
 
         <SummaryCard $variant="asset">
-          <CardIcon>🚜</CardIcon>
+          <CardIcon $variant="asset">
+            <Tractor size={26} strokeWidth={1.6} />
+          </CardIcon>
           <CardContent>
             <CardLabel>Farm Assets</CardLabel>
             <CardValue>{loading ? '...' : formatNumber(summary?.assetInventory.totalItems || 0)}</CardValue>
@@ -102,12 +111,12 @@ export function InventoryDashboard() {
         </SummaryCard>
 
         <SummaryCard $variant="alerts">
-          <CardIcon>⚠️</CardIcon>
+          <CardIcon $variant="alerts">
+            <AlertTriangle size={26} strokeWidth={1.6} />
+          </CardIcon>
           <CardContent>
             <CardLabel>Alerts</CardLabel>
-            <CardValue>
-              {loading ? '...' : formatNumber((summary?.lowStockAlerts || 0) + (summary?.expiringItems || 0) + (summary?.maintenanceOverdue || 0))}
-            </CardValue>
+            <CardValue>{loading ? '...' : formatNumber(totalAlerts)}</CardValue>
             <CardSubtext>
               {summary?.expiringItems ? `${formatNumber(summary.expiringItems)} items expiring soon` : 'No urgent alerts'}
             </CardSubtext>
@@ -118,11 +127,11 @@ export function InventoryDashboard() {
       {/* Navigation Tabs — Inputs and Assets only */}
       <TabNav>
         <TabLink to="/inventory/input">
-          <TabIcon>🧪</TabIcon>
+          <TabIcon><FlaskConical size={16} strokeWidth={1.6} /></TabIcon>
           Inputs
         </TabLink>
         <TabLink to="/inventory/assets">
-          <TabIcon>🚜</TabIcon>
+          <TabIcon><Tractor size={16} strokeWidth={1.6} /></TabIcon>
           Assets
         </TabLink>
       </TabNav>
@@ -131,8 +140,8 @@ export function InventoryDashboard() {
       <ContentArea>
         <Suspense fallback={<LoadingText>Loading...</LoadingText>}>
           <Routes>
-            <Route path="input" element={<InputInventoryList onUpdate={loadSummary} />} />
-            <Route path="assets" element={<AssetInventoryList onUpdate={loadSummary} />} />
+            <Route path="input" element={<InputInventoryList onUpdate={loadSummary} embedded />} />
+            <Route path="assets" element={<AssetInventoryList onUpdate={loadSummary} embedded />} />
           </Routes>
         </Suspense>
       </ContentArea>
@@ -141,47 +150,12 @@ export function InventoryDashboard() {
 }
 
 // Styled Components
+// Night Observatory (T-901): page-level container stays transparent so the
+// fixed sky shows through — no opaque background here (spec §2).
 const Container = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
   max-width: 1400px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
-`;
-
-const HeaderLeft = styled.div`
-  flex: 1;
-`;
-
-const FarmingYearBadge = styled.span`
-  display: inline-block;
-  background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.primary[700]};
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  margin-left: 8px;
-`;
-
-const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
-`;
-
-const Subtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
 `;
 
 const SummaryGrid = styled.div`
@@ -195,26 +169,42 @@ interface SummaryCardProps {
   $variant: 'input' | 'asset' | 'alerts';
 }
 
+// One glass layer — the panels sit directly on the sky (spec §2 two-layer max).
 const SummaryCard = styled.div<SummaryCardProps>`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
   display: flex;
   align-items: flex-start;
   gap: ${({ theme }) => theme.spacing.md};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  border-left: 4px solid ${({ theme, $variant }) => {
-    switch ($variant) {
-      case 'input': return theme.colors.primary[500];
-      case 'asset': return theme.colors.warning;
-      case 'alerts': return theme.colors.error;
-      default: return theme.colors.neutral[300];
-    }
-  }};
+  border-left: 3px solid
+    ${({ theme, $variant }) => {
+      switch ($variant) {
+        case 'input':
+          return theme.colors.bright.lapis;
+        case 'asset':
+          return theme.colors.bright.laurel;
+        case 'alerts':
+          return theme.colors.bright.coral;
+        default:
+          return theme.colors.line;
+      }
+    }};
 `;
 
-const CardIcon = styled.div`
-  font-size: 2rem;
+const CardIcon = styled.div<SummaryCardProps>`
+  display: flex;
+  color: ${({ theme, $variant }) => {
+    switch ($variant) {
+      case 'input':
+        return theme.colors.bright.lapis;
+      case 'asset':
+        return theme.colors.bright.laurel;
+      case 'alerts':
+        return theme.colors.bright.coral;
+      default:
+        return theme.colors.celeste;
+    }
+  }};
 `;
 
 const CardContent = styled.div`
@@ -222,12 +212,13 @@ const CardContent = styled.div`
 `;
 
 const CardLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const CardValue = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -235,19 +226,19 @@ const CardValue = styled.div`
 
 const CardSubtext = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
 const AlertText = styled.span`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
 `;
 
 const TabNav = styled.nav`
   display: flex;
   gap: ${({ theme }) => theme.spacing.sm};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
   overflow-x: auto;
 `;
@@ -259,25 +250,25 @@ const TabLink = styled(NavLink)`
   padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-decoration: none;
   border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  margin-bottom: -1px;
   transition: all 0.2s ease;
   white-space: nowrap;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &.active {
-    color: ${({ theme }) => theme.colors.primary[500]};
-    border-bottom-color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.celeste};
+    border-bottom-color: ${({ theme }) => theme.colors.celeste};
   }
 `;
 
 const TabIcon = styled.span`
-  font-size: 1.25rem;
+  display: flex;
 `;
 
 const ContentArea = styled.div`
@@ -287,5 +278,5 @@ const ContentArea = styled.div`
 const LoadingText = styled.div`
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;

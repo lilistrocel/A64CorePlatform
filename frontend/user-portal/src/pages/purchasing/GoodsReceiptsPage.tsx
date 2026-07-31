@@ -7,14 +7,22 @@
  * Modals do NOT close on overlay click — X button only.
  *
  * Route: /purchasing/gr
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls, phase badges via ./statusPhase,
+ * Space Mono metadata, shared PageHeader/Button. Logic, routes, data-fetching
+ * and props are unchanged.
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
+import styled, { css } from 'styled-components';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { useGoodsReceipts } from '../../hooks/queries/useGoodsReceipts';
 import { useAuthStore } from '../../stores/auth.store';
 import type { GRStatus } from '../../services/goodsReceiptsService';
+import { purchasingStatusToPhase } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -22,20 +30,6 @@ const Container = styled.div`
   padding: 32px;
   max-width: 1440px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
 `;
 
 const FilterRow = styled.div`
@@ -47,16 +41,19 @@ const FilterRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 220px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const FilterChips = styled.div`
@@ -65,110 +62,125 @@ const FilterChips = styled.div`
   flex-wrap: wrap;
 `;
 
-const Chip = styled.button<{ $active: boolean }>`
+/** Filter pill — spec §5 preamble: "same status = same colour in every
+ * context (badge, card edge, filter pill, ...)". Active state without a
+ * phase (the "All" chip) falls back to celeste, never gold. */
+const Chip = styled.button<{ $active: boolean; $phase?: PhaseKey }>`
+  ${glassControl}
+  display: inline-flex;
+  align-items: center;
   padding: 6px 14px;
   border-radius: 99px;
-  border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
-  font-size: 13px;
-  font-weight: ${({ $active }) => ($active ? '600' : '400')};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   transition: all 150ms ease;
+
+  &:hover {
+    border-color: rgba(180, 200, 220, 0.4);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  ${({ $active, $phase, theme }) =>
+    $active &&
+    ($phase
+      ? phaseBadge($phase)
+      : css`
+          color: ${theme.colors.celeste};
+          border-color: ${theme.colors.celeste};
+          background: rgba(180, 200, 220, 0.14);
+        `)}
 `;
 
-const PrimaryButton = styled.button`
-  padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-`;
-
-const GhostButton = styled.button`
-  padding: 6px 14px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+const TableWrap = styled.div`
+  ${glassPanel}
+  overflow: hidden;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Tr = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover td { background: rgba(180, 200, 220, 0.05); }
   &:last-child td { border-bottom: none; }
 `;
 
-const StatusBadge = styled.span<{ $status: GRStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
+/** Space Mono for document IDs, quantities, currency amounts, timestamps —
+ * spec §2/instruction 6. */
+const Mono = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
+const DocCode = styled(Mono)`
+  font-size: 13px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+/** Muted, smaller Space Mono — for secondary metadata like "Posted At". */
+const MutedMono = styled(Mono)`
   font-size: 12px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'Draft':   return theme.colors.neutral[100];
-      case 'Posted':  return theme.colors.successBg;
-      default:        return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'Draft':   return theme.colors.textSecondary;
-      case 'Posted':  return theme.colors.emerald[700];
-      default:        return theme.colors.textSecondary;
-    }
-  }};
+  color: ${({ theme }) => theme.colors.muted};
+`;
+
+/** PO cross-reference link — secondary emphasis (celeste), never gold. Also
+ * Space Mono since it renders a doc number. */
+const RefLink = styled(Mono)`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.celeste};
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
+`;
+
+const StatusBadge = styled.span<{ $status: GRStatus }>`
+  ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
+`;
+
+const StatusMessage = styled.p`
+  text-align: center;
+  padding: 48px 32px;
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 15px;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 15px;
+`;
+
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 1.4rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 8px;
+`;
+
+const EmptyText = styled.p`
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 0.9rem;
+  margin: 0 0 20px;
 `;
 
 const Pagination = styled.div`
@@ -177,12 +189,19 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PageButtons = styled.div`
   display: flex;
+  align-items: center;
   gap: 8px;
+`;
+
+const PageIndicator = styled.span`
+  ${monoLabel}
+  padding: 6px 12px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -215,7 +234,6 @@ function formatDate(dateStr?: string | null): string {
 export function GoodsReceiptsPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const theme = useTheme();
   const organizationId = user?.organizationId ?? '';
 
   const [page, setPage] = useState(1);
@@ -235,12 +253,16 @@ export function GoodsReceiptsPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Goods Receipts</Title>
-        <PrimaryButton onClick={() => navigate('/purchasing/gr/new')}>
-          + New from PO
-        </PrimaryButton>
-      </Header>
+      <PageHeader
+        breadcrumb="— PURCHASING · RECEIPTS"
+        title="Goods Receipts"
+        emphasizeLastWord
+        description="Confirmed deliveries against open purchase orders."
+        stats={[
+          { value: meta.total, label: 'Total GRs' },
+          { value: grs.length, label: 'This Page' },
+        ]}
+      />
 
       <FilterRow>
         <SearchInput
@@ -254,84 +276,97 @@ export function GoodsReceiptsPage() {
             <Chip
               key={f.value}
               $active={statusFilter === f.value}
+              $phase={f.value === 'all' ? undefined : purchasingStatusToPhase(f.value)}
               onClick={() => { setStatusFilter(f.value as GRStatus | 'all'); setPage(1); }}
             >
               {f.label}
             </Chip>
           ))}
         </FilterChips>
+        <Button variant="primary" onClick={() => navigate('/purchasing/gr/new')}>
+          New from PO
+        </Button>
       </FilterRow>
 
-      {isLoading && <EmptyState>Loading goods receipts...</EmptyState>}
-      {isError && <EmptyState>Failed to load goods receipts. Please try again.</EmptyState>}
+      {isLoading && <StatusMessage>Loading goods receipts...</StatusMessage>}
+      {isError && <StatusMessage>Failed to load goods receipts. Please try again.</StatusMessage>}
       {!isLoading && !isError && grs.length === 0 && (
-        <EmptyState>No goods receipts found.</EmptyState>
+        <EmptyState>
+          <EmptyHeadline>No goods receipts yet</EmptyHeadline>
+          {/* Reason: no separate CTA — "New from PO" above in FilterRow
+              already covers this action; a second gold primary button here
+              would breach the spec §3 ≤4-gold-per-view budget. */}
+          <EmptyText style={{ marginBottom: 0 }}>Receive against an open purchase order above to record a delivery.</EmptyText>
+        </EmptyState>
       )}
 
       {!isLoading && !isError && grs.length > 0 && (
         <>
-          <Table>
-            <thead>
-              <tr>
-                <Th>GR Number</Th>
-                <Th>PO Number</Th>
-                <Th>Vendor</Th>
-                <Th>Received Date</Th>
-                <Th>Total Net</Th>
-                <Th>Status</Th>
-                <Th>Posted At</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {grs.map((gr) => (
-                <Tr key={gr.docId} onClick={() => navigate(`/purchasing/gr/${gr.docId}`)}>
-                  <Td>
-                    <code style={{ fontSize: 13, fontWeight: 600 }}>{gr.docNumber}</code>
-                  </Td>
-                  <Td>
-                    {gr.baseDocNumber ? (
-                      <span
-                        style={{ color: theme.colors.primary[600], cursor: 'pointer', fontSize: 13 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/purchasing/po/${gr.baseDocId}`);
-                        }}
-                      >
-                        {gr.baseDocNumber}
-                      </span>
-                    ) : '—'}
-                  </Td>
-                  <Td>{gr.vendorName ?? gr.vendorCode ?? '—'}</Td>
-                  <Td>{formatDate(gr.receivedDate)}</Td>
-                  <Td>{formatAmount(gr.subtotalNet, gr.currencyCode)}</Td>
-                  <Td>
-                    <StatusBadge $status={gr.status}>{gr.status}</StatusBadge>
-                  </Td>
-                  <Td style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-                    {gr.postedAt ? formatDate(gr.postedAt) : '—'}
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <TableWrap>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>GR Number</Th>
+                  <Th>PO Number</Th>
+                  <Th>Vendor</Th>
+                  <Th>Received Date</Th>
+                  <Th>Total Net</Th>
+                  <Th>Status</Th>
+                  <Th>Posted At</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {grs.map((gr) => (
+                  <Tr key={gr.docId} onClick={() => navigate(`/purchasing/gr/${gr.docId}`)}>
+                    <Td>
+                      <DocCode>{gr.docNumber}</DocCode>
+                    </Td>
+                    <Td>
+                      {gr.baseDocNumber ? (
+                        <RefLink
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/purchasing/po/${gr.baseDocId}`);
+                          }}
+                        >
+                          {gr.baseDocNumber}
+                        </RefLink>
+                      ) : '—'}
+                    </Td>
+                    <Td>{gr.vendorName ?? gr.vendorCode ?? '—'}</Td>
+                    <Td><Mono>{formatDate(gr.receivedDate)}</Mono></Td>
+                    <Td><Mono>{formatAmount(gr.subtotalNet, gr.currencyCode)}</Mono></Td>
+                    <Td>
+                      <StatusBadge $status={gr.status}>{gr.status}</StatusBadge>
+                    </Td>
+                    <Td>
+                      <MutedMono>{gr.postedAt ? formatDate(gr.postedAt) : '—'}</MutedMono>
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrap>
           <Pagination>
             <span>Showing {grs.length} of {meta.total} goods receipts</span>
             <PageButtons>
-              <GhostButton
+              <Button
+                variant="outline"
+                size="small"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
               >
                 Previous
-              </GhostButton>
-              <span style={{ padding: '6px 12px', fontSize: 13 }}>
-                Page {meta.page} / {meta.totalPages}
-              </span>
-              <GhostButton
+              </Button>
+              <PageIndicator>Page {meta.page} / {meta.totalPages}</PageIndicator>
+              <Button
+                variant="outline"
+                size="small"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page >= meta.totalPages}
               >
                 Next
-              </GhostButton>
+              </Button>
             </PageButtons>
           </Pagination>
         </>

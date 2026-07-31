@@ -17,7 +17,22 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import styled, { keyframes, useTheme, type DefaultTheme } from 'styled-components';
-import { Send, Loader, Trash2 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Send,
+  Loader,
+  Trash2,
+  Settings,
+  Radio,
+  BarChart3,
+  Sprout,
+  Zap,
+  Eye,
+  FileText,
+  Brain,
+  FileSpreadsheet,
+} from 'lucide-react';
+import { glassControl } from '@a64core/shared';
 import { useAIHub } from '../../hooks/ai/useAIHub';
 import { ConfirmationCard } from './ConfirmationCard';
 import { exportReport } from '../../services/aiHubApi';
@@ -77,31 +92,31 @@ const QUICK_ACTIONS: Record<AIHubSection, string[]> = {
 };
 
 interface SectionWelcomeConfig {
-  icon: string;
+  icon: LucideIcon;
   title: string;
   subtitle: string;
 }
 
 const SECTION_WELCOME: Record<AIHubSection, SectionWelcomeConfig> = {
   control: {
-    icon: '⚙️',
+    icon: Settings,
     title: 'Operations Control',
     subtitle:
       'Control relays, manage automations, and execute equipment commands. All actions require your confirmation.',
   },
   monitor: {
-    icon: '📡',
+    icon: Radio,
     title: 'Live Monitoring',
     subtitle:
       'View real-time sensor data, equipment status, alerts, and farm statistics. Read-only access.',
   },
   report: {
-    icon: '📊',
+    icon: BarChart3,
     title: 'Report Generator',
     subtitle: 'Generate structured reports with data analysis. Export as PDF or Excel.',
   },
   advise: {
-    icon: '🌱',
+    icon: Sprout,
     title: 'Agricultural Advisor',
     subtitle:
       'Get expert farming advice based on your live data and international best practices.',
@@ -109,25 +124,25 @@ const SECTION_WELCOME: Record<AIHubSection, SectionWelcomeConfig> = {
 };
 
 interface SectionBadgeConfig {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   color: string;
 }
 
 /**
- * Section identity colours, resolved against the live theme (not a module
- * constant) so dark mode stays correct. `report` was purple — it needs to
- * stay visually distinct from `monitor`'s blue, but `control` already owns
- * `warning` (== `secondary`/gold at the token level), so `report` takes
- * `primary[700]` (decorative-only per spec §3) rather than colliding with
- * control's gold on the value it shares with `warning`.
+ * Night Observatory (T-901): section identity colours, resolved against the
+ * live theme (not a module constant) so dark mode stays correct. These are
+ * categorical (which section is this), not status, so they come from
+ * `colors.bright.*` (spec §3) matching AIHubTabBar/AIHub page — `warning`
+ * (== gold-b) is reserved and never used for a categorical badge. Four
+ * distinct bright hues, none of them bright.gold.
  */
 function getSectionBadge(theme: DefaultTheme): Record<AIHubSection, SectionBadgeConfig> {
   return {
-    control: { icon: '⚡', label: 'Write Access', color: theme.colors.warning },
-    monitor: { icon: '👁️', label: 'Read Only',    color: theme.colors.info },
-    report:  { icon: '📄', label: 'Exportable',   color: theme.colors.primary[700] },
-    advise:  { icon: '🧠', label: 'Expert Mode',  color: theme.colors.success },
+    control: { icon: Zap,      label: 'Write Access', color: theme.colors.bright.terra },
+    monitor: { icon: Eye,      label: 'Read Only',    color: theme.colors.bright.lapis },
+    report:  { icon: FileText, label: 'Exportable',   color: theme.colors.bright.lavender },
+    advise:  { icon: Brain,    label: 'Expert Mode',  color: theme.colors.bright.emerald },
   };
 }
 
@@ -147,12 +162,14 @@ const bounce = keyframes`
   40%           { transform: translateY(-6px); }
 `;
 
+// Night Observatory (T-901): transparent — AIHub's FullScreen/Header already
+// stopped painting an opaque background over the app shell's Sky layer; this
+// inner wrapper must not reintroduce one.
 const ChatWrapper = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: ${({ theme }) => theme.colors.background};
   overflow: hidden;
 `;
 
@@ -163,8 +180,7 @@ const ChatInnerHeader = styled.div`
   align-items: center;
   justify-content: flex-end;
   padding: 6px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.background};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
   gap: 8px;
 `;
@@ -231,6 +247,9 @@ const IconButton = styled.button`
 
 /* ----- Messages ----- */
 
+// Transparent — lets the sky read through behind the conversation; message
+// bubbles below carry their own contrast, so the scroll area itself needs
+// no fill (spec §7).
 const MessagesArea = styled.div`
   flex: 1;
   overflow-y: auto;
@@ -239,7 +258,6 @@ const MessagesArea = styled.div`
   flex-direction: column;
   gap: 14px;
   min-height: 0;
-  background: ${({ theme }) => theme.colors.neutral[50]};
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -248,7 +266,7 @@ const MessagesArea = styled.div`
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.cosmosHi};
     border-radius: 2px;
   }
 
@@ -273,12 +291,11 @@ const WelcomeIcon = styled.div<AccentTextProps>`
   height: 56px;
   border-radius: 50%;
   background: ${({ $color }) => `${$color}15`};
+  border: 1px solid ${({ $color }) => `${$color}40`};
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${({ $color }) => $color};
-  font-size: 26px;
-  line-height: 1;
 `;
 
 const WelcomeTitle = styled.h2`
@@ -360,8 +377,11 @@ const MessageBubble = styled.div<BubbleProps>`
   border-radius: ${({ $isUser }) =>
     $isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};
   background: ${({ $isUser, $accentColor, theme }) =>
-    $isUser ? $accentColor : theme.colors.neutral[200]};
-  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onAccent : theme.colors.textPrimary)};
+    $isUser ? $accentColor : theme.colors.cosmosHi};
+  /* Night Observatory onAccent audit (spec §1.1): $accentColor is always one
+     of the bright.* categorical hues (never gold), so user bubbles need
+     onDark (cream), not onAccent (cosmos, reserved for gold fills). */
+  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onDark : theme.colors.textPrimary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -430,30 +450,29 @@ const ExportBar = styled.div`
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ExportButton = styled.button`
+  ${glassControl}
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 
@@ -470,8 +489,7 @@ const QuickActionsBar = styled.div`
   gap: 6px;
   padding: 8px 12px;
   overflow-x: auto;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 
   &::-webkit-scrollbar {
@@ -480,11 +498,10 @@ const QuickActionsBar = styled.div`
 `;
 
 const QuickBarChip = styled.button<QuickChipProps>`
+  ${glassControl}
   padding: 5px 12px;
   min-height: 36px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.celeste};
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
@@ -517,35 +534,32 @@ const InputArea = styled.div`
   align-items: flex-end;
   gap: 10px;
   padding: 12px 14px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
 const TextareaInput = styled.textarea`
+  ${glassControl}
   flex: 1;
   min-height: 56px;
   max-height: 160px;
   padding: 16px 18px;
-  border: 1.5px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
   font-size: 18px;
   line-height: 1.4;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
   resize: none;
   transition: all 150ms ease-in-out;
   font-family: inherit;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1F;
-    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:disabled {
@@ -564,7 +578,9 @@ const SendButton = styled.button<SendButtonProps>`
   min-width: 52px;
   border-radius: 50%;
   background: ${({ $accentColor }) => $accentColor};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* $accentColor is a bright.* section colour, never gold — onDark, not
+     onAccent (spec §1.1 onAccent audit). */
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   cursor: pointer;
   display: flex;
@@ -703,6 +719,8 @@ export function AIHubChat({
   const quickActions = QUICK_ACTIONS[section];
   const welcomeConfig = SECTION_WELCOME[section];
   const badgeConfig = SECTION_BADGE[section];
+  const WelcomeIconGlyph = welcomeConfig.icon;
+  const BadgeIconGlyph = badgeConfig.icon;
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -718,7 +736,7 @@ export function AIHubChat({
       <ChatInnerHeader>
         <SectionLabel $color={accentColor} aria-hidden="true">{section}</SectionLabel>
         <SectionBadge $color={badgeConfig.color} aria-label={badgeConfig.label}>
-          <span aria-hidden="true">{badgeConfig.icon}</span>
+          <BadgeIconGlyph size={12} strokeWidth={2} aria-hidden="true" />
           {badgeConfig.label}
         </SectionBadge>
         <IconButton
@@ -736,7 +754,7 @@ export function AIHubChat({
         {messages.length === 0 && (
           <WelcomeContainer>
             <WelcomeIcon $color={accentColor} aria-hidden="true">
-              {welcomeConfig.icon}
+              <WelcomeIconGlyph size={26} strokeWidth={1.6} />
             </WelcomeIcon>
             <WelcomeTitle>{welcomeConfig.title}</WelcomeTitle>
             <WelcomeText>{welcomeConfig.subtitle}</WelcomeText>
@@ -784,7 +802,7 @@ export function AIHubChat({
                     {exportingKey === `${msg.id}-pdf` ? (
                       <Loader size={11} />
                     ) : (
-                      <span aria-hidden="true">📄</span>
+                      <FileText size={11} aria-hidden="true" />
                     )}
                     PDF
                   </ExportButton>
@@ -798,7 +816,7 @@ export function AIHubChat({
                     {exportingKey === `${msg.id}-excel` ? (
                       <Loader size={11} />
                     ) : (
-                      <span aria-hidden="true">📊</span>
+                      <FileSpreadsheet size={11} aria-hidden="true" />
                     )}
                     Excel
                   </ExportButton>

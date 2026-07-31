@@ -9,6 +9,21 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import {
+  Home,
+  Wheat,
+  Droplet,
+  Building2,
+  Package,
+  Sprout,
+  ArrowRight,
+  Sparkles,
+  TrendingUp,
+  BarChart3,
+  Trash2,
+} from 'lucide-react';
+import { glassPanelHover, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { AddVirtualCropModal } from './AddVirtualCropModal';
 import { AreaBudgetBar } from './AreaBudgetBar';
 import { PhysicalBlockPlantingsModal } from './PhysicalBlockPlantingsModal';
@@ -30,21 +45,34 @@ export interface PhysicalBlockCardProps {
 }
 
 // ============================================================================
+// PHASE MAP
+// ============================================================================
+
+// BlockState -> Night Observatory phase colour (spec §5.2 extrapolation, plus
+// literal matches where the crop-growth vocabulary already lines up with the
+// room-phase one: empty/fruiting/harvesting/cleaning are exact). Kept in sync
+// with the identical map in VirtualBlockItem.tsx — same status vocabulary
+// (BlockState), same colour everywhere (spec §5: "same status = same colour
+// in every context").
+const BLOCK_STATE_PHASE: Record<string, PhaseKey> = {
+  empty: 'empty',
+  planned: 'fruitingInit', // pending / awaiting — not yet actively growing
+  growing: 'inoculated', // open / active / in progress
+  fruiting: 'fruiting', // literal match
+  harvesting: 'harvesting', // literal match — the one gold status
+  cleaning: 'cleaning', // literal match
+  alert: 'quarantined', // rejected / failed / needs attention
+  partial: 'colonizing', // partially done
+};
+
+// ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
-const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+const Card = styled.div<{ $phase: PhaseKey }>`
+  ${glassPanelHover}
   padding: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  border-left: 4px solid ${({ theme }) => theme.colors.success};
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.lg};
-    transform: translateY(-2px);
-  }
+  border-left: 3px solid ${({ theme, $phase }) => theme.colors.phase[$phase]};
 `;
 
 const Header = styled.div`
@@ -59,7 +87,8 @@ const LeftSection = styled.div`
 `;
 
 const BlockIcon = styled.div`
-  font-size: 28px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
@@ -72,15 +101,17 @@ const BlockName = styled.h3`
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.celeste};
     text-decoration: underline;
   }
 `;
 
 const BlockCode = styled.div`
-  font-size: 13px;
+  ${monoLabel}
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-family: 'Courier New', monospace;
   margin-bottom: 4px;
 `;
 
@@ -91,12 +122,12 @@ const BlockType = styled.div`
 `;
 
 const PlantingCountBadge = styled.div<{ $count: number }>`
+  ${monoLabel}
   padding: 8px 14px;
   border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 0.72rem;
   background: ${({ $count, theme }) => ($count > 0 ? theme.colors.successBg : theme.colors.surface)};
-  color: ${({ $count, theme }) => ($count > 0 ? theme.colors.emerald[600] : theme.colors.textDisabled)};
+  color: ${({ $count, theme }) => ($count > 0 ? theme.colors.bright.emerald : theme.colors.textDisabled)};
   white-space: nowrap;
 `;
 
@@ -115,11 +146,15 @@ const PlantingsSectionTitle = styled.div`
 `;
 
 const EmptyPlantingsMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 24px;
   text-align: center;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.glass.base};
   border-radius: 8px;
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px dashed ${({ theme }) => theme.colors.glass.border};
   color: ${({ theme }) => theme.colors.textDisabled};
   font-size: 14px;
 `;
@@ -127,14 +162,14 @@ const EmptyPlantingsMessage = styled.div`
 const ViewPlantingsButton = styled.button`
   width: 100%;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -142,11 +177,12 @@ const ViewPlantingsButton = styled.button`
   margin-bottom: 12px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: rgba(180, 200, 220, 0.07);
+    border-color: ${({ theme }) => theme.colors.celeste};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -159,7 +195,7 @@ const Actions = styled.div`
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   flex: 1;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -174,29 +210,29 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.success};
-        color: ${theme.colors.onAccent};
+        color: ${theme.colors.onDark};
         &:hover {
           background: ${theme.colors.success};
-          filter: brightness(0.85);
+          filter: brightness(0.9);
         }
       `;
     }
     if ($variant === 'danger') {
       return `
-        background: transparent;
-        color: ${theme.colors.terracotta[600]};
-        border: 1px solid ${theme.colors.terracotta[600]};
+        background: ${theme.colors.errorBg};
+        color: ${theme.colors.error};
+        border: 1px solid ${theme.colors.error};
         &:hover {
-          background: ${theme.colors.errorBg};
+          filter: brightness(1.15);
         }
       `;
     }
     return `
-      background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      background: ${theme.colors.glass.base};
+      color: ${theme.colors.textPrimary};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.infoBg};
+        background: ${theme.colors.glass.hi};
       }
     `;
   }}
@@ -210,21 +246,21 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 const AddNewPlantingButton = styled.button`
   width: 100%;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: none;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 
   &:hover {
-    filter: brightness(0.85);
+    filter: brightness(0.9);
   }
 
   &:focus-visible {
@@ -238,51 +274,15 @@ const PhysicalBlockPlantingInfo = styled.div`
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.successBg};
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   margin-bottom: 8px;
 `;
 
-const PlantingState = styled.div<{ $state: string }>`
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 600;
+const PlantingState = styled.div<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
   text-transform: capitalize;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: ${({ $state, theme }) => {
-    switch ($state) {
-      case 'planned':
-        return theme.colors.infoBg;
-      case 'growing':
-        return theme.colors.successBg;
-      case 'fruiting':
-        return theme.colors.warningBg;
-      case 'harvesting':
-        return theme.colors.errorBg;
-      default:
-        return theme.colors.surface;
-    }
-  }};
-  color: ${({ $state, theme }) => {
-    switch ($state) {
-      case 'planned':
-        return theme.colors.primary[700];
-      case 'growing':
-        return theme.colors.emerald[600];
-      case 'fruiting':
-        return theme.colors.terracotta[600];
-      // No brand token matches the original magenta exactly (not in the migration
-      // table); terracotta[800] keeps it in the errorBg-paired family while staying
-      // visually distinct (darker) from the fruiting terracotta[600] above.
-      case 'harvesting':
-        return theme.colors.terracotta[800];
-      default:
-        return theme.colors.neutral[700];
-    }
-  }};
 `;
 
 const PlantingDetails = styled.div`
@@ -296,7 +296,10 @@ const PlantingCrop = styled.div`
 `;
 
 const PlantingMeta = styled.div`
-  font-size: 12px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
   color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 2px;
 `;
@@ -340,6 +343,8 @@ export function PhysicalBlockCard({
   // Can add planting if not cleaning AND either there is available area OR the block is fully empty
   const canAddPlanting = !isBlockCleaning && ((physicalBlock.availableArea || 0) > 0 || isFullyEmpty);
 
+  const cardPhase: PhaseKey = BLOCK_STATE_PHASE[physicalBlock.state] ?? 'empty';
+
   const handleBlockNameClick = () => {
     navigate(`/farm/farms/${farmId}/blocks/${physicalBlock.blockId}`);
   };
@@ -368,23 +373,26 @@ export function PhysicalBlockCard({
     }
   };
 
-  const getBlockTypeIcon = (): string => {
+  const BlockTypeIcon = (() => {
     const blockType = physicalBlock.metadata?.blockType?.toString().toLowerCase() || '';
-    if (blockType.includes('greenhouse')) return '🏡';
-    if (blockType.includes('open')) return '🌾';
-    if (blockType.includes('hydro')) return '💧';
-    if (blockType.includes('vertical')) return '🏢';
-    return '📦';
-  };
+    if (blockType.includes('greenhouse')) return Home;
+    if (blockType.includes('open')) return Wheat;
+    if (blockType.includes('hydro')) return Droplet;
+    if (blockType.includes('vertical')) return Building2;
+    return Package;
+  })();
 
   return (
     <Card
+      $phase={cardPhase}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       <Header>
         <LeftSection>
-          <BlockIcon>{getBlockTypeIcon()}</BlockIcon>
+          <BlockIcon>
+            <BlockTypeIcon size={26} strokeWidth={1.6} />
+          </BlockIcon>
           <BlockName onClick={handleBlockNameClick}>
             {physicalBlock.name || physicalBlock.blockCode || 'Unnamed Block'}
           </BlockName>
@@ -417,11 +425,7 @@ export function PhysicalBlockCard({
         {/* Show physical block's own planting if it has one */}
         {physicalBlockHasPlanting && (
           <PhysicalBlockPlantingInfo>
-            <PlantingState $state={physicalBlock.state}>
-              {physicalBlock.state === 'planned' && '📋'}
-              {physicalBlock.state === 'growing' && '🌱'}
-              {physicalBlock.state === 'fruiting' && '🍅'}
-              {physicalBlock.state === 'harvesting' && '🌾'}
+            <PlantingState $phase={cardPhase}>
               {physicalBlock.state}
             </PlantingState>
             <PlantingDetails>
@@ -444,9 +448,9 @@ export function PhysicalBlockCard({
         {/* Button to open the plantings modal for virtual block children */}
         {activePlantings.length > 0 && (
           <ViewPlantingsButton onClick={() => setShowPlantingsModal(true)}>
-            <span>🌱</span>
+            <Sprout size={13} strokeWidth={1.6} />
             <span>View Active Plantings ({activePlantings.length})</span>
-            <span>→</span>
+            <ArrowRight size={13} strokeWidth={1.6} />
           </ViewPlantingsButton>
         )}
 
@@ -454,11 +458,12 @@ export function PhysicalBlockCard({
         {!physicalBlockHasPlanting && activePlantings.length === 0 && (
           isBlockCleaning ? (
             <EmptyPlantingsMessage>
-              🧹 This block is being cleaned and will be ready for planting soon
+              <Sparkles size={13} strokeWidth={1.6} />
+              <span>This block is being cleaned and will be ready for planting soon</span>
             </EmptyPlantingsMessage>
           ) : (
             <AddNewPlantingButton onClick={() => setShowPlantModal(true)}>
-              <span>🌱</span>
+              <Sprout size={13} strokeWidth={1.6} />
               <span>Add New Planting</span>
             </AddNewPlantingButton>
           )
@@ -470,7 +475,7 @@ export function PhysicalBlockCard({
           {/* Add Another Planting — only for non-empty blocks that still have capacity */}
           {!isFullyEmpty && canAddPlanting && (
             <ActionButton $variant="primary" onClick={() => setShowPlantModal(true)}>
-              <span>🌱</span>
+              <Sprout size={13} strokeWidth={1.6} />
               <span>Add Another Planting</span>
             </ActionButton>
           )}
@@ -478,25 +483,25 @@ export function PhysicalBlockCard({
           {/* Cleaning in progress indicator */}
           {isBlockCleaning && (
             <ActionButton $variant="secondary" disabled>
-              <span>🧹</span>
+              <Sparkles size={13} strokeWidth={1.6} />
               <span>Cleaning in Progress</span>
             </ActionButton>
           )}
 
           {physicalBlockHasPlanting && (
             <ActionButton $variant="secondary" onClick={handleBlockNameClick}>
-              <span>📈</span>
+              <TrendingUp size={13} strokeWidth={1.6} />
               <span>Manage Planting</span>
             </ActionButton>
           )}
 
           <ActionButton $variant="secondary" onClick={handleBlockNameClick}>
-            <span>📊</span>
+            <BarChart3 size={13} strokeWidth={1.6} />
             <span>View Details</span>
           </ActionButton>
 
           <ActionButton $variant="danger" onClick={handleDeleteBlock} disabled={isDeleting}>
-            <span>🗑️</span>
+            <Trash2 size={13} strokeWidth={1.6} />
             <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
           </ActionButton>
         </Actions>

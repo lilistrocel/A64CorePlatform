@@ -115,8 +115,7 @@ const Container = styled.div`
   flex-direction: column;
   gap: 2px;
   padding: ${({ theme }) => theme.spacing.sm};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const NewButton = styled.button`
@@ -126,7 +125,9 @@ const NewButton = styled.button`
   width: 100%;
   padding: 8px ${({ theme }) => theme.spacing.sm};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* primary/lapis is a bright fill, not gold — onDark, not onAccent
+     (spec §1.1 onAccent audit). */
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};

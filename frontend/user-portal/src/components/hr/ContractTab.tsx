@@ -5,9 +5,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { Plus, X } from 'lucide-react';
 import { hrApi, getContractTypeLabel, getContractStatusColor, formatCurrency, formatDate } from '../../services/hrService';
 import type { Contract, ContractCreate, ContractUpdate, ContractType, ContractStatus } from '../../types/hr';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -38,18 +40,22 @@ const Title = styled.h3`
 `;
 
 const AddButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -60,9 +66,8 @@ const CardList = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanel}
+  border-radius: 16px;
   padding: 16px;
 `;
 
@@ -79,15 +84,29 @@ const CardTitle = styled.div`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+/* Status colour comes from hrService.getContractStatusColor(), already
+   routed onto colors.phase.* (spec §5.2) — applies the §4 badge visual. */
 const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.64rem;
+  font-weight: 700;
+  background: ${({ $color }) => `${$color}29`};
   color: ${({ $color }) => $color};
-  text-transform: capitalize;
+  border: 1px solid ${({ $color }) => `${$color}73`};
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
 `;
 
 const CardDetails = styled.div`
@@ -97,49 +116,52 @@ const CardDetails = styled.div`
   margin-bottom: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textSecondary};
+
+  /* Salary is a payroll figure — Space Mono per spec §5 */
+  span.figure {
+    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  }
 `;
 
 const Actions = styled.div`
   display: flex;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const dangerVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+  }
+`;
+
+const defaultVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'danger') {
-      return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
-        &:hover {
-          background: ${theme.colors.errorBg};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
-      &:hover {
-        background: ${theme.colors.primary[50]};
-      }
-    `;
-  }}
+  ${({ $variant }) => ($variant === 'danger' ? dangerVariant : defaultVariant)}
 `;
 
 const EmptyText = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Modal = styled.div<{ $isOpen: boolean }>`
@@ -149,21 +171,23 @@ const Modal = styled.div<{ $isOpen: boolean }>`
   left: 0;
   width: 100%;
   height: 100%;
-  background: ${({ theme }) => `${theme.colors.neutral[900]}80`};
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   justify-content: center;
   align-items: center;
-  z-index: 1100;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
   padding: 32px;
   max-width: 600px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 `;
 
 const ModalHeader = styled.div`
@@ -181,16 +205,18 @@ const ModalTitle = styled.h3`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
   line-height: 1;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -207,32 +233,45 @@ const FormField = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const FormActions = styled.div`
@@ -242,34 +281,33 @@ const FormActions = styled.div`
   margin-top: 16px;
 `;
 
+const primaryVariant = css`
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
+  color: ${({ theme }) => theme.colors.onAccent};
+  font-weight: 700;
+  border: none;
+  &:hover {
+    filter: brightness(1.05);
+  }
+`;
+
+const secondaryVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+  }
+`;
+
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'primary') {
-      return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
-        border: none;
-        &:hover {
-          background: ${theme.colors.primary[600]};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
-      &:hover {
-        background: ${theme.colors.surface};
-      }
-    `;
-  }}
+  ${({ $variant }) => ($variant === 'primary' ? primaryVariant : secondaryVariant)}
 `;
 
 // ============================================================================
@@ -406,7 +444,9 @@ export function ContractTab({ employeeId }: ContractTabProps) {
     <Container>
       <Header>
         <Title>Contracts</Title>
-        <AddButton onClick={handleAdd}>+ Add Contract</AddButton>
+        <AddButton onClick={handleAdd}>
+          <Plus size={14} strokeWidth={2} /> Add Contract
+        </AddButton>
       </Header>
 
       {contracts.length === 0 ? (
@@ -420,9 +460,9 @@ export function ContractTab({ employeeId }: ContractTabProps) {
                 <StatusBadge $color={getContractStatusColor(contract.status)}>{contract.status}</StatusBadge>
               </CardHeader>
               <CardDetails>
-                <div>Start: {formatDate(contract.startDate)}</div>
-                <div>End: {contract.endDate ? formatDate(contract.endDate) : 'Ongoing'}</div>
-                {contract.salary && <div>Salary: {formatCurrency(contract.salary, contract.currency)}</div>}
+                <div>Start: <span className="figure">{formatDate(contract.startDate)}</span></div>
+                <div>End: <span className="figure">{contract.endDate ? formatDate(contract.endDate) : 'Ongoing'}</span></div>
+                {contract.salary && <div>Salary: <span className="figure">{formatCurrency(contract.salary, contract.currency)}</span></div>}
                 {contract.benefits && contract.benefits.length > 0 && <div>Benefits: {contract.benefits.join(', ')}</div>}
               </CardDetails>
               <Actions>
@@ -440,7 +480,9 @@ export function ContractTab({ employeeId }: ContractTabProps) {
         <ModalContent>
           <ModalHeader>
             <ModalTitle>{editingContract ? 'Edit Contract' : 'Add Contract'}</ModalTitle>
-            <CloseButton onClick={() => setModalOpen(false)}>×</CloseButton>
+            <CloseButton onClick={() => setModalOpen(false)} aria-label="Close">
+              <X size={20} strokeWidth={1.8} />
+            </CloseButton>
           </ModalHeader>
 
           <Form onSubmit={handleSubmit}>

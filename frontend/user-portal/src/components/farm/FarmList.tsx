@@ -8,6 +8,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import styled, { css, keyframes } from 'styled-components';
+import { Search, X, ChevronDown, Plus } from 'lucide-react';
+import { PageHeader, glassControl, monoLabel } from '@a64core/shared';
 import { FarmCard } from './FarmCard';
 import { CreateFarmModal } from './CreateFarmModal';
 import { EditFarmModal } from './EditFarmModal';
@@ -53,7 +55,7 @@ const Container = styled.div<{ $embedded?: boolean }>`
 
 const Header = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 32px;
 
@@ -62,13 +64,6 @@ const Header = styled.div`
     align-items: flex-start;
     gap: 16px;
   }
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
 `;
 
 const Actions = styled.div`
@@ -82,24 +77,22 @@ const Actions = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 16px; /* Prevents iOS zoom on focus */
   width: 300px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
   min-height: 44px; /* Touch-friendly height */
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1A`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   @media (max-width: 768px) {
@@ -108,14 +101,16 @@ const SearchInput = styled.input`
   }
 `;
 
+// The ONE primary-CTA gold budget item (spec §3) for this view — matches the
+// shared Button component's `primary` recipe (gold gradient, onAccent text).
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 11px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   display: flex;
@@ -124,9 +119,11 @@ const CreateButton = styled.button`
   gap: 8px;
   min-height: 44px; /* Touch-friendly height */
   white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 
   &:active {
@@ -161,10 +158,10 @@ const slideDown = keyframes`
 const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
   display: none;
   padding: 12px 16px;
-  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.primary[50] : theme.colors.surface)};
-  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.primary[500] : theme.colors.textSecondary)};
-  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 8px;
+  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.glass.hi : theme.colors.glass.base)};
+  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? theme.colors.celeste : theme.colors.muted)};
+  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? 'rgba(180, 200, 220, 0.4)' : theme.colors.glass.border)};
+  border-radius: 11px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -184,9 +181,9 @@ const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: 
 `;
 
 const FilterToggleIcon = styled.span<{ $isOpen: boolean }>`
+  display: flex;
   transition: transform 200ms ease-in-out;
   transform: ${({ $isOpen }) => ($isOpen ? 'rotate(180deg)' : 'rotate(0deg)')};
-  font-size: 12px;
 `;
 
 const FilterToggleText = styled.span`
@@ -195,9 +192,11 @@ const FilterToggleText = styled.span`
   gap: 8px;
 `;
 
+// Numeric count chip — a solid saturated fill (bright.lapis), so onAccent's
+// new "text on gold" meaning does not apply; needs onDark (spec §1.1).
 const ActiveFilterBadge = styled.span`
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  color: ${({ theme }) => theme.colors.onDark};
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -228,12 +227,15 @@ const FilterBar = styled.div<{ $isCollapsed?: boolean }>`
   }
 `;
 
+// Filter chips — glassControl per spec §4 "filter chips/search input/dropdown"
+// (item 1). Active state uses celeste (secondary emphasis), never gold —
+// this is a repeatable toggle, not the page's one primary CTA.
 const FilterButton = styled.button<{ $active: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 8px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.glass.hi : theme.colors.glass.base)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.muted)};
+  border-color: ${({ $active, theme }) => ($active ? 'rgba(180, 200, 220, 0.4)' : theme.colors.glass.border)};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -244,7 +246,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   justify-content: center;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:active {
@@ -257,12 +259,14 @@ const FilterButton = styled.button<{ $active: boolean }>`
   }
 `;
 
+// Ghost treatment (spec §4): clearing filters isn't destructive to data, so
+// this is celeste/transparent, not the coral "danger" tone it used to borrow.
 const ResetFiltersButton = styled.button`
   padding: 12px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 11px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -275,7 +279,8 @@ const ResetFiltersButton = styled.button`
   gap: 6px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[100]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:active {
@@ -318,11 +323,13 @@ const LoadingContainer = styled.div`
   min-height: 400px;
 `;
 
+// Gold is not on the loading-spinner budget (spec §3) — celeste, matching
+// the shared Spinner component's default accent.
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 4px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.celeste};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -335,9 +342,9 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: ${({ theme }) => theme.colors.terracotta[100]};
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
+  border-radius: 12px;
   color: ${({ theme }) => theme.colors.error};
   text-align: center;
 `;
@@ -345,24 +352,23 @@ const ErrorContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
-const EmptyIcon = styled.div`
-  font-size: 64px;
-  margin-bottom: 16px;
-`;
-
+// Fraunces italic celeste headline, one muted sentence, one primary button —
+// spec §4 "Empty states". No emoji, no stock illustration (the old giant
+// icon glyph is removed, not swapped for a lucide equivalent).
 const EmptyTitle = styled.h3`
-  font-size: 24px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 26px;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 24px 0;
 `;
 
@@ -380,11 +386,11 @@ const Pagination = styled.div`
 `;
 
 const PageButton = styled.button<{ $active?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 8px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.glass.hi : theme.colors.glass.base)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.textSecondary)};
+  border-color: ${({ $active, theme }) => ($active ? 'rgba(180, 200, 220, 0.4)' : theme.colors.glass.border)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
@@ -394,7 +400,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:active:not(:disabled) {
@@ -408,8 +414,9 @@ const PageButton = styled.button<{ $active?: boolean }>`
 `;
 
 const PageInfo = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const PageSizeContainer = styled.div`
@@ -428,28 +435,26 @@ const PageSizeContainer = styled.div`
 
 const PageSizeLabel = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PageSizeSelect = styled.select`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 16px; /* Prevents iOS zoom */
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   min-height: 44px; /* Touch-friendly height */
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1A`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
+    border-color: rgba(180, 200, 220, 0.35);
   }
 `;
 
@@ -679,8 +684,9 @@ export function FarmList({ onCreateFarm, onEditFarm, embedded = false }: FarmLis
         farmName={selectedFarmName}
       />
 
+      <PageHeader breadcrumb="OPERATIONS · FARM" title="Farm Management" />
+
       <Header>
-        <Title>Farm Management</Title>
         <Actions>
           <SearchInput
             type="text"
@@ -689,7 +695,7 @@ export function FarmList({ onCreateFarm, onEditFarm, embedded = false }: FarmLis
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <CreateButton onClick={handleCreateFarm}>
-            <span>+</span>
+            <Plus size={13} strokeWidth={1.8} />
             <span>New Farm</span>
           </CreateButton>
         </Actions>
@@ -704,13 +710,15 @@ export function FarmList({ onCreateFarm, onEditFarm, embedded = false }: FarmLis
         aria-controls="filter-bar"
       >
         <FilterToggleText>
-          <span>🔍</span>
+          <Search size={13} strokeWidth={1.6} aria-hidden="true" />
           <span>Filters</span>
           {activeFilterCount > 0 && (
             <ActiveFilterBadge>{activeFilterCount}</ActiveFilterBadge>
           )}
         </FilterToggleText>
-        <FilterToggleIcon $isOpen={isFilterOpen}>▼</FilterToggleIcon>
+        <FilterToggleIcon $isOpen={isFilterOpen} aria-hidden="true">
+          <ChevronDown size={13} strokeWidth={1.8} />
+        </FilterToggleIcon>
       </FilterToggleButton>
 
       <FilterBar $isCollapsed={!isFilterOpen} id="filter-bar">
@@ -731,7 +739,7 @@ export function FarmList({ onCreateFarm, onEditFarm, embedded = false }: FarmLis
         </FilterButton>
         {hasActiveFilters && (
           <ResetFiltersButton onClick={resetFilters}>
-            <span>✕</span>
+            <X size={13} strokeWidth={1.8} />
             <span>Clear Filters</span>
           </ResetFiltersButton>
         )}
@@ -739,7 +747,6 @@ export function FarmList({ onCreateFarm, onEditFarm, embedded = false }: FarmLis
 
       {filteredFarms.length === 0 ? (
         <EmptyState>
-          <EmptyIcon>🏞️</EmptyIcon>
           <EmptyTitle>No farms found</EmptyTitle>
           <EmptyDescription>
             {searchTerm
@@ -748,7 +755,7 @@ export function FarmList({ onCreateFarm, onEditFarm, embedded = false }: FarmLis
           </EmptyDescription>
           {!searchTerm && (
             <CreateButton onClick={handleCreateFarm}>
-              <span>+</span>
+              <Plus size={13} strokeWidth={1.8} />
               <span>Create Your First Farm</span>
             </CreateButton>
           )}

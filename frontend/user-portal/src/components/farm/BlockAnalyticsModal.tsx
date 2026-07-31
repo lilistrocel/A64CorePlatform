@@ -12,7 +12,19 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styled, { keyframes, css, useTheme } from 'styled-components';
+import {
+  BarChart3,
+  Wheat,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  X,
+  Sprout,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { glassPanel, glassOpaque, monoLabel, colorBadge } from '@a64core/shared';
 import type { Theme } from '@a64core/shared';
+import { BLOCK_STATE_PHASE_KEYS } from '../../types/farm';
 import {
   LineChart,
   Line,
@@ -49,39 +61,33 @@ export interface BlockAnalyticsModalProps {
 
 type TabType = 'overview' | 'yield' | 'timeline' | 'tasks' | 'alerts';
 
-const TABS: Array<{ key: TabType; label: string; icon: string }> = [
-  { key: 'overview', label: 'Overview', icon: '📊' },
-  { key: 'yield', label: 'Yield', icon: '🌾' },
-  { key: 'timeline', label: 'Timeline', icon: '⏱️' },
-  { key: 'tasks', label: 'Tasks', icon: '✅' },
-  { key: 'alerts', label: 'Alerts', icon: '⚠️' },
+const TABS: Array<{ key: TabType; label: string; icon: LucideIcon }> = [
+  { key: 'overview', label: 'Overview', icon: BarChart3 },
+  { key: 'yield', label: 'Yield', icon: Wheat },
+  { key: 'timeline', label: 'Timeline', icon: Clock },
+  { key: 'tasks', label: 'Tasks', icon: CheckCircle2 },
+  { key: 'alerts', label: 'Alerts', icon: AlertTriangle },
 ];
 
-// Quality-grade and lifecycle-state colour maps are theme-aware functions
-// (not static objects) because some tokens they resolve to — textSecondary in
-// particular — differ between light and dark theme. Call sites hold `theme`
-// via `useTheme()`.
+// Quality grade and lifecycle state extrapolate the phase vocabulary (spec
+// §5.2) — gold/warning stays reserved for the literal Harvesting phase, not
+// an ordinary grade or state chip (spec §3).
 function getQualityColor(theme: Theme, grade: string): string {
   const map: Record<string, string> = {
-    A: theme.colors.success,
-    B: theme.colors.primary[500],
-    C: theme.colors.warning,
+    A: theme.colors.phase.fruiting,
+    B: theme.colors.phase.inoculated,
+    C: theme.colors.phase.fruitingInit,
   };
-  return map[grade] ?? theme.colors.textSecondary;
+  return map[grade] ?? theme.colors.muted;
 }
 
+// `state` arrives as a loose string here (analytics payload isn't typed as
+// BlockState), so the lookup goes through BLOCK_STATE_PHASE_KEYS
+// (types/farm.ts, the canonical state→phase map) via a widened index rather
+// than re-deriving the mapping.
 function getStateColor(theme: Theme, state: string): string {
-  const map: Record<string, string> = {
-    empty: theme.colors.textSecondary,
-    planned: theme.colors.primary[500],
-    planted: theme.colors.success,
-    growing: theme.colors.success,
-    fruiting: theme.colors.secondary[500],
-    harvesting: theme.colors.warning,
-    cleaning: theme.colors.terracotta[400],
-    alert: theme.colors.error,
-  };
-  return map[state] ?? theme.colors.textSecondary;
+  const phaseKey = (BLOCK_STATE_PHASE_KEYS as Record<string, (typeof BLOCK_STATE_PHASE_KEYS)[keyof typeof BLOCK_STATE_PHASE_KEYS]>)[state];
+  return theme.colors.phase[phaseKey ?? 'empty'];
 }
 
 // ============================================================================
@@ -137,7 +143,7 @@ export function BlockAnalyticsModal({ isOpen, onClose, blockId, farmId }: BlockA
     if (error) {
       return (
         <ErrorContainer>
-          <ErrorIcon>❌</ErrorIcon>
+          <ErrorIcon><AlertTriangle size={48} strokeWidth={1.4} /></ErrorIcon>
           <ErrorTitle>Failed to load analytics</ErrorTitle>
           <ErrorMessage>{error.message}</ErrorMessage>
           <RetryButton onClick={refetch}>Try Again</RetryButton>
@@ -148,7 +154,7 @@ export function BlockAnalyticsModal({ isOpen, onClose, blockId, farmId }: BlockA
     if (!analytics) {
       return (
         <EmptyContainer>
-          <EmptyIcon>📊</EmptyIcon>
+          <EmptyIcon><BarChart3 size={48} strokeWidth={1.4} /></EmptyIcon>
           <EmptyText>No analytics data available</EmptyText>
         </EmptyContainer>
       );
@@ -176,7 +182,7 @@ export function BlockAnalyticsModal({ isOpen, onClose, blockId, farmId }: BlockA
         {/* Header */}
         <ModalHeader>
           <HeaderLeft>
-            <ModalTitle>📊 Block Analytics</ModalTitle>
+            <ModalTitle><BarChart3 size={22} strokeWidth={1.8} /> Block Analytics</ModalTitle>
             {analytics?.blockInfo && (
               <BlockInfo>
                 <BlockCode>{analytics.blockInfo.blockCode}</BlockCode>
@@ -196,7 +202,7 @@ export function BlockAnalyticsModal({ isOpen, onClose, blockId, farmId }: BlockA
               </PeriodSelect>
             </PeriodFilter>
             <CloseButton onClick={onClose} aria-label="Close modal">
-              ×
+              <X size={20} strokeWidth={1.8} />
             </CloseButton>
           </HeaderRight>
         </ModalHeader>
@@ -205,7 +211,7 @@ export function BlockAnalyticsModal({ isOpen, onClose, blockId, farmId }: BlockA
         <TabsContainer>
           {TABS.map((tab) => (
             <Tab key={tab.key} $active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
-              <TabIcon>{tab.icon}</TabIcon>
+              <TabIcon><tab.icon size={15} strokeWidth={1.8} /></TabIcon>
               <TabLabel>{tab.label}</TabLabel>
             </Tab>
           ))}
@@ -278,14 +284,16 @@ function OverviewTab({ analytics }: { analytics: any }) {
   }
 
   const performanceScore = analytics?.performanceMetrics?.overallScore ?? 0;
+  // Tiered performance score extrapolates the phase vocabulary (spec §5.2) —
+  // gold/warning stays reserved for the literal Harvesting phase (spec §3).
   const performanceColor =
     performanceScore >= 80
-      ? theme.colors.success
+      ? theme.colors.bright.emerald
       : performanceScore >= 60
-      ? theme.colors.primary[500]
+      ? theme.colors.bright.lapis
       : performanceScore >= 40
-      ? theme.colors.warning
-      : theme.colors.error;
+      ? theme.colors.bright.terra
+      : theme.colors.bright.coral;
 
   return (
     <TabContent>
@@ -311,13 +319,17 @@ function OverviewTab({ analytics }: { analytics: any }) {
           {analytics.blockInfo.currentCrop && (
             <InfoCard>
               <InfoLabel>Current Crop</InfoLabel>
-              <InfoValue>🌿 {analytics.blockInfo.currentCrop}</InfoValue>
+              <InfoValue style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Sprout size={14} strokeWidth={1.8} /> {analytics.blockInfo.currentCrop}
+              </InfoValue>
             </InfoCard>
           )}
           {analytics.blockInfo.actualPlantCount != null && (
             <InfoCard>
               <InfoLabel>Number of Plants</InfoLabel>
-              <InfoValue>🌱 {analytics.blockInfo.actualPlantCount.toLocaleString()}</InfoValue>
+              <InfoValue style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Sprout size={14} strokeWidth={1.8} /> {analytics.blockInfo.actualPlantCount.toLocaleString()}
+              </InfoValue>
             </InfoCard>
           )}
           {analytics.blockInfo.daysInCurrentCycle !== null && (
@@ -361,7 +373,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
         {analytics.performanceMetrics.strengths?.length > 0 && (
           <div style={{ marginTop: '16px' }}>
             <InfoLabel style={{ marginBottom: '8px' }}>Strengths:</InfoLabel>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: theme.colors.success }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: theme.colors.bright.emerald }}>
               {analytics.performanceMetrics.strengths.map((strength: string, idx: number) => (
                 <li key={idx} style={{ fontSize: '13px', marginBottom: '4px' }}>{strength}</li>
               ))}
@@ -371,7 +383,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
         {analytics.performanceMetrics.improvements?.length > 0 && (
           <div style={{ marginTop: '12px' }}>
             <InfoLabel style={{ marginBottom: '8px' }}>Areas for Improvement:</InfoLabel>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: theme.colors.warning }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: theme.colors.bright.terra }}>
               {analytics.performanceMetrics.improvements.map((improvement: string, idx: number) => (
                 <li key={idx} style={{ fontSize: '13px', marginBottom: '4px' }}>{improvement}</li>
               ))}
@@ -384,22 +396,22 @@ function OverviewTab({ analytics }: { analytics: any }) {
         <SectionTitle>Quick Stats</SectionTitle>
         <QuickStatsGrid>
           <QuickStatCard>
-            <QuickStatIcon>🌾</QuickStatIcon>
+            <QuickStatIcon><Wheat size={26} strokeWidth={1.6} /></QuickStatIcon>
             <QuickStatValue>{(analytics.yieldAnalytics?.totalYieldKg || 0).toFixed(1)} kg</QuickStatValue>
             <QuickStatLabel>Total Yield</QuickStatLabel>
           </QuickStatCard>
           <QuickStatCard>
-            <QuickStatIcon>✅</QuickStatIcon>
+            <QuickStatIcon><CheckCircle2 size={26} strokeWidth={1.6} /></QuickStatIcon>
             <QuickStatValue>{(analytics.taskAnalytics?.completionRate || 0).toFixed(0)}%</QuickStatValue>
             <QuickStatLabel>Task Completion</QuickStatLabel>
           </QuickStatCard>
           <QuickStatCard>
-            <QuickStatIcon>⚠️</QuickStatIcon>
+            <QuickStatIcon><AlertTriangle size={26} strokeWidth={1.6} /></QuickStatIcon>
             <QuickStatValue>{analytics.alertAnalytics?.activeAlerts || 0}</QuickStatValue>
             <QuickStatLabel>Active Alerts</QuickStatLabel>
           </QuickStatCard>
           <QuickStatCard>
-            <QuickStatIcon>⏱️</QuickStatIcon>
+            <QuickStatIcon><Clock size={26} strokeWidth={1.6} /></QuickStatIcon>
             <QuickStatValue>{analytics.timelineAnalytics?.cycleDuration || 0}</QuickStatValue>
             <QuickStatLabel>Days in Cycle</QuickStatLabel>
           </QuickStatCard>
@@ -437,10 +449,10 @@ function YieldTab({ analytics }: { analytics: any }) {
             <YieldStatValue
               $color={
                 analytics.yieldAnalytics.yieldEfficiencyPercent >= 90
-                  ? theme.colors.success
+                  ? theme.colors.bright.emerald
                   : analytics.yieldAnalytics.yieldEfficiencyPercent >= 70
-                  ? theme.colors.primary[500]
-                  : theme.colors.warning
+                  ? theme.colors.bright.lapis
+                  : theme.colors.bright.terra
               }
             >
               {analytics.yieldAnalytics.yieldEfficiencyPercent.toFixed(1)}%
@@ -529,8 +541,8 @@ function YieldTab({ analytics }: { analytics: any }) {
                       formatter={(value: number) => [`${value.toFixed(2)} kg`, '']}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="cumulativeKg" stroke={theme.colors.primary[500]} name="Cumulative Yield" strokeWidth={2} />
-                    <Line type="monotone" dataKey="quantityKg" stroke={theme.colors.success} name="Harvest Quantity" strokeWidth={2} />
+                    <Line type="monotone" dataKey="cumulativeKg" stroke={theme.colors.celeste} name="Cumulative Yield" strokeWidth={2} />
+                    <Line type="monotone" dataKey="quantityKg" stroke={theme.colors.bright.emerald} name="Harvest Quantity" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -539,7 +551,7 @@ function YieldTab({ analytics }: { analytics: any }) {
         </>
       ) : (
         <EmptyStateSection>
-          <EmptyIcon>🌾</EmptyIcon>
+          <EmptyIcon><Wheat size={48} strokeWidth={1.4} /></EmptyIcon>
           <EmptyText>No harvest data recorded yet</EmptyText>
         </EmptyStateSection>
       )}
@@ -663,19 +675,19 @@ function TasksTab({ analytics }: { analytics: any }) {
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Completed</TaskStatLabel>
-            <TaskStatValue $color={theme.colors.success}>{analytics.taskAnalytics.completedTasks}</TaskStatValue>
+            <TaskStatValue $color={theme.colors.bright.emerald}>{analytics.taskAnalytics.completedTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Pending</TaskStatLabel>
-            <TaskStatValue $color={theme.colors.warning}>{analytics.taskAnalytics.pendingTasks}</TaskStatValue>
+            <TaskStatValue $color={theme.colors.bright.terra}>{analytics.taskAnalytics.pendingTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Overdue</TaskStatLabel>
-            <TaskStatValue $color={theme.colors.error}>{analytics.taskAnalytics.overdueTasks}</TaskStatValue>
+            <TaskStatValue $color={theme.colors.bright.coral}>{analytics.taskAnalytics.overdueTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Completion Rate</TaskStatLabel>
-            <TaskStatValue $color={theme.colors.primary[500]}>{analytics.taskAnalytics.completionRate.toFixed(0)}%</TaskStatValue>
+            <TaskStatValue $color={theme.colors.bright.lapis}>{analytics.taskAnalytics.completionRate.toFixed(0)}%</TaskStatValue>
           </TaskStatCard>
         </TaskStatsGrid>
       </Section>
@@ -693,9 +705,9 @@ function TasksTab({ analytics }: { analytics: any }) {
                     <YAxis label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="total" fill={theme.colors.primary[500]} name="Total Tasks" />
-                    <Bar dataKey="completed" fill={theme.colors.success} name="Completed" />
-                    <Bar dataKey="pending" fill={theme.colors.warning} name="Pending" />
+                    <Bar dataKey="total" fill={theme.colors.bright.lapis} name="Total Tasks" />
+                    <Bar dataKey="completed" fill={theme.colors.bright.emerald} name="Completed" />
+                    <Bar dataKey="pending" fill={theme.colors.bright.terra} name="Pending" />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -716,7 +728,7 @@ function TasksTab({ analytics }: { analytics: any }) {
               )}
               <MetricItem>
                 <MetricLabel>Overdue Tasks:</MetricLabel>
-                <MetricValue $color={analytics.taskAnalytics.overdueTasks > 0 ? theme.colors.error : theme.colors.success}>
+                <MetricValue $color={analytics.taskAnalytics.overdueTasks > 0 ? theme.colors.bright.coral : theme.colors.bright.emerald}>
                   {analytics.taskAnalytics.overdueTasks}
                 </MetricValue>
               </MetricItem>
@@ -733,7 +745,7 @@ function TasksTab({ analytics }: { analytics: any }) {
         </>
       ) : (
         <EmptyStateSection>
-          <EmptyIcon>✅</EmptyIcon>
+          <EmptyIcon><CheckCircle2 size={48} strokeWidth={1.4} /></EmptyIcon>
           <EmptyText>No tasks recorded yet</EmptyText>
         </EmptyStateSection>
       )}
@@ -743,11 +755,13 @@ function TasksTab({ analytics }: { analytics: any }) {
 
 function AlertsTab({ analytics }: { analytics: any }) {
   const theme = useTheme();
+  // Severity extrapolates the phase vocabulary (spec §5.2) — gold/warning
+  // stays reserved for the literal Harvesting phase (spec §3).
   const alertSeverityData = [
-    { severity: 'Critical', count: analytics.alertAnalytics.criticalCount, color: theme.colors.terracotta[600] },
-    { severity: 'High', count: analytics.alertAnalytics.highCount, color: theme.colors.warning },
-    { severity: 'Medium', count: analytics.alertAnalytics.mediumCount, color: theme.colors.primary[500] },
-    { severity: 'Low', count: analytics.alertAnalytics.lowCount, color: theme.colors.textSecondary },
+    { severity: 'Critical', count: analytics.alertAnalytics.criticalCount, color: theme.colors.bright.coral },
+    { severity: 'High', count: analytics.alertAnalytics.highCount, color: theme.colors.bright.terra },
+    { severity: 'Medium', count: analytics.alertAnalytics.mediumCount, color: theme.colors.bright.lapis },
+    { severity: 'Low', count: analytics.alertAnalytics.lowCount, color: theme.colors.muted },
   ].filter((item) => item.count > 0);
 
   const hasAlertData = analytics.alertAnalytics.totalAlerts > 0;
@@ -763,15 +777,15 @@ function AlertsTab({ analytics }: { analytics: any }) {
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Active</AlertStatLabel>
-            <AlertStatValue $color={theme.colors.error}>{analytics.alertAnalytics.activeAlerts}</AlertStatValue>
+            <AlertStatValue $color={theme.colors.bright.coral}>{analytics.alertAnalytics.activeAlerts}</AlertStatValue>
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Resolved</AlertStatLabel>
-            <AlertStatValue $color={theme.colors.success}>{analytics.alertAnalytics.resolvedAlerts}</AlertStatValue>
+            <AlertStatValue $color={theme.colors.bright.emerald}>{analytics.alertAnalytics.resolvedAlerts}</AlertStatValue>
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Dismissed</AlertStatLabel>
-            <AlertStatValue $color={theme.colors.textSecondary}>{analytics.alertAnalytics.dismissedAlerts}</AlertStatValue>
+            <AlertStatValue $color={theme.colors.muted}>{analytics.alertAnalytics.dismissedAlerts}</AlertStatValue>
           </AlertStatCard>
         </AlertStatsGrid>
       </Section>
@@ -811,7 +825,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
                 {analytics.alertAnalytics.fastestResolutionHours !== null && (
                   <MetricItem>
                     <MetricLabel>Fastest Resolution:</MetricLabel>
-                    <MetricValue $color={theme.colors.success}>
+                    <MetricValue $color={theme.colors.bright.emerald}>
                       {analytics.alertAnalytics.fastestResolutionHours.toFixed(1)} hours
                     </MetricValue>
                   </MetricItem>
@@ -819,7 +833,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
                 {analytics.alertAnalytics.slowestResolutionHours !== null && (
                   <MetricItem>
                     <MetricLabel>Slowest Resolution:</MetricLabel>
-                    <MetricValue $color={theme.colors.error}>
+                    <MetricValue $color={theme.colors.bright.coral}>
                       {analytics.alertAnalytics.slowestResolutionHours.toFixed(1)} hours
                     </MetricValue>
                   </MetricItem>
@@ -830,7 +844,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
         </>
       ) : (
         <EmptyStateSection>
-          <EmptyIcon>⚠️</EmptyIcon>
+          <EmptyIcon><AlertTriangle size={48} strokeWidth={1.4} /></EmptyIcon>
           <EmptyText>No alerts recorded</EmptyText>
         </EmptyStateSection>
       )}
@@ -842,6 +856,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers").
 const Overlay = styled.div<{ $isOpen: boolean }>`
   display: ${({ $isOpen }) => ($isOpen ? 'flex' : 'none')};
   position: fixed;
@@ -849,24 +864,24 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 14, 36, 0.6);
   justify-content: center;
   align-items: center;
-  z-index: 1100;
+  z-index: ${({ theme }) => theme.zIndex.modal};
   padding: 20px;
   pointer-events: auto;
 `;
 
 const ModalContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 1200px;
   height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -877,11 +892,10 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 
   @media (max-width: 768px) {
@@ -909,8 +923,11 @@ const HeaderRight = styled.div`
 `;
 
 const ModalTitle = styled.h2`
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -920,17 +937,17 @@ const BlockInfo = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const BlockCode = styled.span`
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const BlockName = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PeriodFilter = styled.div`
@@ -942,30 +959,32 @@ const PeriodFilter = styled.div`
 const PeriodLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PeriodSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   width: 36px;
@@ -973,19 +992,18 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   overflow-x: auto;
   flex-shrink: 0;
 
@@ -1000,22 +1018,23 @@ const Tab = styled.button<{ $active: boolean }>`
   gap: 6px;
   padding: 14px 20px;
   border: none;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  background: transparent;
+  color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.muted)};
   font-size: 14px;
-  font-weight: ${({ $active }) => ($active ? '600' : '500')};
+  font-weight: ${({ $active }) => ($active ? '700' : '500')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : 'transparent')};
   white-space: nowrap;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.textPrimary)};
   }
 `;
 
 const TabIcon = styled.span`
-  font-size: 16px;
+  display: inline-flex;
 `;
 
 const TabLabel = styled.span``;
@@ -1024,7 +1043,6 @@ const ModalBody = styled.div`
   padding: 24px;
   overflow-y: auto;
   flex: 1;
-  background: ${({ theme }) => theme.colors.neutral[50]};
 `;
 
 const TabContent = styled.div`
@@ -1034,16 +1052,14 @@ const TabContent = styled.div`
 `;
 
 const Section = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px 0;
 `;
 
@@ -1060,27 +1076,19 @@ const InfoCard = styled.div`
 `;
 
 const InfoLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const InfoValue = styled.div`
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StateBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 500;
-  background: ${({ $color }) => `${$color}20`};
-  color: ${({ $color }) => $color};
+  ${({ $color }) => colorBadge($color)}
 `;
 
 const PerformanceContainer = styled.div`
@@ -1096,7 +1104,7 @@ const PerformanceContainer = styled.div`
 
 const PerformanceScore = styled.div<{ $color: string }>`
   font-size: 64px;
-  font-weight: 700;
+  font-weight: 800;
   color: ${({ $color }) => $color};
   line-height: 1;
 `;
@@ -1114,15 +1122,14 @@ const SubScore = styled.div`
 `;
 
 const SubScoreLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const SubScoreValue = styled.div`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -1132,31 +1139,35 @@ const QuickStatsGrid = styled.div`
   gap: 16px;
 `;
 
+// Nested one level inside a glass Section — flat tinted card, no blur, per
+// the two-glass-layer rule (spec §2).
 const QuickStatCard = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   text-align: center;
 `;
 
 const QuickStatIcon = styled.div`
-  font-size: 32px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const QuickStatValue = styled.div`
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const QuickStatLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const YieldStatsGrid = styled.div`
@@ -1167,21 +1178,21 @@ const YieldStatsGrid = styled.div`
 
 const YieldStatCard = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 `;
 
 const YieldStatLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
 const YieldStatValue = styled.div<{ $color?: string }>`
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
@@ -1203,8 +1214,9 @@ const TransitionItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -1221,13 +1233,13 @@ const TransitionStates = styled.div`
 
 const TransitionState = styled.span`
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TransitionArrow = styled.span`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TransitionDetails = styled.div`
@@ -1243,13 +1255,13 @@ const TransitionDetails = styled.div`
 
 const TransitionDate = styled.div`
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TransitionDuration = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TimelineSummary = styled.div`
@@ -1263,8 +1275,9 @@ const SummaryItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -1276,12 +1289,12 @@ const SummaryItem = styled.div`
 const SummaryLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const SummaryValue = styled.div`
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -1293,21 +1306,21 @@ const TaskStatsGrid = styled.div`
 
 const TaskStatCard = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 `;
 
 const TaskStatLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
 const TaskStatValue = styled.div<{ $color?: string }>`
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
@@ -1322,8 +1335,9 @@ const MetricItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -1335,12 +1349,12 @@ const MetricItem = styled.div`
 const MetricLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const MetricValue = styled.div<{ $color?: string }>`
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
@@ -1352,21 +1366,21 @@ const AlertStatsGrid = styled.div`
 
 const AlertStatCard = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 `;
 
 const AlertStatLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
 const AlertStatValue = styled.div<{ $color?: string }>`
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
@@ -1407,7 +1421,7 @@ const StepConnector = styled.div<{ $completed: boolean }>`
   width: 100%;
   height: 2px;
   z-index: 0;
-  background: ${({ $completed, theme }) => ($completed ? theme.colors.success : theme.colors.neutral[300])};
+  background: ${({ $completed, theme }) => ($completed ? theme.colors.bright.emerald : theme.colors.line)};
   transition: background 150ms ease-in-out;
 `;
 
@@ -1438,9 +1452,9 @@ const StepNode = styled.div<{ $state: NodeState }>`
   ${({ $state, theme }) =>
     $state === 'active' &&
     css`
-      background: ${theme.colors.primary[500]};
-      border: 2px solid ${theme.colors.primary[500]};
-      box-shadow: 0 0 0 4px ${theme.colors.primary[500]}2E;
+      background: ${theme.colors.bright.lapis};
+      border: 2px solid ${theme.colors.bright.lapis};
+      box-shadow: 0 0 0 4px rgba(107, 138, 224, 0.18);
 
       /* Two staggered rings emanate from behind the node like ripples on water.
          z-index: -1 keeps them behind the solid node so they radiate from under it. */
@@ -1450,7 +1464,7 @@ const StepNode = styled.div<{ $state: NodeState }>`
         position: absolute;
         inset: -1px;
         border-radius: 50%;
-        border: 1.5px solid ${theme.colors.primary[500]};
+        border: 1.5px solid ${theme.colors.bright.lapis};
         z-index: -1;
         pointer-events: none;
         animation: ${ripple} 2.8s ease-out infinite;
@@ -1463,22 +1477,22 @@ const StepNode = styled.div<{ $state: NodeState }>`
   ${({ $state, theme }) =>
     $state === 'completed' &&
     `
-    background: ${theme.colors.success};
-    border: 2px solid ${theme.colors.success};
+    background: ${theme.colors.bright.emerald};
+    border: 2px solid ${theme.colors.bright.emerald};
   `}
 
   ${({ $state, theme }) =>
     $state === 'upcoming' &&
     `
-    background: ${theme.colors.background};
-    border: 2px solid ${theme.colors.neutral[300]};
+    background: transparent;
+    border: 2px solid ${theme.colors.glass.border};
   `}
 `;
 
 const StepCheckmark = styled.span`
   font-size: 14px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   line-height: 1;
 `;
 
@@ -1486,7 +1500,7 @@ const StepDot = styled.div`
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.onDark};
 `;
 
 const StepLabel = styled.div<{ $state: NodeState }>`
@@ -1494,7 +1508,7 @@ const StepLabel = styled.div<{ $state: NodeState }>`
   font-size: 12px;
   font-weight: ${({ $state }) => ($state === 'active' ? '600' : '500')};
   color: ${({ $state, theme }) =>
-    $state === 'upcoming' ? theme.colors.textDisabled : theme.colors.textPrimary};
+    $state === 'upcoming' ? theme.colors.muted : theme.colors.textPrimary};
   text-align: center;
   white-space: nowrap;
 `;
@@ -1502,7 +1516,7 @@ const StepLabel = styled.div<{ $state: NodeState }>`
 const StepDate = styled.div`
   margin-top: 4px;
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
   white-space: nowrap;
 `;
@@ -1519,8 +1533,8 @@ const LoadingContainer = styled.div`
 const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 4px solid ${({ theme }) => theme.colors.glass.border};
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1534,7 +1548,7 @@ const LoadingSpinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
@@ -1547,36 +1561,40 @@ const ErrorContainer = styled.div`
 `;
 
 const ErrorIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-bottom: 16px;
 `;
 
 const ErrorTitle = styled.div`
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
 const ErrorMessage = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 24px;
 `;
 
+// Isolated in the error state — this view's one gold-gradient CTA (spec §3).
 const RetryButton = styled.button`
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  font-weight: 700;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   cursor: pointer;
-  transition: background 150ms ease-in-out;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;
 
@@ -1596,19 +1614,18 @@ const EmptyStateSection = styled.div`
   justify-content: center;
   padding: 40px 20px;
   text-align: center;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 16px;
-  opacity: 0.5;
+  opacity: 0.7;
 `;
 
 const EmptyText = styled.div`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ---------------------------------------------------------------------------
@@ -1625,8 +1642,9 @@ const YieldRecordList = styled.div`
 
 const YieldRecordItem = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1658,24 +1676,18 @@ const YieldRecordDate = styled.span`
 `;
 
 const GradeBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $color }) => `${$color}20`};
-  color: ${({ $color }) => $color};
+  ${({ $color }) => colorBadge($color)}
 `;
 
 const YieldRecordQuantity = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const YieldRecordMeta = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
 
   @media (max-width: 768px) {
@@ -1685,7 +1697,7 @@ const YieldRecordMeta = styled.div`
 
 const YieldRecordNotes = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
   padding-left: 2px;
 `;
@@ -1694,15 +1706,17 @@ const YieldRecordNotes = styled.div`
 // Plant data staleness chip (Overview tab — Block Information section)
 // ---------------------------------------------------------------------------
 
+// "Outdated" is a pending-action signal (spec §5.2 "pending" → fruitingInit),
+// not gold-b — gold stays reserved for the literal Harvesting phase (spec §3).
 const StalenessChip = styled.span`
   display: inline-block;
   padding: 2px 10px;
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.gold[50]};
-  color: ${({ theme }) => theme.colors.gold[800]};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
+  background: rgba(232, 147, 95, 0.16);
+  color: ${({ theme }) => theme.colors.bright.terra};
+  border: 1px solid rgba(232, 147, 95, 0.45);
   margin-left: 8px;
   vertical-align: middle;
 `;

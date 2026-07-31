@@ -5,6 +5,8 @@
  */
 
 import styled from 'styled-components';
+import { BarChart3, Snowflake, Sun, Waves, Thermometer, AlertTriangle, Check } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
 import type { AgriculturalInsights, RiskLevel, GrowingConditions } from '../../../types/farm';
 import {
   RISK_LEVEL_COLORS,
@@ -14,10 +16,8 @@ import {
 } from '../../../types/farm';
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -28,6 +28,11 @@ const Title = styled.h3`
   display: flex;
   align-items: center;
   gap: 8px;
+
+  svg {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.celeste};
+  }
 `;
 
 const GrowingConditionsBadge = styled.div<{ $condition: GrowingConditions }>`
@@ -35,19 +40,20 @@ const GrowingConditionsBadge = styled.div<{ $condition: GrowingConditions }>`
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: ${({ $condition }) => `${GROWING_CONDITIONS_COLORS[$condition]}15`};
-  border: 2px solid ${({ $condition }) => GROWING_CONDITIONS_COLORS[$condition]};
-  border-radius: 12px;
+  background: ${({ $condition }) => `${GROWING_CONDITIONS_COLORS[$condition]}29`};
+  border: 1px solid ${({ $condition }) => `${GROWING_CONDITIONS_COLORS[$condition]}73`};
+  border-radius: 99px;
   margin-bottom: 20px;
 
   .label {
-    font-size: 13px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    ${monoLabel}
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   .value {
-    font-size: 16px;
-    font-weight: 600;
+    ${monoLabel}
+    font-size: 0.72rem;
+    font-weight: 700;
     color: ${({ $condition }) => GROWING_CONDITIONS_COLORS[$condition]};
   }
 `;
@@ -64,20 +70,22 @@ const RiskItem = styled.div<{ $level: RiskLevel }>`
   align-items: center;
   gap: 10px;
   padding: 12px;
-  background: ${({ $level }) => `${RISK_LEVEL_COLORS[$level]}10`};
+  background: ${({ $level }) => `${RISK_LEVEL_COLORS[$level]}1A`};
   border-radius: 8px;
-  border-left: 4px solid ${({ $level }) => RISK_LEVEL_COLORS[$level]};
+  border-left: 3px solid ${({ $level }) => RISK_LEVEL_COLORS[$level]};
 
   .icon {
-    font-size: 20px;
+    display: flex;
+    flex-shrink: 0;
+    color: ${({ $level }) => RISK_LEVEL_COLORS[$level]};
   }
 
   .content {
     flex: 1;
 
     .label {
-      font-size: 12px;
-      color: ${({ theme }) => theme.colors.textSecondary};
+      ${monoLabel}
+      color: ${({ theme }) => theme.colors.muted};
     }
 
     .value {
@@ -96,11 +104,9 @@ const Section = styled.div`
   }
 
   h4 {
-    font-size: 13px;
-    font-weight: 600;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    ${monoLabel}
+    font-size: 0.68rem;
+    color: ${({ theme }) => theme.colors.muted};
     margin: 0 0 12px 0;
   }
 `;
@@ -109,7 +115,7 @@ const AssessmentRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   &:last-child {
     border-bottom: none;
@@ -141,16 +147,18 @@ const AlertItem = styled.div`
   padding: 10px 12px;
   background: ${({ theme }) => theme.colors.errorBg};
   border-radius: 8px;
-  border-left: 4px solid ${({ theme }) => theme.colors.error};
+  border-left: 3px solid ${({ theme }) => theme.colors.error};
 
   .icon {
-    font-size: 16px;
+    display: flex;
     flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.error};
+    margin-top: 1px;
   }
 
   .text {
     font-size: 13px;
-    color: ${({ theme }) => theme.colors.terracotta[900]};
+    color: ${({ theme }) => theme.colors.onDark};
     line-height: 1.4;
   }
 `;
@@ -170,14 +178,15 @@ const RecommendationItem = styled.div`
   border-radius: 8px;
 
   .icon {
-    font-size: 14px;
+    display: flex;
     flex-shrink: 0;
-    color: ${({ theme }) => theme.colors.emerald[600]};
+    margin-top: 1px;
+    color: ${({ theme }) => theme.colors.bright.emerald};
   }
 
   .text {
     font-size: 13px;
-    color: ${({ theme }) => theme.colors.emerald[800]};
+    color: ${({ theme }) => theme.colors.onDark};
     line-height: 1.4;
   }
 `;
@@ -187,16 +196,18 @@ interface InsightsCardProps {
 }
 
 export function InsightsCard({ insights }: InsightsCardProps) {
-  const riskIcons: Record<string, string> = {
-    frost: '❄️',
-    drought: '🏜️',
-    flood: '🌊',
-    heat: '🌡️',
+  // Night Observatory (T-901): risk icons are lucide-react line icons, not
+  // emoji — 13px inline, currentColor via the parent's `.icon` color.
+  const riskIcons: Record<string, React.ReactNode> = {
+    frost: <Snowflake size={13} strokeWidth={1.6} />,
+    drought: <Sun size={13} strokeWidth={1.6} />,
+    flood: <Waves size={13} strokeWidth={1.6} />,
+    heat: <Thermometer size={13} strokeWidth={1.6} />,
   };
 
   return (
     <Card>
-      <Title>📊 Agricultural Insights</Title>
+      <Title><BarChart3 size={16} strokeWidth={1.6} /> Agricultural Insights</Title>
 
       <GrowingConditionsBadge $condition={insights.growingConditions}>
         <span className="label">Growing Conditions:</span>
@@ -258,7 +269,7 @@ export function InsightsCard({ insights }: InsightsCardProps) {
           <AlertsList>
             {insights.alerts.map((alert, index) => (
               <AlertItem key={index}>
-                <span className="icon">⚠️</span>
+                <span className="icon"><AlertTriangle size={13} strokeWidth={1.6} /></span>
                 <span className="text">{alert}</span>
               </AlertItem>
             ))}
@@ -272,7 +283,7 @@ export function InsightsCard({ insights }: InsightsCardProps) {
           <RecommendationsList>
             {insights.recommendations.map((rec, index) => (
               <RecommendationItem key={index}>
-                <span className="icon">✓</span>
+                <span className="icon"><Check size={13} strokeWidth={1.6} /></span>
                 <span className="text">{rec}</span>
               </RecommendationItem>
             ))}

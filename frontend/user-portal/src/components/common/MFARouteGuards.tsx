@@ -103,6 +103,9 @@ export function MFASetupGuard() {
 }
 
 // Styled components
+// Night Observatory (spec §0/§7): these guards render for /mfa/verify and
+// /mfa/setup — auth-adjacent routes with no sidebar — so the fixed Sky layer
+// at the app shell is the backdrop here, same as Login/Register/MFA pages.
 const LoadingContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -110,10 +113,9 @@ const LoadingContainer = styled.div`
   justify-content: center;
   min-height: 100vh;
   gap: ${({ theme }) => theme.spacing.lg};
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
 `;
 
 const LoadingText = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.celeste};
 `;

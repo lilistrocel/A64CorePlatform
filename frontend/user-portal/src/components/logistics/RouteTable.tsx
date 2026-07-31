@@ -2,10 +2,22 @@
  * RouteTable Component
  *
  * Displays routes in a sortable table format with action buttons.
+ *
+ * Night Observatory (T-901 Phase 3): glass table per spec §4 "Tables" — one
+ * glassPanel wrapper, transparent rows, Space Mono uppercase celeste headers,
+ * `line` dividers. Route has no multi-value status enum (only `isActive`),
+ * so it maps onto the phase vocabulary as a two-state badge: active routes
+ * read as spec §5.2 "open/active/in progress" -> `inoculated`; inactive
+ * routes read as "cancelled/void/archived" -> `decommissioned` (dim, no
+ * glow — this is the single-file consumer of that mapping, so it is inlined
+ * rather than exported).
  */
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { ArrowUpDown, ArrowUp, ArrowDown, Eye, Pencil, Trash2 } from 'lucide-react';
+import type { PhaseKey } from '@a64core/shared';
+import { glassPanel, monoLabel, phaseBadge } from '@a64core/shared';
 import type { Route } from '../../types/logistics';
 import { formatLocation, formatDistance, formatDuration } from '../../services/logisticsService';
 
@@ -23,14 +35,19 @@ export interface RouteTableProps {
 type SortField = 'name' | 'routeCode' | 'distance' | 'estimatedDuration' | 'isActive' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
 
+// Route "status" -> phase key. Route only carries isActive, so this is a
+// two-state map, not a full vocabulary — spec §5.2 extrapolation:
+// active reads "open/active/in progress", inactive reads "cancelled/void/archived".
+function routePhaseKey(isActive: boolean): PhaseKey {
+  return isActive ? 'inoculated' : 'decommissioned';
+}
+
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
 const TableContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  ${glassPanel}
   overflow: hidden;
 `;
 
@@ -40,48 +57,39 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
-  padding: 16px;
+  padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
-  transition: background 150ms ease-in-out;
+  transition: color 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.neutral[200] : theme.colors.surface)};
+    color: ${({ $sortable, theme }) => ($sortable ? theme.colors.textPrimary : theme.colors.celeste)};
   }
 `;
 
 const SortIndicator = styled.span`
+  display: inline-flex;
+  vertical-align: middle;
   margin-left: 4px;
-  font-size: 10px;
+  opacity: 0.75;
 `;
 
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   transition: background 150ms ease-in-out;
 
-  &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.surface};
-  }
-
-  &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
-  }
-
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.05);
   }
 
   &:last-child {
@@ -90,7 +98,7 @@ const TableRow = styled.tr`
 `;
 
 const TableCell = styled.td`
-  padding: 16px;
+  padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -108,24 +116,18 @@ const RouteName = styled.span`
 
 const RouteCode = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const LocationText = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   line-height: 1.4;
 `;
 
-const StatusBadge = styled.span<{ $isActive: boolean }>`
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $isActive, theme }) => ($isActive ? `${theme.colors.success}20` : `${theme.colors.textSecondary}20`)};
-  color: ${({ $isActive, theme }) => ($isActive ? theme.colors.success : theme.colors.textSecondary)};
+const StatusBadge = styled.span<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
 `;
 
 const Actions = styled.div`
@@ -133,41 +135,45 @@ const Actions = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
+const ActionButton = styled.button<{ $variant?: 'ghost' | 'secondary' | 'danger' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   ${({ $variant, theme }) => {
-    if ($variant === 'primary') {
+    if ($variant === 'secondary') {
       return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
+        background: ${theme.colors.glass.base};
+        color: ${theme.colors.textPrimary};
+        border: 1px solid ${theme.colors.glass.border};
         &:hover {
-          background: ${theme.colors.primary[700]};
+          background: ${theme.colors.glass.hi};
         }
       `;
     }
     if ($variant === 'danger') {
       return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
+        background: rgba(240, 138, 112, 0.12);
+        color: ${theme.colors.bright.coral};
+        border: 1px solid rgba(240, 138, 112, 0.35);
         &:hover {
-          background: ${theme.colors.errorBg};
+          background: rgba(240, 138, 112, 0.2);
         }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      color: ${theme.colors.celeste};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.infoBg};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
@@ -175,8 +181,22 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  padding: 56px 24px;
+`;
+
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 8px;
+`;
+
+const EmptyBody = styled.p`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.muted};
+  margin: 0;
 `;
 
 // ============================================================================
@@ -211,8 +231,10 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
   });
 
   const getSortIndicator = (field: SortField) => {
-    if (sortField !== field) return '⇅';
-    return sortDirection === 'asc' ? '↑' : '↓';
+    if (sortField !== field) return <ArrowUpDown size={11} strokeWidth={1.8} aria-hidden="true" />;
+    return sortDirection === 'asc'
+      ? <ArrowUp size={11} strokeWidth={1.8} aria-hidden="true" />
+      : <ArrowDown size={11} strokeWidth={1.8} aria-hidden="true" />;
   };
 
   // Helper to get aria-sort value for sortable columns
@@ -225,7 +247,8 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
     return (
       <TableContainer>
         <EmptyState>
-          <p>No routes found</p>
+          <EmptyHeadline>No routes found</EmptyHeadline>
+          <EmptyBody>Routes you create will appear here.</EmptyBody>
         </EmptyState>
       </TableContainer>
     );
@@ -291,18 +314,20 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
               <TableCell>{formatDistance(route.distance)}</TableCell>
               <TableCell>{formatDuration(route.estimatedDuration)}</TableCell>
               <TableCell>
-                <StatusBadge $isActive={route.isActive}>{route.isActive ? 'Active' : 'Inactive'}</StatusBadge>
+                <StatusBadge $phaseKey={routePhaseKey(route.isActive)}>
+                  {route.isActive ? 'Active' : 'Inactive'}
+                </StatusBadge>
               </TableCell>
               <TableCell>
                 <Actions>
                   {onView && (
-                    <ActionButton $variant="primary" onClick={() => onView(route.routeId)}>
-                      View
+                    <ActionButton $variant="ghost" onClick={() => onView(route.routeId)}>
+                      <Eye size={12} strokeWidth={1.8} /> View
                     </ActionButton>
                   )}
                   {onEdit && (
                     <ActionButton $variant="secondary" onClick={() => onEdit(route.routeId)}>
-                      Edit
+                      <Pencil size={12} strokeWidth={1.8} /> Edit
                     </ActionButton>
                   )}
                   {onDelete && (
@@ -314,7 +339,7 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
                         }
                       }}
                     >
-                      Delete
+                      <Trash2 size={12} strokeWidth={1.8} /> Delete
                     </ActionButton>
                   )}
                 </Actions>

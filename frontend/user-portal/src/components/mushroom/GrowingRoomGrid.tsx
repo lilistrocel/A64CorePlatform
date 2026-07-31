@@ -6,6 +6,7 @@
  */
 
 import styled from 'styled-components';
+import { Sprout } from 'lucide-react';
 import { GrowingRoomCard } from './GrowingRoomCard';
 import type { GrowingRoom, RoomOccupancy, RoomPhase } from '../../types/mushroom';
 import { PHASE_LABELS } from '../../types/mushroom';
@@ -33,7 +34,7 @@ export function GrowingRoomGrid({
   if (filtered.length === 0) {
     return (
       <EmptyState>
-        <EmptyIcon>🍄</EmptyIcon>
+        <EmptyIcon><Sprout size={40} strokeWidth={1.4} /></EmptyIcon>
         <EmptyTitle>
           {filterPhase
             ? `No rooms in ${PHASE_LABELS[filterPhase] ?? filterPhase} phase`
@@ -71,39 +72,45 @@ interface GridProps {
   $compact: boolean;
 }
 
+// Spec §4 room-card grid: repeat(auto-fill, minmax(240px, 1fr)), 18px gap.
+// `compact` is a separate, tighter density used outside the Room Monitor
+// mockup screen (dashboard summaries etc.) — kept proportionally smaller.
 const Grid = styled.div<GridProps>`
   display: grid;
   grid-template-columns: repeat(
     auto-fill,
-    minmax(${({ $compact }) => ($compact ? '120px' : '170px')}, 1fr)
+    minmax(${({ $compact }) => ($compact ? '170px' : '240px')}, 1fr)
   );
-  gap: ${({ $compact }) => ($compact ? '10px' : '16px')};
+  gap: ${({ $compact }) => ($compact ? '12px' : '18px')};
   padding: 4px 0;
 `;
 
+// Empty state — Fraunces italic celeste headline, one muted sentence (spec
+// §4 "Empty states"). No dashed border box in the Night Observatory system.
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 12px;
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.6;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+  color: ${({ theme }) => theme.colors.celeste};
+  opacity: 0.7;
 `;
 
 const EmptyTitle = styled.h4`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.15rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 6px 0;
 `;
 
 const EmptyText = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.88rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;

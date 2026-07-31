@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Card } from '@a64core/shared';
+import { Card, PageHeader, glassPanel } from '@a64core/shared';
 import { getSpacingCategories, updateSpacingStandards, resetSpacingStandards, getFarmingYearConfig, updateFarmingYearConfig, type FarmingYearConfig } from '../../services/farmApi';
 import type { SpacingCategoryInfo, SpacingCategory } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
@@ -402,7 +402,11 @@ export function Settings() {
 
   return (
     <SettingsContainer>
-      <Title>Settings</Title>
+      <PageHeader
+        breadcrumb="Account · Settings"
+        title="Settings"
+        description="Manage spacing standards, farming year, preferences, notifications, and account security."
+      />
 
       <Card title="Farm Spacing Standards">
         <SettingsContent>
@@ -891,18 +895,6 @@ const SettingsContainer = styled.div`
   }
 `;
 
-const Title = styled.h1`
-  font-size: ${({ theme }: any) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.bold};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
-
-  @media (min-width: 768px) {
-    font-size: ${({ theme }: any) => theme.typography.fontSize['3xl']};
-    margin-bottom: ${({ theme }: any) => theme.spacing.lg};
-  }
-`;
-
 const SettingsContent = styled.div`
   display: flex;
   flex-direction: column;
@@ -918,7 +910,7 @@ const SettingItem = styled.div`
   flex-direction: column;
   gap: ${({ theme }: any) => theme.spacing.xs};
   padding-bottom: ${({ theme }: any) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.line};
 
   @media (min-width: 768px) {
     padding-bottom: ${({ theme }: any) => theme.spacing.lg};
@@ -973,35 +965,28 @@ const SpacingTable = styled.table`
   margin-bottom: ${({ theme }: any) => theme.spacing.md};
 `;
 
+// Tables — spec §4: no solid chrome, Space Mono uppercase celeste headers,
+// `line` row dividers, transparent rows, hover rgba(180,200,220,.05).
 const TableHeader = styled.th`
+  font-family: ${({ theme }: any) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  color: ${({ theme }: any) => theme.colors.celeste};
   text-align: left;
   padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
-  border-bottom: 2px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.line};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.1em;
 `;
 
 const TableRow = styled.tr`
-  /* Striped rows for readability - alternating row colors */
-  &:nth-child(even) {
-    background: ${({ theme }: any) => theme.colors.neutral[50]};
-  }
-
-  &:nth-child(odd) {
-    background: ${({ theme }: any) => theme.colors.background};
-  }
-
   &:hover {
-    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const TableCell = styled.td`
   padding: ${({ theme }: any) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.line};
   vertical-align: middle;
 `;
 
@@ -1013,8 +998,8 @@ const CategoryName = styled.div`
 
 const CategoryCode = styled.div`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  font-family: monospace;
+  color: ${({ theme }: any) => theme.colors.muted};
+  font-family: ${({ theme }: any) => theme.typography.fontFamily.mono};
 `;
 
 const ExampleText = styled.div`
@@ -1038,7 +1023,7 @@ const ModifiedBadge = styled.span`
   padding: 4px 8px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
-  color: ${({ theme }: any) => theme.colors.gold[700]};
+  color: ${({ theme }: any) => theme.colors.warning};
   background: ${({ theme }: any) => theme.colors.warningBg};
   border-radius: 4px;
 `;
@@ -1048,7 +1033,7 @@ const DefaultBadge = styled.span`
   padding: 4px 8px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
-  color: ${({ theme }: any) => theme.colors.emerald[700]};
+  color: ${({ theme }: any) => theme.colors.bright.emerald};
   background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 4px;
 `;
@@ -1063,7 +1048,8 @@ const SpacingNote = styled.div`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   color: ${({ theme }: any) => theme.colors.textSecondary};
   padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.neutral[100]};
+  background: ${({ theme }: any) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
   margin-top: ${({ theme }: any) => theme.spacing.md};
 `;
@@ -1083,7 +1069,7 @@ const ErrorText = styled.div`
 `;
 
 const SuccessText = styled.div`
-  color: ${({ theme }: any) => theme.colors.emerald[700]};
+  color: ${({ theme }: any) => theme.colors.bright.emerald};
   padding: ${({ theme }: any) => theme.spacing.md};
   background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 6px;
@@ -1096,20 +1082,20 @@ const DensityInput = styled.input`
   font-size: ${({ theme }: any) => theme.typography.fontSize.base};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
   text-align: right;
-  border: 2px solid ${({ theme }: any) => theme.colors.primary[300]};
+  border: 2px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
-  color: ${({ theme }: any) => theme.colors.primary[600]};
-  background: ${({ theme }: any) => theme.colors.background};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+  background: ${({ theme }: any) => theme.colors.glass.base};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    background: ${({ theme }: any) => theme.colors.cosmosDeep};
     cursor: not-allowed;
   }
 
@@ -1128,7 +1114,7 @@ const ButtonRow = styled.div`
   justify-content: flex-end;
   margin-top: ${({ theme }: any) => theme.spacing.lg};
   padding-top: ${({ theme }: any) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }: any) => theme.colors.line};
 `;
 
 const BaseButton = styled.button`
@@ -1145,9 +1131,16 @@ const BaseButton = styled.button`
   }
 `;
 
+// This page renders many independent "primary" actions across several Card
+// sections (Save Changes, Edit Densities, Save Preferences, Set Up MFA, ...).
+// Gold is reserved for ONE distinguished CTA per view (spec §3) — with this
+// many ordinary save/submit buttons on one page, making all of them gold
+// would blow the ≤4-gold-elements budget on this, the busiest view in the
+// shard. Lapis fill instead; PageHeader above still carries the page's gold
+// budget (breadcrumb kicker).
 const PrimaryButton = styled(BaseButton)`
   background: ${({ theme }: any) => theme.colors.primary[500]};
-  color: ${({ theme }: any) => theme.colors.onAccent};
+  color: ${({ theme }: any) => theme.colors.onDark};
   border: none;
 
   &:hover:not(:disabled) {
@@ -1156,34 +1149,33 @@ const PrimaryButton = styled(BaseButton)`
 `;
 
 const SecondaryButton = styled(BaseButton)`
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  background: ${({ theme }: any) => theme.colors.glass.base};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.neutral[50]};
-    border-color: ${({ theme }: any) => theme.colors.neutral[400]};
+    background: ${({ theme }: any) => theme.colors.glass.hi};
   }
 `;
 
+// Destructive action — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled(BaseButton)`
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.terracotta[600]};
-  border: 1px solid ${({ theme }: any) => theme.colors.terracotta[300]};
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }: any) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.errorBg};
-    border-color: ${({ theme }: any) => theme.colors.error};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
 const PreferenceSelect = styled.select`
   padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
-  color: ${({ theme }: any) => theme.colors.primary[600]};
-  background: ${({ theme }: any) => theme.colors.background};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+  background: ${({ theme }: any) => theme.colors.glass.base};
   cursor: pointer;
   width: 100%;
   max-width: 350px;
@@ -1191,12 +1183,12 @@ const PreferenceSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    background: ${({ theme }: any) => theme.colors.cosmosDeep};
     cursor: not-allowed;
   }
 `;
@@ -1207,10 +1199,11 @@ const PrefsButtonRow = styled.div`
   margin-top: ${({ theme }: any) => theme.spacing.md};
 `;
 
-// Farming Year Configuration styled components
+// Farming Year Configuration styled components — informational preview,
+// infoBg/lapis-b tint (spec §1.1 semantic background tints).
 const FarmingYearPreviewBox = styled.div`
-  background: ${({ theme }: any) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }: any) => theme.colors.primary[200]};
+  background: ${({ theme }: any) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }: any) => theme.colors.info};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.lg};
   margin-top: ${({ theme }: any) => theme.spacing.md};
@@ -1219,7 +1212,7 @@ const FarmingYearPreviewBox = styled.div`
 const FarmingYearPreviewTitle = styled.h4`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.primary[700]};
+  color: ${({ theme }: any) => theme.colors.bright.lapis};
   margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
 `;
 
@@ -1239,7 +1232,7 @@ const FarmingYearPreviewRow = styled.div`
 
 const FarmingYearValue = styled.span`
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.primary[600]};
+  color: ${({ theme }: any) => theme.colors.bright.lapis};
 `;
 
 const FarmingYearExample = styled.div`
@@ -1247,7 +1240,7 @@ const FarmingYearExample = styled.div`
   color: ${({ theme }: any) => theme.colors.textSecondary};
   margin-top: ${({ theme }: any) => theme.spacing.md};
   padding-top: ${({ theme }: any) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }: any) => theme.colors.primary[200]};
+  border-top: 1px solid ${({ theme }: any) => theme.colors.line};
   font-style: italic;
 `;
 
@@ -1262,13 +1255,13 @@ const ConfirmationBox = styled.div`
 const ConfirmationTitle = styled.h4`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.gold[800]};
+  color: ${({ theme }: any) => theme.colors.warning};
   margin: 0 0 ${({ theme }: any) => theme.spacing.sm} 0;
 `;
 
 const ConfirmationText = styled.p`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.gold[800]};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
   margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
   line-height: 1.5;
 `;
@@ -1279,7 +1272,7 @@ const MfaEnabledBadge = styled.span`
   padding: 4px 12px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.emerald[700]};
+  color: ${({ theme }: any) => theme.colors.bright.emerald};
   background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 4px;
 `;
@@ -1289,14 +1282,14 @@ const MfaPendingBadge = styled.span`
   padding: 4px 12px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.gold[700]};
+  color: ${({ theme }: any) => theme.colors.warning};
   background: ${({ theme }: any) => theme.colors.warningBg};
   border-radius: 4px;
 `;
 
 const MfaWarning = styled.div`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.terracotta[600]};
+  color: ${({ theme }: any) => theme.colors.bright.coral};
   margin-top: ${({ theme }: any) => theme.spacing.xs};
 `;
 
@@ -1313,8 +1306,8 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
-  background: rgba(14, 19, 48, 0.5);
+  /* Cosmos scrim, spec §4 "Modals/drawers" (rgba(10,14,36,.6)). */
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1323,14 +1316,15 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }: any) => theme.colors.background};
-  border-radius: ${({ theme }: any) => theme.borderRadius.lg};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: ${({ theme }: any) => theme.spacing.xl};
   max-width: 480px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: ${({ theme }: any) => theme.shadows.xl};
 `;
 
 const ModalTitle = styled.h2`
@@ -1353,17 +1347,17 @@ const ModalWarning = styled.div`
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.md};
   margin-bottom: ${({ theme }: any) => theme.spacing.lg};
-  color: ${({ theme }: any) => theme.colors.gold[800]};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
 `;
 
 const ModalError = styled.div`
   background: ${({ theme }: any) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }: any) => theme.colors.terracotta[300]};
+  border: 1px solid ${({ theme }: any) => theme.colors.error};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.md};
   margin-bottom: ${({ theme }: any) => theme.spacing.lg};
-  color: ${({ theme }: any) => theme.colors.terracotta[600]};
+  color: ${({ theme }: any) => theme.colors.bright.coral};
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
 `;
 
@@ -1388,23 +1382,23 @@ const ModalLabel = styled.label`
 const TotpCodeInput = styled.input`
   padding: ${({ theme }: any) => theme.spacing.md};
   font-size: 1.5rem;
-  font-family: 'Courier New', monospace;
+  font-family: ${({ theme }: any) => theme.typography.fontFamily.mono};
   text-align: center;
   letter-spacing: 0.5rem;
-  border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  background: ${({ theme }: any) => theme.colors.background};
+  background: ${({ theme }: any) => theme.colors.glass.base};
   color: ${({ theme }: any) => theme.colors.textPrimary};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }: any) => theme.colors.textDisabled};
+    color: ${({ theme }: any) => theme.colors.muted};
     letter-spacing: 0.5rem;
   }
 `;
@@ -1412,20 +1406,20 @@ const TotpCodeInput = styled.input`
 const PasswordInput = styled.input`
   padding: ${({ theme }: any) => theme.spacing.md};
   font-size: ${({ theme }: any) => theme.typography.fontSize.base};
-  border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  background: ${({ theme }: any) => theme.colors.background};
+  background: ${({ theme }: any) => theme.colors.glass.base};
   color: ${({ theme }: any) => theme.colors.textPrimary};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &::placeholder {
-    color: ${({ theme }: any) => theme.colors.textDisabled};
+    color: ${({ theme }: any) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -1436,9 +1430,12 @@ const ModalButtonRow = styled.div`
   margin-top: ${({ theme }: any) => theme.spacing.md};
 `;
 
+// Flat/opaque, not another translucent glass layer — sits inside the
+// already-glass ModalContent (spec §2's two-layer limit), matching the
+// BackupCodesModal.tsx reference component.
 const BackupCodesContainer = styled.div`
-  background: ${({ theme }: any) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  background: ${({ theme }: any) => theme.colors.cosmosDeep};
+  border: 1px solid ${({ theme }: any) => theme.colors.line};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.md};
   margin-bottom: ${({ theme }: any) => theme.spacing.lg};
@@ -1452,30 +1449,29 @@ const BackupCodesGrid = styled.div`
 `;
 
 const BackupCodeItem = styled.div`
-  font-family: 'Courier New', monospace;
+  font-family: ${({ theme }: any) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   color: ${({ theme }: any) => theme.colors.textPrimary};
-  background: ${({ theme }: any) => theme.colors.background};
+  background: ${({ theme }: any) => theme.colors.glass.base};
   padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
   border-radius: 4px;
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   text-align: center;
 `;
 
 const CopyCodesButton = styled.button`
   width: 100%;
   padding: ${({ theme }: any) => theme.spacing.sm};
-  background: ${({ theme }: any) => theme.colors.background};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  background: ${({ theme }: any) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 4px;
-  color: ${({ theme }: any) => theme.colors.primary[600]};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }: any) => theme.colors.neutral[50]};
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
+    background: ${({ theme }: any) => theme.colors.glass.hi};
   }
 `;

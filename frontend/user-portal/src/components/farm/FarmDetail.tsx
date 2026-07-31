@@ -8,6 +8,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import {
+  BarChart3,
+  Calendar,
+  Pencil,
+  Construction,
+  ClipboardList,
+  Sprout,
+  Wheat,
+  AlertTriangle,
+  Map as MapIcon,
+  X,
+} from 'lucide-react';
 import { useFarm, useFarmSummary, useFarmBlocks } from '../../hooks/queries';
 import { PhysicalBlockGrid } from './PhysicalBlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
@@ -27,7 +39,8 @@ import { useDashboardData } from '../../hooks/farm/useDashboardData';
 import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
 import { farmApi } from '../../services/farmApi';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
-import { Breadcrumb } from '@a64core/shared';
+import { Breadcrumb, PageHeader, Spinner, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type { FarmSummary, DashboardSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
 import { formatNumber } from '../../utils';
 
@@ -64,6 +77,9 @@ const MOBILE_VIEW_PREF_KEY = 'farm-detail-mobile-view';
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
+// Night Observatory (T-901, screen sweep). Page-level Container stays
+// transparent so the fixed Sky layer shows through; hero/tab panels below
+// carry the glass treatment (spec §2/§4).
 
 const Container = styled.div`
   padding: 32px;
@@ -91,206 +107,167 @@ const BackButton = styled.button`
   }
 `;
 
-const Header = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  padding: 32px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  margin-bottom: 32px;
+/** Hero panel — one glass layer holding the title block, quick actions and
+ * the 4-stat BlockMonitorHero. */
+const HeroPanel = styled.div`
+  ${glassPanel}
+  padding: 28px 32px 32px;
+  margin-bottom: 28px;
 `;
 
-const TitleRow = styled.div`
+const HeaderTopRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
   margin-bottom: 24px;
-  gap: 16px;
 
   @media (max-width: 768px) {
     flex-direction: column;
-    gap: 16px;
   }
 `;
 
-/** Horizontal flex: icon badge on the left, content column on the right. */
-const TitleSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  min-width: 0;
+/** PageHeader (breadcrumb + title + description) with its own bottom margin
+ * stripped — HeaderTopRow controls spacing since HeaderActions sits beside it. */
+const StyledPageHeader = styled(PageHeader)`
+  margin-bottom: 0;
   flex: 1;
-`;
-
-/** Square icon badge with subtle accent background — replaces the inline emoji. */
-const FarmIcon = styled.div`
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  border-radius: 14px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-`;
-
-/** Vertical stack to the right of the icon: title row + metadata row. */
-const TitleContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-`;
-
-const FarmTitle = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-  line-height: 1.2;
-`;
-
-/** Inline row for the farm title + farming year chip */
-const TitleNameRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  min-width: 260px;
 `;
 
 const FarmingYearChip = styled.span`
+  ${monoLabel}
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 20px;
-  padding: 4px 12px;
+  padding: 5px 12px;
   white-space: nowrap;
-`;
 
-const Location = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  svg {
+    flex-shrink: 0;
+  }
 `;
 
 /** Divider between the title/actions row and the hero stats. */
 const HeaderDivider = styled.hr`
   border: none;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   margin: 0 0 24px 0;
 `;
 
-const StatusBadge = styled.span<{ $isActive: boolean }>`
-  display: inline-block;
-  padding: 8px 16px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 500;
-  background: ${({ $isActive, theme }) => ($isActive ? theme.colors.success : theme.colors.textSecondary)};
-  color: ${({ theme }) => theme.colors.onAccent};
+const StatusBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
 `;
 
 const HeaderActions = styled.div`
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 `;
 
+/** Primary CTA — the one gold element this button contributes to the page's
+ * gold budget (spec §3/§4 Buttons: gold gradient + onAccent text). */
 const EditButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[400]}, ${({ theme }) => theme.colors.secondary[500]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
+  transition: transform 150ms ease-in-out, box-shadow 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(220, 185, 79, 0.3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
   }
 `;
 
-/** Secondary-styled action button used for "Farm Stats" in the header. */
+/** Secondary action — glass button per spec §4 Buttons ("Secondary: glass +
+ * glass.border + cream text"). */
 const StatsButton = styled.button`
+  ${glassControl}
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: transparent;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    border-color: rgba(220, 185, 79, 0.35);
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
-const TabsContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  overflow: hidden;
-`;
+/** Content panel for the tab bar + tab views — transparent so nested tab
+ * content (map, block grids, etc.) owns its own glass treatment; TabBar
+ * itself is the one glass element here (spec §4 "Tab bar → glassControl"). */
+const TabsContainer = styled.div``;
 
 const TabBar = styled.div`
+  ${glassControl}
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   overflow-x: auto;
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: 20px;
 
   &::-webkit-scrollbar {
     height: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.line};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
-  padding: 16px 24px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  padding: 12px 20px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.glass.hi : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.muted)};
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const TabContent = styled.div`
-  padding: 32px;
+  padding: 4px 0 32px;
 `;
 
 const LoadingContainer = styled.div`
@@ -298,21 +275,6 @@ const LoadingContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 400px;
-`;
-
-const Spinner = styled.div`
-  width: 48px;
-  height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
 `;
 
 const ErrorContainer = styled.div`
@@ -332,8 +294,7 @@ const OverviewGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  ${glassPanel}
   padding: 20px;
 `;
 
@@ -346,9 +307,10 @@ const InfoTitle = styled.h3`
 
 const InfoItem = styled.div`
   display: flex;
+  align-items: center;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   &:last-child {
     border-bottom: none;
@@ -356,13 +318,24 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textSecondary};
+
+  svg {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.muted};
+  }
 `;
 
 const InfoValue = styled.span`
-  font-size: 14px;
-  font-weight: 500;
+  ${monoLabel}
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -385,9 +358,9 @@ const MobileToggleButton = styled.button<{ $active: boolean }>`
   justify-content: center;
   gap: 8px;
   padding: 12px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.glass.base)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onDark : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.glass.border)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -400,13 +373,9 @@ const MobileToggleButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-const MobileToggleIcon = styled.span`
-  font-size: 18px;
-`;
-
 const MobileMapContainer = styled.div<{ $isFullScreen: boolean }>`
   @media (max-width: 768px) {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.canvas};
     ${({ $isFullScreen }) => $isFullScreen && `
       position: fixed;
       top: 0;
@@ -426,12 +395,15 @@ const MobileMapHeader = styled.div`
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    background: ${({ theme }) => theme.colors.background};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   }
 `;
 
 const MobileMapTitle = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -443,15 +415,15 @@ const MobileCloseButton = styled.button`
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.glass.base};
   border: none;
   border-radius: 8px;
-  font-size: 20px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -475,7 +447,7 @@ const FloatingMapButton = styled.button`
     right: 24px;
     padding: 14px 20px;
     background: ${({ theme }) => theme.colors.primary[500]};
-    color: ${({ theme }) => theme.colors.onAccent};
+    color: ${({ theme }) => theme.colors.onDark};
     border: none;
     border-radius: 28px;
     font-size: 14px;
@@ -680,7 +652,7 @@ export function FarmDetail() {
     return (
       <Container>
         <LoadingContainer>
-          <Spinner />
+          <Spinner size="large" />
         </LoadingContainer>
       </Container>
     );
@@ -690,8 +662,8 @@ export function FarmDetail() {
     return (
       <Container>
         <Breadcrumb items={[
-          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-          { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+          { label: 'Dashboard', path: '/dashboard' },
+          { label: 'Farms', path: '/farm/farms' },
           { label: 'Error' },
         ]} />
         <ErrorContainer>
@@ -705,8 +677,8 @@ export function FarmDetail() {
     return (
       <Container>
         <Breadcrumb items={[
-          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-          { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+          { label: 'Dashboard', path: '/dashboard' },
+          { label: 'Farms', path: '/farm/farms' },
           { label: 'Not Found' },
         ]} />
         <ErrorContainer>Farm not found</ErrorContainer>
@@ -733,43 +705,39 @@ export function FarmDetail() {
       {/* Quick farm switcher — allows navigating to another farm without going back to list */}
       <FarmQuickSwitcher currentFarmId={farmId!} currentFarmName={farm.name} />
 
-      <Header>
-        <TitleRow>
-          <TitleSection>
-            <FarmIcon aria-hidden="true">🏞️</FarmIcon>
-            <TitleContent>
-              <TitleNameRow>
-                <FarmTitle>{farm.name}</FarmTitle>
-                {selectedFarmingYearDisplay && (
-                  <FarmingYearChip>📅 {selectedFarmingYearDisplay}</FarmingYearChip>
-                )}
-              </TitleNameRow>
-              <Location>
-                <span aria-hidden="true">📍</span>
-                <span>{locationText}</span>
-              </Location>
-            </TitleContent>
-          </TitleSection>
+      <HeroPanel>
+        <HeaderTopRow>
+          <StyledPageHeader
+            breadcrumb="Farm Manager · Detail"
+            title={farm.name}
+            description={locationText}
+          />
           <HeaderActions>
+            {selectedFarmingYearDisplay && (
+              <FarmingYearChip>
+                <Calendar size={13} strokeWidth={1.6} />
+                {selectedFarmingYearDisplay}
+              </FarmingYearChip>
+            )}
+            <StatusBadge $phase={farm.isActive ? 'inoculated' : 'decommissioned'}>
+              {farm.isActive ? 'Active' : 'Inactive'}
+            </StatusBadge>
             <StatsButton type="button" onClick={() => setShowAnalyticsModal(true)}>
-              <span>📊</span>
+              <BarChart3 size={16} strokeWidth={1.6} />
               <span>Farm Stats</span>
             </StatsButton>
             <EditButton onClick={() => setShowEditFarmModal(true)}>
-              <span>✏️</span>
+              <Pencil size={16} strokeWidth={1.6} />
               <span>Edit Farm</span>
             </EditButton>
-            <StatusBadge $isActive={farm.isActive}>
-              {farm.isActive ? 'Active' : 'Inactive'}
-            </StatusBadge>
           </HeaderActions>
-        </TitleRow>
+        </HeaderTopRow>
 
         <HeaderDivider />
 
         {/* 4-stat hero: Total Blocks, Active Plantings, Avg Yield Efficiency, Predicted Yield */}
         <BlockMonitorHero summary={dashboardSummary} />
-      </Header>
+      </HeroPanel>
 
       <TabsContainer>
         <TabBar>
@@ -825,24 +793,24 @@ export function FarmDetail() {
               <InfoCard>
                 <InfoTitle>Block Distribution</InfoTitle>
                 <InfoItem>
-                  <InfoLabel>🏗️ Empty</InfoLabel>
+                  <InfoLabel><Construction size={14} strokeWidth={1.6} /> Empty</InfoLabel>
                   <InfoValue>{formatNumber(summary.blocksByState.empty)}</InfoValue>
                 </InfoItem>
                 <InfoItem>
-                  <InfoLabel>📋 Planned</InfoLabel>
+                  <InfoLabel><ClipboardList size={14} strokeWidth={1.6} /> Planned</InfoLabel>
                   <InfoValue>{formatNumber(summary.blocksByState.planned)}</InfoValue>
                 </InfoItem>
                 <InfoItem>
-                  <InfoLabel>🌱 Planted</InfoLabel>
+                  <InfoLabel><Sprout size={14} strokeWidth={1.6} /> Planted</InfoLabel>
                   <InfoValue>{formatNumber(summary.blocksByState.planted)}</InfoValue>
                 </InfoItem>
                 <InfoItem>
-                  <InfoLabel>🌾 Harvesting</InfoLabel>
+                  <InfoLabel><Wheat size={14} strokeWidth={1.6} /> Harvesting</InfoLabel>
                   <InfoValue>{formatNumber(summary.blocksByState.harvesting)}</InfoValue>
                 </InfoItem>
                 {summary.blocksByState.alert > 0 && (
                   <InfoItem>
-                    <InfoLabel>⚠️ Alert</InfoLabel>
+                    <InfoLabel><AlertTriangle size={14} strokeWidth={1.6} /> Alert</InfoLabel>
                     <InfoValue>{formatNumber(summary.blocksByState.alert)}</InfoValue>
                   </InfoItem>
                 )}
@@ -862,14 +830,14 @@ export function FarmDetail() {
                       $active={mobileView === 'list'}
                       onClick={() => handleMobileViewChange('list')}
                     >
-                      <MobileToggleIcon>📋</MobileToggleIcon>
+                      <ClipboardList size={16} strokeWidth={1.6} />
                       List View
                     </MobileToggleButton>
                     <MobileToggleButton
                       $active={mobileView === 'map'}
                       onClick={() => handleMobileViewChange('map')}
                     >
-                      <MobileToggleIcon>🗺️</MobileToggleIcon>
+                      <MapIcon size={16} strokeWidth={1.6} />
                       Map View
                     </MobileToggleButton>
                   </MobileViewToggle>
@@ -878,9 +846,9 @@ export function FarmDetail() {
                   {isMobile && isMapFullScreen && (
                     <MobileMapContainer $isFullScreen={true}>
                       <MobileMapHeader>
-                        <MobileMapTitle>🗺️ Farm Map</MobileMapTitle>
+                        <MobileMapTitle><MapIcon size={16} strokeWidth={1.6} /> Farm Map</MobileMapTitle>
                         <MobileCloseButton onClick={handleCloseMapFullScreen}>
-                          ✕
+                          <X size={18} strokeWidth={1.8} />
                         </MobileCloseButton>
                       </MobileMapHeader>
                       <FarmMapView
@@ -916,7 +884,7 @@ export function FarmDetail() {
                   {/* Floating Map Button (visible on mobile in list view) */}
                   {isMobile && !isMapFullScreen && (
                     <FloatingMapButton onClick={() => handleMobileViewChange('map')}>
-                      <span>🗺️</span>
+                      <MapIcon size={16} strokeWidth={1.6} />
                       <span>View Map</span>
                     </FloatingMapButton>
                   )}

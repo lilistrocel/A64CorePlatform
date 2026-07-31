@@ -30,6 +30,8 @@
 import React, { useReducer } from 'react';
 import styled, { keyframes, useTheme } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { Check, CheckCircle2 } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { useOrganizations, useCreateOrganization, useAssignUserOrg } from '../../hooks/queries/useOrganizations';
 import { useFinanceCompanies, useCreateCompany } from '../../hooks/queries/useFinanceCompanies';
@@ -127,14 +129,11 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: ${({ theme }) => theme.colors.background};
 `;
 
 const WizardCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
   width: 100%;
   max-width: 600px;
   padding: 36px 36px 28px;
@@ -177,20 +176,22 @@ const StepDot = styled.div<{ $state: 'done' | 'active' | 'upcoming' }>`
   transition: background 200ms, border-color 200ms;
 
   ${({ $state, theme }) => {
+    // emerald/lapis fills — onDark (cream), not onAccent (gold-fill only,
+    // spec §1.1's breaking onAccent-meaning change).
     if ($state === 'done') return `
       background: ${theme.colors.success};
-      color: ${theme.colors.onAccent};
+      color: ${theme.colors.onDark};
       border: 2px solid ${theme.colors.success};
     `;
     if ($state === 'active') return `
       background: ${theme.colors.primary[500]};
-      color: ${theme.colors.onAccent};
+      color: ${theme.colors.onDark};
       border: 2px solid ${theme.colors.primary[500]};
     `;
     return `
       background: transparent;
       color: ${theme.colors.textSecondary};
-      border: 2px solid ${theme.colors.neutral[300]};
+      border: 2px solid ${theme.colors.glass.border};
     `;
   }}
 `;
@@ -199,7 +200,7 @@ const StepConnector = styled.div<{ $done: boolean }>`
   flex: 1;
   height: 2px;
   background: ${({ $done, theme }) =>
-    $done ? theme.colors.success : theme.colors.neutral[200]};
+    $done ? theme.colors.success : theme.colors.line};
   transition: background 200ms;
   min-width: 8px;
 `;
@@ -245,16 +246,17 @@ const FieldInput = styled.input`
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &:disabled {
     opacity: 0.6;
@@ -265,17 +267,18 @@ const FieldInput = styled.input`
 const FieldSelect = styled.select`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: border-color 150ms;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &:disabled {
     opacity: 0.6;
@@ -309,19 +312,22 @@ const ButtonRow = styled.div`
   margin-top: 24px;
 `;
 
+// This wizard shows exactly one step (and one primary action) at a time —
+// the single distinguished CTA the gold budget is for (spec §3/§4 Buttons).
 const PrimaryButton = styled.button`
   padding: 10px 22px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
   color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  border: 1px solid transparent;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: background 150ms;
+  transition: transform 150ms, box-shadow 150ms;
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.5;
@@ -332,8 +338,8 @@ const PrimaryButton = styled.button`
 const SecondaryButton = styled.button`
   padding: 10px 22px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -341,7 +347,7 @@ const SecondaryButton = styled.button`
   cursor: pointer;
   transition: background 150ms, color 150ms;
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:disabled {
@@ -363,7 +369,7 @@ const StatusCell = styled.div<{ $ok: boolean }>`
   padding: 14px 16px;
   border-radius: 10px;
   border: 1px solid ${({ $ok, theme }) =>
-    $ok ? `${theme.colors.success}44` : theme.colors.neutral[200]};
+    $ok ? `${theme.colors.success}44` : theme.colors.line};
   background: ${({ $ok, theme }) => ($ok ? theme.colors.successBg : 'transparent')};
 `;
 
@@ -388,12 +394,12 @@ const StatusCellValue = styled.p<{ $ok: boolean }>`
 
 const SeedPanel = styled.div`
   background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: 10px;
   padding: 14px 16px;
   margin-bottom: 20px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.emerald[800]};
+  color: ${({ theme }) => theme.colors.bright.emerald};
   line-height: 1.6;
 `;
 
@@ -401,23 +407,24 @@ const SeedPanel = styled.div`
 
 const Divider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.line};
   margin: 20px 0;
 `;
 
 // ─── Inline link button ───────────────────────────────────────────────────────
 
+// Secondary emphasis (spec §3: "Secondary emphasis is celeste, never gold").
 const TextButton = styled.button`
   background: none;
   border: none;
   padding: 0;
   font-size: 13px;
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   text-decoration: underline;
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[700]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -766,12 +773,12 @@ function Step2SelfAssign({ userId, orgId, orgName, onAssigned, onBack, onRefresh
       <div
         style={{
           background: theme.colors.infoBg,
-          border: `1px solid ${theme.colors.primary[200]}`,
+          border: `1px solid ${theme.colors.info}`,
           borderRadius: 10,
           padding: '14px 16px',
           marginBottom: 20,
           fontSize: 14,
-          color: theme.colors.primary[800],
+          color: theme.colors.textPrimary,
           lineHeight: 1.65,
         }}
       >
@@ -1166,7 +1173,12 @@ function Step5Done({ orgName, companyCode, seedMessage, periodCode, onDone }: St
   return (
     <>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <span style={{ fontSize: 48 }} aria-hidden="true">✅</span>
+        <span
+          style={{ display: 'inline-flex', color: theme.colors.bright.emerald }}
+          aria-hidden="true"
+        >
+          <CheckCircle2 size={48} strokeWidth={1.6} />
+        </span>
         <p style={{ fontSize: 16, fontWeight: 600, marginTop: 12 }}>
           Platform setup complete!
         </p>
@@ -1178,16 +1190,16 @@ function Step5Done({ orgName, companyCode, seedMessage, periodCode, onDone }: St
       <div
         style={{
           background: theme.colors.successBg,
-          border: `1px solid ${theme.colors.emerald[200]}`,
+          border: `1px solid ${theme.colors.success}`,
           borderRadius: 10,
           padding: '16px 20px',
           marginBottom: 24,
         }}
       >
-        <p style={{ fontSize: 13, margin: '0 0 8px', fontWeight: 700, color: theme.colors.emerald[700] }}>
+        <p style={{ fontSize: 13, margin: '0 0 8px', fontWeight: 700, color: theme.colors.bright.emerald }}>
           Created successfully:
         </p>
-        <ul style={{ margin: 0, padding: '0 0 0 20px', fontSize: 14, color: theme.colors.emerald[800], lineHeight: 1.8 }}>
+        <ul style={{ margin: 0, padding: '0 0 0 20px', fontSize: 14, color: theme.colors.textPrimary, lineHeight: 1.8 }}>
           {orgName && <li>Organization: <strong>{orgName}</strong></li>}
           {companyCode && (
             <li>Finance Company Code: <strong>{companyCode}</strong></li>
@@ -1232,7 +1244,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
             {i > 0 && <StepConnector $done={s <= currentStep} />}
             <StepItem>
               <StepDot $state={state} aria-label={`Step ${s}: ${STEP_LABELS[s]} — ${state}`}>
-                {state === 'done' ? '✓' : s}
+                {state === 'done' ? <Check size={14} strokeWidth={2.5} /> : s}
               </StepDot>
               <StepLabel $active={state === 'active'}>{STEP_LABELS[s]}</StepLabel>
             </StepItem>

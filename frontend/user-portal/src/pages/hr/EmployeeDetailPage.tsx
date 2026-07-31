@@ -12,9 +12,9 @@ import { ContractTab } from '../../components/hr/ContractTab';
 import { VisaTab } from '../../components/hr/VisaTab';
 import { InsuranceTab } from '../../components/hr/InsuranceTab';
 import { PerformanceTab } from '../../components/hr/PerformanceTab';
-import { hrApi, getEmployeeFullName, getEmployeeStatusColor, getEmployeeStatusLabel } from '../../services/hrService';
+import { hrApi, getEmployeeFullName, getEmployeeStatusLabel, getEmployeeStatusColor } from '../../services/hrService';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
-import { Breadcrumb } from '@a64core/shared';
+import { Breadcrumb, glassPanel, monoLabel } from '@a64core/shared';
 import type { BreadcrumbItem } from '@a64core/shared';
 import type { Employee, EmployeeUpdate } from '../../types/hr';
 
@@ -41,25 +41,6 @@ const Header = styled.div`
   }
 `;
 
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
-  }
-`;
-
 const HeaderActions = styled.div`
   display: flex;
   gap: 12px;
@@ -67,7 +48,7 @@ const HeaderActions = styled.div`
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   border: none;
@@ -86,10 +67,12 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
       `;
     }
     return `
-      background: ${theme.colors.primary[500]};
-      color: ${theme.colors.onAccent};
+      background: transparent;
+      color: ${theme.colors.celeste};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.primary[600]};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
@@ -106,23 +89,22 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const DetailsCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 32px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 18px;
 `;
 
 const EmployeeHeader = styled.div`
@@ -131,7 +113,7 @@ const EmployeeHeader = styled.div`
   align-items: flex-start;
   margin-bottom: 32px;
   padding-bottom: 24px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const EmployeeInfo = styled.div`
@@ -146,45 +128,58 @@ const EmployeeName = styled.h1`
 `;
 
 const EmployeeCode = styled.div`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  ${monoLabel}
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+/* Status colour comes from hrService.getEmployeeStatusColor(), already
+   routed onto colors.phase.* (spec §5.2) — applies the §4 badge visual. */
 const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 8px 16px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: ${({ $color }) => `${$color}29`};
   color: ${({ $color }) => $color};
-  text-transform: capitalize;
+  border: 1px solid ${({ $color }) => `${$color}73`};
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
 `;
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   margin-bottom: 24px;
   overflow-x: auto;
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 12px 24px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  background: transparent;
+  color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.muted)};
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.celeste : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  margin-bottom: -2px;
+  margin-bottom: -1px;
   white-space: nowrap;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -223,11 +218,9 @@ const DetailItem = styled.div`
 `;
 
 const DetailLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const DetailValue = styled.span`
@@ -236,17 +229,18 @@ const DetailValue = styled.span`
 `;
 
 const EmptyText = styled.span`
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
 const Metadata = styled.div`
+  ${monoLabel}
   display: flex;
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -353,10 +347,15 @@ export function EmployeeDetailPage() {
     );
   }
 
-  // Breadcrumb items for navigation
+  // Breadcrumb items for navigation.
+  // Note: the shared Breadcrumb component's `icon` prop is typed `string` and
+  // renders it as raw text (not a lucide component) — it predates the icon
+  // system and lives outside this shard (frontend/shared, phase-2 owned).
+  // Rather than render emoji glyphs through it, the icon prop is simply
+  // omitted here (it's optional) — see report for the mixin-gap note.
   const breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-    { label: 'HR', path: '/hr', icon: '👔' },
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'HR', path: '/hr' },
     { label: 'Employees', path: '/hr/employees' },
     { label: isNew ? 'New Employee' : employee ? getEmployeeFullName(employee) : 'Employee' },
   ];
@@ -365,8 +364,8 @@ export function EmployeeDetailPage() {
     return (
       <Container>
         <Breadcrumb items={[
-          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-          { label: 'HR', path: '/hr', icon: '👔' },
+          { label: 'Dashboard', path: '/dashboard' },
+          { label: 'HR', path: '/hr' },
           { label: 'Employees', path: '/hr/employees' },
           { label: 'Error' },
         ]} />

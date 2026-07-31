@@ -11,7 +11,8 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
-import { Card } from '@a64core/shared';
+import { X } from 'lucide-react';
+import { Card, glassPanel } from '@a64core/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/auth.store';
 import { useToastStore } from '../../stores/toast.store';
@@ -130,7 +131,7 @@ export function ModulesSettingsCard() {
                 onClick={() => setShowConfirmDisable(false)}
                 disabled={mutation.isPending}
               >
-                ×
+                <X size={16} strokeWidth={1.8} />
               </CloseButton>
             </ModalHeader>
             <ModalBody>
@@ -229,7 +230,7 @@ const Muted = styled.div`
 const UnreachableNote = styled.div`
   background: ${({ theme }: any) => theme.colors.warningBg};
   border: 1px solid ${({ theme }: any) => theme.colors.warning};
-  color: ${({ theme }: any) => theme.colors.gold[800]};
+  color: ${({ theme }: any) => theme.colors.warning};
   padding: 0.625rem 0.875rem;
   border-radius: 6px;
   font-size: 0.8125rem;
@@ -240,8 +241,8 @@ const UnreachableNote = styled.div`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
-  background: rgba(14, 19, 48, 0.5);
+  /* Cosmos scrim, spec §4 "Modals/drawers" (rgba(10,14,36,.6)). */
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -250,18 +251,19 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }: any) => theme.colors.background};
-  border-radius: 8px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   max-width: 480px;
   width: 100%;
-  box-shadow: ${({ theme }: any) => theme.shadows.lg};
   display: flex;
   flex-direction: column;
 `;
 
 const ModalHeader = styled.div`
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.line};
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -288,7 +290,7 @@ const CloseButton = styled.button`
   border-radius: 4px;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
   }
 
   &:disabled {
@@ -313,7 +315,7 @@ const ModalBody = styled.div`
 
 const ModalActions = styled.div`
   padding: 1rem 1.25rem;
-  border-top: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }: any) => theme.colors.line};
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
@@ -322,14 +324,14 @@ const ModalActions = styled.div`
 const SecondaryButton = styled.button`
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  background: ${({ theme }: any) => theme.colors.glass.base};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.neutral[50]};
+    background: ${({ theme }: any) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -338,17 +340,18 @@ const SecondaryButton = styled.button`
   }
 `;
 
+// Destructive action — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  background: ${({ theme }: any) => theme.colors.terracotta[600]};
-  color: ${({ theme }: any) => theme.colors.onAccent};
-  border: none;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }: any) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 6px;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.terracotta[700]};
+    background: rgba(240, 138, 112, 0.26);
   }
 
   &:disabled {

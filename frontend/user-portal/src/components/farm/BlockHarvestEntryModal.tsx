@@ -10,6 +10,8 @@
 
 import { useState, useRef } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { MapPin, Sprout, X } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, hexToRgba } from '@a64core/shared';
 import type { Theme } from '@a64core/shared';
 import { recordBlockHarvest, recordBlockWaste } from '../../services/farmApi';
 import { positiveNumberInputProps } from '../../utils';
@@ -40,14 +42,15 @@ type QualityGrade = 'A' | 'B' | 'C' | 'Waste';
 
 const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C', 'Waste'];
 
-// Theme-aware — called with `theme` from useTheme() since some resolved
-// tokens (textDisabled) differ between light/dark.
+// Quality grade extrapolates the phase vocabulary (spec §5.2) — gold/warning
+// stays reserved for the literal Harvesting action (the submit button below),
+// not an ordinary grade chip (spec §3).
 function getGradeColor(theme: Theme, grade: QualityGrade): string {
   const map: Record<QualityGrade, string> = {
-    A: theme.colors.success,
-    B: theme.colors.primary[500],
-    C: theme.colors.warning,
-    Waste: theme.colors.textDisabled,
+    A: theme.colors.phase.fruiting,
+    B: theme.colors.phase.inoculated,
+    C: theme.colors.phase.fruitingInit,
+    Waste: theme.colors.phase.quarantined,
   };
   return map[grade];
 }
@@ -191,14 +194,16 @@ export function BlockHarvestEntryModal({
       >
         <Header>
           <Title>Quick Harvest Entry</Title>
-          <CloseButton type="button" onClick={onClose} aria-label="Close modal">×</CloseButton>
+          <CloseButton type="button" onClick={onClose} aria-label="Close modal">
+            <X size={20} strokeWidth={1.8} />
+          </CloseButton>
         </Header>
 
         <Content>
           {/* Block/crop identity card — always visible */}
           <BlockInfo>
             <BlockLine>
-              <LineIcon aria-hidden="true">📍</LineIcon>
+              <LineIcon aria-hidden="true"><MapPin size={14} strokeWidth={1.8} /></LineIcon>
               <BlockIdentity>
                 {blockCode}
                 {blockName && <BlockNameInline> — {blockName}</BlockNameInline>}
@@ -207,7 +212,7 @@ export function BlockHarvestEntryModal({
 
             {targetCropName && (
               <CropLine>
-                <LineIcon aria-hidden="true">🌱</LineIcon>
+                <LineIcon aria-hidden="true"><Sprout size={14} strokeWidth={1.8} /></LineIcon>
                 <CropName>{targetCropName}</CropName>
               </CropLine>
             )}
@@ -262,7 +267,7 @@ export function BlockHarvestEntryModal({
                     key={grade}
                     type="button"
                     $selected={qualityGrade === grade}
-                    $color={grade === 'Waste' ? theme.colors.error : getGradeColor(theme, grade)}
+                    $color={getGradeColor(theme, grade)}
                     $isWaste={grade === 'Waste'}
                     onClick={() => handleGradeChange(grade)}
                     aria-pressed={qualityGrade === grade}
@@ -339,10 +344,12 @@ export function BlockHarvestEntryModal({
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers"). No onClick on
+// Overlay — data-entry modal closes only via the X/Cancel button, unchanged.
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -351,15 +358,16 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const Header = styled.div`
@@ -367,12 +375,12 @@ const Header = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Title = styled.h2`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -380,8 +388,7 @@ const Title = styled.h2`
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -393,7 +400,7 @@ const CloseButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -409,9 +416,9 @@ const BlockInfo = styled.div`
   gap: ${({ theme }) => theme.spacing.xs};
   margin-bottom: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border-left: 4px solid ${({ theme }) => theme.colors.success}; /* grade-A green: consistent with Operations harvest modal */
+  border-left: 4px solid ${({ theme }) => theme.colors.bright.emerald}; /* grade-A green: consistent with Operations harvest modal */
 `;
 
 const BlockLine = styled.div`
@@ -427,21 +434,21 @@ const CropLine = styled.div`
 `;
 
 const LineIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  line-height: 1;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const BlockIdentity = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-family: 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const BlockNameInline = styled.span`
   font-family: ${({ theme }) => theme.typography.fontFamily.primary};
   font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const CropName = styled.span`
@@ -458,14 +465,13 @@ const ChipRow = styled.div`
 `;
 
 const Chip = styled.span<{ $variant?: 'progress' }>`
+  ${monoLabel}
   display: inline-flex;
   align-items: center;
   padding: 2px ${({ theme }) => theme.spacing.xs};
-  background: ${({ theme, $variant }) =>
-    $variant === 'progress' ? `${theme.colors.success}1A` : theme.colors.neutral[100]};
-  color: ${({ theme, $variant }) =>
-    $variant === 'progress' ? theme.colors.emerald[700] : theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  background: ${({ $variant }) => ($variant === 'progress' ? 'rgba(84, 211, 155, 0.14)' : 'rgba(180, 200, 220, 0.08)')};
+  color: ${({ theme, $variant }) => ($variant === 'progress' ? theme.colors.bright.emerald : theme.colors.muted)};
+  font-size: 0.62rem;
   border-radius: ${({ theme }) => theme.borderRadius.sm};
 `;
 
@@ -482,15 +488,14 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -498,11 +503,12 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[500]};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -520,28 +526,15 @@ const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste
   justify-content: center;
   padding: ${({ theme }) => theme.spacing.md};
   border: 2px solid
-    ${({ $selected, $color, $isWaste, theme }) =>
-      $selected
-        ? $isWaste
-          ? $color /* solid red border when Waste selected */
-          : $color
-        : $isWaste
-        ? theme.colors.neutral[300] /* muted when not selected */
-        : theme.colors.neutral[300]};
+    ${({ $selected, $color, theme }) => ($selected ? $color : theme.colors.glass.border)};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ $selected, $color, $isWaste, theme }) =>
-    $selected
-      ? $isWaste
-        ? `${theme.colors.error}14` /* subtle rose tint for Waste */
-        : `${$color}15`
-      : 'transparent'};
+  background: ${({ $selected, $color }) => ($selected ? hexToRgba($color, 0.16) : 'transparent')};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
     border-color: ${({ $color }) => $color};
-    background: ${({ $color, $isWaste, theme }) =>
-      $isWaste ? `${theme.colors.error}0F` : `${$color}10`};
+    background: ${({ $color }) => hexToRgba($color, 0.1)};
   }
 `;
 
@@ -553,22 +546,21 @@ const GradeIcon = styled.div<{ $color?: string }>`
 `;
 
 const GradeLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const GradeNote = styled.div<{ $warn?: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ $warn, theme }) => ($warn ? theme.colors.terracotta[700] : theme.colors.textSecondary)};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.bright.coral : theme.colors.muted)};
   font-style: italic;
   text-align: center;
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -577,25 +569,27 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[500]};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
 const CharCount = styled.div<{ $over: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ $over, theme }) => ($over ? theme.colors.error : theme.colors.textSecondary)};
+  color: ${({ $over, theme }) => ($over ? theme.colors.bright.coral : theme.colors.muted)};
   text-align: right;
 `;
 
 const ErrorMessage = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.error}15`};
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid rgba(240, 138, 112, 0.4);
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   text-align: center;
 `;
@@ -608,17 +602,18 @@ const ButtonGroup = styled.div`
 const CancelButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: none;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:disabled {
@@ -627,20 +622,28 @@ const CancelButton = styled.button`
   }
 `;
 
+// The literal "record harvest" action IS the Harvesting phase, so gold is
+// spec-sanctioned here (spec §3/§5.1) — unlike the grade chips above, this is
+// not an ordinary status colour. Waste (excluded from KPIs) drops to a plain
+// glass/coral treatment instead of gold.
 const SubmitButton = styled.button<{ $isWaste: boolean }>`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ $isWaste, theme }) => ($isWaste ? theme.colors.textDisabled : theme.colors.warning)};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: ${({ $isWaste, theme }) =>
+    $isWaste
+      ? 'rgba(240, 138, 112, 0.16)'
+      : `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
+  color: ${({ $isWaste, theme }) => ($isWaste ? theme.colors.bright.coral : theme.colors.onAccent)};
+  border: 1px solid ${({ $isWaste }) => ($isWaste ? 'rgba(240, 138, 112, 0.45)' : 'transparent')};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: ${({ $isWaste }) => ($isWaste ? 'none' : '0 4px 14px rgba(4, 6, 18, 0.35)')};
 
   &:hover:not(:disabled) {
-    filter: brightness(0.9);
+    filter: brightness(1.05);
   }
 
   &:disabled {

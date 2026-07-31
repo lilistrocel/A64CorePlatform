@@ -24,6 +24,15 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
+import { Wheat, BarChart3, RefreshCw } from 'lucide-react';
+import {
+  PageHeader as SharedPageHeader,
+  glassPanel,
+  glassControl,
+  glassOpaque,
+  monoLabel,
+  goldThread,
+} from '@a64core/shared';
 import { apiClient } from '../../services/api';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
@@ -178,60 +187,64 @@ interface Insight {
  */
 function getModuleColors(theme: DefaultTheme): Record<string, string> {
   return {
-    farms: theme.colors.success,
-    blocks: theme.colors.primary[500],
-    // was purple (#8B5CF6) — decorative only, doesn't distinguish from an
-    // adjacent blue element in this file, so primary[700] per spec §3.
-    employees: theme.colors.primary[700],
-    customers: theme.colors.warning,
-    orders: theme.colors.error,
-    // was indigo (#6366F1) — decorative only.
-    vehicles: theme.colors.primary[600],
-    // was teal (#14B8A6) — teal is art-only; this reads as a yield/growth
-    // metric (feeds the "Total Yield" hero card) so emerald fits better
-    // than the generic primary[400] fallback.
-    shipments: theme.colors.emerald[400],
-    // was pink (#EC4899) — no direct token in the migration table; nearest
-    // warm categorical value. Unused in this file today (kept for parity).
-    campaigns: theme.colors.terracotta[400],
-    users: theme.colors.textSecondary,
-  };
-}
-
-function getBlockStateColors(theme: DefaultTheme): Record<string, string> {
-  return {
-    growing: theme.colors.success,
-    harvesting: theme.colors.warning,
-    planned: theme.colors.primary[500],
-    empty: theme.colors.textDisabled,
-    // was purple (#8B5CF6) — decorative only, primary[700] per spec §3.
-    cleaning: theme.colors.primary[700],
-    alert: theme.colors.error,
-    // was orange (#F97316) — explicit table mapping, distinct from warning/gold.
-    fruiting: theme.colors.terracotta[400],
-    // was cyan (#06B6D4) — teal/cyan is art-only in the brand.
-    partial: theme.colors.primary[400],
+    farms: theme.colors.bright.emerald,
+    blocks: theme.colors.bright.lapis,
+    employees: theme.colors.bright.lavender,
+    // Night Observatory (T-901): was theme.colors.warning (== gold-b) — a
+    // categorical card-accent use of the reserved harvesting/gold hue,
+    // which spec §3 explicitly forbids ("not a chart series default").
+    // bright.rose keeps it warm and distinct from orders'/campaigns' terra.
+    customers: theme.colors.bright.rose,
+    orders: theme.colors.bright.coral,
+    vehicles: theme.colors.bright.verdi,
+    // Feeds the "Total Yield" hero card — emerald reads as the yield/growth
+    // metric, matching the "alive/growing" convention (spec §4/§3).
+    shipments: theme.colors.bright.emerald,
+    campaigns: theme.colors.bright.terra,
+    users: theme.colors.celeste,
   };
 }
 
 /**
- * 10-swatch categorical palette for the crop-distribution donut. Built from
- * the four brand ramps at varying shades (per spec: "where a chart needs 4+
- * distinguishable series, build them from the four brand ramps") rather than
- * mechanically remapping the old rainbow list hex-for-hex.
+ * Night Observatory (T-901): block states are a farm-specific vocabulary
+ * extrapolated onto the spec §5 phase map (§5.2 authorises this) rather than
+ * an ad-hoc primary/success/warning mix. `harvesting` -> phase.harvesting is
+ * the literal harvest phase — the one place gold is earned here, not spent
+ * arbitrarily.
+ */
+function getBlockStateColors(theme: DefaultTheme): Record<string, string> {
+  return {
+    empty: theme.colors.phase.empty,
+    planned: theme.colors.phase.preparing,
+    growing: theme.colors.phase.inoculated,
+    fruiting: theme.colors.phase.fruiting,
+    harvesting: theme.colors.phase.harvesting,
+    cleaning: theme.colors.phase.cleaning,
+    alert: theme.colors.phase.quarantined,
+    partial: theme.colors.phase.colonizing,
+  };
+}
+
+/**
+ * 10-swatch categorical palette for the crop-distribution donut, built from
+ * the full `bright.*` ramp (spec §1.2 — the brand's dark-ground-tuned
+ * categorical hues) rather than mixing semantic/status tokens into a chart
+ * palette. No `bright.gold` at index 0/1 repeat position — gold stays
+ * reserved (spec §3); it only appears once, in the Charts-prescribed series
+ * order position, matching ChartWidget's shared convention.
  */
 function getCropPalette(theme: DefaultTheme): string[] {
   return [
-    theme.colors.primary[500],
-    theme.colors.success,
-    theme.colors.warning,
-    theme.colors.error,
-    theme.colors.primary[300],
-    theme.colors.emerald[300],
-    theme.colors.gold[300],
-    theme.colors.terracotta[300],
-    theme.colors.primary[700],
-    theme.colors.emerald[700],
+    theme.colors.celeste,
+    theme.colors.bright.gold,
+    theme.colors.bright.emerald,
+    theme.colors.bright.lapis,
+    theme.colors.bright.terra,
+    theme.colors.bright.lavender,
+    theme.colors.bright.laurel,
+    theme.colors.bright.verdi,
+    theme.colors.bright.rose,
+    theme.colors.bright.coral,
   ];
 }
 
@@ -506,6 +519,18 @@ export function Dashboard() {
   const MODULE_COLORS = useMemo(() => getModuleColors(theme), [theme]);
   const BLOCK_STATE_COLORS = useMemo(() => getBlockStateColors(theme), [theme]);
   const CROP_PALETTE = useMemo(() => getCropPalette(theme), [theme]);
+  // Recharts tooltips render outside styled-components' theme context, so
+  // they need the glassOpaque recipe (spec §4 "Charts": "tooltips glassOpaque")
+  // reproduced as an inline style object rather than the mixin.
+  const chartTooltipStyle = {
+    backgroundColor: theme.colors.cosmosHi,
+    border: `1px solid ${theme.colors.glass.border}`,
+    borderRadius: '10px',
+    boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
+    color: theme.colors.textPrimary,
+    fontSize: '0.8rem',
+  };
+  const chartTooltipLabelStyle = { color: theme.colors.celeste };
 
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [farmData, setFarmData] = useState<FarmSummaryData | null>(null);
@@ -661,34 +686,46 @@ export function Dashboard() {
     return farmCrops ?? cropDistributionData;
   })();
 
-  // Hero metric values derived from data + farmData
+  // Hero metric values derived from data + farmData.
+  // Night Observatory (T-901) gold discipline (spec §3): only the single
+  // most important number on the landing page (Farms — first card, the
+  // headline count) carries gold + the goldThread top accent. "Alive/growing"
+  // metrics use bright.emerald; status metrics borrow their exact phase
+  // colour (pending -> fruitingInit/terra, alerts -> quarantined/coral) so
+  // the same vocabulary reads consistently across the whole app (spec §5.2).
   const heroMetrics = data
     ? [
         {
           label: 'Farms',
           value: data.farms.total,
           borderColor: MODULE_COLORS.farms,
+          valueColor: theme.colors.secondary[500],
+          isPrimary: true,
         },
         {
           label: 'Active Blocks',
           value: farmData?.overview.activePlantings ?? (data.blocks.active ?? data.blocks.total),
           borderColor: MODULE_COLORS.blocks,
+          valueColor: theme.colors.bright.emerald,
         },
         {
           label: 'Total Yield',
           value: farmData?.yieldByFarm?.reduce((sum, f) => sum + f.actualYieldKg, 0) ?? 0,
           borderColor: MODULE_COLORS.shipments,
+          valueColor: theme.colors.bright.emerald,
           suffix: ' kg',
         },
         {
           label: 'Pending Orders',
           value: data.orders.details?.pending ?? 0,
           borderColor: MODULE_COLORS.orders,
+          valueColor: theme.colors.phase.fruitingInit,
         },
         {
           label: 'Active Alerts',
           value: farmData?.recentActivity.activeAlerts ?? 0,
-          borderColor: theme.colors.error,
+          borderColor: theme.colors.phase.quarantined,
+          valueColor: theme.colors.phase.quarantined,
         },
       ]
     : [];
@@ -701,28 +738,31 @@ export function Dashboard() {
   return (
     <PageContainer>
       {/* ── Section 1: Page header ─────────────────────────────────────────── */}
-      <PageHeader>
-        <HeaderLeft>
-          <PageTitleRow>
-            <PageTitle>Dashboard</PageTitle>
-            {selectedYearDisplay && <ChartYearBadge>{selectedYearDisplay}</ChartYearBadge>}
-          </PageTitleRow>
-          <PageSubtitle>Executive overview across all modules</PageSubtitle>
-        </HeaderLeft>
-        <HeaderRight>
-          <RefreshButton onClick={fetchData} disabled={isLoading} aria-label="Refresh dashboard">
-            <RefreshIcon $spinning={isLoading} aria-hidden="true">
-              &#x21BA;
-            </RefreshIcon>
-            Refresh
-          </RefreshButton>
-          {data?.lastUpdated && (
-            <LastUpdatedText>
-              Last updated: {formatTimestamp(data.lastUpdated)}
-            </LastUpdatedText>
-          )}
-        </HeaderRight>
-      </PageHeader>
+      {/* Night Observatory (T-901): the dashboard is the app's landing surface,
+          so its header is exactly the shared PageHeader pattern (spec §4 "Page
+          header" / mockup .topline) — breadcrumb + H1 + description, with the
+          refresh/last-updated actions as a sibling row (PageHeader itself has
+          no action-button slot). */}
+      <SharedPageHeader
+        breadcrumb="Operations · Live"
+        title="Dashboard"
+        description="Executive overview across all modules"
+      />
+      <HeaderActionsRow>
+        {selectedYearDisplay && <ChartYearBadge>{selectedYearDisplay}</ChartYearBadge>}
+        <HeaderActionsSpacer />
+        <RefreshButton onClick={fetchData} disabled={isLoading} aria-label="Refresh dashboard">
+          <RefreshIcon $spinning={isLoading} aria-hidden="true">
+            <RefreshCw size={14} strokeWidth={1.8} />
+          </RefreshIcon>
+          Refresh
+        </RefreshButton>
+        {data?.lastUpdated && (
+          <LastUpdatedText>
+            Last updated: {formatTimestamp(data.lastUpdated)}
+          </LastUpdatedText>
+        )}
+      </HeaderActionsRow>
 
       {/* ── Tab bar (only rendered when user has P&L access) ───────────────── */}
       {canViewPnl && (
@@ -733,7 +773,7 @@ export function Dashboard() {
             $active={activeTab === 'farm'}
             onClick={() => setActiveTab('farm')}
           >
-            <TabIcon>🌾</TabIcon>
+            <TabIcon aria-hidden="true"><Wheat size={24} strokeWidth={1.6} /></TabIcon>
             <TabLabelGroup>
               <TabLabel>Farm Overview</TabLabel>
               <TabHint>Blocks, crops, yield performance</TabHint>
@@ -745,7 +785,7 @@ export function Dashboard() {
             $active={activeTab === 'pnl'}
             onClick={() => setActiveTab('pnl')}
           >
-            <TabIcon>📊</TabIcon>
+            <TabIcon aria-hidden="true"><BarChart3 size={24} strokeWidth={1.6} /></TabIcon>
             <TabLabelGroup>
               <TabLabel>Profit &amp; Loss</TabLabel>
               <TabHint>Revenue, margins, receivables</TabHint>
@@ -785,8 +825,12 @@ export function Dashboard() {
           <PageSection>
             <HeroGrid>
               {heroMetrics.map((metric) => (
-                <HeroCard key={metric.label} $borderColor={metric.borderColor}>
-                  <KpiValue>
+                <HeroCard
+                  key={metric.label}
+                  $borderColor={metric.borderColor}
+                  $gold={!!metric.isPrimary}
+                >
+                  <KpiValue $color={metric.valueColor}>
                     {formatNumber(metric.value)}
                     {metric.suffix ?? ''}
                   </KpiValue>
@@ -846,6 +890,8 @@ export function Dashboard() {
                             `${formatNumber(value)} Blocks`,
                             name,
                           ]}
+                          contentStyle={chartTooltipStyle}
+                          labelStyle={chartTooltipLabelStyle}
                         />
                       </PieChart>
                     </ResponsiveContainer>
@@ -1524,10 +1570,12 @@ const PageContainer = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
   width: 100%;
   min-height: 100vh;
-  /* Dashboard is the landing surface — this is the page's own ground, so it
-     uses canvas (Fresco Cream) directly rather than the recessed "surface"
-     token; cards below sit on "background" (Cream Hi), raised above this. */
-  background: ${({ theme }) => theme.colors.canvas};
+  /* Night Observatory sky-blocker fix (spec §7): the dashboard is the app's
+     landing surface — the fixed Sky layer (mounted once at the app shell)
+     must read through it more strongly than anywhere else. The previous
+     opaque "canvas" fill here painted directly over the sky on every visit.
+     No background at all: PageContainer is transparent, glass widgets below
+     float on the sky itself. */
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: ${({ theme }) => theme.spacing.lg};
@@ -1538,100 +1586,80 @@ const PageContainer = styled.div`
   }
 `;
 
-const PageHeader = styled.header`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: ${({ theme }) => theme.spacing.xl};
-  }
-`;
-
-const HeaderLeft = styled.div`
-  flex: 1;
-`;
-
-const PageTitleRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-`;
-
-const PageTitle = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-  line-height: ${({ theme }) => theme.typography.lineHeight.tight};
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  }
-`;
-
-const PageSubtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    font-size: ${({ theme }) => theme.typography.fontSize.base};
-  }
-`;
-
-const HeaderRight = styled.div`
+// Actions row (refresh + last-updated + year badge) sits below the shared
+// PageHeader — PageHeader itself only has a stat-tile slot, not an
+// action-button slot, so this stays a sibling rather than forcing those
+// controls into stats.
+const HeaderActionsRow = styled.div`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.md};
   flex-wrap: wrap;
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+`;
+
+const HeaderActionsSpacer = styled.div`
+  flex: 1;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    display: none;
+  }
 `;
 
 /**
- * The dashboard's one deliberate gold accent (spec §1: "rare and meaningful" —
- * reserved for the active nav item, one primary CTA per view, or a genuine
- * highlight badge). Refresh is the single most prominent, always-visible
- * action on this page, so it carries the gold rather than lapis.
+ * The dashboard's one deliberate gold accent from the shell's own budget
+ * (spec §3): the primary CTA on the landing page. Refresh is the single
+ * most prominent, always-visible action on this page, so it carries the
+ * gold-gradient primary-button treatment (spec §4 "Buttons").
  */
 const RefreshButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xs};
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background: ${({ theme }) => theme.colors.secondary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[400]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease-in-out;
+  transition: transform 150ms ease-in-out, box-shadow 150ms ease-in-out;
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.secondary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(220, 185, 79, 0.3);
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover:not(:disabled) {
+      transform: none;
+    }
+  }
 `;
 
 const RefreshIcon = styled.span<{ $spinning: boolean }>`
-  display: inline-block;
-  font-style: normal;
+  display: inline-flex;
+  align-items: center;
   animation: ${({ $spinning }) => ($spinning ? spinAnimation : 'none')} 1s linear infinite;
 `;
 
 const LastUpdatedText = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   white-space: nowrap;
 `;
@@ -1670,37 +1698,31 @@ const HeroGrid = styled.div`
   }
 `;
 
-const HeroCard = styled.article<{ $borderColor: string }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+// Night Observatory (T-901): glass hero tiles floating over the sky, left
+// edge keeps its categorical accent stripe. Only the primary metric (Farms)
+// carries the goldThread top accent (spec §3 — most of the gold budget on
+// this page is spent here + the breadcrumb, not on every card).
+const HeroCard = styled.article<{ $borderColor: string; $gold: boolean }>`
+  ${glassPanel}
+  ${({ $gold }) => $gold && goldThread}
   padding: ${({ theme }) => theme.spacing.xl};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  /* Hairline border does the heavy lifting for card-on-canvas separation —
-     background vs canvas alone is a subtle cream-on-cream contrast. */
-  border: 1px solid ${({ theme }) => theme.colors.border};
   border-left: 4px solid ${({ $borderColor }) => $borderColor};
-  transition: box-shadow 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-  }
 `;
 
-const KpiValue = styled.p`
+const KpiValue = styled.p<{ $color?: string }>`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme, $color }) => $color ?? theme.colors.textPrimary};
+  text-shadow: 0 0 22px ${({ $color }) => ($color ? `${$color}66` : 'transparent')};
   margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
   line-height: ${({ theme }) => theme.typography.lineHeight.tight};
 `;
 
 const KpiLabel = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
 `;
 
@@ -1734,12 +1756,8 @@ const TwoColumnLayout = styled.div`
 // ── Chart card ──────────────────────────────────────────────────────────────
 
 const ChartCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.xl};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  /* See HeroCard — border carries card-on-canvas separation, not shadow alone. */
-  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const CardTitle = styled.h3`
@@ -1767,29 +1785,28 @@ const ChartHeaderSpacer = styled.div`
 `;
 
 const ChartYearBadge = styled.span`
+  ${monoLabel}
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-size: 0.62rem;
   border-radius: ${({ theme }) => theme.borderRadius.full};
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[700]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.45);
 `;
 
 const ChartFilterSelect = styled.select`
-  padding: 6px 12px;
+  ${glassControl}
+  padding: 6px 30px 6px 12px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -1914,35 +1931,34 @@ const CropSearchWrapper = styled.div`
 `;
 
 const CropSearchInput = styled.input`
+  ${glassControl}
   width: 100%;
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 0.15s ease;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Dropdown popping out of the glass ChartCard above it — glassOpaque per
+// spec §2's two-glass-layer rule (an opaque menu, not another blurred panel).
 const CropSearchDropdown = styled.div`
+  ${glassOpaque}
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   margin-top: 4px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  border-radius: 10px;
   z-index: ${({ theme }) => theme.zIndex.dropdown};
   max-height: 200px;
   overflow-y: auto;
@@ -2309,7 +2325,10 @@ const ErrorMessage = styled.p`
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.xl}`};
   background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* Night Observatory onAccent audit (spec §1.1): error/coral is a bright
+     fill, not the gold fill onAccent now means "dark text for" — needs
+     onDark (cream), same bug class as the AI Hub/assistant files. */
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -2333,14 +2352,12 @@ const NoDataText = styled.p`
 // ── Tab bar ─────────────────────────────────────────────────────────────────
 
 const TabBar = styled.div`
+  ${glassPanel}
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 const TabPill = styled.button<{ $active: boolean }>`
@@ -2348,33 +2365,36 @@ const TabPill = styled.button<{ $active: boolean }>`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => `${theme.spacing.md} ${theme.spacing.lg}`};
-  border: 2px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : 'transparent'};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 1px solid ${({ $active, theme }) =>
+    $active ? 'rgba(107, 138, 224, 0.4)' : 'transparent'};
+  border-radius: 10px;
   font-family: inherit;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   text-align: left;
 
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.background : 'transparent'};
-  box-shadow: ${({ $active, theme }) =>
-    $active ? theme.shadows.md : 'none'};
+  background: ${({ $active }) =>
+    $active ? 'linear-gradient(90deg, rgba(107, 138, 224, 0.16), rgba(107, 138, 224, 0.04))' : 'transparent'};
 
   &:hover:not([aria-selected='true']) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    border-color: ${({ theme }) => theme.colors.neutral[300]};
+    background: rgba(180, 200, 220, 0.07);
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `;
 
 const TabIcon = styled.span`
-  font-size: 28px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.bright.lapis};
   flex-shrink: 0;
 `;
 
@@ -2392,7 +2412,7 @@ const TabLabel = styled.span`
 
 const TabHint = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ── P&L tab content wrapper ──────────────────────────────────────────────────

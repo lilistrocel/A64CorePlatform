@@ -4,9 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled, { keyframes, css } from 'styled-components';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Button, Input } from '@a64core/shared';
+import { Check, Smartphone } from 'lucide-react';
+import { Button, Input, glassPanel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
-import { useThemeStore } from '../../stores/theme.store';
 import { usePageVisibility } from '../../hooks/usePageVisibility';
 
 // Login form sessionStorage caching constants
@@ -111,10 +111,10 @@ export function Login() {
   const redirectTo = searchParams.get('redirect');
   const { login, isLoading, error, clearError, mfaRequired, mfaPendingToken, isAuthenticated } = useAuthStore();
   // The lockup ships as separate cream/cosmos-text SVGs (not a single
-  // currentColor asset), so the correct variant must be picked per theme —
-  // see Docs/2-Working-Progress/a20core-rebrand-spec.md §5.
-  const { mode } = useThemeStore();
-  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
+  // currentColor asset). Night Observatory is dark-only (T-901) — the cosmos
+  // (cream-text) variant is now correct unconditionally; the theme-mode
+  // branch that used to pick between the two is gone with light mode.
+  const logoSrc = '/brand/lockup_cosmos.svg';
   const [localError, setLocalError] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState<string | null>(null);
 
@@ -295,7 +295,7 @@ export function Login() {
           {/* Feature #347: Session preserved indicator */}
           {showSessionPreserved && wasRestored && (
             <SessionPreservedBanner role="status" aria-live="polite">
-              <SessionPreservedIcon>✓</SessionPreservedIcon>
+              <SessionPreservedIcon><Check size={12} strokeWidth={2.5} /></SessionPreservedIcon>
               <SessionPreservedText>
                 Session restored — your email was remembered
               </SessionPreservedText>
@@ -324,7 +324,7 @@ export function Login() {
             {/* Feature #347: Mobile helper text for MFA flow */}
             {isMobile && emailValue && (
               <MobileHelperText>
-                <MobileHelperIcon>📱</MobileHelperIcon>
+                <MobileHelperIcon><Smartphone size={14} strokeWidth={1.8} /></MobileHelperIcon>
                 You can safely switch to your authenticator app after signing in
               </MobileHelperText>
             )}
@@ -367,7 +367,9 @@ const LoginContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  /* Night Observatory (spec §0/§7): auth screens carry no sidebar, so the
+     fixed Sky layer mounted at the app shell IS the entire backdrop here —
+     no opaque/gradient ground on top of it. */
   padding: 1rem;
 
   @media (min-width: 640px) {
@@ -376,9 +378,8 @@ const LoginContainer = styled.div`
 `;
 
 const LoginCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 22px;
   padding: 1.5rem;
   width: 100%;
   max-width: 400px;
@@ -386,7 +387,6 @@ const LoginCard = styled.div`
   @media (min-width: 640px) {
     padding: 2rem;
     max-width: 440px;
-    border-radius: ${({ theme }) => theme.borderRadius.xl};
   }
 `;
 
@@ -413,13 +413,13 @@ const LogoImg = styled.img`
   margin: 0 auto;
 `;
 
-// Brand contract §4 — Fraunces is editorial-only, permitted here as the
-// login tagline and nowhere else in the app.
+// Night Observatory (spec §0/§6.1 shard note): the app's ONE Fraunces
+// italic accent outside empty states — editorial-only, never on UI controls.
 const Tagline = styled.p`
   font-family: ${({ theme }) => theme.typography.fontFamily.display};
   font-style: italic;
   font-size: 0.9375rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-align: center;
   margin: 0 0 1.25rem 0;
 
@@ -453,7 +453,7 @@ const Subtitle = styled.p`
 `;
 
 const SessionExpiredBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.warning}15`};
+  background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem;
@@ -464,7 +464,7 @@ const SessionExpiredBanner = styled.div`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.error}10`};
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem;
@@ -517,7 +517,7 @@ const SessionPreservedBanner = styled.div`
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.successBg} 0%, ${({ theme }) => theme.colors.emerald[100]} 100%);
+  background: ${({ theme }) => theme.colors.successBg};
   border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   margin-bottom: 1rem;
@@ -531,15 +531,16 @@ const SessionPreservedIcon = styled.span`
   width: 20px;
   height: 20px;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* success/emerald fill — onDark (cream), NOT onAccent (that's reserved for
+     gold fills per spec §1.1's breaking onAccent-meaning change). */
+  color: ${({ theme }) => theme.colors.onDark};
   border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: bold;
+  flex-shrink: 0;
 `;
 
 const SessionPreservedText = styled.span`
   font-size: 0.8125rem;
-  color: ${({ theme }) => theme.colors.emerald[700]};
+  color: ${({ theme }) => theme.colors.bright.emerald};
   font-weight: 500;
 `;
 
@@ -549,10 +550,11 @@ const MobileHelperText = styled.p`
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
   padding: 0.5rem 0.75rem;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.cosmosDeep};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   line-height: 1.4;
   animation: ${fadeIn} 0.3s ease-out;
@@ -563,19 +565,22 @@ const MobileHelperText = styled.p`
 `;
 
 const MobileHelperIcon = styled.span`
-  font-size: 0.875rem;
+  display: flex;
   flex-shrink: 0;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
+// Secondary-emphasis link (spec §3: "Secondary emphasis is celeste, never
+// gold" — this is not one of the gold-budget items).
 const ForgotPasswordLink = styled(Link)`
-  /* WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast on the page ground */
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 0.875rem;
   text-decoration: none;
   align-self: flex-end;
   margin-top: -0.5rem;
 
   &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
     text-decoration: underline;
   }
 `;
@@ -584,17 +589,17 @@ const RegisterPrompt = styled.p`
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 0;
 `;
 
 const RegisterLink = styled(Link)`
-  /* WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast on the page ground */
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   text-decoration: none;
 
   &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
     text-decoration: underline;
   }
 `;

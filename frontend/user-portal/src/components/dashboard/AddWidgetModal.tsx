@@ -1,6 +1,18 @@
+/**
+ * Add Widget Modal
+ *
+ * Night Observatory (T-901 GAP-FILL, spec §4 "Modals/drawers"): glassPanel
+ * at blur 24px over an rgba(10,14,36,.6) scrim, 20px radius, X-only close.
+ * This modal previously closed on overlay click — per the project's standing
+ * rule (data-entry/action modals never close on backdrop click), that is
+ * removed here too; the X button is the only way out.
+ */
+
 import { useState } from 'react';
 import styled from 'styled-components';
-import { useDashboardStore, WIDGET_CATALOG } from '../../stores/dashboard.store';
+import { BarChart3, X } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
+import { useDashboardStore, WIDGET_CATALOG, WIDGET_ICON_COMPONENTS } from '../../stores/dashboard.store';
 
 interface AddWidgetModalProps {
   isOpen: boolean;
@@ -24,11 +36,13 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
   };
 
   return (
-    <Overlay onClick={onClose}>
-      <Modal onClick={(e) => e.stopPropagation()}>
+    <Overlay>
+      <Modal role="dialog" aria-modal="true" aria-label="Add widget">
         <ModalHeader>
           <ModalTitle>Add Widget</ModalTitle>
-          <CloseBtn onClick={onClose} aria-label="Close add widget dialog">&times;</CloseBtn>
+          <CloseBtn onClick={onClose} aria-label="Close add widget dialog">
+            <X size={18} strokeWidth={2} />
+          </CloseBtn>
         </ModalHeader>
 
         <ModalBody>
@@ -36,9 +50,13 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
             <EmptyMessage>All available widgets are already on your dashboard.</EmptyMessage>
           ) : (
             <WidgetGrid>
-              {availableWidgets.map((widget) => (
+              {availableWidgets.map((widget) => {
+                const WidgetIcon = WIDGET_ICON_COMPONENTS[widget.id] ?? BarChart3;
+                return (
                 <WidgetCard key={widget.id}>
-                  <WidgetIcon>{widget.icon || '📊'}</WidgetIcon>
+                  <WidgetIconWrap aria-hidden="true">
+                    <WidgetIcon size={20} strokeWidth={1.6} />
+                  </WidgetIconWrap>
                   <WidgetInfo>
                     <WidgetName>{widget.title}</WidgetName>
                     <WidgetDesc>{widget.description}</WidgetDesc>
@@ -49,10 +67,11 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
                     disabled={adding === widget.id}
                     aria-label={`Add ${widget.title} widget`}
                   >
-                    {adding === widget.id ? 'Adding...' : '+ Add'}
+                    {adding === widget.id ? 'Adding…' : '+ Add'}
                   </AddButton>
                 </WidgetCard>
-              ))}
+                );
+              })}
             </WidgetGrid>
           )}
         </ModalBody>
@@ -63,21 +82,22 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
 
 const Overlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: ${({ theme }) => theme.zIndex.modal};
+  padding: ${({ theme }) => theme.spacing.lg};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 90%;
   max-width: 560px;
   max-height: 80vh;
@@ -90,33 +110,41 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const CloseBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 1.5rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
-  padding: 0;
-  line-height: 1;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 150ms, color 150ms;
 
   &:hover {
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
 const ModalBody = styled.div`
-  padding: 1.5rem;
+  padding: 20px 24px;
   overflow-y: auto;
 `;
 
@@ -131,24 +159,28 @@ const WidgetCard = styled.div`
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 12px;
   transition: border-color 0.2s, background 0.2s;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[300]};
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    border-color: rgba(220, 185, 79, 0.35);
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
-const WidgetIcon = styled.div`
-  font-size: 2rem;
-  width: 48px;
-  height: 48px;
+const WidgetIconWrap = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: ${({ theme }) => theme.colors.glass.hi};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 `;
 
 const WidgetInfo = styled.div`
@@ -158,50 +190,57 @@ const WidgetInfo = styled.div`
 
 const WidgetName = styled.div`
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const WidgetDesc = styled.div`
   font-size: 0.8125rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 0.125rem;
 `;
 
 const WidgetType = styled.div`
-  font-size: 0.6875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: 0.25rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-top: 0.35rem;
 `;
 
+// Secondary/ghost treatment — this is not the view's primary CTA (spec §3
+// gold discipline), so it stays glass rather than gold.
 const AddButton = styled.button`
   padding: 0.5rem 1rem;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-radius: 9px;
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 0.2s;
+  transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
+  }
 `;
 
 const EmptyMessage = styled.p`
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   padding: 2rem 0;
   font-size: 0.9375rem;
 `;

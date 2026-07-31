@@ -10,6 +10,7 @@ import styled, { useTheme } from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
 import { formatNumber } from '../../utils/formatNumber';
 import type { MarketingDashboardStats } from '../../types/marketing';
+import { PageHeader, glassPanel, glassPanelHover, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -21,23 +22,6 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
-  margin-bottom: 32px;
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 8px 0;
-`;
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -46,27 +30,22 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 16px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-  }
 `;
 
 const StatLabel = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: 8px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.muted};
+  margin-bottom: 10px;
 `;
 
-const StatValue = styled.div`
-  font-size: 36px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+const StatValue = styled.div<{ $color?: string }>`
+  font-size: 32px;
+  font-weight: 800;
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
 const WidgetsRow = styled.div`
@@ -81,10 +60,9 @@ const WidgetsRow = styled.div`
 `;
 
 const Widget = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 16px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const WidgetTitle = styled.h3`
@@ -101,18 +79,12 @@ const CampaignList = styled.div`
 `;
 
 const CampaignItem = styled.div`
+  ${glassPanelHover}
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-  }
+  border-radius: 10px;
 `;
 
 const CampaignName = styled.span`
@@ -122,8 +94,9 @@ const CampaignName = styled.span`
 `;
 
 const CampaignMetrics = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const EventList = styled.div`
@@ -137,9 +110,9 @@ const EventItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border-left: 3px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 4px;
+  background: rgba(107, 138, 224, 0.12);
+  border-left: 3px solid ${({ theme }) => theme.colors.bright.lapis};
+  border-radius: 8px;
   font-size: 13px;
 `;
 
@@ -149,8 +122,9 @@ const EventName = styled.span`
 `;
 
 const EventDate = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.primary[800]};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const BudgetList = styled.div`
@@ -161,8 +135,9 @@ const BudgetList = styled.div`
 
 const BudgetItem = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
 `;
 
 const BudgetHeader = styled.div`
@@ -179,16 +154,18 @@ const BudgetName = styled.span`
 `;
 
 const BudgetAmount = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.success};
+  ${monoLabel}
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 const ProgressBar = styled.div`
   width: 100%;
-  height: 8px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 4px;
+  height: 10px;
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 99px;
   overflow: hidden;
 `;
 
@@ -196,20 +173,26 @@ interface ProgressFillProps {
   $percentage: number;
 }
 
+/* Utilization gauge — not a phase status, so this stays off the phase
+   vocabulary, but still off gold (spec §3): emerald under 75%, terra as it
+   approaches the ceiling, coral (the only red) once over budget. Matches the
+   identical gauge in BudgetTable.tsx. */
 const ProgressFill = styled.div<ProgressFillProps>`
   height: 100%;
+  border-radius: 99px;
   background: ${({ $percentage, theme }) =>
-    $percentage >= 90 ? theme.colors.error :
-    $percentage >= 75 ? theme.colors.warning :
-    theme.colors.success
+    $percentage >= 90 ? theme.colors.bright.coral :
+    $percentage >= 75 ? theme.colors.bright.terra :
+    theme.colors.bright.emerald
   };
   width: ${({ $percentage }) => Math.min($percentage, 100)}%;
   transition: width 300ms ease-in-out;
 `;
 
 const ProgressLabel = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
   text-align: right;
 `;
@@ -221,19 +204,23 @@ const QuickActions = styled.div`
   margin-top: 24px;
 `;
 
+/* Four equal-weight navigation shortcuts, not a single primary action — kept
+   off gold (spec §3 gold-discipline budget; this dashboard's one gold
+   element is the PageHeader breadcrumb kicker). */
 const ActionButton = styled.button`
   padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -243,22 +230,22 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const EmptyText = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -312,10 +299,12 @@ export function MarketingDashboardPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Marketing Management</Title>
-        <Subtitle>Campaign performance, budget tracking, and event management</Subtitle>
-      </Header>
+      <PageHeader
+        breadcrumb="Marketing · LIVE"
+        title="Marketing Management"
+        emphasizeLastWord
+        description="Campaign performance, budget tracking, and event management"
+      />
 
       <StatsGrid>
         <StatCard>
@@ -325,21 +314,23 @@ export function MarketingDashboardPage() {
 
         <StatCard>
           <StatLabel>Allocated</StatLabel>
-          <StatValue style={{ color: theme.colors.primary[500] }}>
+          <StatValue $color={theme.colors.bright.lapis}>
             {marketingApi.formatCurrency(stats.allocatedBudget)}
           </StatValue>
         </StatCard>
 
         <StatCard>
+          {/* Spent is an attention figure, not the Harvesting phase — terra,
+              never gold (spec §3). */}
           <StatLabel>Spent</StatLabel>
-          <StatValue style={{ color: theme.colors.warning }}>
+          <StatValue $color={theme.colors.bright.terra}>
             {marketingApi.formatCurrency(stats.spentBudget)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Available</StatLabel>
-          <StatValue style={{ color: theme.colors.success }}>
+          <StatValue $color={theme.colors.bright.emerald}>
             {marketingApi.formatCurrency(stats.totalBudget - stats.spentBudget)}
           </StatValue>
         </StatCard>
@@ -348,28 +339,32 @@ export function MarketingDashboardPage() {
       <StatsGrid>
         <StatCard>
           <StatLabel>Active Campaigns</StatLabel>
-          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.activeCampaigns)}</StatValue>
+          <StatValue $color={theme.colors.bright.emerald}>{formatNumber(stats.activeCampaigns)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Total Impressions</StatLabel>
-          <StatValue style={{ color: theme.colors.primary[500] }}>
+          <StatValue $color={theme.colors.bright.lapis}>
             {formatNumber(stats.totalImpressions)}
           </StatValue>
         </StatCard>
 
         <StatCard>
-          {/* Purple -> secondary (gold) per spec's categorical judgement call: distinguishes
-              this metric from the adjacent lapis "Total Impressions" tile. */}
+          {/* Night Observatory (T-901): this tile previously borrowed
+              secondary/gold to distinguish it from the adjacent lapis
+              "Total Impressions" tile — gold is now hard-limited to the
+              Harvesting phase / primary CTA / stat-tile thread (spec §3) and
+              must never be a plain category colour. Moved to bright.lavender,
+              the palette's actual purple-family voice. */}
           <StatLabel>Total Clicks</StatLabel>
-          <StatValue style={{ color: theme.colors.secondary[600] }}>
+          <StatValue $color={theme.colors.bright.lavender}>
             {formatNumber(stats.totalClicks)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Conversions</StatLabel>
-          <StatValue style={{ color: theme.colors.success }}>
+          <StatValue $color={theme.colors.bright.emerald}>
             {formatNumber(stats.totalConversions)}
           </StatValue>
         </StatCard>

@@ -25,6 +25,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import {
   usePostedGRsForAP,
   useCreateAPFromGR,
@@ -42,6 +43,7 @@ import { useAuthStore } from '../../stores/auth.store';
 import type { APLineCreate } from '../../services/apInvoicesService';
 
 // ─── Styled components ────────────────────────────────────────────────────────
+// Night Observatory (T-901 Phase 3). Container stays transparent (spec §7).
 
 const Container = styled.div`
   padding: 32px;
@@ -52,25 +54,17 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
-  &:hover { text-decoration: underline; }
-`;
-
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 24px;
+  transition: color 150ms ease;
+  &:hover { color: ${({ theme }) => theme.colors.textPrimary}; text-decoration: underline; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
@@ -105,45 +99,71 @@ const Field = styled.div`
   gap: 6px;
 `;
 
+// Space Mono uppercase micro-label above each field (spec §4).
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &:disabled { opacity: 0.6; background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+// Numeric variant — Space Mono, tabular figures (spec §6).
+const NumberInput = styled(Input)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &:disabled { opacity: 0.6; background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
+  width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 72px;
-  background: ${({ theme }) => theme.colors.background};
+  box-sizing: border-box;
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const Table = styled.table`
@@ -151,36 +171,63 @@ const Table = styled.table`
   border-collapse: collapse;
 `;
 
+// Space Mono uppercase celeste column headers, no solid chrome (spec §4 "Tables").
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 8px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 10px 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
-/** Amber row highlight when invoice price differs from PO price */
-const LineRow = styled.tr<{ $hasVariance: boolean }>`
-  background: ${({ $hasVariance, theme }) => ($hasVariance ? theme.colors.gold[50] : 'transparent')};
+const Tr = styled.tr`
+  transition: background 100ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.05); }
 `;
 
+// Space Mono for computed currency/quantity values (spec §6).
+const AmountValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const DocCode = styled.code`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+/** Coral-tinted row flag when the invoice price differs from the PO price.
+ * Was previously theme.colors.gold[50] (amber) — gold is reserved for the
+ * Harvesting phase / primary CTA / breadcrumb / focus ring (spec §3), and
+ * this exact fix was already made in APInvoiceDetailPage.tsx's LineRow;
+ * mirrored here verbatim (rgba(240, 138, 112, 0.05)) so the two screens
+ * read as one system. CSS-only — `$hasVariance` is computed exactly as
+ * before. */
+const LineRow = styled.tr<{ $hasVariance: boolean }>`
+  background: ${({ $hasVariance }) => ($hasVariance ? 'rgba(240, 138, 112, 0.05)' : 'transparent')};
+  transition: background 100ms ease;
+`;
+
+// Sign colouring matches APInvoiceDetailPage's VarianceValue: bright.coral
+// (unfavourable — vendor invoiced more than the PO), bright.emerald
+// (favourable), muted (zero). Was terracotta[600]/emerald[600].
 const VarianceCell = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   font-weight: ${({ $sign }) => ($sign === 'zero' ? '400' : '600')};
   color: ${({ $sign, theme }) => {
-    if ($sign === 'positive') return theme.colors.terracotta[600];
-    if ($sign === 'negative') return theme.colors.emerald[600];
-    return theme.colors.textDisabled;
+    if ($sign === 'positive') return theme.colors.bright.coral;
+    if ($sign === 'negative') return theme.colors.bright.emerald;
+    return theme.colors.muted;
   }};
 `;
 
@@ -192,7 +239,7 @@ const TotalsBlock = styled.div`
   gap: 4px;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TotalsRow = styled.div`
@@ -203,26 +250,31 @@ const TotalsRow = styled.div`
 `;
 
 const TotalsLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   min-width: 140px;
   text-align: right;
 `;
 
 const TotalsValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
   min-width: 120px;
   text-align: right;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TotalsVariance = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-size: 14px;
   min-width: 120px;
   text-align: right;
   color: ${({ $sign, theme }) => {
-    if ($sign === 'positive') return theme.colors.terracotta[600];
-    if ($sign === 'negative') return theme.colors.emerald[600];
-    return theme.colors.textDisabled;
+    if ($sign === 'positive') return theme.colors.bright.coral;
+    if ($sign === 'negative') return theme.colors.bright.emerald;
+    return theme.colors.muted;
   }};
 `;
 
@@ -233,42 +285,73 @@ const FooterRow = styled.div`
   padding-top: 16px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4). Previously
+// primary[500] (lapis) fill with onAccent text — a mismatch under onAccent's
+// new meaning ("text on a GOLD fill"). Fixed by making the fill gold rather
+// than swapping the text colour.
 const PrimaryButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Ghost — transparent, celeste text/border (spec §4 "Buttons").
 const GhostButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+// Row-level "Select" action in the GR picker table — deliberately NOT the
+// gold PrimaryButton (spec §3 gold-discipline budget): one per row in a
+// paginated list would blow well past the ≤4-gold-elements-per-viewport
+// limit. Secondary glass treatment instead.
+const SelectButton = styled.button`
+  ${glassControl}
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  cursor: pointer;
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 13px;
   margin: 8px 0 0;
 `;
 
+// Variance is a "needs review" heads-up, not a validation error — but it
+// must NOT render gold (theme.colors.warning/gold[*] is gold-b, reserved
+// for the Harvesting phase per spec §3). Coral matches the sign colouring
+// already used for variance everywhere else on this page (VarianceCell,
+// TotalsVariance), so the whole variance story reads as one colour.
 const VarianceHelpText = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.gold[800]};
-  background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.gold[300]};
+  color: ${({ theme }) => theme.colors.bright.coral};
+  background: rgba(240, 138, 112, 0.12);
+  border: 1px solid rgba(240, 138, 112, 0.35);
   border-radius: 6px;
   padding: 8px 12px;
   margin: 12px 0 0;
@@ -419,11 +502,11 @@ function GRPickerCard({
         </thead>
         <tbody>
           {grs.map((gr) => (
-            <tr key={gr.docId}>
-              <Td><code style={{ fontWeight: 600 }}>{gr.docNumber}</code></Td>
+            <Tr key={gr.docId}>
+              <Td><DocCode>{gr.docNumber}</DocCode></Td>
               <Td>
                 {gr.baseDocNumber ?? (
-                  <span style={{ color: theme.colors.textDisabled }}>—</span>
+                  <span style={{ color: theme.colors.muted }}>—</span>
                 )}
               </Td>
               <Td>{gr.vendorName ?? gr.vendorCode ?? '—'}</Td>
@@ -435,19 +518,18 @@ function GRPickerCard({
                   : '—'}
               </Td>
               <Td>
-                {new Intl.NumberFormat('en-AE', {
-                  style: 'currency', currency: gr.currencyCode,
-                }).format(gr.subtotalNet)}
+                <AmountValue>
+                  {new Intl.NumberFormat('en-AE', {
+                    style: 'currency', currency: gr.currencyCode,
+                  }).format(gr.subtotalNet)}
+                </AmountValue>
               </Td>
               <Td>
-                <PrimaryButton
-                  style={{ padding: '6px 14px', fontSize: 13 }}
-                  onClick={() => onSelect(gr.docId)}
-                >
+                <SelectButton onClick={() => onSelect(gr.docId)}>
                   Select
-                </PrimaryButton>
+                </SelectButton>
               </Td>
-            </tr>
+            </Tr>
           ))}
         </tbody>
       </Table>
@@ -778,7 +860,12 @@ export function APInvoiceFormPage() {
     return (
       <Container>
         <BackLink onClick={handleBack}>&larr; Back</BackLink>
-        <Title>New AP Invoice — Select GR</Title>
+        <PageHeader
+          breadcrumb="— PURCHASING · AP INVOICES"
+          title="New AP Invoice"
+          emphasizeLastWord
+          description="Select the posted GR to invoice against."
+        />
         <GRPickerCard
           organizationId={orgId}
           onSelect={(id) => setSelectedGrDocId(id)}
@@ -792,16 +879,22 @@ export function APInvoiceFormPage() {
   return (
     <Container>
       <BackLink onClick={handleBack}>&larr; Back</BackLink>
-      <Title>{pageTitle}</Title>
+
+      <PageHeader
+        breadcrumb="— PURCHASING · AP INVOICES"
+        title={pageTitle}
+        emphasizeLastWord
+        description={isEdit ? `${existingAP?.invoiceNumber ?? ''}` : 'Confirm invoice details against the source GR.'}
+      />
 
       <FinanceUnreachableBanner />
 
       {/* Source GR context banner */}
       {sourceGR && !isEdit && (
-        <Card style={{ borderLeft: `4px solid ${theme.colors.primary[600]}`, padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, fontSize: 14, color: theme.colors.primary[700] }}>
-            Invoicing against GR <strong>{sourceGR.docNumber}</strong>{' '}
-            {sourceGR.baseDocNumber && <>from PO <strong>{sourceGR.baseDocNumber}</strong> · </>}
+        <Card style={{ borderLeft: `4px solid ${theme.colors.bright.lapis}`, padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, fontSize: 14, color: theme.colors.celeste }}>
+            Invoicing against GR <DocCode>{sourceGR.docNumber}</DocCode>{' '}
+            {sourceGR.baseDocNumber && <>from PO <DocCode>{sourceGR.baseDocNumber}</DocCode> · </>}
             Vendor: <strong>{sourceGR.vendorName ?? sourceGR.vendorCode ?? '—'}</strong>
           </p>
         </Card>
@@ -871,7 +964,7 @@ export function APInvoiceFormPage() {
           <CardTitle>Invoice Lines</CardTitle>
           {hasAnyVariance && (
             <VarianceHelpText>
-              Variance detected. Rows highlighted in amber have a difference between the
+              Variance detected. Rows highlighted have a difference between the
               agreed PO price and the vendor's invoice price.
               Variance &gt; 0 means the vendor invoiced more than agreed.
               The difference posts to Purchase Price Variance at approval.
@@ -904,13 +997,15 @@ export function APInvoiceFormPage() {
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{line.itemCode}</div>
                       <div style={{ fontSize: 11, color: theme.colors.textSecondary }}>{line.itemName}</div>
                     </Td>
-                    <Td style={{ color: theme.colors.textSecondary }}>{line.quantity}</Td>
+                    <Td style={{ color: theme.colors.textSecondary }}>
+                      <AmountValue>{line.quantity}</AmountValue>
+                    </Td>
                     <Td>{line.uom}</Td>
                     <Td style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
-                      {formatAmt(line.poUnitPrice, currency)}
+                      <AmountValue>{formatAmt(line.poUnitPrice, currency)}</AmountValue>
                     </Td>
                     <Td>
-                      <Input
+                      <NumberInput
                         type="number"
                         min="0"
                         step="0.01"
@@ -958,10 +1053,14 @@ export function APInvoiceFormPage() {
                         {line.costCenterId ?? '—'}
                       </Td>
                     )}
-                    <Td style={{ fontSize: 13 }}>{formatAmt(line.lineNet, currency)}</Td>
-                    <Td style={{ fontSize: 13 }}>{formatAmt(line.lineTax, currency)}</Td>
                     <Td style={{ fontSize: 13 }}>
-                      <strong>{formatAmt(line.lineGross, currency)}</strong>
+                      <AmountValue>{formatAmt(line.lineNet, currency)}</AmountValue>
+                    </Td>
+                    <Td style={{ fontSize: 13 }}>
+                      <AmountValue>{formatAmt(line.lineTax, currency)}</AmountValue>
+                    </Td>
+                    <Td style={{ fontSize: 13 }}>
+                      <AmountValue style={{ fontWeight: 700 }}>{formatAmt(line.lineGross, currency)}</AmountValue>
                     </Td>
                     <Td>
                       <VarianceCell $sign={varSign}>{varLabel}</VarianceCell>

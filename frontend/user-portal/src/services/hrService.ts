@@ -6,7 +6,8 @@
  */
 
 import { apiClient } from './api';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type {
   Employee,
   EmployeeCreate,
@@ -266,19 +267,27 @@ export function getEmployeeFullName(employee: Employee): string {
 
 /**
  * Get employee status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2
+ * (open/active→inoculated, maintenance/on-hold/suspended→maintenance,
+ * cancelled/void/archived→decommissioned).
  */
-export function getEmployeeStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getEmployeeStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'active':
-      return c.success; // emerald
+      return 'inoculated';
     case 'on_leave':
-      return c.warning; // gold
+      return 'maintenance';
     case 'terminated':
-      return c.error; // terracotta
+      return 'decommissioned';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getEmployeeStatusColor(status: string): string {
+  const key = getEmployeeStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
@@ -317,36 +326,49 @@ export function getContractTypeLabel(type: string): string {
 
 /**
  * Get contract status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2.
  */
-export function getContractStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getContractStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'active':
-      return c.success; // emerald
+      return 'inoculated';
     case 'expired':
-      return c.textSecondary;
+      return 'quarantined'; // rejected/failed/overdue/expired
     case 'terminated':
-      return c.error; // terracotta
+      return 'decommissioned';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getContractStatusColor(status: string): string {
+  const key = getContractStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
  * Get visa status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2
+ * (valid≈"approved"→fruiting, expired→quarantined, pending_renewal→fruitingInit).
  */
-export function getVisaStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getVisaStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'valid':
-      return c.success; // emerald
+      return 'fruiting';
     case 'expired':
-      return c.error; // terracotta
+      return 'quarantined';
     case 'pending_renewal':
-      return c.warning; // gold
+      return 'fruitingInit';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getVisaStatusColor(status: string): string {
+  const key = getVisaStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
@@ -434,10 +456,13 @@ export const hrApi = {
   // Utilities
   getEmployeeFullName,
   getEmployeeStatusColor,
+  getEmployeeStatusPhaseKey,
   getEmployeeStatusLabel,
   getContractTypeLabel,
   getContractStatusColor,
+  getContractStatusPhaseKey,
   getVisaStatusColor,
+  getVisaStatusPhaseKey,
   getInsuranceTypeLabel,
   formatCurrency,
   formatDate,

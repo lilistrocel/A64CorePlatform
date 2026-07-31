@@ -7,14 +7,46 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
+import {
+  Square,
+  ClipboardList,
+  Sprout,
+  Grape,
+  Wheat,
+  Sparkles,
+  AlertTriangle,
+  BarChart3,
+  Package,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { glassPanelHover, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { Theme, PhaseKey } from '@a64core/shared';
 import { farmApi } from '../../services/farmApi';
 import type { Block, BlockSummary, BlockState } from '../../types/farm';
-import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
+import { BLOCK_STATE_LABELS, BLOCK_STATE_PHASE_KEYS } from '../../types/farm';
 import { AddVirtualCropModal } from './AddVirtualCropModal';
 import { PendingTasksWarningModal } from './PendingTasksWarningModal';
 import { BlockAnalyticsModal } from './BlockAnalyticsModal';
 import { formatNumber } from '../../utils';
+
+// Block-state → phase colour. BLOCK_STATE_PHASE_KEYS is the canonical map
+// (types/farm.ts, kept alongside BLOCK_STATE_COLORS) — do not re-derive
+// per-component.
+function getBlockStateColor(theme: Theme, state: BlockState): string {
+  return theme.colors.phase[BLOCK_STATE_PHASE_KEYS[state] ?? 'empty'];
+}
+
+const BLOCK_STATE_ICONS: Record<BlockState, LucideIcon> = {
+  empty: Square,
+  planned: ClipboardList,
+  growing: Sprout,
+  fruiting: Grape,
+  harvesting: Wheat,
+  cleaning: Sparkles,
+  alert: AlertTriangle,
+  partial: BarChart3,
+};
 
 // ============================================================================
 // COMPONENT PROPS
@@ -32,26 +64,33 @@ export interface BlockCardProps {
 // STYLED COMPONENTS
 // ============================================================================
 
+// Interactive room-style card (spec §4 mockup ".card") — click navigates to
+// the block detail route, so it earns the hover-lift/gold-rim treatment.
+// The per-state edge stripe (spec mockup ".card.is-active::after") carries
+// the phase colour so the same status reads identically to badges elsewhere.
 const Card = styled.div<{ $stateColor: string; $isVirtual?: boolean }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanelHover}
   padding: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid ${({ $stateColor }) => $stateColor};
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14%;
+    bottom: 14%;
+    width: 2.5px;
+    border-radius: 3px;
+    background: ${({ $stateColor }) => $stateColor};
+    box-shadow: 0 0 12px ${({ $stateColor }) => $stateColor};
+  }
+
   ${({ $isVirtual, theme }) =>
     $isVirtual &&
     `
-    border: 2px dashed ${theme.colors.primary[600]};
-    border-left-width: 4px;
-    border-left-style: solid;
+    border-style: dashed;
+    border-color: ${theme.colors.bright.lapis};
   `}
-  transition: all 150ms ease-in-out;
-  position: relative;
-
-  &:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-  }
 `;
 
 const Header = styled.div`
@@ -63,49 +102,41 @@ const Header = styled.div`
 `;
 
 const VirtualBadge = styled.span`
+  ${monoLabel}
   position: absolute;
   top: -8px;
   right: -8px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[600]};
-  font-size: 10px;
-  font-weight: 600;
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  font-size: 0.6rem;
   padding: 4px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid ${({ theme }) => theme.colors.primary[600]};
+  border-radius: 99px;
+  border: 1px solid rgba(107, 138, 224, 0.45);
 `;
 
 const BlockIcon = styled.div`
-  font-size: 24px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
 const BlockName = styled.h4`
   font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  font-weight: 800;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
   cursor: pointer;
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[600]};
+    color: ${({ theme }) => theme.colors.celeste};
     text-decoration: underline;
   }
 `;
 
-const StateBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => $color};
-  color: ${({ theme }) => theme.colors.onAccent};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+// The §4 badge pattern via the shared phaseBadge mixin.
+const StateBadge = styled.span<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
 `;
 
 const StatsGrid = styled.div`
@@ -121,43 +152,43 @@ const StatItem = styled.div`
 `;
 
 const StatLabel = styled.span`
-  font-size: 11px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
 const StatValue = styled.span`
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const PlantingInfo = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   padding: 12px;
   margin-bottom: 16px;
   font-size: 13px;
 `;
 
 const PlantingLabel = styled.div`
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 4px;
 `;
 
 const PlantingDetail = styled.div`
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const CapacityBar = styled.div`
   width: 100%;
   height: 8px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 4px;
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 99px;
   overflow: hidden;
   margin-bottom: 8px;
 `;
@@ -171,7 +202,7 @@ const CapacityFill = styled.div<{ $percent: number; $color: string }>`
 
 const CapacityText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
 `;
 
@@ -182,11 +213,15 @@ const Actions = styled.div`
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'analytics' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
-  border: none;
+  font-weight: 700;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   flex: 1;
@@ -195,51 +230,55 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
+        background: rgba(107, 138, 224, 0.16);
+        border-color: rgba(107, 138, 224, 0.4);
+        color: ${theme.colors.bright.lapis};
         &:hover {
-          background: ${theme.colors.primary[600]};
+          background: rgba(107, 138, 224, 0.26);
         }
       `;
     }
     if ($variant === 'success') {
       return `
-        background: ${theme.colors.success};
-        color: ${theme.colors.onAccent};
+        background: rgba(84, 211, 155, 0.16);
+        border-color: rgba(84, 211, 155, 0.4);
+        color: ${theme.colors.bright.emerald};
         &:hover {
-          background: ${theme.colors.emerald[600]};
+          background: rgba(84, 211, 155, 0.26);
         }
       `;
     }
     if ($variant === 'analytics') {
       // Deliberately lapis, not gold/secondary: brand spec reserves gold for the
       // active nav item / one CTA per view / highlight badges, not ordinary
-      // per-card action buttons. A deeper primary shade keeps this visually
-      // distinct from the plain "primary" variant above without spending gold.
+      // per-card action buttons (spec §3).
       return `
-        background: ${theme.colors.primary[700]};
-        color: ${theme.colors.onAccent};
+        background: rgba(107, 138, 224, 0.28);
+        border-color: rgba(107, 138, 224, 0.5);
+        color: ${theme.colors.onDark};
         &:hover {
-          background: ${theme.colors.primary[800]};
+          background: rgba(107, 138, 224, 0.4);
         }
       `;
     }
     if ($variant === 'danger') {
+      // Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
       return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
+        background: rgba(240, 138, 112, 0.14);
+        border-color: rgba(240, 138, 112, 0.4);
+        color: ${theme.colors.bright.coral};
         &:hover {
-          background: ${theme.colors.terracotta[100]};
+          background: rgba(240, 138, 112, 0.26);
         }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      color: ${theme.colors.celeste};
+      border-color: ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.primary[50]};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
@@ -251,24 +290,24 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 `;
 
 const StateSelect = styled.select`
+  ${glassControl}
   padding: 6px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 6px;
+  border-color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  background: ${({ theme }) => theme.colors.background};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.bright.lapis};
   cursor: pointer;
   flex: 1;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1A;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -278,6 +317,7 @@ const StateSelect = styled.select`
 
 export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: BlockCardProps) {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [summary, setSummary] = useState<BlockSummary | null>(null);
   const [validTransitions, setValidTransitions] = useState<BlockState[]>([]);
   const [loading, setLoading] = useState(false);
@@ -357,32 +397,18 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
     }
   };
 
-  const stateColor = BLOCK_STATE_COLORS[block.state];
+  const stateColor = getBlockStateColor(theme, block.state);
   const stateLabel = BLOCK_STATE_LABELS[block.state];
   const utilizationPercent = summary ? summary.utilizationPercent : 0;
   const isVirtual = block.blockCategory === 'virtual';
-
-  const getStateIcon = (state: BlockState) => {
-    const icons = {
-      empty: '⬜',
-      planned: '📋',
-      planted: '🌱',
-      growing: '🌱',
-      fruiting: '🍇',
-      harvesting: '🌾',
-      cleaning: '🧹',
-      alert: '⚠️',
-      partial: '📊',
-    };
-    return icons[state] || '📦';
-  };
+  const StateIcon = BLOCK_STATE_ICONS[block.state] ?? Package;
 
   return (
     <Card $stateColor={stateColor} $isVirtual={isVirtual}>
       <Header>
         {isVirtual && <VirtualBadge>Virtual</VirtualBadge>}
         <div>
-          <BlockIcon>{getStateIcon(block.state)}</BlockIcon>
+          <BlockIcon aria-hidden="true"><StateIcon size={22} strokeWidth={1.6} /></BlockIcon>
           <BlockName onClick={() => navigate(`/farm/farms/${farmId}/blocks/${block.blockId}`)}>
             {block.name || block.targetCropName || block.blockCode}
           </BlockName>
@@ -393,7 +419,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
             </div>
           )}
         </div>
-        <StateBadge $color={stateColor}>{stateLabel}</StateBadge>
+        <StateBadge $phaseKey={BLOCK_STATE_PHASE_KEYS[block.state] ?? 'empty'}>{stateLabel}</StateBadge>
       </Header>
 
       <StatsGrid>
@@ -461,13 +487,13 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       <Actions>
         {/* Statistics button - always available */}
         <ActionButton $variant="analytics" onClick={() => setShowAnalyticsModal(true)} disabled={loading}>
-          📊 Statistics
+          <BarChart3 size={13} strokeWidth={1.8} /> Statistics
         </ActionButton>
 
         {/* Show Plant Crop button only for empty blocks */}
         {block.state === 'empty' && (
           <ActionButton $variant="success" onClick={() => setShowPlantModal(true)} disabled={loading}>
-            🌱 Plant Crop
+            <Sprout size={13} strokeWidth={1.8} /> Plant Crop
           </ActionButton>
         )}
         {validTransitions.length > 0 && (

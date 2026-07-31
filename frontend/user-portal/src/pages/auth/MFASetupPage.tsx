@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Card } from '@a64core/shared';
+import { Check, Clock, Copy, Lock } from 'lucide-react';
+import { Button, Card, glassPanel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
-import { useThemeStore } from '../../stores/theme.store';
 import { BackupCodesModal } from '../../components/auth/BackupCodesModal';
 import {
   useMFASetup,
@@ -19,9 +19,9 @@ import { queryKeys } from '../../config/react-query.config';
 export function MFASetupPage() {
   const navigate = useNavigate();
   const { user, loadUser, logout } = useAuthStore();
-  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
-  const { mode } = useThemeStore();
-  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
+  // Night Observatory is dark-only (T-901) — the cosmos (cream-text) lockup
+  // variant is now correct unconditionally; no more per-theme branch.
+  const logoSrc = '/brand/lockup_cosmos.svg';
   const queryClient = useQueryClient();
 
   // Forced-setup: account has mfaSetupRequired=true and not yet enabled.
@@ -267,7 +267,7 @@ export function MFASetupPage() {
         <SetupContainer>
           <SetupCard>
             <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
-            <ExpiredIcon>⏱️</ExpiredIcon>
+            <ExpiredIcon><Clock size={28} strokeWidth={1.8} /></ExpiredIcon>
             <Title>Session Expired</Title>
             <Subtitle>
               Your MFA setup session has expired for security reasons.
@@ -293,7 +293,7 @@ export function MFASetupPage() {
         <SetupContainer>
           <SetupCard>
             <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
-            <SuccessIcon>&#10003;</SuccessIcon>
+            <SuccessIcon><Check size={28} strokeWidth={2.2} /></SuccessIcon>
             <Title>MFA Enabled Successfully!</Title>
             <Subtitle>Your account is now protected with two-factor authentication.</Subtitle>
           </SetupCard>
@@ -317,7 +317,7 @@ export function MFASetupPage() {
 
           {/* Session timeout indicator */}
           <SessionTimer $warning={timeRemaining < 2 * 60 * 1000}>
-            <TimerIcon>⏱️</TimerIcon>
+            <TimerIcon><Clock size={14} strokeWidth={1.8} /></TimerIcon>
             <TimerText>
               Session expires in <TimerValue>{formatTimeRemaining(timeRemaining)}</TimerValue>
             </TimerText>
@@ -348,12 +348,12 @@ export function MFASetupPage() {
                   <CopySecretButton onClick={handleCopySecret} $copied={copied}>
                     {copied ? (
                       <>
-                        <CopyIcon>✓</CopyIcon>
+                        <CopyIcon><Check size={14} strokeWidth={2.2} /></CopyIcon>
                         Copied!
                       </>
                     ) : (
                       <>
-                        <CopyIcon>📋</CopyIcon>
+                        <CopyIcon><Copy size={14} strokeWidth={1.8} /></CopyIcon>
                         Copy
                       </>
                     )}
@@ -403,7 +403,7 @@ export function MFASetupPage() {
                     </>
                   ) : (
                     <>
-                      <LockIcon>🔐</LockIcon>
+                      <LockIcon><Lock size={16} strokeWidth={1.8} /></LockIcon>
                       Verify & Enable MFA
                     </>
                   )}
@@ -436,7 +436,8 @@ const SetupContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  /* Night Observatory (spec §0/§7): auth screens carry no sidebar — the
+     fixed Sky layer at the app shell is the entire backdrop here. */
   padding: 0.5rem;
 
   @media (min-width: 360px) {
@@ -453,9 +454,8 @@ const SetupContainer = styled.div`
 `;
 
 const SetupCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 22px;
   padding: 1rem;
   width: 100%;
   max-width: 480px;
@@ -471,7 +471,6 @@ const SetupCard = styled.div`
   @media (min-width: 640px) {
     padding: 2rem;
     max-width: 520px;
-    border-radius: ${({ theme }) => theme.borderRadius.xl};
   }
 `;
 
@@ -548,8 +547,8 @@ const LoadingSpinner = styled.div`
 const SpinnerIcon = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.celeste};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -565,7 +564,7 @@ const LoadingText = styled.p`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.error}10`};
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem;
@@ -597,13 +596,13 @@ const SuccessIcon = styled.div`
   height: 60px;
   margin: 0 auto 1rem;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* emerald fill — onDark (cream), not onAccent (that's reserved for gold
+     fills per spec §1.1's breaking onAccent-meaning change). */
+  color: ${({ theme }) => theme.colors.onDark};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
-  font-weight: bold;
 `;
 
 const ExpiredIcon = styled.div`
@@ -611,12 +610,12 @@ const ExpiredIcon = styled.div`
   height: 60px;
   margin: 0 auto 1rem;
   background: ${({ theme }) => theme.colors.warning};
+  /* gold-b (warning) fill is light — cosmos (onAccent) text stays correct here. */
   color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
 `;
 
 const SessionTimer = styled.div<{ $warning: boolean }>`
@@ -627,13 +626,13 @@ const SessionTimer = styled.div<{ $warning: boolean }>`
   padding: 0.5rem 1rem;
   margin-bottom: 1rem;
   background: ${({ $warning, theme }) =>
-    $warning ? `${theme.colors.gold[500]}1A` : theme.colors.neutral[50]};
+    $warning ? theme.colors.warningBg : theme.colors.glass.base};
   border: 1px solid ${({ $warning, theme }) =>
-    $warning ? `${theme.colors.gold[500]}4D` : theme.colors.neutral[200]};
+    $warning ? theme.colors.warning : theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: 0.8125rem;
   color: ${({ $warning, theme }) =>
-    $warning ? theme.colors.gold[800] : theme.colors.textSecondary};
+    $warning ? theme.colors.warning : theme.colors.celeste};
   transition: all 0.3s ease;
 
   @media (min-width: 640px) {
@@ -642,7 +641,7 @@ const SessionTimer = styled.div<{ $warning: boolean }>`
 `;
 
 const TimerIcon = styled.span`
-  font-size: 1rem;
+  display: flex;
 `;
 
 const TimerText = styled.span`
@@ -666,8 +665,8 @@ const StepSection = styled.div<{ $active: boolean }>`
   gap: 0.75rem;
   padding: 0.875rem;
   margin-bottom: 0.75rem;
-  background: ${({ $active, theme }) => $active ? theme.colors.neutral[50] : 'transparent'};
-  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.neutral[200] : 'transparent'};
+  background: ${({ $active, theme }) => $active ? theme.colors.glass.base : 'transparent'};
+  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.glass.border : 'transparent'};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   opacity: ${({ $active }) => $active ? 1 : 0.6};
   transition: all 0.3s ease;
@@ -693,7 +692,8 @@ const StepNumber = styled.div`
   height: 28px;
   min-width: 28px;
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[600]} 100%);
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* lapis fill — onDark (cream), not onAccent (gold-fill only, spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -746,7 +746,7 @@ const QRCodeContainer = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   margin-bottom: 0.75rem;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 2px solid ${({ theme }) => theme.colors.glass.border};
   box-shadow: ${({ theme }) => theme.shadows.sm};
   position: relative;
 
@@ -819,7 +819,8 @@ const QRCodePlaceholder = styled.div`
   justify-content: center;
   align-items: center;
   padding: 2rem;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   margin-bottom: 1rem;
 `;
@@ -852,8 +853,8 @@ const SecretKeyBox = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.cosmosDeep};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.625rem 0.75rem;
 
@@ -906,7 +907,8 @@ const CopySecretButton = styled.button<{ $copied?: boolean }>`
   gap: 0.375rem;
   background: ${({ $copied, theme }) =>
     $copied ? theme.colors.success : theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* emerald/lapis fill — onDark (cream), not onAccent (gold-fill only). */
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   /* Touch-friendly: min 44px height for accessibility */
@@ -939,7 +941,7 @@ const CopySecretButton = styled.button<{ $copied?: boolean }>`
 `;
 
 const CopyIcon = styled.span`
-  font-size: 0.875rem;
+  display: flex;
 `;
 
 const VerificationForm = styled.form`
@@ -981,10 +983,10 @@ const DigitInput = styled.input<{ $filled: boolean; $error: boolean }>`
   text-align: center;
   border: 2px solid ${({ $error, $filled, theme }) =>
     $error ? theme.colors.error :
-    $filled ? theme.colors.primary[500] : theme.colors.neutral[300]};
+    $filled ? theme.colors.bright.lapis : theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   background: ${({ $filled, theme }) =>
-    $filled ? theme.colors.primary[50] : theme.colors.background};
+    $filled ? theme.colors.glass.hi : theme.colors.glass.base};
   transition: all 0.2s ease;
   color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
@@ -1010,14 +1012,14 @@ const DigitInput = styled.input<{ $filled: boolean; $error: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? theme.colors.error : theme.colors.primary[500]};
+      $error ? theme.colors.error : theme.colors.secondary[500]};
     box-shadow: 0 0 0 3px ${({ $error, theme }) =>
-      $error ? `${theme.colors.error}20` : theme.colors.primary[100]};
+      $error ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
     animation: ${pulse} 0.3s ease;
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   /* Hide spinner controls in number inputs */
@@ -1033,6 +1035,9 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `;
 
+// The primary-CTA gold treatment (spec §4 Buttons) — this is the one gold
+// budget item on the "scan" step (a custom button rather than the shared
+// <Button> because it composes a spinner/lock-icon child layout).
 const VerifyButton = styled.button<{ $loading?: boolean }>`
   display: flex;
   align-items: center;
@@ -1043,15 +1048,15 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   min-height: 48px;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.onAccent};
+  font-weight: 700;
+  color: ${({ disabled, theme }) => disabled ? theme.colors.muted : theme.colors.onAccent};
   background: ${({ disabled, theme }) =>
-    disabled ? theme.colors.neutral[300] : `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[600]} 100%)`};
-  border: none;
+    disabled ? theme.colors.glass.base : `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
+  border: 1px solid ${({ disabled, theme }) => disabled ? theme.colors.glass.border : 'transparent'};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   transition: all 0.2s ease;
-  box-shadow: ${({ disabled, theme }) => disabled ? 'none' : theme.shadows.md};
+  box-shadow: ${({ disabled }) => disabled ? 'none' : '0 4px 14px rgba(4, 6, 18, 0.35)'};
 
   @media (min-width: 360px) {
     font-size: 0.9375rem;
@@ -1087,7 +1092,7 @@ const ButtonSpinner = styled.span`
 `;
 
 const LockIcon = styled.span`
-  font-size: 1.125rem;
+  display: flex;
 `;
 
 const CancelLink = styled.button`

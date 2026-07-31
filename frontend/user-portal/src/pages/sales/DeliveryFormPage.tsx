@@ -27,8 +27,9 @@ import styled, { useTheme } from 'styled-components';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import axios from 'axios';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import {
   useDelivery,
   useCreateDeliveryFromSO,
@@ -83,12 +84,12 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
-  &:hover { text-decoration: underline; }
+  &:hover { text-decoration: underline; color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const PageTitle = styled.h1`
@@ -99,9 +100,7 @@ const PageTitle = styled.h1`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -129,57 +128,55 @@ const Field = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $error?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ $error, theme }) =>
-    $error ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $error, theme }) => ($error ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ $error, theme }) =>
-      $error ? theme.colors.error : theme.colors.primary[500]};
+    border-color: ${({ $error, theme }) => ($error ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: ${({ $error }) => ($error ? 'none' : '0 0 0 3px rgba(220, 185, 79, 0.15)')};
   }
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    color: ${({ theme }) => theme.colors.muted};
     cursor: not-allowed;
   }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 80px;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const InfoBanner = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.lapis[700]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   margin-bottom: 20px;
 `;
 
@@ -201,58 +198,56 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-align: left;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const Td = styled.td`
   padding: 8px 6px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: top;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const LineInput = styled.input<{ $error?: boolean }>`
+  ${glassControl}
   padding: 7px 8px;
-  border: 1px solid ${({ $error, theme }) =>
-    $error ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
   width: 100%;
-  background: ${({ theme }) => theme.colors.background};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $error, theme }) => ($error ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ $error, theme }) =>
-      $error ? theme.colors.error : theme.colors.primary[500]};
+    border-color: ${({ $error, theme }) => ($error ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: ${({ $error }) => ($error ? 'none' : '0 0 0 3px rgba(220, 185, 79, 0.15)')};
   }
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    color: ${({ theme }) => theme.colors.muted};
     cursor: not-allowed;
   }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DeleteLineBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: none;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
   border-radius: 6px;
   cursor: pointer;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.terracotta[600]};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
@@ -263,45 +258,70 @@ const SubmitRow = styled.div`
   margin-top: 8px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   padding: 11px 28px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 11px 24px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const ErrorBanner = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-bottom: 16px;
+`;
+
+// Ghost/ancillary button — transparent, celeste text/border (spec §4).
+const AddLineButton = styled.button`
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -742,19 +762,8 @@ export function DeliveryFormPage() {
           </LinesTable>
 
           {!isFromSO && (
-            <button
+            <AddLineButton
               type="button"
-              style={{
-                marginTop: 12,
-                padding: '8px 14px',
-                border: `1px dashed ${theme.colors.primary[400]}`,
-                background: theme.colors.primary[50],
-                color: theme.colors.primary[600],
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
               onClick={() =>
                 append({
                   soLineId: '',
@@ -771,8 +780,8 @@ export function DeliveryFormPage() {
                 })
               }
             >
-              + Add Line
-            </button>
+              <Plus size={14} /> Add Line
+            </AddLineButton>
           )}
         </Card>
 

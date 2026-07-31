@@ -8,12 +8,19 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Trash2, X } from 'lucide-react';
+import { glassPanel, glassPanelHover, glassControl, monoLabel, phaseBadge, Spinner } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { farmApi } from '../../services/farmApi';
 import type { BlockArchive } from '../../types/farm';
 
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
+// Night Observatory (T-901, screen sweep). This tab has no literal <table> —
+// archived cycles render as a list of clickable glass cards (glassPanelHover).
+// Never stack more than 2 glass layers (spec §2): the archive-detail modal is
+// layer 1, its nested QualityCard grid deliberately stays a flat tinted card
+// (not glassPanel) rather than nesting a second glass surface there.
 
 const Container = styled.div`
   display: flex;
@@ -42,18 +49,20 @@ const FilterSection = styled.div`
 `;
 
 const PageInfo = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // Summary Cards Section
 const SummaryGrid = styled.div`
+  ${glassPanel}
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
 `;
 
 const SummaryCard = styled.div`
@@ -61,23 +70,21 @@ const SummaryCard = styled.div`
 `;
 
 const SummaryLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
 const SummaryValue = styled.div`
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
@@ -89,17 +96,8 @@ const ArchivesList = styled.div`
 `;
 
 const ArchiveCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanelHover}
   padding: 20px;
-  transition: box-shadow 150ms ease-in-out, transform 150ms ease-in-out;
-  cursor: pointer;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-    transform: translateY(-2px);
-  }
 `;
 
 const ArchiveHeader = styled.div`
@@ -121,8 +119,11 @@ const ArchiveTitle = styled.h3`
 `;
 
 const ArchiveMeta = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const BlockInfo = styled.div`
@@ -164,19 +165,20 @@ const DeleteButton = styled.button`
   }
 `;
 
-const EfficiencyBadge = styled.span<{ $efficiency: number }>`
-  display: inline-block;
-  padding: 6px 16px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 600;
-  background: ${({ $efficiency, theme }) => {
-    if ($efficiency >= 90) return theme.colors.success;
-    if ($efficiency >= 75) return theme.colors.emerald[300];
-    if ($efficiency >= 60) return theme.colors.warning;
-    return theme.colors.terracotta[400];
-  }};
-  color: ${({ theme }) => theme.colors.onAccent};
+/** Yield-efficiency tier → phase colour (spec §5.2 extrapolation). This is a
+ * magnitude scale, not a workflow status, so it borrows the room-phase
+ * progression by "how healthy the cycle read": quarantined (worst) through
+ * fruiting (best) — never gold-b, which spec §5.1 reserves for the literal
+ * Harvesting phase, not a performance tier. */
+function getEfficiencyPhase(efficiency: number): PhaseKey {
+  if (efficiency >= 90) return 'fruiting';
+  if (efficiency >= 75) return 'colonizing';
+  if (efficiency >= 60) return 'fruitingInit';
+  return 'quarantined';
+}
+
+const EfficiencyBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
 `;
 
 const ArchiveStats = styled.div`
@@ -185,8 +187,9 @@ const ArchiveStats = styled.div`
   gap: 16px;
   margin-bottom: 16px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 6px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
 `;
 
 const StatItem = styled.div`
@@ -195,11 +198,9 @@ const StatItem = styled.div`
 `;
 
 const StatLabel = styled.span`
-  font-size: 11px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 4px;
 `;
 
@@ -224,33 +225,33 @@ const QualityRow = styled.div`
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const Spinner = styled.div`
-  width: 48px;
-  height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+const SpinnerWrap = styled.div`
   margin: 0 auto 16px;
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
+  width: fit-content;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  padding: 64px 24px;
+`;
 
-  p {
-    margin: 8px 0;
-  }
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 10px;
+`;
+
+const EmptyBody = styled.p`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.muted};
+  max-width: 480px;
+  margin: 0 auto;
 `;
 
 const ErrorState = styled.div`
@@ -271,18 +272,17 @@ const PaginationContainer = styled.div`
 `;
 
 const PaginationButton = styled.button<{ $disabled?: boolean }>`
+  ${glassControl}
   padding: 8px 16px;
-  background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : theme.colors.primary[500])};
-  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : theme.colors.onAccent)};
-  border: none;
-  border-radius: 6px;
+  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : theme.colors.textPrimary)};
   font-size: 14px;
   font-weight: 500;
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : theme.colors.primary[600])};
+    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.glass.base : theme.colors.glass.hi)};
   }
 `;
 
@@ -294,7 +294,7 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   align-items: center;
   justify-content: center;
@@ -312,12 +312,13 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   padding: 32px;
   max-width: 500px;
   width: 90%;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
   animation: slideIn 300ms ease-in-out;
 
   @keyframes slideIn {
@@ -353,13 +354,13 @@ const CloseButton = styled.button`
   padding: 4px;
   background: transparent;
   border: none;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   border-radius: 4px;
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.base};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -376,8 +377,8 @@ const WarningText = styled.p`
 `;
 
 const ArchiveDetails = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   padding: 16px;
   margin-top: 12px;
@@ -388,7 +389,7 @@ const DetailRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   &:last-child {
     border-bottom: none;
@@ -414,18 +415,16 @@ const ModalFooter = styled.div`
 `;
 
 const CancelButton = styled.button`
+  ${glassControl}
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
   color: ${({ theme }) => theme.colors.textPrimary};
-  border: none;
-  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[400]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -434,14 +433,15 @@ const CancelButton = styled.button`
   }
 `;
 
+/** Destructive action — coral-tinted glass, never solid red (spec §4 Buttons). */
 const ConfirmDeleteButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: rgba(240, 138, 112, 0.16);
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   border-radius: 6px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease-in-out;
   display: flex;
@@ -449,7 +449,7 @@ const ConfirmDeleteButton = styled.button`
   gap: 8px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[600]};
+    background: rgba(240, 138, 112, 0.24);
   }
 
   &:disabled {
@@ -458,16 +458,17 @@ const ConfirmDeleteButton = styled.button`
   }
 `;
 
+/** Small glass toast chip, bottom-right, with a phase-coloured edge bar
+ * (spec §4 Toasts: "emerald-b success, coral-b error"). */
 const Toast = styled.div<{ $show: boolean; $type: 'success' | 'error' }>`
+  ${glassPanel}
   display: ${({ $show }) => ($show ? 'flex' : 'none')};
   position: fixed;
-  top: 24px;
+  bottom: 24px;
   right: 24px;
-  background: ${({ $type, theme }) => ($type === 'success' ? theme.colors.success : theme.colors.error)};
-  color: ${({ theme }) => theme.colors.onAccent};
-  padding: 16px 24px;
-  border-radius: 8px;
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  padding: 14px 22px 14px 16px;
+  border-left: 3px solid
+    ${({ $type, theme }) => ($type === 'success' ? theme.colors.bright.emerald : theme.colors.bright.coral)};
   z-index: 1400;
   align-items: center;
   gap: 12px;
@@ -488,13 +489,17 @@ const Toast = styled.div<{ $show: boolean; $type: 'success' | 'error' }>`
 const ToastMessage = styled.span`
   font-size: 14px;
   font-weight: 500;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+/** Inline spinner for the (coral, tinted-glass) delete button — rides on
+ * `currentColor` so it always matches its host button's text colour instead
+ * of assuming a fixed onAccent/onDark value. */
 const ButtonSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid ${({ theme }) => `${theme.colors.onAccent}4D`};
-  border-top-color: ${({ theme }) => theme.colors.onAccent};
+  border: 2px solid rgba(240, 138, 112, 0.3);
+  border-top-color: currentColor;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 
@@ -513,7 +518,7 @@ const DetailModalOverlay = styled.div<{ $isOpen: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   align-items: center;
   justify-content: center;
@@ -531,14 +536,15 @@ const DetailModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const DetailModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   max-width: 900px;
   width: 90%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
   animation: slideIn 300ms ease-in-out;
 
   @keyframes slideIn {
@@ -558,7 +564,7 @@ const DetailModalHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   padding: 24px 32px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const DetailModalHeaderLeft = styled.div`
@@ -573,8 +579,11 @@ const DetailModalTitle = styled.h2`
 `;
 
 const DetailModalSubtitle = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.7rem;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  color: ${({ theme }) => theme.colors.celeste};
   display: flex;
   align-items: center;
   gap: 12px;
@@ -607,7 +616,7 @@ const DetailSectionTitle = styled.h3`
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const DetailGrid = styled.div`
@@ -623,11 +632,9 @@ const DetailItem = styled.div`
 `;
 
 const DetailItemLabel = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const DetailItemValue = styled.span`
@@ -646,7 +653,8 @@ const TimelineItem = styled.div`
   display: flex;
   gap: 16px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   border-left: 4px solid ${({ theme }) => theme.colors.primary[500]};
 `;
@@ -656,7 +664,7 @@ const TimelineIcon = styled.div`
   height: 40px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -677,8 +685,11 @@ const TimelineTitle = styled.div`
 `;
 
 const TimelineDate = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
@@ -688,34 +699,26 @@ const TimelineDetails = styled.div`
   line-height: 1.5;
 `;
 
-const PerformanceBadge = styled.span<{ $category: string }>`
-  display: inline-block;
-  padding: 6px 16px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 600;
-  background: ${({ $category, theme }) => {
-    switch ($category) {
-      // "Exceptional" (>=200%) is the rarest, most meaningful tier — the one
-      // case in this scale that reaches for gold rather than staying in the
-      // green/blue/orange progression (brand has no purple to reuse here).
-      case 'exceptional':
-        return theme.colors.secondary[500];
-      case 'exceeding':
-        return theme.colors.success;
-      case 'excellent':
-        return theme.colors.emerald[300];
-      case 'good':
-        return theme.colors.primary[500];
-      case 'acceptable':
-        return theme.colors.gold[300];
-      case 'poor':
-        return theme.colors.terracotta[400];
-      default:
-        return theme.colors.textDisabled;
-    }
-  }};
-  color: ${({ theme }) => theme.colors.onAccent};
+/** Performance-category tier → phase colour (spec §5.2 extrapolation). Same
+ * rationale as getEfficiencyPhase: a magnitude scale reusing the room-phase
+ * progression, worst (quarantined) to best (resting — chosen for
+ * "exceptional" precisely because gold-b is off-limits here per spec §3/§5.1,
+ * reserved for the literal Harvesting phase only). */
+const PERFORMANCE_PHASE: Record<string, PhaseKey> = {
+  poor: 'quarantined',
+  acceptable: 'fruitingInit',
+  good: 'inoculated',
+  excellent: 'colonizing',
+  exceeding: 'fruiting',
+  exceptional: 'resting',
+};
+
+function getPerformanceCategoryPhase(category: string): PhaseKey {
+  return PERFORMANCE_PHASE[category] ?? 'empty';
+}
+
+const PerformanceBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
 `;
 
 const QualityGrid = styled.div`
@@ -730,11 +733,14 @@ const QualityCard = styled.div<{ $grade: string }>`
       case 'A':
         return theme.colors.successBg;
       case 'B':
-        return theme.colors.warningBg;
+        // Grade B is a mid quality tier, not a warning — gold-b is reserved
+        // for the Harvesting phase only (spec §3), so this borrows the
+        // colonizing (laurel) phase tint instead of warningBg.
+        return 'rgba(201, 203, 164, 0.16)';
       case 'C':
         return theme.colors.errorBg;
       default:
-        return theme.colors.neutral[100];
+        return theme.colors.glass.base;
     }
   }};
   border: 2px solid
@@ -743,11 +749,11 @@ const QualityCard = styled.div<{ $grade: string }>`
         case 'A':
           return theme.colors.success;
         case 'B':
-          return theme.colors.warning;
+          return theme.colors.phase.colonizing;
         case 'C':
           return theme.colors.error;
         default:
-          return theme.colors.textDisabled;
+          return theme.colors.line;
       }
     }};
   border-radius: 8px;
@@ -772,9 +778,10 @@ const YieldComparisonBar = styled.div`
   display: flex;
   gap: 16px;
   align-items: center;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 10px;
 `;
 
 const YieldColumn = styled.div`
@@ -783,11 +790,9 @@ const YieldColumn = styled.div`
 `;
 
 const YieldLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
@@ -806,7 +811,7 @@ const YieldUnit = styled.span`
 const VsDivider = styled.div`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -992,7 +997,9 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
   if (loading) {
     return (
       <LoadingState>
-        <Spinner />
+        <SpinnerWrap>
+          <Spinner size="large" />
+        </SpinnerWrap>
         <div>Loading farm history...</div>
       </LoadingState>
     );
@@ -1043,11 +1050,11 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
 
       {archives.length === 0 ? (
         <EmptyState>
-          <p>📦 No archived cycles yet</p>
-          <p>
+          <EmptyHeadline>No archived cycles yet</EmptyHeadline>
+          <EmptyBody>
             Complete a full growing cycle (plant → harvest → reset to empty) on any block to see
-            historical performance data here
-          </p>
+            historical performance data here.
+          </EmptyBody>
         </EmptyState>
       ) : (
         <>
@@ -1067,7 +1074,7 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                     </BlockInfo>
                   </ArchiveTitleSection>
                   <ArchiveHeaderActions>
-                    <EfficiencyBadge $efficiency={archive.yieldEfficiencyPercent}>
+                    <EfficiencyBadge $phase={getEfficiencyPhase(archive.yieldEfficiencyPercent)}>
                       {archive.yieldEfficiencyPercent.toFixed(1)}% Efficiency
                     </EfficiencyBadge>
                     <DeleteButton
@@ -1075,7 +1082,7 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                       aria-label="Delete archive"
                       title="Delete this archived cycle"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={18} strokeWidth={1.6} />
                     </DeleteButton>
                   </ArchiveHeaderActions>
                 </ArchiveHeader>
@@ -1152,7 +1159,7 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
           <ModalHeader>
             <ModalTitle>Delete Archived Cycle</ModalTitle>
             <CloseButton onClick={handleCloseModal} aria-label="Close modal">
-              <X size={20} />
+              <X size={20} strokeWidth={1.8} />
             </CloseButton>
           </ModalHeader>
 
@@ -1209,7 +1216,7 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                 </>
               ) : (
                 <>
-                  <Trash2 size={16} />
+                  <Trash2 size={16} strokeWidth={1.6} />
                   Delete
                 </>
               )}
@@ -1244,11 +1251,11 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                 </DetailModalSubtitle>
               </DetailModalHeaderLeft>
               <DetailModalHeaderRight>
-                <EfficiencyBadge $efficiency={selectedArchive.yieldEfficiencyPercent}>
+                <EfficiencyBadge $phase={getEfficiencyPhase(selectedArchive.yieldEfficiencyPercent)}>
                   {selectedArchive.yieldEfficiencyPercent.toFixed(1)}% Efficiency
                 </EfficiencyBadge>
                 <CloseButton onClick={handleCloseDetailModal} aria-label="Close modal">
-                  <X size={20} />
+                  <X size={20} strokeWidth={1.8} />
                 </CloseButton>
               </DetailModalHeaderRight>
             </DetailModalHeader>
@@ -1276,7 +1283,9 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                     <DetailItemLabel>Performance</DetailItemLabel>
                     <DetailItemValue>
                       <PerformanceBadge
-                        $category={getPerformanceCategory(selectedArchive.yieldEfficiencyPercent)}
+                        $phase={getPerformanceCategoryPhase(
+                          getPerformanceCategory(selectedArchive.yieldEfficiencyPercent)
+                        )}
                       >
                         {formatPerformanceCategory(
                           getPerformanceCategory(selectedArchive.yieldEfficiencyPercent)

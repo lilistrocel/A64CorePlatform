@@ -7,10 +7,66 @@
 
 import { useState } from 'react';
 import styled, { useTheme } from 'styled-components';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Wheat,
+  TreeDeciduous,
+  Leaf,
+  Apple,
+  Carrot,
+  Flower2,
+  Sprout,
+  Pencil,
+  Copy,
+  Trash2,
+  X,
+  ChevronRight,
+} from 'lucide-react';
+import { glassPanel, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type { PlantDataEnhanced } from '../../types/farm';
 import { formatFarmType, getFarmTypeColor } from '../../services/plantDataEnhancedApi';
 import { useAuthStore } from '../../stores/auth.store';
 import { FertigationScheduleEditorModal } from './FertigationScheduleEditorModal';
+
+// ============================================================================
+// PLANT-TYPE ICON MAP (spec §6 — every emoji icon becomes a lucide-react
+// line icon)
+// ============================================================================
+
+const PLANT_TYPE_ICONS: Record<string, LucideIcon> = {
+  crop: Wheat,
+  tree: TreeDeciduous,
+  herb: Leaf,
+  fruit: Apple,
+  vegetable: Carrot,
+  ornamental: Flower2,
+  medicinal: Sprout,
+};
+
+function getPlantTypeIcon(plantType: string): LucideIcon {
+  return PLANT_TYPE_ICONS[plantType] || Sprout;
+}
+
+// ============================================================================
+// GROWTH-STAGE -> PHASE MAP (spec §5.2 — "crop stage" is called out by name
+// as an extrapolation target for the room-phase vocabulary). `growthStage` is
+// free text on a fertigation card, not a strict enum, so this is a best-effort
+// keyword match; anything unrecognised falls back to `preparing` rather than
+// `empty` since a card with a named (if unfamiliar) stage is not "nothing
+// happening."
+// ============================================================================
+
+function growthStageToPhase(stage: string): PhaseKey {
+  const s = stage.toLowerCase();
+  if (s.includes('germinat') || s.includes('seedling')) return 'preparing';
+  if (s.includes('veg')) return 'colonizing';
+  if (s.includes('flower') || s.includes('bud')) return 'fruitingInit';
+  if (s.includes('fruit')) return 'fruiting';
+  if (s.includes('harvest')) return 'harvesting';
+  if (s.includes('rest') || s.includes('dorman')) return 'resting';
+  return 'preparing';
+}
 
 // ============================================================================
 // COMPONENT PROPS
@@ -36,7 +92,8 @@ const Overlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Cosmos scrim (spec §4 "Modals/drawers"), not pure black. */
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -46,9 +103,10 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 900px;
   max-height: 90vh;
@@ -59,7 +117,7 @@ const Modal = styled.div`
 
 const Header = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -71,13 +129,22 @@ const HeaderLeft = styled.div`
 `;
 
 const PlantIcon = styled.div`
-  font-size: 48px;
-  margin-bottom: 8px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 10px;
+  flex-shrink: 0;
 `;
 
 const PlantName = styled.h2`
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
@@ -85,13 +152,14 @@ const PlantName = styled.h2`
 const ScientificName = styled.div`
   font-size: 16px;
   font-style: italic;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
 const VersionInfo = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const HeaderActions = styled.div`
@@ -100,53 +168,74 @@ const HeaderActions = styled.div`
 `;
 
 const ActionButton = styled.button<{ $variant?: 'edit' | 'clone' | 'delete' | 'close' }>`
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
-  border: none;
+  font-weight: 700;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   display: flex;
   align-items: center;
   gap: 6px;
+  font-family: inherit;
 
   ${({ $variant, theme }) => {
+    // Edit is the ONE primary CTA of this detail view (spec §3) — gold
+    // gradient fill, cosmos (onAccent) text. Clone/Delete/Close stay off the
+    // gold budget so only one gold button is ever on screen at once.
     if ($variant === 'edit') {
       return `
-        background: ${theme.colors.warning};
+        background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
         color: ${theme.colors.onAccent};
+        box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
         &:hover {
-          background: ${theme.colors.gold[600]};
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
         }
       `;
     }
     if ($variant === 'clone') {
+      // Secondary — glass fill, cream text (spec §4 "Buttons").
       return `
-        background: ${theme.colors.success};
-        color: ${theme.colors.onAccent};
+        background: ${theme.colors.glass.base};
+        border-color: ${theme.colors.glass.border};
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: ${theme.colors.textPrimary};
         &:hover {
-          background: ${theme.colors.emerald[600]};
+          background: ${theme.colors.glass.hi};
+          transform: translateY(-1px);
         }
       `;
     }
     if ($variant === 'delete') {
+      // Destructive — coral-tinted glass, never solid red (spec §4 "Buttons").
       return `
-        background: ${theme.colors.error};
-        color: ${theme.colors.onAccent};
+        background: ${theme.colors.errorBg};
+        border-color: rgba(240, 138, 112, 0.45);
+        color: ${theme.colors.error};
         &:hover {
-          background: ${theme.colors.terracotta[600]};
+          background: rgba(240, 138, 112, 0.24);
         }
       `;
     }
+    // close — ghost icon button
     return `
-      background: ${theme.colors.neutral[300]};
-      color: ${theme.colors.textSecondary};
+      background: transparent;
+      border-color: ${theme.colors.glass.border};
+      color: ${theme.colors.muted};
       &:hover {
-        background: ${theme.colors.neutral[400]};
+        color: ${theme.colors.textPrimary};
+        background: rgba(180, 200, 220, 0.07);
       }
     `;
   }}
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
+  }
 `;
 
 const Content = styled.div`
@@ -157,47 +246,48 @@ const Content = styled.div`
 
 const Section = styled.div`
   margin-bottom: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 12px;
   overflow: hidden;
 `;
 
 const SectionHeader = styled.button<{ $isOpen: boolean }>`
   width: 100%;
   padding: 16px 20px;
-  background: ${({ $isOpen, theme }) => ($isOpen ? theme.colors.surface : theme.colors.background)};
+  background: ${({ $isOpen }) => ($isOpen ? 'rgba(180, 200, 220, 0.05)' : 'transparent')};
   border: none;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
   transition: background 150ms ease-in-out;
+  font-family: inherit;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
 const SectionTitle = styled.h3`
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   text-align: left;
 `;
 
 const SectionIcon = styled.span<{ $isOpen: boolean }>`
-  font-size: 20px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   transform: ${({ $isOpen }) => ($isOpen ? 'rotate(90deg)' : 'rotate(0deg)')};
   transition: transform 150ms ease-in-out;
 `;
 
 const SectionContent = styled.div<{ $isOpen: boolean }>`
   padding: ${({ $isOpen }) => ($isOpen ? '20px' : '0 20px')};
-  max-height: ${({ $isOpen }) => ($isOpen ? '2000px' : '0')};
+  max-height: ${({ $isOpen }) => ($isOpen ? '4000px' : '0')};
   overflow: hidden;
   transition: all 300ms ease-in-out;
-  background: ${({ theme }) => theme.colors.background};
 `;
 
 const FieldGrid = styled.div`
@@ -217,11 +307,9 @@ const Field = styled.div`
 `;
 
 const FieldLabel = styled.label`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
@@ -237,30 +325,40 @@ const BadgeContainer = styled.div`
   flex-wrap: wrap;
 `;
 
+// Dynamic-colour badge — used for farm-type compatibility (a category
+// vocabulary, not a status, so it takes an arbitrary colour rather than
+// routing through phaseBadge) plus a couple of one-off severity/outcome
+// chips. `onDark` (cream) is correct here, never `onAccent` (cosmos is only
+// for text on a GOLD fill, spec §1.1) — none of these fills are gold.
 const Badge = styled.span<{ $color?: string }>`
   display: inline-block;
   padding: 4px 10px;
   border-radius: 9999px;
   font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color, theme }) => $color || theme.colors.neutral[300]};
-  color: ${({ $color, theme }) => ($color ? theme.colors.onAccent : theme.colors.textSecondary)};
+  font-weight: 700;
+  background: ${({ $color, theme }) => $color || theme.colors.glass.base};
+  color: ${({ $color, theme }) => ($color ? theme.colors.onDark : theme.colors.celeste)};
 `;
 
 const Tag = styled.span`
   display: inline-block;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
+// Nested second glass layer inside the modal (spec §2 two-layer rule) — flat
+// tint + line border, no independent blur, so it never stacks a third
+// backdrop-filter on top of Modal's own.
 const ArrayItem = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.04);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   margin-bottom: 8px;
 
   &:last-child {
@@ -270,20 +368,21 @@ const ArrayItem = styled.div`
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   margin: 16px 0;
 `;
 
 const EmptyText = styled.div`
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
   font-size: 14px;
 `;
 
 const RuleCard = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.04);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   margin-bottom: 12px;
 
   &:last-child {
@@ -300,7 +399,7 @@ const RuleHeader = styled.div`
 
 const RuleName = styled.span`
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -309,9 +408,12 @@ const FrequencyBadge = styled.span`
   padding: 3px 8px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  /* Was primary[700] — a step tuned for dark text on a light ground; wrong
+     way round on the Night Observatory dark ground, near-illegible on the
+     tinted background. bright.lapis is the correct light-on-dark value. */
+  color: ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const IngredientRow = styled.div`
@@ -319,7 +421,7 @@ const IngredientRow = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   font-size: 13px;
 
   &:last-child {
@@ -328,12 +430,12 @@ const IngredientRow = styled.div`
 `;
 
 const IngredientName = styled.span`
-  color: ${({ theme }) => theme.colors.neutral[800]};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const IngredientDosage = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 500;
+  color: ${({ theme }) => theme.colors.celeste};
+  font-weight: 700;
 `;
 
 const CardHeader = styled.div`
@@ -346,23 +448,20 @@ const CardHeader = styled.div`
 
 const CardTitle = styled.span`
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-const StageBadge = styled.span`
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 500;
-  background: ${({ theme }) => theme.colors.successBg};
-  color: ${({ theme }) => theme.colors.emerald[700]};
+// Growth-stage badge — routed through the room-phase badge pattern via
+// growthStageToPhase() (spec §5.2 "crop stage" extrapolation target).
+const StageBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
 `;
 
 const DayRange = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // ============================================================================
@@ -389,18 +488,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
     }));
   };
 
-  const getPlantIcon = () => {
-    const iconMap: Record<string, string> = {
-      crop: '🌾',
-      tree: '🌳',
-      herb: '🌿',
-      fruit: '🍎',
-      vegetable: '🥕',
-      ornamental: '🌺',
-      medicinal: '🌱',
-    };
-    return iconMap[plant.plantType] || '🌱';
-  };
+  const PlantTypeIcon = getPlantTypeIcon(plant.plantType);
 
   // Reason: Overlay click intentionally NOT wired to onClose — modal must close via X button only.
   return (
@@ -408,7 +496,9 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
       <Modal>
         <Header>
           <HeaderLeft>
-            <PlantIcon>{getPlantIcon()}</PlantIcon>
+            <PlantIcon aria-hidden="true">
+              <PlantTypeIcon size={28} strokeWidth={1.6} />
+            </PlantIcon>
             <PlantName>{plant.plantName}</PlantName>
             {plant.scientificName && <ScientificName>{plant.scientificName}</ScientificName>}
             <VersionInfo>
@@ -419,21 +509,21 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <HeaderActions>
             {onEdit && (
               <ActionButton $variant="edit" onClick={() => onEdit(plant.plantDataId)}>
-                ✏️ Edit
+                <Pencil size={15} strokeWidth={1.8} /> Edit
               </ActionButton>
             )}
             {onClone && (
               <ActionButton $variant="clone" onClick={() => onClone(plant.plantDataId)}>
-                📋 Clone
+                <Copy size={15} strokeWidth={1.8} /> Clone
               </ActionButton>
             )}
             {onDelete && (
               <ActionButton $variant="delete" onClick={() => onDelete(plant.plantDataId)}>
-                🗑️ Delete
+                <Trash2 size={15} strokeWidth={1.8} /> Delete
               </ActionButton>
             )}
-            <ActionButton $variant="close" onClick={onClose}>
-              ✕
+            <ActionButton $variant="close" onClick={onClose} aria-label="Close">
+              <X size={15} strokeWidth={1.8} />
             </ActionButton>
           </HeaderActions>
         </Header>
@@ -443,7 +533,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.basic} onClick={() => toggleSection('basic')}>
               <SectionTitle>1. Basic Information</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.basic}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.basic}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.basic}>
               <FieldGrid>
@@ -480,7 +570,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.growth} onClick={() => toggleSection('growth')}>
               <SectionTitle>2. Growth Cycle</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.growth}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.growth}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.growth}>
               <FieldGrid>
@@ -518,7 +608,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.yield} onClick={() => toggleSection('yield')}>
               <SectionTitle>3. Yield & Waste</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.yield}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.yield}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.yield}>
               <FieldGrid>
@@ -552,7 +642,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.environment} onClick={() => toggleSection('environment')}>
               <SectionTitle>4. Environmental Requirements</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.environment}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.environment}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.environment}>
               <FieldGrid>
@@ -592,7 +682,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.watering} onClick={() => toggleSection('watering')}>
               <SectionTitle>5. Watering Requirements</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.watering}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.watering}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.watering}>
               <FieldGrid>
@@ -629,7 +719,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.soil} onClick={() => toggleSection('soil')}>
               <SectionTitle>6. Soil & pH Requirements</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.soil}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.soil}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.soil}>
               <FieldGrid>
@@ -680,7 +770,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.diseases} onClick={() => toggleSection('diseases')}>
               <SectionTitle>7. Diseases & Pests</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.diseases}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.diseases}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.diseases}>
               {plant.diseasesAndPests && plant.diseasesAndPests.length > 0 ? (
@@ -690,7 +780,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                       <FieldLabel>Name</FieldLabel>
                       <FieldValue>
                         <strong>{disease.name}</strong>
-                        {disease.severity && <Badge $color={theme.colors.error}>{disease.severity}</Badge>}
+                        {disease.severity && <Badge $color={theme.colors.phase.quarantined}>{disease.severity}</Badge>}
                       </FieldValue>
                     </Field>
                     {disease.symptoms && (
@@ -732,7 +822,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.light} onClick={() => toggleSection('light')}>
               <SectionTitle>8. Light Requirements</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.light}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.light}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.light}>
               <FieldGrid>
@@ -770,7 +860,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.quality} onClick={() => toggleSection('quality')}>
               <SectionTitle>9. Quality Grading</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.quality}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.quality}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.quality}>
               {plant.qualityGrades && plant.qualityGrades.length > 0 ? (
@@ -781,7 +871,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                       <FieldValue>
                         <strong>{grade.gradeName}</strong>
                         {grade.priceMultiplier && (
-                          <Badge $color={theme.colors.success}>{grade.priceMultiplier}x price</Badge>
+                          <Badge $color={theme.colors.phase.fruiting}>{grade.priceMultiplier}x price</Badge>
                         )}
                       </FieldValue>
                     </Field>
@@ -815,7 +905,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
           <Section>
             <SectionHeader $isOpen={!!openSections.economics} onClick={() => toggleSection('economics')}>
               <SectionTitle>10. Economics & Labor</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.economics}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.economics}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.economics}>
               <FieldGrid>
@@ -872,8 +962,11 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
                   <SectionTitle>11. Fertigation Schedule</SectionTitle>
                   {canEditFertigation && (
+                    // "clone" (secondary/glass), not "edit" (gold) — Header's
+                    // own Edit button is already this view's ONE primary CTA
+                    // (spec §3); a second gold button here would double it.
                     <ActionButton
-                      $variant="edit"
+                      $variant="clone"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowFertigationEditor(true);
@@ -886,7 +979,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                     </ActionButton>
                   )}
                 </div>
-                <SectionIcon $isOpen={!!openSections.fertigation}>›</SectionIcon>
+                <SectionIcon $isOpen={!!openSections.fertigation}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
               </SectionHeader>
               <SectionContent $isOpen={!!openSections.fertigation}>
                 {!plant.fertigationSchedule?.cards || plant.fertigationSchedule.cards.length === 0 ? (
@@ -923,9 +1016,9 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                       <ArrayItem key={cardIdx}>
                         <CardHeader>
                           <CardTitle>{card.cardName}</CardTitle>
-                          <StageBadge>{card.growthStage}</StageBadge>
+                          <StageBadge $phase={growthStageToPhase(card.growthStage)}>{card.growthStage}</StageBadge>
                           <DayRange>Day {card.dayStart} - {card.dayEnd}</DayRange>
-                          {!card.isActive && <Badge $color={theme.colors.error}>Inactive</Badge>}
+                          {!card.isActive && <Badge $color={theme.colors.phase.decommissioned}>Inactive</Badge>}
                         </CardHeader>
                         {card.rules.map((rule, ruleIdx) => (
                           <RuleCard key={ruleIdx}>
@@ -1009,7 +1102,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                   ? '12'
                   : '11'}. Additional Information
               </SectionTitle>
-              <SectionIcon $isOpen={!!openSections.additional}>›</SectionIcon>
+              <SectionIcon $isOpen={!!openSections.additional}><ChevronRight size={18} strokeWidth={1.8} /></SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.additional}>
               <FieldGrid>

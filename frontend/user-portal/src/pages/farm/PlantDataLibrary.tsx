@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
+import { Download, Loader2, Upload, Plus, CheckCircle2, XCircle, Sprout } from 'lucide-react';
 import { PlantDataCard } from '../../components/farm/PlantDataCard';
 import { PlantDataDetail } from '../../components/farm/PlantDataDetail';
 import { PlantDataFormModal } from '../../components/farm/PlantDataFormModal';
@@ -75,11 +76,19 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   border: none;
   white-space: nowrap;
 
+  svg.spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
+        color: ${theme.colors.onDark};
         box-shadow: 0 4px 6px -1px ${theme.colors.primary[500]}4d;
         &:hover {
           background: ${theme.colors.primary[600]};
@@ -237,7 +246,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   font-weight: 500;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onDark : theme.colors.textSecondary)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -289,7 +298,10 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.celeste};
+  opacity: 0.7;
   margin-bottom: 16px;
 `;
 
@@ -328,8 +340,8 @@ const ImportFeedback = styled.div<{ $type: 'success' | 'error' }>`
 `;
 
 const ImportFeedbackIcon = styled.span`
-  font-size: 20px;
-  line-height: 1;
+  display: flex;
+  flex-shrink: 0;
 `;
 
 const ImportFeedbackContent = styled.div`
@@ -365,6 +377,9 @@ const ProgressHeader = styled.div`
 `;
 
 const ProgressLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.primary[800]};
@@ -679,15 +694,23 @@ export function PlantDataLibrary() {
         </HeaderLeft>
         <HeaderActions>
           <Button $variant="secondary" onClick={handleDownloadTemplate}>
-            📥 Download CSV Template
+            <Download size={15} strokeWidth={1.8} /> Download CSV Template
           </Button>
           {hasAgronomistPermission && (
             <>
               <Button $variant="secondary" onClick={handleImportClick} disabled={importing}>
-                {importing ? '⏳ Importing...' : '📤 Import CSV'}
+                {importing ? (
+                  <>
+                    <Loader2 size={15} strokeWidth={1.8} className="spinning" /> Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={15} strokeWidth={1.8} /> Import CSV
+                  </>
+                )}
               </Button>
               <Button $variant="primary" onClick={handleCreateNew}>
-                ➕ New Plant
+                <Plus size={15} strokeWidth={2} /> New Plant
               </Button>
             </>
           )}
@@ -706,7 +729,9 @@ export function PlantDataLibrary() {
       {importing && (
         <ProgressContainer>
           <ProgressHeader>
-            <ProgressLabel>📤 Uploading CSV file...</ProgressLabel>
+            <ProgressLabel>
+              <Upload size={14} strokeWidth={1.8} /> Uploading CSV file...
+            </ProgressLabel>
             <ProgressPercent>{uploadProgress}%</ProgressPercent>
           </ProgressHeader>
           <ProgressBarOuter>
@@ -718,7 +743,7 @@ export function PlantDataLibrary() {
       {/* Import result feedback */}
       {importResult && (
         <ImportFeedback $type="success">
-          <ImportFeedbackIcon>✅</ImportFeedbackIcon>
+          <ImportFeedbackIcon><CheckCircle2 size={20} strokeWidth={1.8} /></ImportFeedbackIcon>
           <ImportFeedbackContent>
             <ImportFeedbackTitle>CSV Import Successful</ImportFeedbackTitle>
             <ImportFeedbackDetails>
@@ -736,7 +761,7 @@ export function PlantDataLibrary() {
       {/* Import error feedback */}
       {importError && (
         <ImportFeedback $type="error">
-          <ImportFeedbackIcon>❌</ImportFeedbackIcon>
+          <ImportFeedbackIcon><XCircle size={20} strokeWidth={1.8} /></ImportFeedbackIcon>
           <ImportFeedbackContent>
             <ImportFeedbackTitle>CSV Import Failed</ImportFeedbackTitle>
             <ImportFeedbackDetails>{importError}</ImportFeedbackDetails>
@@ -801,7 +826,7 @@ export function PlantDataLibrary() {
 
       {plants.length === 0 ? (
         <EmptyState>
-          <EmptyIcon>🌱</EmptyIcon>
+          <EmptyIcon><Sprout size={40} strokeWidth={1.4} /></EmptyIcon>
           <EmptyTitle>No plants found</EmptyTitle>
           <EmptyDescription>
             {searchTerm || selectedFarmType || selectedContributor || selectedRegion

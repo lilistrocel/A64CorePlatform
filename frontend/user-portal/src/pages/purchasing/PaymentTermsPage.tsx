@@ -5,10 +5,20 @@
  * Admin-only write access. Simple list with create/edit modals.
  *
  * Modals do NOT close on overlay click — X button only.
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls/modal, Space Mono metadata,
+ * shared PageHeader/Button. Payment terms have no PR/PO/GR/AP lifecycle
+ * status — the active/inactive toggle is extrapolated onto the phase map per
+ * spec §5.2 as 'fruiting' (active) / 'decommissioned' (inactive), matching
+ * VendorsPage / PurchaseItemsPage. Logic, routes, data-fetching and props
+ * are unchanged.
  */
 
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   usePaymentTerms,
   useCreatePaymentTerms,
@@ -21,32 +31,73 @@ import type { PaymentTerms, PaymentTermsCreate, PaymentTermsUpdate } from '../..
 // ─── Styled components ──────────────────────────────────────────────────────
 
 const Container = styled.div`padding: 32px; max-width: 900px; margin: 0 auto;`;
-const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;`;
-const Title = styled.h1`font-size: 28px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0;`;
-const AdminNote = styled.p`font-size: 13px; color: ${({ theme }) => theme.colors.textSecondary}; margin: 0 0 24px;`;
-const PrimaryButton = styled.button`padding: 10px 20px; background: ${({ theme }) => theme.colors.primary[500]}; color: ${({ theme }) => theme.colors.onAccent}; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; &:hover { background: ${({ theme }) => theme.colors.primary[700]}; } &:disabled { opacity: 0.5; cursor: not-allowed; }`;
-const GhostButton = styled.button`padding: 6px 14px; background: transparent; color: ${({ theme }) => theme.colors.textSecondary}; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 6px; font-size: 13px; cursor: pointer; &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }`;
-const DangerButton = styled.button`padding: 6px 14px; background: transparent; color: ${({ theme }) => theme.colors.error}; border: 1px solid ${({ theme }) => theme.colors.error}; border-radius: 6px; font-size: 13px; cursor: pointer; &:hover { background: ${({ theme }) => theme.colors.errorBg}; }`;
-const Table = styled.table`width: 100%; border-collapse: collapse; background: ${({ theme }) => theme.colors.surface}; border-radius: 12px; overflow: hidden; box-shadow: ${({ theme }) => theme.shadows.sm};`;
-const Th = styled.th`padding: 14px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: ${({ theme }) => theme.colors.textSecondary}; background: ${({ theme }) => theme.colors.neutral[50]}; border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};`;
-const Td = styled.td`padding: 14px 16px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary}; border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};`;
-const Tr = styled.tr`cursor: pointer; transition: background 100ms ease; &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; } &:last-child td { border-bottom: none; }`;
-const Badge = styled.span<{ $active: boolean }>`display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; background: ${({ $active, theme }) => $active ? theme.colors.successBg : theme.colors.neutral[100]}; color: ${({ $active, theme }) => $active ? theme.colors.success : theme.colors.textDisabled};`;
-const EmptyState = styled.div`text-align: center; padding: 64px 32px; color: ${({ theme }) => theme.colors.textSecondary}; font-size: 15px;`;
-const AccessDenied = styled.div`text-align: center; padding: 80px 32px; color: ${({ theme }) => theme.colors.textSecondary};`;
+const HeaderRow = styled.div`display: flex; justify-content: flex-end; margin-bottom: 8px;`;
+const AdminNote = styled.p`font-size: 13px; color: ${({ theme }) => theme.colors.muted}; margin: 0 0 24px;`;
+const DangerButton = styled.button`
+  padding: 6px 14px; background: ${({ theme }) => theme.colors.errorBg}; color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4); border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.24); }
+`;
+const TableWrap = styled.div`
+  ${glassPanel}
+  overflow: hidden;
+`;
+const Table = styled.table`width: 100%; border-collapse: collapse;`;
+const Th = styled.th`
+  ${monoLabel}
+  padding: 14px 16px; text-align: left; color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+`;
+const Td = styled.td`padding: 14px 16px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary}; border-bottom: 1px solid ${({ theme }) => theme.colors.line};`;
+const Tr = styled.tr`cursor: pointer; transition: background 100ms ease; &:hover td { background: rgba(180, 200, 220, 0.05); } &:last-child td { border-bottom: none; }`;
+const Mono = styled.span`font-family: ${({ theme }) => theme.typography.fontFamily.mono};`;
+const CodeCell = styled(Mono)`font-weight: 700; color: ${({ theme }) => theme.colors.textPrimary};`;
+
+/** Active/inactive extrapolated onto the phase map — see file header note. */
+const StatusBadge = styled.span<{ $active: boolean }>`
+  ${({ $active }) => phaseBadge($active ? 'fruiting' : 'decommissioned')}
+`;
+
+const StatusMessage = styled.p`text-align: center; padding: 48px 32px; color: ${({ theme }) => theme.colors.muted}; font-size: 15px;`;
+const EmptyState = styled.div`text-align: center; padding: 64px 32px;`;
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic; font-size: 1.4rem; color: ${({ theme }) => theme.colors.celeste}; margin: 0 0 8px;
+`;
+const EmptyText = styled.p`color: ${({ theme }) => theme.colors.muted}; font-size: 0.9rem; margin: 0;`;
 
 // ─── Modal primitives ───────────────────────────────────────────────────────
 
-const Overlay = styled.div`position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px;`;
-const Modal = styled.div`background: ${({ theme }) => theme.colors.surface}; border-radius: 16px; box-shadow: ${({ theme }) => theme.shadows.xl}; width: 100%; max-width: 480px; display: flex; flex-direction: column;`;
-const ModalHeader = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 24px 28px 16px; border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};`;
+const Overlay = styled.div`position: fixed; inset: 0; background: rgba(10, 14, 36, 0.6); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px;`;
+const Modal = styled.div`
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  width: 100%; max-width: 480px; display: flex; flex-direction: column;
+`;
+const ModalHeader = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 24px 28px 16px; border-bottom: 1px solid ${({ theme }) => theme.colors.line};`;
 const ModalTitle = styled.h2`font-size: 20px; font-weight: 700; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0;`;
-const CloseButton = styled.button`background: none; border: none; font-size: 20px; cursor: pointer; color: ${({ theme }) => theme.colors.textSecondary}; padding: 4px; border-radius: 6px; line-height: 1; &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }`;
+const CloseButton = styled.button`
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer; color: ${({ theme }) => theme.colors.muted};
+  padding: 4px; border-radius: 6px;
+  &:hover { background: rgba(180, 200, 220, 0.1); color: ${({ theme }) => theme.colors.textPrimary}; }
+`;
 const ModalBody = styled.div`padding: 24px 28px; display: flex; flex-direction: column; gap: 16px;`;
-const ModalFooter = styled.div`padding: 16px 28px 24px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};`;
+const ModalFooter = styled.div`padding: 16px 28px 24px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid ${({ theme }) => theme.colors.line};`;
 const Field = styled.div`display: flex; flex-direction: column; gap: 6px;`;
-const Label = styled.label`font-size: 13px; font-weight: 600; color: ${({ theme }) => theme.colors.textSecondary};`;
-const Input = styled.input`padding: 10px 14px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; } &[disabled] { opacity: 0.6; }`;
+const Label = styled.label`
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
+`;
+const Input = styled.input`
+  ${glassControl}
+  padding: 10px 14px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
+  &[disabled] { opacity: 0.6; }
+`;
 const ErrorText = styled.p`color: ${({ theme }) => theme.colors.error}; font-size: 13px; margin: 0;`;
 
 // ─── Terms Form Modal ────────────────────────────────────────────────────────
@@ -110,7 +161,9 @@ function TermsFormModal({ terms, organizationId, onClose, onSaved }: TermsFormMo
       <Modal onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>{isEdit ? 'Edit Payment Terms' : 'New Payment Terms'}</ModalTitle>
-          <CloseButton onClick={onClose} aria-label="Close">✕</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={1.8} />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           {error && <ErrorText>{error}</ErrorText>}
@@ -140,10 +193,10 @@ function TermsFormModal({ terms, organizationId, onClose, onSaved }: TermsFormMo
           </Field>
         </ModalBody>
         <ModalFooter>
-          <GhostButton onClick={onClose}>Cancel</GhostButton>
-          <PrimaryButton onClick={handleSubmit} disabled={isLoading || !form.termsCode || !form.description}>
+          <Button variant="outline" size="small" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="small" onClick={handleSubmit} disabled={isLoading || !form.termsCode || !form.description}>
             {isLoading ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Terms'}
-          </PrimaryButton>
+          </Button>
         </ModalFooter>
       </Modal>
     </Overlay>
@@ -180,57 +233,72 @@ export function PaymentTermsPage() {
   );
 
   const terms = Array.isArray(termsList) ? termsList : [];
+  const activeCount = terms.filter((t) => t.isActive).length;
 
   return (
     <Container>
-      <Header>
-        <Title>Payment Terms</Title>
-        {canWrite && (
-          <PrimaryButton onClick={() => { setEditingTerms(null); setShowModal(true); }}>
-            + New Terms
-          </PrimaryButton>
-        )}
-      </Header>
+      <PageHeader
+        breadcrumb="— PURCHASING · TERMS"
+        title="Payment Terms"
+        description="Net-day terms available to vendors across the organisation."
+        stats={[
+          { value: terms.length, label: 'Total Terms' },
+          { value: activeCount, label: 'Active' },
+        ]}
+      />
       <AdminNote>
         Payment terms are seeded automatically for your organisation. Admin and Finance Admin can add custom terms.
       </AdminNote>
 
-      {isLoading && <EmptyState>Loading payment terms...</EmptyState>}
-      {isError && <EmptyState>Failed to load payment terms. Please try again.</EmptyState>}
+      {canWrite && (
+        <HeaderRow>
+          <Button variant="primary" onClick={() => { setEditingTerms(null); setShowModal(true); }}>
+            New Terms
+          </Button>
+        </HeaderRow>
+      )}
+
+      {isLoading && <StatusMessage>Loading payment terms...</StatusMessage>}
+      {isError && <StatusMessage>Failed to load payment terms. Please try again.</StatusMessage>}
       {!isLoading && !isError && terms.length === 0 && (
-        <EmptyState>No payment terms found.</EmptyState>
+        <EmptyState>
+          <EmptyHeadline>No payment terms yet</EmptyHeadline>
+          <EmptyText>{canWrite ? 'Add your first custom terms above.' : 'Terms are seeded automatically for your organisation.'}</EmptyText>
+        </EmptyState>
       )}
 
       {!isLoading && !isError && terms.length > 0 && (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Code</Th>
-              <Th>Description</Th>
-              <Th>Net Days</Th>
-              <Th>Status</Th>
-              {canWrite && <Th></Th>}
-            </tr>
-          </thead>
-          <tbody>
-            {terms.map((t) => (
-              <Tr
-                key={t.termsId}
-                onClick={() => { if (canWrite) { setEditingTerms(t); setShowModal(true); } }}
-              >
-                <Td><strong>{t.termsCode}</strong></Td>
-                <Td>{t.description}</Td>
-                <Td>{t.netDays === 0 ? 'Immediate / COD' : `${t.netDays} days`}</Td>
-                <Td><Badge $active={t.isActive}>{t.isActive ? 'Active' : 'Inactive'}</Badge></Td>
-                {canWrite && (
-                  <Td onClick={(e) => e.stopPropagation()}>
-                    <DangerButton onClick={(e) => handleDelete(t, e)}>Deactivate</DangerButton>
-                  </Td>
-                )}
-              </Tr>
-            ))}
-          </tbody>
-        </Table>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Code</Th>
+                <Th>Description</Th>
+                <Th>Net Days</Th>
+                <Th>Status</Th>
+                {canWrite && <Th></Th>}
+              </tr>
+            </thead>
+            <tbody>
+              {terms.map((t) => (
+                <Tr
+                  key={t.termsId}
+                  onClick={() => { if (canWrite) { setEditingTerms(t); setShowModal(true); } }}
+                >
+                  <Td><CodeCell>{t.termsCode}</CodeCell></Td>
+                  <Td>{t.description}</Td>
+                  <Td><Mono>{t.netDays === 0 ? 'Immediate / COD' : `${t.netDays} days`}</Mono></Td>
+                  <Td><StatusBadge $active={t.isActive}>{t.isActive ? 'Active' : 'Inactive'}</StatusBadge></Td>
+                  {canWrite && (
+                    <Td onClick={(e) => e.stopPropagation()}>
+                      <DangerButton onClick={(e) => handleDelete(t, e)}>Deactivate</DangerButton>
+                    </Td>
+                  )}
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       )}
 
       {showModal && canWrite && (

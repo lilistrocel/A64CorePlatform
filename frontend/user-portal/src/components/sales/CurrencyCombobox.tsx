@@ -26,6 +26,7 @@ import {
 } from 'react';
 import styled from 'styled-components';
 import { ChevronDown } from 'lucide-react';
+import { glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
@@ -74,17 +75,15 @@ const Wrapper = styled.div`
 `;
 
 const TriggerButton = styled.button<{ $hasError?: boolean; $disabled?: boolean }>`
+  ${glassControl}
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 14px;
-  background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.surface : theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
   text-align: left;
@@ -94,10 +93,10 @@ const TriggerButton = styled.button<{ $hasError?: boolean; $disabled?: boolean }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
 `;
 
@@ -110,6 +109,7 @@ const TriggerContent = styled.span`
 `;
 
 const CodeBadge = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.3px;
@@ -118,7 +118,7 @@ const CodeBadge = styled.span`
 
 const CurrencyLabel = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -126,20 +126,21 @@ const CurrencyLabel = styled.span`
 
 const ChevronIcon = styled(ChevronDown)<{ $open: boolean }>`
   flex-shrink: 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   transition: transform 150ms ease-in-out;
   transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'rotate(0deg)')};
 `;
 
+/* Dropdown/menu popup — glassOpaque (cosmos-hi, no blur). The "opaque menu
+   popping out of a glass panel" pattern keeps this under the spec §2
+   two-glass-layer limit when the combobox itself sits inside a glassPanel. */
 const Dropdown = styled.ul`
+  ${glassOpaque}
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   max-height: 280px;
   overflow-y: auto;
   z-index: 1200;
@@ -149,38 +150,37 @@ const Dropdown = styled.ul`
 `;
 
 const SectionDivider = styled.li`
+  ${monoLabel}
   padding: 4px 12px 2px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  opacity: 0.7;
+  color: ${({ theme }) => theme.colors.muted};
   user-select: none;
 
   & + & {
     margin-top: 4px;
-    border-top: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+    border-top: 1px solid ${({ theme }) => theme.colors.line};
     padding-top: 8px;
   }
 `;
 
+/* Selected/highlighted item — subtle neutral tint, never gold (gold is
+   reserved — spec §3). */
 const CurrencyItem = styled.li<{ $highlighted?: boolean; $isBase?: boolean }>`
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
   cursor: pointer;
-  background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+  background: ${({ $highlighted }) =>
+    $highlighted ? 'rgba(180, 200, 220, 0.07)' : 'transparent'};
   transition: background 80ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
 const ItemCode = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 700;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -189,19 +189,17 @@ const ItemCode = styled.span`
 
 const ItemName = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   flex: 1;
 `;
 
 const BaseBadge = styled.span`
+  ${monoLabel}
   display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
   padding: 1px 6px;
   border-radius: 10px;
-  background: ${({ theme }) => theme.colors.primary[100]};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   flex-shrink: 0;
 `;
 

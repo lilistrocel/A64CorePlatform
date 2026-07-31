@@ -6,37 +6,33 @@
  * Mushroom Dashboard: the Dashboard shows summary cards and analytics; this
  * page shows every single room's status at a glance — like a SCADA wall.
  *
- * Features:
- *  - Phase legend bar (color chips for all phases)
- *  - Summary stat bar (total rooms + per-phase counts)
- *  - Filters: facility selector, phase multi-select chips, room-code search
- *  - Dense compact grid grouped by facility
- *  - Phase distribution stacked bar chart
+ * Night Observatory (T-901, spec §4/§5): this is the shard's own subject
+ * matter — the visual ground truth mockup
+ * (Brand_Engineering/Brand/A20Core_NightObservatory_Glass.html) literally
+ * renders this screen. PageHeader, the phase-distribution bar, the phase
+ * filter pills, and the facility group headers below all reproduce that
+ * mockup section-for-section (l.111-369).
  *
- * Colours come from the theme, not hardcoded values. This page was originally
- * built with a fixed dark palette for a "SCADA wall" look, which meant it
- * ignored the light/dark toggle entirely and sat as a dark island in light
- * mode. The dense at-a-glance layout is what makes it a monitor — the palette
- * does not need to fight the rest of the app to achieve that. Phase colours
- * (PHASE_COLORS) stay vivid and semantic in both modes.
+ * Features:
+ *  - Summary stat bar (total rooms + per-phase counts) — PageHeader stats
+ *  - Phase distribution stacked bar chart
+ *  - Filters: facility selector, phase multi-select pills, room-code search
+ *  - Dense glass-card grid grouped by facility
  */
 
 import { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import styled from 'styled-components';
+import { PageHeader, monoLabel, glassPanel, glassControl, type PageHeaderStat } from '@a64core/shared';
 import { apiClient } from '../../services/api';
 import { useFacilities } from '../../hooks/mushroom/useFacilityData';
 import { GrowingRoomCard } from '../../components/mushroom/GrowingRoomCard';
 import { RoomDetailsModal } from '../../components/mushroom/RoomDetailsModal';
 import type { GrowingRoom, Facility, RoomPhase } from '../../types/mushroom';
-import {
-  PHASE_COLORS,
-  PHASE_LABELS,
-  PHASE_TEXT_COLORS,
-} from '../../types/mushroom';
+import { PHASE_LABELS, ROOM_PHASE_TO_PHASE_KEY } from '../../types/mushroom';
 
 // ============================================================================
-// ORDERED PHASES — drives the legend and distribution bar
+// ORDERED PHASES — drives the pills and distribution bar (spec §5.1 order)
 // ============================================================================
 
 const PHASE_ORDER: RoomPhase[] = [
@@ -53,6 +49,20 @@ const PHASE_ORDER: RoomPhase[] = [
   'quarantined',
   'decommissioned',
 ];
+
+/** `#rrggbb` -> `rgba(r, g, b, alpha)` — same technique as mixins.ts
+ * `hexToRgba` (not exported), needed here for the pill's active-state tint
+ * which uses different percentages (14%/30%) than the `phaseBadge` mixin's
+ * badge tint (16%/45%), per mockup `.pill.on` (l.175) vs `.card .phase`
+ * (l.217-218). */
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const bigint = parseInt(clean, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 // ============================================================================
 // CUSTOM HOOK — fetch rooms for every facility in parallel via useQueries
@@ -130,6 +140,22 @@ export function MushroomRoomMonitor() {
     return counts;
   }, [allRooms]);
 
+  // "In cycle" — rooms with an actual crop process running (PageHeader's
+  // third stat, mockup l.295: emerald "alive" numeral).
+  const inCycleCount = useMemo(
+    () =>
+      allRooms.filter(
+        (r) => r.currentPhase !== 'empty' && r.currentPhase !== 'decommissioned'
+      ).length,
+    [allRooms]
+  );
+
+  const headerStats: PageHeaderStat[] = [
+    { value: allRooms.length, label: 'Total rooms' },
+    { value: facilities.length, label: 'Facilities' },
+    { value: inCycleCount, label: 'In cycle', alive: true },
+  ];
+
   // Toggle a phase chip in the multi-select filter
   const handlePhaseToggle = (phase: RoomPhase) => {
     setActivePhaseFilters((prev) => {
@@ -185,91 +211,55 @@ export function MushroomRoomMonitor() {
 
   const hasFilters = activePhaseFilters.size > 0 || searchQuery.trim() !== '';
 
+  // Present phases, in spec order, for the distribution bar + its summary text
+  const presentPhases = PHASE_ORDER.filter((p) => (phaseCounts[p] ?? 0) > 0);
+  const distributionSummary = presentPhases
+    .map((p) => `${phaseCounts[p]} ${(PHASE_LABELS[p] ?? p).toLowerCase()}`)
+    .join(' · ');
+
   return (
     <PageWrapper>
-      {/* ------------------------------------------------------------------ */}
-      {/* HEADER                                                              */}
-      {/* ------------------------------------------------------------------ */}
-      <Header>
-        <HeaderLeft>
-          <PageTitle>Room Monitor</PageTitle>
-          <PageSubtitle>
-            Live status of all growing rooms across every facility
-          </PageSubtitle>
-        </HeaderLeft>
+      <PageHeader
+        breadcrumb="Operations · Live"
+        title="Room Monitor"
+        emphasizeLastWord
+        description="Live status of all growing rooms across every facility"
+        stats={headerStats}
+      />
 
-        <HeaderRight>
-          {isAnyLoading && (
-            <LoadingPill>
-              <Spinner $small />
-              Loading
-            </LoadingPill>
-          )}
-
-          <StatPill>
-            <StatPillNumber>{allRooms.length}</StatPillNumber>
-            <StatPillLabel>Total Rooms</StatPillLabel>
-          </StatPill>
-
-          <StatPill>
-            <StatPillNumber>{facilities.length}</StatPillNumber>
-            <StatPillLabel>Facilities</StatPillLabel>
-          </StatPill>
-        </HeaderRight>
-      </Header>
+      {isAnyLoading && <LoadingNote>Loading…</LoadingNote>}
 
       {/* ------------------------------------------------------------------ */}
-      {/* PHASE LEGEND                                                        */}
-      {/* ------------------------------------------------------------------ */}
-      <LegendBar role="list" aria-label="Phase legend">
-        {PHASE_ORDER.map((phase) => {
-          const count = phaseCounts[phase] ?? 0;
-          return (
-            <LegendChip
-              key={phase}
-              $bg={PHASE_COLORS[phase]}
-              $text={PHASE_TEXT_COLORS[phase]}
-              role="listitem"
-              title={`${PHASE_LABELS[phase]}: ${count} room${count !== 1 ? 's' : ''}`}
-            >
-              {PHASE_LABELS[phase]}
-              {count > 0 && <LegendCount>{count}</LegendCount>}
-            </LegendChip>
-          );
-        })}
-      </LegendBar>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* PHASE DISTRIBUTION STACKED BAR                                     */}
+      {/* PHASE DISTRIBUTION STACKED BAR — mockup `.distro` (l.130-138)       */}
       {/* ------------------------------------------------------------------ */}
       {allRooms.length > 0 && (
         <DistributionSection aria-label="Phase distribution">
-          <DistributionLabel>Phase Distribution</DistributionLabel>
+          <DistributionLabelRow>
+            <DistributionTitle>Phase distribution</DistributionTitle>
+            <DistributionValue>{distributionSummary}</DistributionValue>
+          </DistributionLabelRow>
           <DistributionBar>
-            {PHASE_ORDER.filter((p) => (phaseCounts[p] ?? 0) > 0).map(
-              (phase) => {
-                const count = phaseCounts[phase] ?? 0;
-                const pct = (count / allRooms.length) * 100;
-                return (
-                  <DistributionSegment
-                    key={phase}
-                    $color={PHASE_COLORS[phase]}
-                    $pct={pct}
-                    title={`${PHASE_LABELS[phase]}: ${count} (${pct.toFixed(1)}%)`}
-                    aria-label={`${PHASE_LABELS[phase]} ${pct.toFixed(1)} percent`}
-                  />
-                );
-              }
-            )}
+            {presentPhases.map((phase) => {
+              const count = phaseCounts[phase] ?? 0;
+              const pct = (count / allRooms.length) * 100;
+              return (
+                <DistributionSegment
+                  key={phase}
+                  $phaseKey={ROOM_PHASE_TO_PHASE_KEY[phase]}
+                  $pct={pct}
+                  title={`${PHASE_LABELS[phase]}: ${count} (${pct.toFixed(1)}%)`}
+                  aria-label={`${PHASE_LABELS[phase]} ${pct.toFixed(1)} percent`}
+                />
+              );
+            })}
           </DistributionBar>
         </DistributionSection>
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* FILTERS BAR                                                         */}
+      {/* FILTERS BAR — mockup `.controls` (l.140-154)                       */}
       {/* ------------------------------------------------------------------ */}
       <FiltersBar>
-        {/* Facility selector */}
         <FilterGroup>
           <FilterLabel htmlFor="monitor-facility-select">Facility</FilterLabel>
           <FilterSelect
@@ -278,7 +268,7 @@ export function MushroomRoomMonitor() {
             onChange={(e) => setSelectedFacilityId(e.target.value)}
             aria-label="Filter by facility"
           >
-            <option value="">All Facilities</option>
+            <option value="">All facilities</option>
             {facilities.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
@@ -287,47 +277,18 @@ export function MushroomRoomMonitor() {
           </FilterSelect>
         </FilterGroup>
 
-        {/* Room code search */}
         <FilterGroup>
-          <FilterLabel htmlFor="monitor-room-search">Room Code</FilterLabel>
+          <FilterLabel htmlFor="monitor-room-search">Room code</FilterLabel>
           <FilterInput
             id="monitor-room-search"
             type="search"
-            placeholder="Search room..."
+            placeholder="Search room…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search by room code or name"
           />
         </FilterGroup>
 
-        {/* Phase multi-select chips */}
-        <FilterGroup $grow>
-          <FilterLabel>Filter by Phase</FilterLabel>
-          <PhaseChipRow role="group" aria-label="Phase filter chips">
-            {PHASE_ORDER.map((phase) => {
-              const active = activePhaseFilters.has(phase);
-              const count = phaseCounts[phase] ?? 0;
-              return (
-                <PhaseFilterChip
-                  key={phase}
-                  $bg={PHASE_COLORS[phase]}
-                  $text={PHASE_TEXT_COLORS[phase]}
-                  $active={active}
-                  onClick={() => handlePhaseToggle(phase)}
-                  aria-pressed={active}
-                  title={`${PHASE_LABELS[phase]} (${count} rooms)`}
-                >
-                  {PHASE_LABELS[phase]}
-                  {count > 0 && (
-                    <PhaseChipCount $active={active}>{count}</PhaseChipCount>
-                  )}
-                </PhaseFilterChip>
-              );
-            })}
-          </PhaseChipRow>
-        </FilterGroup>
-
-        {/* Clear filters */}
         {hasFilters && (
           <ClearBtn
             onClick={() => {
@@ -342,13 +303,40 @@ export function MushroomRoomMonitor() {
       </FiltersBar>
 
       {/* ------------------------------------------------------------------ */}
-      {/* MAIN GRID — grouped by facility                                     */}
+      {/* PHASE FILTER PILLS — mockup `.pills` (l.156-175); doubles as the   */}
+      {/* phase legend (dot + label + count), same pattern as the mockup —   */}
+      {/* no separate static legend bar.                                     */}
+      {/* ------------------------------------------------------------------ */}
+      <Pills role="group" aria-label="Phase filter">
+        {PHASE_ORDER.map((phase) => {
+          const active = activePhaseFilters.has(phase);
+          const count = phaseCounts[phase] ?? 0;
+          return (
+            <Pill
+              key={phase}
+              type="button"
+              $phaseKey={ROOM_PHASE_TO_PHASE_KEY[phase]}
+              $active={active}
+              onClick={() => handlePhaseToggle(phase)}
+              aria-pressed={active}
+            >
+              <PillDot />
+              {PHASE_LABELS[phase]}
+              {count > 0 && <PillCount>{count}</PillCount>}
+            </Pill>
+          );
+        })}
+      </Pills>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* MAIN GRID — grouped by facility, mockup `.group`/`.cards`           */}
+      {/* (l.177-184, 328-356)                                                */}
       {/* ------------------------------------------------------------------ */}
       <GridArea>
         {facilitiesLoading && (
           <LoadingOverlay>
             <Spinner />
-            <LoadingMsg>Loading facilities...</LoadingMsg>
+            <LoadingMsg>Loading facilities…</LoadingMsg>
           </LoadingOverlay>
         )}
 
@@ -370,15 +358,11 @@ export function MushroomRoomMonitor() {
           const loading = facilityResult?.isLoading ?? false;
 
           return (
-            <FacilitySection key={facility.id}>
-              <FacilityHeader>
-                <FacilityMeta>
-                  <FacilityName>{facility.name}</FacilityName>
-                  {facility.location && (
-                    <FacilityLocation>{facility.location}</FacilityLocation>
-                  )}
-                </FacilityMeta>
-                <FacilityRoomCount>
+            <FacilityGroup key={facility.id}>
+              <GroupHeader>
+                <GroupTitle>{facility.name.toUpperCase()}</GroupTitle>
+                {facility.location && <GroupSub>{facility.location}</GroupSub>}
+                <GroupCount>
                   {loading ? (
                     <Spinner $small />
                   ) : (
@@ -390,13 +374,13 @@ export function MushroomRoomMonitor() {
                       room{filtered.length !== 1 ? 's' : ''}
                     </>
                   )}
-                </FacilityRoomCount>
-              </FacilityHeader>
+                </GroupCount>
+              </GroupHeader>
 
               {loading ? (
                 <FacilityLoadingRow>
                   <Spinner $small />
-                  <span>Loading rooms...</span>
+                  <span>Loading rooms…</span>
                 </FacilityLoadingRow>
               ) : filtered.length === 0 ? (
                 <FacilityEmptyMsg>
@@ -405,18 +389,17 @@ export function MushroomRoomMonitor() {
                     : 'No rooms have been added to this facility yet.'}
                 </FacilityEmptyMsg>
               ) : (
-                <CompactGrid>
+                <Cards>
                   {filtered.map((room) => (
                     <GrowingRoomCard
                       key={room.id}
                       room={room}
-                      compact
                       onClick={setSelectedRoom}
                     />
                   ))}
-                </CompactGrid>
+                </Cards>
               )}
-            </FacilitySection>
+            </FacilityGroup>
           );
         })}
 
@@ -451,366 +434,274 @@ export function MushroomRoomMonitor() {
 
 // ============================================================================
 // STYLED COMPONENTS
-// All custom props follow the transient $ prefix pattern per UI-Standards.md
+// Night Observatory (T-901 Phase 3) — visual ground truth: mockup l.111-369.
+// All custom props follow the transient $ prefix pattern.
 // ============================================================================
 
+// Transparent page container — the fixed sky (mounted once at the app shell)
+// shows through every page; no opaque background here (spec §7).
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
-  padding: 0;
+  min-height: 100%;
 `;
 
-// ---- Header ----------------------------------------------------------------
-
-const Header = styled.header`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 24px 16px;
-  background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  flex-wrap: wrap;
+const LoadingNote = styled.div`
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: -14px 0 18px;
 `;
 
-const HeaderLeft = styled.div``;
-
-const PageTitle = styled.h1`
-  font-size: 22px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px 0;
-  letter-spacing: -0.3px;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-`;
-
-const StatPill = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 10px;
-  padding: 8px 16px;
-  min-width: 80px;
-`;
-
-const StatPillNumber = styled.span`
-  font-size: 20px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  line-height: 1;
-`;
-
-const StatPillLabel = styled.span`
-  font-size: 10px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
-`;
-
-const LoadingPill = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 10px;
-  padding: 8px 12px;
-`;
-
-// ---- Phase Legend ----------------------------------------------------------
-
-const LegendBar = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-`;
-
-interface LegendChipProps {
-  $bg: string;
-  $text: string;
-}
-
-const LegendChip = styled.span<LegendChipProps>`
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ $bg }) => $bg};
-  color: ${({ $text }) => $text};
-  border-radius: 20px;
-  padding: 3px 9px;
-  letter-spacing: 0.2px;
-`;
-
-const LegendCount = styled.span`
-  font-size: 10px;
-  font-weight: 700;
-  opacity: 0.9;
-`;
-
-// ---- Phase Distribution Bar -----------------------------------------------
+// ---- Phase Distribution Bar — mockup `.distro` (l.130-138) -----------------
 
 const DistributionSection = styled.div`
-  padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  ${glassPanel}
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border-radius: 16px;
+`;
+
+const DistributionLabelRow = styled.div`
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
   gap: 12px;
 `;
 
-const DistributionLabel = styled.span`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
+const DistributionTitle = styled.span`
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
+`;
+
+const DistributionValue = styled.span`
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.muted};
+  text-align: right;
 `;
 
 const DistributionBar = styled.div`
   display: flex;
   height: 10px;
-  border-radius: 6px;
+  border-radius: 99px;
   overflow: hidden;
-  flex: 1;
-  background: ${({ theme }) => theme.colors.surface};
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid rgba(180, 200, 220, 0.1);
 `;
 
-interface DistributionSegmentProps {
-  $color: string;
-  $pct: number;
-}
-
-const DistributionSegment = styled.div<DistributionSegmentProps>`
-  background: ${({ $color }) => $color};
+const DistributionSegment = styled.div<{ $phaseKey: string; $pct: number }>`
+  height: 100%;
   width: ${({ $pct }) => $pct}%;
-  transition: width 300ms ease-in-out;
   min-width: ${({ $pct }) => ($pct > 0 ? '4px' : '0')};
+  transition: width 300ms ease-in-out;
+  background: ${({ theme, $phaseKey }) =>
+    (theme.colors.phase as Record<string, string>)[$phaseKey]};
+  box-shadow: 0 0 10px
+    ${({ theme, $phaseKey }) => (theme.colors.phase as Record<string, string>)[$phaseKey]}80;
 `;
 
-// ---- Filters Bar -----------------------------------------------------------
+// ---- Filters Bar — mockup `.controls`/`.field` (l.140-154) -----------------
 
 const FiltersBar = styled.div`
   display: flex;
   align-items: flex-end;
-  gap: 16px;
-  padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  gap: 14px;
   flex-wrap: wrap;
+  margin-bottom: 18px;
 `;
 
-interface FilterGroupProps {
-  $grow?: boolean;
-}
-
-const FilterGroup = styled.div<FilterGroupProps>`
+const FilterGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: ${({ $grow }) => ($grow ? 1 : 'none')};
-  min-width: 0;
+  gap: 6px;
 `;
 
 const FilterLabel = styled.label`
-  font-size: 10px;
+  ${monoLabel}
+  font-size: 0.58rem;
+  color: ${({ theme }) => theme.colors.muted};
+`;
+
+const fieldStyles = `
+  border-radius: 11px;
+  padding: 10px 14px;
+  font-size: 0.86rem;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  outline: none;
 `;
 
 const FilterSelect = styled.select`
-  padding: 7px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 13px;
+  ${glassControl}
+  ${fieldStyles}
+  appearance: none;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
-  cursor: pointer;
-  outline: none;
-  min-width: 180px;
-  transition: border-color 150ms;
+  min-width: 190px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23B4C8DC' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
 
   option {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.cosmosHi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}40`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FilterInput = styled.input`
-  padding: 7px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 13px;
+  ${glassControl}
+  ${fieldStyles}
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
-  outline: none;
-  min-width: 160px;
-  transition: border-color 150ms;
+  min-width: 230px;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
+    font-weight: 400;
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}40`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
-`;
-
-const PhaseChipRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-`;
-
-interface PhaseFilterChipProps {
-  $bg: string;
-  $text: string;
-  $active: boolean;
-}
-
-const PhaseFilterChip = styled.button<PhaseFilterChipProps>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 20px;
-  padding: 4px 10px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 150ms ease-in-out;
-  letter-spacing: 0.2px;
-
-  background: ${({ $active, $bg }) => ($active ? $bg : 'transparent')};
-  color: ${({ $active, $bg, $text }) =>
-    $active ? $text : $bg};
-  border-color: ${({ $bg }) => $bg};
-  opacity: ${({ $active }) => ($active ? 1 : 0.6)};
-
-  &:hover {
-    opacity: 1;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
-  }
-`;
-
-interface PhaseChipCountProps {
-  $active: boolean;
-}
-
-const PhaseChipCount = styled.span<PhaseChipCountProps>`
-  font-size: 10px;
-  font-weight: 700;
 `;
 
 const ClearBtn = styled.button`
-  padding: 7px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassControl}
+  padding: 10px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 12px;
-  font-weight: 500;
+  color: ${({ theme }) => theme.colors.celeste};
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  align-self: flex-end;
-  transition: all 150ms;
+  align-self: center;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
     color: ${({ theme }) => theme.colors.textPrimary};
+    border-color: ${({ theme }) => theme.colors.glass.border};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
-// ---- Main Grid Area --------------------------------------------------------
+// ---- Phase filter pills — mockup `.pills`/`.pill` (l.156-175) --------------
 
-const GridArea = styled.main`
+const Pills = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 34px;
+`;
+
+const Pill = styled.button<{ $phaseKey: string; $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 6px 13px;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  background: ${({ theme, $active, $phaseKey }) =>
+    $active
+      ? hexToRgba((theme.colors.phase as Record<string, string>)[$phaseKey], 0.14)
+      : 'rgba(23, 29, 64, 0.35)'};
+  border: 1px solid
+    ${({ theme, $active, $phaseKey }) =>
+      $active ? (theme.colors.phase as Record<string, string>)[$phaseKey] : theme.colors.line};
+  color: ${({ theme, $active }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: ${({ theme, $active, $phaseKey }) =>
+    $active
+      ? `0 0 18px ${hexToRgba((theme.colors.phase as Record<string, string>)[$phaseKey], 0.3)}`
+      : 'none'};
+
+  &:hover {
+    border-color: rgba(180, 200, 220, 0.4);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`;
+
+const PillDot = styled.span`
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+`;
+
+const PillCount = styled.small`
+  font-weight: 400;
+  opacity: 0.75;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.62rem;
+`;
+
+// ---- Facility groups — mockup `.group`/`.group-h` (l.177-184) --------------
+
+const GridArea = styled.div`
   flex: 1;
-  padding: 20px 24px 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
 `;
 
-const FacilitySection = styled.section`
-  /* no background — stays in the dark page context */
+const FacilityGroup = styled.section`
+  margin-bottom: 12px;
 `;
 
-const FacilityHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-`;
-
-const FacilityMeta = styled.div`
+const GroupHeader = styled.div`
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 64px;
+    height: 1px;
+    background: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 8px rgba(220, 185, 79, 0.6);
+  }
 `;
 
-const FacilityName = styled.h2`
-  font-size: 14px;
-  font-weight: 700;
+const GroupTitle = styled.h2`
+  font-size: 1.05rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.03em;
 `;
 
-const FacilityLocation = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+const GroupSub = styled.span`
+  font-size: 0.76rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const FacilityRoomCount = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+const GroupCount = styled.span`
+  margin-left: auto;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -818,33 +709,32 @@ const FacilityRoomCount = styled.span`
 `;
 
 const TotalRoomHint = styled.span`
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const CompactGrid = styled.div`
+const Cards = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
 `;
 
 const FacilityLoadingRow = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: 0.85rem;
+  color: ${({ theme }) => theme.colors.muted};
   padding: 16px 0;
 `;
 
 const FacilityEmptyMsg = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: 0.85rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   padding: 16px 0;
-  font-style: italic;
 `;
 
-// ---- Full-page states ------------------------------------------------------
+// ---- Full-page states — spec §4 "Empty states" ------------------------------
 
 const LoadingOverlay = styled.div`
   display: flex;
@@ -856,8 +746,8 @@ const LoadingOverlay = styled.div`
 `;
 
 const LoadingMsg = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
@@ -871,29 +761,27 @@ const EmptyPage = styled.div`
 `;
 
 const EmptyPageTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 8px 0;
 `;
 
 const EmptyPageText = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
 // ---- Spinner ----------------------------------------------------------------
 
-interface SpinnerProps {
-  $small?: boolean;
-}
-
-const Spinner = styled.div<SpinnerProps>`
+const Spinner = styled.div<{ $small?: boolean }>`
   width: ${({ $small }) => ($small ? '16px' : '36px')};
   height: ${({ $small }) => ($small ? '16px' : '36px')};
-  border: ${({ $small }) => ($small ? '2px' : '3px')} solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: ${({ $small }) => ($small ? '2px' : '3px')} solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spinAnim 0.9s linear infinite;
 

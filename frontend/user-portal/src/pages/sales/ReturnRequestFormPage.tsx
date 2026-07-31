@@ -29,6 +29,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import {
   useReturnRequest,
   useCreateReturnRequestFromDelivery,
@@ -100,12 +101,12 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
-  &:hover { text-decoration: underline; }
+  &:hover { text-decoration: underline; color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const Title = styled.h1`
@@ -116,9 +117,7 @@ const Title = styled.h1`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -143,60 +142,57 @@ const Field = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[400]}; }
-  &:disabled { background: ${({ theme }) => theme.colors.neutral[100]}; color: ${({ theme }) => theme.colors.textSecondary}; }
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
+  &:disabled { color: ${({ theme }) => theme.colors.muted}; }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[400]}; }
-  &:disabled { background: ${({ theme }) => theme.colors.neutral[100]}; color: ${({ theme }) => theme.colors.textSecondary}; }
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
+  &:disabled { color: ${({ theme }) => theme.colors.muted}; }
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 72px;
   font-family: inherit;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[400]}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const LockedValue = styled.div`
+  ${glassControl}
   padding: 9px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Table = styled.table`
@@ -205,15 +201,11 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 9px 10px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -221,36 +213,39 @@ const Td = styled.td`
   padding: 8px 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: top;
 `;
 
 const TdInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.border)};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &:disabled { background: ${({ theme }) => theme.colors.neutral[100]}; color: ${({ theme }) => theme.colors.textSecondary}; }
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
+  &:disabled { color: ${({ theme }) => theme.colors.muted}; }
 `;
 
 const MaxQtyHint = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 2px;
   display: block;
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DeleteLineButton = styled.button`
   padding: 5px 8px;
-  background: none;
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  background: rgba(240, 138, 112, 0.16);
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 6px;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  transition: background 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.26); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
@@ -261,61 +256,67 @@ const ActionBar = styled.div`
   margin-top: 8px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   padding: 10px 28px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primary[600]}; }
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 10px 22px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const SubmitError = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   margin-bottom: 16px;
 `;
 
 const SourceBanner = styled.div`
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   margin-bottom: 20px;
 `;
 
 /**
- * T-201.8 — contextual help note shown in the Lines section of direct-create mode.
+ * T-201.8 - contextual help note shown in the Lines section of direct-create mode.
  * Inlined within the Card to sit just above the table.
  */
 const DirectCreateNote = styled.div`
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   margin-bottom: 16px;
 `;
 

@@ -5,6 +5,7 @@
  * observations and lineage.
  */
 
+import axios from 'axios';
 import { apiClient } from './api';
 import type {
   Accession,
@@ -164,6 +165,72 @@ export async function splitAccession(
 ): Promise<SplitResult> {
   const { data } = await apiClient.post(`${BASE}/accessions/${accessionId}/split`, payload);
   return data.data;
+}
+
+// ============================================================================
+// LABELS (T-804 §5.1) — GET .../labels?from=&to=&size=, application/pdf.
+// A read in permission (require_view) but not in effect: a successful call
+// raises the accession's labelledVesselCount server-side, spec §5.1.
+// ============================================================================
+
+export interface GetLabelsPdfParams {
+  from?: number;
+  to?: number;
+  // Mirrors _TAPE_PRINTABLE_PX in src/modules/genetics/api/v1/labels.py.
+  // 62x20 (continuous) is the recommended size: it holds a flat 0.486mm QR
+  // module across every vessel number, where 17x87 drops a QR version at
+  // vessel #10 and falls to 0.340mm mid-batch.
+  size?: '62x20' | '29x90' | '17x87';
+}
+
+export interface LabelsPdfResult {
+  blob: Blob;
+  /** Read off the response's Content-Disposition header — authoritative,
+   * never constructed client-side (the backend embeds the accession code
+   * and the resolved from/to range in it). */
+  filename: string;
+}
+
+/**
+ * Fetch a print-ready label PDF for a vessel range.
+ *
+ * `responseType: 'blob'` applies to error bodies too, not just success ones
+ * — a 400 (bad range/size) arrives as a Blob containing the JSON error, not
+ * parsed JSON. Unwrapped here so a caller sees a normal `Error` carrying the
+ * backend's actual `detail` text via `.message`, matching how every other
+ * genetics mutation in this module surfaces its error.
+ */
+export async function getLabelsPdf(
+  accessionId: string,
+  params: GetLabelsPdfParams = {}
+): Promise<LabelsPdfResult> {
+  try {
+    const response = await apiClient.get(`${BASE}/accessions/${accessionId}/labels`, {
+      params,
+      responseType: 'blob',
+    });
+    const disposition = response.headers['content-disposition'] as string | undefined;
+    const match = disposition ? /filename="([^"]+)"/.exec(disposition) : null;
+    return {
+      blob: response.data as Blob,
+      filename: match?.[1] ?? `labels-${accessionId}.pdf`,
+    };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data instanceof Blob) {
+      const text = await err.response.data.text();
+      let detail: string | undefined;
+      try {
+        detail = (JSON.parse(text) as { detail?: string }).detail;
+      } catch {
+        // Error body wasn't JSON — leave detail undefined, fall through to
+        // rethrowing the original AxiosError below.
+      }
+      if (detail) {
+        throw new Error(detail);
+      }
+    }
+    throw err;
+  }
 }
 
 // ============================================================================

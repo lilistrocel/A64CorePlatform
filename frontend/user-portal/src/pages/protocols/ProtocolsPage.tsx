@@ -11,10 +11,13 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { phaseBadge } from '@a64core/shared';
+import { ClipboardList, Plus, Check } from 'lucide-react';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { ProtocolFormModal } from '../../components/protocols/ProtocolFormModal';
 import { ProtocolViewModal } from '../../components/protocols/ProtocolViewModal';
+import { PROTOCOL_CATEGORY_ICON_COMPONENTS } from '../../components/protocols/categoryIcons';
+import { PROTOCOL_STATUS_TO_PHASE } from '../../components/protocols/statusPhase';
 import {
   Banner,
   Button,
@@ -33,27 +36,12 @@ import {
 import { useApproveProtocol, useProtocols } from '../../hooks/protocols/useProtocols';
 import type { Protocol, ProtocolCategory, ProtocolStatus } from '../../types/protocols';
 import {
-  PROTOCOL_CATEGORY_ICONS,
   PROTOCOL_CATEGORY_LABELS,
   PROTOCOL_STATUS_LABELS,
 } from '../../types/protocols';
 
-function getStatusStyles(theme: Theme): Record<ProtocolStatus, { bg: string; fg: string }> {
-  return {
-    draft: { bg: theme.colors.warningBg, fg: theme.colors.gold[800] },
-    active: { bg: theme.colors.successBg, fg: theme.colors.emerald[700] },
-    retired: { bg: theme.colors.neutral[100], fg: theme.colors.neutral[700] },
-  };
-}
-
 const StatusBadge = styled.span<{ $status: ProtocolStatus }>`
-  display: inline-flex;
-  padding: 3px 9px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: 12px;
-  font-weight: 700;
-  background: ${({ $status, theme }) => getStatusStyles(theme)[$status].bg};
-  color: ${({ $status, theme }) => getStatusStyles(theme)[$status].fg};
+  ${({ $status }) => phaseBadge(PROTOCOL_STATUS_TO_PHASE[$status])}
 `;
 
 const ProtocolCard = styled(Card)`
@@ -101,7 +89,13 @@ const Meta = styled.div`
   font-size: 11.5px;
   color: ${({ theme }) => theme.colors.textSecondary};
   padding-top: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const CategoryLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 `;
 
 const ScopeRow = styled.div`
@@ -152,14 +146,19 @@ export function ProtocolsPage() {
     <PageWrap>
       <PageHeader>
         <div>
-          <PageTitle>📋 Protocols<HelpButton topic="protocols.library" /></PageTitle>
+          <PageTitle>
+            <ClipboardList size={22} strokeWidth={1.6} /> Protocols
+            <HelpButton topic="protocols.library" />
+          </PageTitle>
           <PageSubtitle>
             Written procedures — how a job is done here. Only approved protocols are
             offered when recording work, and revising one returns it to draft for
             re-approval.
           </PageSubtitle>
         </div>
-        <Button onClick={() => setShowCreate(true)}>+ New protocol</Button>
+        <Button onClick={() => setShowCreate(true)}>
+          <Plus size={15} strokeWidth={2} /> New protocol
+        </Button>
       </PageHeader>
 
       {draftCount > 0 && (
@@ -179,7 +178,7 @@ export function ProtocolsPage() {
           <option value="">All categories</option>
           {(Object.keys(PROTOCOL_CATEGORY_LABELS) as ProtocolCategory[]).map((c) => (
             <option key={c} value={c}>
-              {PROTOCOL_CATEGORY_ICONS[c]} {PROTOCOL_CATEGORY_LABELS[c]}
+              {PROTOCOL_CATEGORY_LABELS[c]}
             </option>
           ))}
         </FilterSelect>
@@ -299,15 +298,22 @@ function ProtocolRow({
       )}
 
       <Meta>
-        <span>
-          {PROTOCOL_CATEGORY_ICONS[protocol.category]}{' '}
+        <CategoryLabel>
+          {(() => {
+            const CategoryIcon = PROTOCOL_CATEGORY_ICON_COMPONENTS[protocol.category];
+            return <CategoryIcon size={12} strokeWidth={1.8} />;
+          })()}
           {PROTOCOL_CATEGORY_LABELS[protocol.category]}
-        </span>
+        </CategoryLabel>
         <span>{protocol.steps.length} steps</span>
         {protocol.steps.some((s) => s.isCritical) && (
           <span>{protocol.steps.filter((s) => s.isCritical).length} critical</span>
         )}
-        {protocol.approvedByName && <span>✓ {protocol.approvedByName}</span>}
+        {protocol.approvedByName && (
+          <CategoryLabel>
+            <Check size={12} strokeWidth={2} /> {protocol.approvedByName}
+          </CategoryLabel>
+        )}
       </Meta>
 
       <Actions onClick={(e) => e.stopPropagation()}>

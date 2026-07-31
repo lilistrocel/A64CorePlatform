@@ -21,6 +21,7 @@
 
 import { useState, useMemo } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceCompanies } from '../../hooks/queries/useFinanceCompanies';
 import { useTrialBalance, useFinancePeriods } from '../../hooks/queries/useTrialBalance';
@@ -64,38 +65,17 @@ function isZeroBalance(acc: TrialBalanceAccount): boolean {
 
 // ─── Styled components ─────────────────────────────────────────────────────────
 
+// Page floor stays transparent — the sky shows through; only cards/panels below get glass.
 const PageContainer = styled.div`
   padding: 24px 32px;
   max-width: 1400px;
   margin: 0 auto;
 `;
 
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 0 24px;
-  line-height: 1.55;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  margin-bottom: 24px;
-`;
-
 // ─── Toolbar ───────────────────────────────────────────────────────────────────
 
 const ToolbarCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 18px 22px;
   margin-bottom: 24px;
 `;
@@ -114,40 +94,36 @@ const ToolbarField = styled.div`
 `;
 
 const ToolbarLabel = styled.label`
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ToolbarSelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 180px;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const ToolbarDateInput = styled.input`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -156,30 +132,38 @@ const ToggleRow = styled.label`
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   user-select: none;
   padding-bottom: 2px;
 `;
 
+// This page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Was `primary[500]` (lapis) + `onAccent`, the exact
+// onAccent-on-non-gold bug the redesign flags — "Generate" is this page's
+// single primary action, so it earns the gold treatment (spec §3), which
+// makes onAccent correct again (dark text on a genuinely gold fill).
 const GenerateButton = styled.button`
   padding: 10px 22px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
@@ -191,21 +175,24 @@ const DisplayToggleRow = styled.div`
   gap: 16px;
   margin-bottom: 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-// ─── Report meta header ────────────────────────────────────────────────────────
+// ─── Report panel (meta bar + table, one glass layer) ──────────────────────────
+
+const ReportPanel = styled.div`
+  ${glassPanel}
+  overflow: hidden;
+`;
 
 const ReportMetaBar = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 10px 10px 0 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ReportMetaTitle = styled.span`
@@ -214,13 +201,12 @@ const ReportMetaTitle = styled.span`
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
+// Dense table, spec §4: transparent rows/header, Space Mono uppercase celeste
+// column headers, `line` row dividers. Already sits inside ReportPanel — no
+// per-row glass.
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top: none;
-  border-radius: 0 0 12px 12px;
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const TBTable = styled.table`
@@ -230,21 +216,16 @@ const TBTable = styled.table`
 `;
 
 const TBTHead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  background: transparent;
 `;
 
 const TBTh = styled.th`
+  ${monoLabel}
   padding: 12px 16px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -255,25 +236,24 @@ const TBThRight = styled(TBTh)`
 // ─── Drawer group separator row ────────────────────────────────────────────────
 
 const DrawerHeaderRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(180, 200, 220, 0.05);
+  border-top: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const DrawerHeaderCell = styled.td`
+  ${monoLabel}
   padding: 8px 16px;
-  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // ─── Data rows ─────────────────────────────────────────────────────────────────
 
 const TBTr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  transition: background 100ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -295,7 +275,7 @@ const AccountNumberCell = styled.td`
   padding: 11px 16px;
   font-size: 12px;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
 `;
 
@@ -306,8 +286,8 @@ interface TotalRowProps {
 }
 
 const TotalsTRow = styled.tr<TotalRowProps>`
-  border-top: 3px double ${({ $outOfBalance, theme }) =>
-    $outOfBalance ? theme.colors.error : theme.colors.border};
+  border-top: 2px solid ${({ $outOfBalance, theme }) =>
+    $outOfBalance ? theme.colors.error : theme.colors.line};
   background: ${({ $outOfBalance, theme }) =>
     $outOfBalance ? theme.colors.errorBg : 'transparent'};
 `;
@@ -341,15 +321,25 @@ const OutOfBalanceLabel = styled.span`
 const EmptyState = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   line-height: 1.6;
+`;
+
+// Empty-state headline, spec §4/§9: Fraunces italic celeste.
+const EmptyTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const LoadingOverlay = styled.div`
   padding: 48px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -357,18 +347,25 @@ const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
 `;
 
+// "Includes voided JEs" is a report-data qualifier, not a document status —
+// uses the generic `warning` semantic token (gold-b), which is distinct from
+// `secondary` chrome gold (spec §1.1: warning is its own named hue, not
+// subject to the gold-discipline budget in §3).
 const VoidedIncludedPill = styled.span`
+  ${monoLabel}
   font-size: 11px;
-  padding: 2px 10px;
+  padding: 3px 10px;
   border-radius: 99px;
   background: ${({ theme }) => theme.colors.warningBg};
-  color: ${({ theme }) => theme.colors.gold[800]};
-  font-weight: 600;
+  color: ${({ theme }) => theme.colors.warning};
+  border: 1px solid rgba(232, 200, 106, 0.45);
+  font-weight: 700;
 `;
 
 // ─── Main component ────────────────────────────────────────────────────────────
@@ -511,12 +508,11 @@ export function TrialBalancePage() {
 
   return (
     <PageContainer>
-      <PageTitle>Trial Balance</PageTitle>
-      <PageSubtitle>
-        A summary of all GL account balances as of a selected date. Debit and Credit totals
-        must be equal — an imbalance indicates a data integrity issue.
-      </PageSubtitle>
-      <Divider />
+      <PageHeader
+        breadcrumb="FINANCE · GENERAL LEDGER"
+        title="Trial Balance"
+        description="A summary of all GL account balances as of a selected date. Debit and Credit totals must be equal — an imbalance indicates a data integrity issue."
+      />
 
       {/* ── Toolbar ── */}
       <ToolbarCard>
@@ -633,6 +629,7 @@ export function TrialBalancePage() {
       {/* ── Empty before first generate ── */}
       {!queryEnabled && !report && !reportLoading && !reportError && (
         <EmptyState>
+          <EmptyTitle>No report generated yet</EmptyTitle>
           Select a company and date above, then click <strong>Generate</strong> to view
           the trial balance.
         </EmptyState>
@@ -658,101 +655,108 @@ export function TrialBalancePage() {
             )}
           </DisplayToggleRow>
 
-          {/* ── Report meta header ── */}
-          <ReportMetaBar>
-            <ReportMetaTitle>
-              Trial Balance — {report.companyCode}
-            </ReportMetaTitle>
-            <span>
-              As of <strong>{report.asOfDate}</strong>
-              {report.periodId ? ` · Period ${report.periodId}` : ''}
-              {' · '}
-              Generated{' '}
-              {new Date(report.generatedAt).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-          </ReportMetaBar>
-
           {visibleAccounts.length === 0 ? (
-            <TableWrapper>
+            <ReportPanel>
+              <ReportMetaBar>
+                <ReportMetaTitle>
+                  Trial Balance — {report.companyCode}
+                </ReportMetaTitle>
+                <span>As of <strong>{report.asOfDate}</strong></span>
+              </ReportMetaBar>
               <EmptyState>
                 No accounts with activity found for the selected period.
                 {!showZeroBalances && ' Try enabling "Show zero-balance accounts".'}
               </EmptyState>
-            </TableWrapper>
+            </ReportPanel>
           ) : (
-            <TableWrapper>
-              <TBTable role="table" aria-label="Trial Balance">
-                <TBTHead>
-                  <tr>
-                    <TBTh scope="col">Account Number</TBTh>
-                    <TBTh scope="col">Account Name</TBTh>
-                    <TBTh scope="col">Drawer</TBTh>
-                    <TBThRight scope="col">Total Debit (AED)</TBThRight>
-                    <TBThRight scope="col">Total Credit (AED)</TBThRight>
-                  </tr>
-                </TBTHead>
-                <tbody>
-                  {drawers.map((drawer) => {
-                    const accounts = byDrawer.get(drawer) ?? [];
-                    return (
-                      <>
-                        {/* Drawer section header */}
-                        <DrawerHeaderRow key={`drawer-${drawer}`}>
-                          <DrawerHeaderCell colSpan={5}>
-                            {drawer}
-                          </DrawerHeaderCell>
-                        </DrawerHeaderRow>
-
-                        {/* Account rows */}
-                        {accounts.map((acc) => (
-                          <TBTr key={acc.accountId}>
-                            <AccountNumberCell>{acc.accountNumber}</AccountNumberCell>
-                            <TBTd>{acc.accountName}</TBTd>
-                            <TBTd style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-                              {acc.drawer}
-                            </TBTd>
-                            <TBTdMono>
-                              {parseFloat(acc.totalDebit) !== 0
-                                ? formatNumber(acc.totalDebit)
-                                : ''}
-                            </TBTdMono>
-                            <TBTdMono>
-                              {parseFloat(acc.totalCredit) !== 0
-                                ? formatNumber(acc.totalCredit)
-                                : ''}
-                            </TBTdMono>
-                          </TBTr>
-                        ))}
-                      </>
-                    );
+            <ReportPanel>
+              <ReportMetaBar>
+                <ReportMetaTitle>
+                  Trial Balance — {report.companyCode}
+                </ReportMetaTitle>
+                <span>
+                  As of <strong>{report.asOfDate}</strong>
+                  {report.periodId ? ` · Period ${report.periodId}` : ''}
+                  {' · '}
+                  Generated{' '}
+                  {new Date(report.generatedAt).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
                   })}
-                </tbody>
-                <tfoot>
-                  <TotalsTRow $outOfBalance={outOfBalance}>
-                    <TotalsTd colSpan={3}>
-                      Totals
-                      {outOfBalance && (
-                        <OutOfBalanceLabel>
-                          Books out of balance — contact administrator.
-                        </OutOfBalanceLabel>
-                      )}
-                    </TotalsTd>
-                    <TotalsTdMono $outOfBalance={outOfBalance}>
-                      {formatNumber(report.totals.totalDebit)}
-                    </TotalsTdMono>
-                    <TotalsTdMono $outOfBalance={outOfBalance}>
-                      {formatNumber(report.totals.totalCredit)}
-                    </TotalsTdMono>
-                  </TotalsTRow>
-                </tfoot>
-              </TBTable>
-            </TableWrapper>
+                </span>
+              </ReportMetaBar>
+
+              <TableWrapper>
+                <TBTable role="table" aria-label="Trial Balance">
+                  <TBTHead>
+                    <tr>
+                      <TBTh scope="col">Account Number</TBTh>
+                      <TBTh scope="col">Account Name</TBTh>
+                      <TBTh scope="col">Drawer</TBTh>
+                      <TBThRight scope="col">Total Debit (AED)</TBThRight>
+                      <TBThRight scope="col">Total Credit (AED)</TBThRight>
+                    </tr>
+                  </TBTHead>
+                  <tbody>
+                    {drawers.map((drawer) => {
+                      const accounts = byDrawer.get(drawer) ?? [];
+                      return (
+                        <>
+                          {/* Drawer section header */}
+                          <DrawerHeaderRow key={`drawer-${drawer}`}>
+                            <DrawerHeaderCell colSpan={5}>
+                              {drawer}
+                            </DrawerHeaderCell>
+                          </DrawerHeaderRow>
+
+                          {/* Account rows */}
+                          {accounts.map((acc) => (
+                            <TBTr key={acc.accountId}>
+                              <AccountNumberCell>{acc.accountNumber}</AccountNumberCell>
+                              <TBTd>{acc.accountName}</TBTd>
+                              <TBTd style={{ fontSize: 12, color: theme.colors.muted }}>
+                                {acc.drawer}
+                              </TBTd>
+                              <TBTdMono>
+                                {parseFloat(acc.totalDebit) !== 0
+                                  ? formatNumber(acc.totalDebit)
+                                  : ''}
+                              </TBTdMono>
+                              <TBTdMono>
+                                {parseFloat(acc.totalCredit) !== 0
+                                  ? formatNumber(acc.totalCredit)
+                                  : ''}
+                              </TBTdMono>
+                            </TBTr>
+                          ))}
+                        </>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <TotalsTRow $outOfBalance={outOfBalance}>
+                      <TotalsTd colSpan={3}>
+                        Totals
+                        {outOfBalance && (
+                          <OutOfBalanceLabel>
+                            Books out of balance — contact administrator.
+                          </OutOfBalanceLabel>
+                        )}
+                      </TotalsTd>
+                      <TotalsTdMono $outOfBalance={outOfBalance}>
+                        {formatNumber(report.totals.totalDebit)}
+                      </TotalsTdMono>
+                      <TotalsTdMono $outOfBalance={outOfBalance}>
+                        {formatNumber(report.totals.totalCredit)}
+                      </TotalsTdMono>
+                    </TotalsTRow>
+                  </tfoot>
+                </TBTable>
+              </TableWrapper>
+            </ReportPanel>
           )}
         </>
       )}

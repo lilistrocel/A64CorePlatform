@@ -18,7 +18,7 @@ import type { TaskWithDetails, TaskStatus, TaskType } from '../../types/tasks';
 import {
   TASK_TYPE_COLORS,
   TASK_TYPE_LABELS,
-  TASK_TYPE_ICONS,
+  TASK_TYPE_ICON_COMPONENTS,
   TASK_STATUS_COLORS,
   TASK_STATUS_LABELS,
 } from '../../types/tasks';
@@ -177,6 +177,7 @@ export function BlockTaskList() {
         <TaskList>
           {filteredTasks.map((task) => {
             const overdue = isTaskOverdue(task);
+            const TypeIcon = TASK_TYPE_ICON_COMPONENTS[task.taskType];
             return (
               <TaskCard
                 key={task.taskId}
@@ -185,7 +186,9 @@ export function BlockTaskList() {
                 $overdue={overdue}
               >
                 <TaskHeader>
-                  <TaskTypeIcon>{TASK_TYPE_ICONS[task.taskType]}</TaskTypeIcon>
+                  <TaskTypeIcon>
+                    <TypeIcon size={22} strokeWidth={1.7} />
+                  </TaskTypeIcon>
                   <TaskInfo>
                     <TaskTitle>{task.title}</TaskTitle>
                     <TaskType $color={TASK_TYPE_COLORS[task.taskType]}>
@@ -474,7 +477,9 @@ const TaskHeader = styled.div`
 `;
 
 const TaskTypeIcon = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
+  display: flex;
+  align-items: center;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const TaskInfo = styled.div`
@@ -557,7 +562,7 @@ const MetaText = styled.span<{ $overdue?: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme, $overdue }) => ($overdue ? theme.colors.error : theme.colors.textSecondary)};
   font-weight: ${({ theme, $overdue }) =>
-    $overdue ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.normal};
+    $overdue ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.regular};
 `;
 
 const ActionPrompt = styled.div`

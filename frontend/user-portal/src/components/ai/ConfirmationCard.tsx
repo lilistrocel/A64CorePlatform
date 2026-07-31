@@ -146,7 +146,9 @@ const ApproveButton = styled.button`
   padding: 8px 16px;
   min-height: 44px;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* success/emerald is a bright fill, not gold — onDark (spec §1.1 onAccent
+     audit), not onAccent. */
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: 8px;
   font-size: 13px;

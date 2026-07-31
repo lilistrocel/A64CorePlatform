@@ -4,9 +4,11 @@
  * Compact employee info card for displaying employee details in a summary view.
  */
 
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { Mail, Smartphone, Building2 } from 'lucide-react';
 import type { Employee } from '../../types/hr';
-import { getEmployeeFullName, getEmployeeStatusColor, getEmployeeStatusLabel } from '../../services/hrService';
+import { getEmployeeFullName, getEmployeeStatusLabel, getEmployeeStatusColor } from '../../services/hrService';
+import { glassPanel, glassPanelHover, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -25,21 +27,9 @@ export interface EmployeeCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $clickable: boolean }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 8px;
+  ${({ $clickable }) => ($clickable ? glassPanelHover : glassPanel)}
   padding: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-  cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
-
-  ${({ $clickable, theme }) =>
-    $clickable &&
-    `
-    &:hover {
-      box-shadow: ${theme.shadows.md};
-      transform: translateY(-2px);
-    }
-  `}
+  border-radius: 16px;
 `;
 
 const CardHeader = styled.div`
@@ -61,21 +51,34 @@ const EmployeeName = styled.h4`
 `;
 
 const EmployeeCode = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+/* Status colour comes from hrService.getEmployeeStatusColor(), already
+   routed onto colors.phase.* (spec §5.2) — applies the §4 badge visual. */
 const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.64rem;
+  font-weight: 700;
+  background: ${({ $color }) => `${$color}29`};
   color: ${({ $color }) => $color};
-  text-transform: capitalize;
+  border: 1px solid ${({ $color }) => `${$color}73`};
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
 `;
 
 const ContactInfo = styled.div`
@@ -94,17 +97,24 @@ const InfoItem = styled.div`
 `;
 
 const InfoIcon = styled.span`
-  font-size: 14px;
-  width: 16px;
-  text-align: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Department = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.surface};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Actions = styled.div`
@@ -112,38 +122,37 @@ const Actions = styled.div`
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const dangerVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+  }
+`;
+
+const defaultVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
   padding: 6px 12px;
-  border-radius: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'danger') {
-      return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
-        &:hover {
-          background: ${theme.colors.errorBg};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
-      &:hover {
-        background: ${theme.colors.primary[50]};
-      }
-    `;
-  }}
+  ${({ $variant }) => ($variant === 'danger' ? dangerVariant : defaultVariant)}
 `;
 
 // ============================================================================
@@ -185,12 +194,12 @@ export function EmployeeCard({
 
       <ContactInfo>
         <InfoItem>
-          <InfoIcon>📧</InfoIcon>
+          <InfoIcon><Mail size={13} strokeWidth={1.6} /></InfoIcon>
           <span>{employee.email}</span>
         </InfoItem>
         {employee.phone && (
           <InfoItem>
-            <InfoIcon>📱</InfoIcon>
+            <InfoIcon><Smartphone size={13} strokeWidth={1.6} /></InfoIcon>
             <span>{employee.phone}</span>
           </InfoItem>
         )}
@@ -198,7 +207,12 @@ export function EmployeeCard({
 
       {(employee.department || employee.position) && (
         <Department>
-          {employee.department && `🏢 ${employee.department}`}
+          {employee.department && (
+            <>
+              <Building2 size={13} strokeWidth={1.6} />
+              {employee.department}
+            </>
+          )}
           {employee.department && employee.position && ' • '}
           {employee.position}
         </Department>

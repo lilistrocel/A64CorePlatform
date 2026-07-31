@@ -42,6 +42,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled, { useTheme } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { X, Circle, Loader2, Check } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { SalesItemCombobox } from './SalesItemCombobox';
 import type { SalesItemSelection } from './SalesItemCombobox';
@@ -94,11 +96,12 @@ type FormValues = z.infer<typeof schema>;
 /**
  * Overlay: intentionally has no onClick handler.
  * Project rule: data-entry modals close only via X button or Cancel.
+ * Canonical modal treatment (spec §4): cosmos scrim + glassPanel at blur 24px.
  */
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,9 +110,10 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 520px;
   max-width: calc(100vw - 32px);
   max-height: 90vh;
@@ -134,23 +138,26 @@ const ModalTitle = styled.h2`
 const ModalTitleSub = styled.span`
   font-size: 0.875rem;
   font-weight: 400;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   display: block;
   margin-top: 2px;
 `;
 
 const ModalClose = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 1.25rem;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   padding: 4px;
   border-radius: 4px;
   line-height: 1;
   flex-shrink: 0;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:disabled {
     opacity: 0.4;
@@ -170,7 +177,7 @@ const ModalFooter = styled.div`
   flex-direction: column;
   gap: 6px;
   padding: 12px 24px 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const FooterButtons = styled.div`
@@ -181,7 +188,7 @@ const FooterButtons = styled.div`
 
 const FooterNote = styled.p`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   text-align: right;
 `;
@@ -199,43 +206,40 @@ const FormLabel = styled.label`
 `;
 
 const RequiredMark = styled.span`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-left: 2px;
 `;
 
 const FormInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.border)};
-  border-radius: 6px;
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
     cursor: not-allowed;
     opacity: 0.7;
   }
 `;
 
 const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
+  ${glassControl}
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.border)};
-  border-radius: 6px;
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   box-sizing: border-box;
   resize: vertical;
@@ -244,13 +248,12 @@ const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
   font-family: inherit;
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
     cursor: not-allowed;
     opacity: 0.7;
   }
@@ -258,7 +261,7 @@ const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
 
 const FormError = styled.span`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const FormRow = styled.div`
@@ -273,12 +276,12 @@ const SubtotalRow = styled.div`
   align-items: center;
   gap: 8px;
   padding: 10px 0 2px;
-  border-top: 1px dashed ${({ theme }) => theme.colors.border};
+  border-top: 1px dashed ${({ theme }) => theme.colors.line};
 `;
 
 const SubtotalLabel = styled.span`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const SubtotalValue = styled.span`
@@ -286,13 +289,16 @@ const SubtotalValue = styled.span`
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
 `;
 
 // ─── Progress panel ───────────────────────────────────────────────────────────
 
+/* One level inside the ModalBox glass panel — plain line-bordered surface
+   rather than a second nested glassPanel (spec §2 two-glass-layer limit). */
 const ProgressPanel = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: rgba(180, 200, 220, 0.04);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   padding: 14px 16px;
   display: flex;
@@ -301,12 +307,9 @@ const ProgressPanel = styled.div`
 `;
 
 const ProgressPanelTitle = styled.p`
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
 `;
 
 const ProgressItem = styled.div`
@@ -324,22 +327,24 @@ const ProgressIcon = styled.span<{ $status: StepStatus }>`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
   margin-top: 1px;
 
   ${({ $status, theme }) => {
     switch ($status) {
       case 'pending':
-        return `background: ${theme.colors.neutral[200]}; color: ${theme.colors.textDisabled};`;
+        return `background: rgba(180, 200, 220, 0.08); color: ${theme.colors.muted};`;
       case 'inProgress':
-        return `background: ${theme.colors.warningBg}; color: ${theme.colors.gold[600]}; animation: pulse 1s ease-in-out infinite;`;
+        return `background: ${theme.colors.warningBg}; color: ${theme.colors.bright.gold}; animation: pulse 1s ease-in-out infinite;`;
       case 'success':
-        return `background: ${theme.colors.successBg}; color: ${theme.colors.emerald[600]};`;
+        return `background: ${theme.colors.successBg}; color: ${theme.colors.bright.emerald};`;
       case 'failure':
-        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[600]};`;
+        return `background: ${theme.colors.errorBg}; color: ${theme.colors.bright.coral};`;
     }
   }}
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -355,33 +360,36 @@ const ProgressText = styled.div`
 
 const ProgressLabel = styled.span<{ $status: StepStatus }>`
   color: ${({ $status, theme }) => {
-    if ($status === 'success') return theme.colors.emerald[600];
-    if ($status === 'failure') return theme.colors.terracotta[600];
-    if ($status === 'inProgress') return theme.colors.gold[600];
-    return theme.colors.textSecondary;
+    if ($status === 'success') return theme.colors.bright.emerald;
+    if ($status === 'failure') return theme.colors.bright.coral;
+    if ($status === 'inProgress') return theme.colors.bright.gold;
+    return theme.colors.celeste;
   }};
 `;
 
 const ProgressError = styled.span`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 // ─── Buttons ──────────────────────────────────────────────────────────────────
 
+// Primary CTA — the one gold budget item in this modal (spec §3/§4).
 const SubmitButton = styled.button<{ $loading?: boolean }>`
   padding: 9px 22px;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
   opacity: ${({ $loading }) => ($loading ? 0.7 : 1)};
-  transition: opacity 0.15s, background 0.15s;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
   &:hover:not([disabled]) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     cursor: not-allowed;
@@ -390,16 +398,14 @@ const SubmitButton = styled.button<{ $loading?: boolean }>`
 `;
 
 const CancelButton = styled.button`
+  ${glassControl}
   padding: 9px 22px;
-  border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -705,7 +711,7 @@ export function QuickServiceChargeModal({
             onClick={onClose}
             disabled={isRunning}
           >
-            ×
+            <X size={18} strokeWidth={1.8} />
           </ModalClose>
         </ModalHeader>
 
@@ -826,10 +832,10 @@ export function QuickServiceChargeModal({
               {steps.map((step, i) => (
                 <ProgressItem key={i}>
                   <ProgressIcon $status={step.status} aria-hidden="true">
-                    {step.status === 'pending' && '○'}
-                    {step.status === 'inProgress' && '⏳'}
-                    {step.status === 'success' && '✓'}
-                    {step.status === 'failure' && '✗'}
+                    {step.status === 'pending' && <Circle size={11} strokeWidth={2.5} />}
+                    {step.status === 'inProgress' && <Loader2 size={11} strokeWidth={2.5} />}
+                    {step.status === 'success' && <Check size={13} strokeWidth={3} />}
+                    {step.status === 'failure' && <X size={12} strokeWidth={3} />}
                   </ProgressIcon>
                   <ProgressText>
                     <ProgressLabel $status={step.status}>{step.label}</ProgressLabel>

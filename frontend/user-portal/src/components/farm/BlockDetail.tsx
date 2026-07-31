@@ -8,11 +8,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import styled, { useTheme } from 'styled-components';
+import { Trash2, Sprout, ArrowRight } from 'lucide-react';
 import { farmApi } from '../../services/farmApi';
 import { queryKeys } from '../../config/react-query.config';
-import { Breadcrumb } from '@a64core/shared';
+import { Breadcrumb, glassPanel, monoLabel, phaseBadge } from '@a64core/shared';
 import type { BreadcrumbItem } from '@a64core/shared';
-import type { Block, BlockSummary } from '../../types/farm';
+import type { Block, BlockSummary, BlockState } from '../../types/farm';
+import { BLOCK_STATE_PHASE_KEYS } from '../../types/farm';
 import { formatNumber, formatPercentage } from '../../utils';
 
 // Import tab components
@@ -40,25 +42,24 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   margin-bottom: 24px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const Header = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 32px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   margin-bottom: 32px;
 `;
 
@@ -77,48 +78,28 @@ const TitleRow = styled.div`
 const TitleSection = styled.div``;
 
 const BlockTitle = styled.h1`
+  display: flex;
+  align-items: center;
   font-size: 36px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const BlockMeta = styled.div`
+  ${monoLabel}
   display: flex;
   gap: 16px;
   align-items: center;
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const StatusBadge = styled.span<{ $status: string }>`
-  display: inline-block;
+// The §4 badge pattern via the shared phaseBadge mixin.
+const StatusBadge = styled.span<{ $status: BlockState }>`
+  ${({ $status }) => phaseBadge(BLOCK_STATE_PHASE_KEYS[$status] ?? 'empty')}
   padding: 8px 16px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 500;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'empty':
-        return theme.colors.textSecondary;
-      case 'planted':
-        return theme.colors.success;
-      case 'growing':
-        return theme.colors.emerald[400];
-      case 'fruiting':
-        return theme.colors.terracotta[400];
-      case 'harvesting':
-        return theme.colors.warning;
-      case 'cleaning':
-        return theme.colors.primary[400];
-      case 'alert':
-        return theme.colors.error;
-      default:
-        return theme.colors.textSecondary;
-    }
-  }};
-  color: ${({ theme }) => theme.colors.onAccent};
-  text-transform: capitalize;
+  font-size: 0.78rem;
 `;
 
 const StatsGrid = styled.div`
@@ -126,7 +107,7 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const StatCard = styled.div`
@@ -135,36 +116,35 @@ const StatCard = styled.div`
 `;
 
 const StatLabel = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
+// Cream-hi, not gold — up to 4 of these render simultaneously and gold is
+// budgeted at <=4 elements per view (spec §3); the active tab underline
+// below is this view's gold-for-navigation element instead.
 const StatValue = styled.span`
   font-size: 32px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatSubtext = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
 const TabsContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  ${glassPanel}
   overflow: hidden;
 `;
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   overflow-x: auto;
 
   &::-webkit-scrollbar {
@@ -172,26 +152,26 @@ const TabBar = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.cosmosHi};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'inherit')};
+  background: transparent;
+  color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.muted)};
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : 'transparent')};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.textPrimary)};
   }
 `;
 
@@ -209,8 +189,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 4px solid ${({ theme }) => theme.colors.glass.border};
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -224,9 +204,9 @@ const Spinner = styled.div`
 const ErrorContainer = styled.div`
   padding: 24px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   text-align: center;
   margin-top: 24px;
 `;
@@ -238,14 +218,13 @@ const OverviewGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  ${glassPanel}
   padding: 20px;
 `;
 
 const InfoTitle = styled.h3`
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
@@ -254,7 +233,7 @@ const InfoItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   &:last-child {
     border-bottom: none;
@@ -263,36 +242,37 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 // Multi-crop styled components
 const AreaBudgetSection = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 8px;
+  border: 1px solid rgba(107, 138, 224, 0.35);
+  border-radius: 10px;
   padding: 20px;
   margin-bottom: 24px;
 `;
 
 const AreaBudgetTitle = styled.h3`
   font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.onDark};
   margin: 0 0 12px 0;
 `;
 
 const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
   width: 100%;
   height: 24px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 12px;
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 99px;
   overflow: hidden;
   margin-bottom: 8px;
   position: relative;
@@ -304,47 +284,53 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: ${({ theme }) => `linear-gradient(90deg, ${theme.colors.primary[500]}, ${theme.colors.primary[600]})`};
+    background: ${({ theme }) => `linear-gradient(90deg, ${theme.colors.bright.lapis}, ${theme.colors.primary[600]})`};
     transition: width 300ms ease-in-out;
   }
 `;
 
 const AreaBudgetText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.onDark};
   text-align: center;
   margin-bottom: 12px;
 `;
 
+// This tab's one gold-gradient CTA (spec §3) — mutually exclusive with
+// EmptyVirtualButton below (physical vs. virtual block).
 const AddCropButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.success};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover {
-    background: ${({ theme }) => theme.colors.emerald[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;
 
 const VirtualChildrenSection = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 8px;
+  ${glassPanel}
   padding: 20px;
   margin-bottom: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px 0;
 `;
 
@@ -353,8 +339,9 @@ const VirtualChildCard = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 6px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 8px;
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
@@ -364,7 +351,8 @@ const VirtualChildCard = styled.div`
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: rgba(180, 200, 220, 0.1);
+    border-color: ${({ theme }) => theme.colors.celeste};
   }
 
   span {
@@ -372,94 +360,98 @@ const VirtualChildCard = styled.div`
     color: ${({ theme }) => theme.colors.textPrimary};
 
     &:first-child {
-      font-weight: 600;
-      color: ${({ theme }) => theme.colors.primary[600]};
+      font-weight: 700;
+      color: ${({ theme }) => theme.colors.bright.lapis};
     }
   }
 `;
 
 const VirtualBlockInfo = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[700]};
-  border-radius: 8px;
+  border: 1px solid rgba(107, 138, 224, 0.4);
+  border-radius: 10px;
   padding: 20px;
   margin-bottom: 24px;
 `;
 
 const VirtualBadge = styled.span`
+  ${monoLabel}
   display: inline-block;
-  background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.primary[700]};
-  font-size: 12px;
-  font-weight: 600;
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  font-size: 0.6rem;
   padding: 4px 12px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid ${({ theme }) => theme.colors.primary[700]};
+  border-radius: 99px;
+  border: 1px solid rgba(107, 138, 224, 0.45);
   margin-left: 12px;
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const EmptyVirtualButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin-top: 16px;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   width: 100%;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-    border-color: ${({ theme }) => theme.colors.error};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
-// Plant data staleness banner
+// Plant-data staleness banner — extrapolates "pending / awaiting action"
+// (spec §5.2 → fruitingInit/terra), not gold-b/warning: gold stays reserved
+// for the literal Harvesting phase and this view's one CTA (spec §3).
 const StaleBanner = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px 20px;
-  background: ${({ theme }) => theme.colors.gold[50]};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
-  border-radius: 8px;
+  background: rgba(232, 147, 95, 0.12);
+  border: 1px solid rgba(232, 147, 95, 0.4);
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const StaleBannerText = styled.p`
   margin: 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.onDark};
   line-height: 1.5;
 `;
 
 const StaleLockNote = styled.p`
   margin: 0;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.gold[700]};
+  color: ${({ theme }) => theme.colors.bright.terra};
   font-style: italic;
 `;
 
 const UpdatePlantDataButton = styled.button<{ $loading: boolean }>`
   align-self: flex-start;
   padding: 8px 16px;
-  background: ${({ $loading, theme }) => ($loading ? theme.colors.gold[600] : theme.colors.warning)};
-  color: ${({ theme }) => theme.colors.neutral[900]};
-  border: none;
-  border-radius: 6px;
+  background: rgba(232, 147, 95, 0.2);
+  color: ${({ theme }) => theme.colors.bright.terra};
+  border: 1px solid rgba(232, 147, 95, 0.5);
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
   transition: background 150ms ease-in-out;
   opacity: ${({ $loading }) => ($loading ? 0.7 : 1)};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.gold[600]};
+    background: rgba(232, 147, 95, 0.32);
   }
 `;
 
@@ -595,20 +587,23 @@ export function BlockDetail() {
     );
   }
 
-  // Breadcrumb items for navigation
+  // Breadcrumb items for navigation. The shared Breadcrumb component's `icon`
+  // prop is typed as a plain string (rendered as text) — out of this shard's
+  // file list to widen to ReactNode, so icons are omitted rather than passing
+  // emoji glyphs (spec §6: no emoji icons).
   const breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-    { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Farms', path: '/farm/farms' },
     { label: block?.farmName || 'Farm', path: `/farm/farms/${farmId}` },
-    { label: block?.name || block?.blockCode || 'Block Details', icon: '🌾' },
+    { label: block?.name || block?.blockCode || 'Block Details' },
   ];
 
   if (error || !block || !summary) {
     return (
       <Container>
         <Breadcrumb items={[
-          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-          { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+          { label: 'Dashboard', path: '/dashboard' },
+          { label: 'Farms', path: '/farm/farms' },
           { label: 'Farm', path: `/farm/farms/${farmId}` },
           { label: 'Error' },
         ]} />
@@ -635,7 +630,9 @@ export function BlockDetail() {
               {block.targetCropName && (
                 <>
                   <span>•</span>
-                  <span style={{ fontWeight: 600, color: theme.colors.success }}>🌱 {block.targetCropName}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 700, color: theme.colors.bright.emerald }}>
+                    <Sprout size={12} strokeWidth={1.8} /> {block.targetCropName}
+                  </span>
                 </>
               )}
             </BlockMeta>
@@ -714,7 +711,7 @@ export function BlockDetail() {
                         {refreshingPlantData ? 'Updating...' : 'Update to latest version'}
                       </UpdatePlantDataButton>
                       {refreshPlantDataError && (
-                        <StaleLockNote style={{ color: theme.colors.terracotta[600] }}>{refreshPlantDataError}</StaleLockNote>
+                        <StaleLockNote style={{ color: theme.colors.bright.coral }}>{refreshPlantDataError}</StaleLockNote>
                       )}
                     </>
                   ) : (
@@ -737,7 +734,7 @@ export function BlockDetail() {
                     {formatNumber(block.availableArea ?? 0, { decimals: 2 })} m² available of {formatNumber(block.area ?? 0, { decimals: 2 })} m² total
                   </AreaBudgetText>
                   <AddCropButton onClick={() => setShowAddVirtualCropModal(true)}>
-                    + Add Additional Crop
+                    <Sprout size={14} strokeWidth={1.8} /> Add Additional Crop
                   </AddCropButton>
                 </AreaBudgetSection>
               )}
@@ -767,10 +764,10 @@ export function BlockDetail() {
                   <InfoItem>
                     <InfoLabel>Parent Block</InfoLabel>
                     <InfoValue
-                      style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: theme.colors.bright.lapis, cursor: 'pointer' }}
                       onClick={() => block.parentBlockId && navigate(`/farm/farms/${farmId}/blocks/${block.parentBlockId}`)}
                     >
-                      {block.parentBlockId ? 'View Parent Block →' : 'Unknown'}
+                      {block.parentBlockId ? (<>View Parent Block <ArrowRight size={13} strokeWidth={1.8} /></>) : 'Unknown'}
                     </InfoValue>
                   </InfoItem>
                   <InfoItem>
@@ -778,7 +775,7 @@ export function BlockDetail() {
                     <InfoValue>{block.allocatedArea ? `${formatNumber(block.allocatedArea, { decimals: 2 })} m²` : 'N/A'}</InfoValue>
                   </InfoItem>
                   <EmptyVirtualButton onClick={() => setShowEmptyVirtualModal(true)}>
-                    🗑️ Empty & Delete Virtual Block
+                    <Trash2 size={14} strokeWidth={1.8} /> Empty &amp; Delete Virtual Block
                   </EmptyVirtualButton>
                 </VirtualBlockInfo>
               )}
@@ -845,7 +842,7 @@ export function BlockDetail() {
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>Yield Efficiency</InfoLabel>
-                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? theme.colors.success : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? theme.colors.warning : theme.colors.error }}>
+                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? theme.colors.bright.emerald : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? theme.colors.bright.terra : theme.colors.bright.coral }}>
                       {formatPercentage(summary.yieldEfficiencyPercent ?? 0, 1)}
                     </InfoValue>
                   </InfoItem>

@@ -13,6 +13,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { Plus, X } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import {
   useCreatePurchaseOrder,
   useUpdatePurchaseOrder,
@@ -31,8 +34,10 @@ import { useFinanceEnabled } from '../../hooks/useCapabilities';
 import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import { useAuthStore } from '../../stores/auth.store';
 import type { DocumentLineCreate } from '../../services/purchasingApi';
+import { purchasingStatusToPhase } from './statusPhase';
 
 // ─── Styled components (same pattern as PurchaseRequestFormPage) ──────────────
+// Night Observatory (T-901 Phase 3). Container stays transparent (spec §7).
 
 const Container = styled.div`
   padding: 32px;
@@ -43,25 +48,17 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
-  &:hover { text-decoration: underline; }
-`;
-
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 24px;
+  transition: color 150ms ease;
+  &:hover { color: ${({ theme }) => theme.colors.textPrimary}; text-decoration: underline; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
@@ -87,43 +84,71 @@ const Field = styled.div`
   gap: 6px;
 `;
 
+// Space Mono uppercase micro-label above each field (spec §4).
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+// Numeric variant — Space Mono, tabular figures (spec §6).
+const NumberInput = styled(Input)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
+  width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
-  background: ${({ theme }) => theme.colors.background};
+  box-sizing: border-box;
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const Table = styled.table`
@@ -131,22 +156,31 @@ const Table = styled.table`
   border-collapse: collapse;
 `;
 
+// Space Mono uppercase celeste column headers, no solid chrome (spec §4 "Tables").
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 8px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: top;
+`;
+
+const Tr = styled.tr`
+  transition: background 100ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.05); }
+`;
+
+// Space Mono for computed currency values in table cells (spec §6).
+const NetValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FooterRow = styled.div`
@@ -156,59 +190,102 @@ const FooterRow = styled.div`
   padding-top: 16px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4). Previously
+// primary[500] (lapis) fill with onAccent text — a mismatch under onAccent's
+// new meaning ("text on a GOLD fill"). Fixed by making the fill gold rather
+// than swapping the text colour.
 const PrimaryButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Ghost — transparent, celeste text/border (spec §4 "Buttons").
 const GhostButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DangerIconButton = styled.button`
-  padding: 6px 10px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 8px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  transition: background 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.26); }
 `;
 
+// Add-line — ghost, celeste, NOT gold (spec §3/§4/§8).
 const AddLineButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[600]};
-  border: 1px dashed ${({ theme }) => theme.colors.primary[400]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px dashed ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 13px;
   cursor: pointer;
   width: 100%;
   margin-top: 8px;
-  &:hover { background: ${({ theme }) => theme.colors.primary[50]}; }
+  transition: background 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 13px;
   margin: 8px 0 0;
+`;
+
+// Read-only banner — the doc's own status routes through the single
+// canonical purchasingStatusToPhase() map + phaseBadge mixin.
+const ReadOnlyCard = styled(Card)<{ $phase: PhaseKey }>`
+  border-left: 3px solid ${({ theme, $phase }) => theme.colors.phase[$phase]};
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+`;
+
+const ReadOnlyText = styled.span`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const StatusBadge = styled.span<{ $status: string }>`
+  ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
 `;
 
 // ─── Empty line factory ───────────────────────────────────────────────────────
@@ -444,16 +521,21 @@ export function PurchaseOrderFormPage() {
       }}>
         &larr; Back
       </BackLink>
-      <Title>{pageTitle}</Title>
+      <PageHeader
+        breadcrumb="— PURCHASING · PURCHASE ORDERS"
+        title={pageTitle}
+        emphasizeLastWord={!isFromPR}
+        description={isEdit ? `${existingPO?.docNumber ?? ''}` : 'Fill in the header and line items below.'}
+      />
 
       <FinanceUnreachableBanner />
 
-      {isReadOnly && (
-        <Card style={{ borderLeft: `4px solid ${theme.colors.warning}`, padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, color: theme.colors.gold[800], fontSize: 14 }}>
-            This PO is in <strong>{existingPO?.status}</strong> status and cannot be edited.
-          </p>
-        </Card>
+      {isReadOnly && existingPO && (
+        <ReadOnlyCard $phase={purchasingStatusToPhase(existingPO.status)}>
+          <ReadOnlyText>
+            This PO is in <StatusBadge $status={existingPO.status}>{existingPO.status}</StatusBadge> status and cannot be edited.
+          </ReadOnlyText>
+        </ReadOnlyCard>
       )}
 
       {/* Header */}
@@ -537,7 +619,7 @@ export function PurchaseOrderFormPage() {
                 const discFactor = Math.max(0, 1 - Number(line.discountPercent ?? 0) / 100);
                 const net = (Number(line.quantity) * Number(line.unitPrice) * discFactor).toFixed(2);
                 return (
-                  <tr key={line._key}>
+                  <Tr key={line._key}>
                     <Td>
                       <Select
                         value={line.itemId}
@@ -573,7 +655,7 @@ export function PurchaseOrderFormPage() {
                       />
                     </Td>
                     <Td>
-                      <Input
+                      <NumberInput
                         type="number"
                         min="0.001"
                         step="any"
@@ -584,7 +666,7 @@ export function PurchaseOrderFormPage() {
                       />
                     </Td>
                     <Td>
-                      <Input
+                      <NumberInput
                         type="number"
                         min="0"
                         step="0.01"
@@ -595,7 +677,7 @@ export function PurchaseOrderFormPage() {
                       />
                     </Td>
                     <Td>
-                      <Input
+                      <NumberInput
                         type="number"
                         min="0"
                         max="100"
@@ -661,20 +743,25 @@ export function PurchaseOrderFormPage() {
                         />
                       )}
                     </Td>
-                    <Td style={{ textAlign: 'right', fontWeight: 600 }}>{net}</Td>
+                    <Td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      <NetValue>{net}</NetValue>
+                    </Td>
                     <Td>
                       {!isReadOnly && lines.length > 1 && (
-                        <DangerIconButton onClick={() => removeLine(line._key)}>✕</DangerIconButton>
+                        <DangerIconButton onClick={() => removeLine(line._key)} aria-label="Remove line">
+                          <X size={13} strokeWidth={1.8} />
+                        </DangerIconButton>
                       )}
                     </Td>
-                  </tr>
+                  </Tr>
                 );
               })}
             </tbody>
           </Table>
           {!isReadOnly && (
             <AddLineButton type="button" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
-              + Add Line
+              <Plus size={14} strokeWidth={1.8} />
+              Add Line
             </AddLineButton>
           )}
         </Card>

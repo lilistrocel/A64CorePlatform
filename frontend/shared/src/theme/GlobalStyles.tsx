@@ -26,10 +26,11 @@ export const GlobalStyles = createGlobalStyle`
     font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
     line-height: ${({ theme }) => theme.typography.lineHeight.normal};
     color: ${({ theme }) => theme.colors.textPrimary};
-    /* colors.canvas (not colors.background) — this is what makes Fresco
-       Cream / Cosmos Ink the dominant ~65% page ground per brand contract
-       §3. colors.background is reserved for raised panels/cards sitting
-       above the canvas. */
+    /* colors.canvas (not colors.background) — cosmos-deep, the page floor
+       UNDER the Sky layer (spec §7). colors.background is the opaque raised
+       surface reserved for panels/menus/tooltips sitting above the canvas;
+       most in-page surfaces are the translucent colors.surface (glass)
+       instead, letting the Sky show through. */
     background-color: ${({ theme }) => theme.colors.canvas};
     width: 100%;
     min-height: 100vh;
@@ -57,13 +58,27 @@ export const GlobalStyles = createGlobalStyle`
   h5 { font-size: ${({ theme }) => theme.typography.fontSize.lg}; }
   h6 { font-size: ${({ theme }) => theme.typography.fontSize.base}; }
 
-  /* Global focus-visible styles for accessibility */
-  a:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+  /* Global focus-visible styles — Night Observatory spec §9: "gold focus
+     ring on every interactive element; no default blue focus." Ring colour
+     is secondary[500] (gold-hi) with a soft glow halo, matching the
+     mockup's input-focus treatment (border-color: gold-hi; box-shadow:
+     0 0 0 3px rgba(220,185,79,.15)) generalised to :focus-visible on any
+     element. */
+  a:focus-visible,
+  button:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  input:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
     border-radius: 2px;
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
+  /* Link colour stays primary (lapis) — gold is reserved (spec §3: logo,
+     active nav, stat numerals, thread, primary CTA, focus rings, section
+     underline, Harvesting phase). "Gold is not a link colour." */
   a {
     color: ${({ theme }) => theme.colors.primary[500]};
     text-decoration: none;
@@ -81,22 +96,44 @@ export const GlobalStyles = createGlobalStyle`
     -moz-osx-font-smoothing: inherit;
   }
 
-  button:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
-  }
-
-  select:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 1px;
-  }
-
-  textarea:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 1px;
-  }
-
   input, textarea, select {
     font-family: inherit;
+  }
+
+  /* Thin scrollbars, cosmosHi thumb (spec §9) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: ${({ theme }) => theme.colors.cosmosHi} transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
+    border-radius: 99px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  /* Honour prefers-reduced-motion globally (spec §9 / §2). Mixins in
+     mixins.ts already guard their own lift/glow transitions; this is the
+     app-wide floor for anything that composes CSS transitions/animations
+     without going through a mixin. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 `;

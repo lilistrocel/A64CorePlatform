@@ -1,10 +1,11 @@
 /* CCM Dashboard Styles
-   A20Core rebrand: plain CSS has no theme access here, so brand hexes are
-   hardcoded literally — see Docs/2-Working-Progress/a20core-rebrand-spec.md
-   §2 ground-token table (neutral[100]/textPrimary/textSecondary, light theme). */
+   Night Observatory: plain CSS has no theme access here, so tokens are
+   hardcoded literally — see Docs/2-Working-Progress/night-observatory-spec.md
+   §1. Page grounds stay TRANSPARENT so the fixed Sky layer reads through;
+   only panels carry a surface. */
 .dashboard-container {
   min-height: 100vh;
-  background: #F1E6CC; /* neutral[100] / canvas — Fresco Cream */
+  background: transparent; /* the Sky layer paints the ground */
   padding: 2rem;
 }
 
@@ -15,13 +16,13 @@
 .dashboard-title {
   font-size: 2rem;
   font-weight: 600;
-  color: #1B1A14; /* textPrimary — Ink */
+  color: #FAF3E2; /* textPrimary — cream-hi */
   margin: 0 0 0.5rem 0;
 }
 
 .dashboard-subtitle {
   font-size: 1rem;
-  color: #5C564A; /* textSecondary — Slate */
+  color: #B4C8DC; /* textSecondary — celeste */
   margin: 0;
 }
 

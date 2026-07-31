@@ -14,7 +14,9 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { BarChart3, AlertTriangle, RefreshCw } from 'lucide-react';
 import type { CCMWidget, ChartWidgetData } from '../types/widget.types';
+import { glassPanel } from '../theme/mixins';
 import { Spinner } from './common/Spinner';
 
 export interface ChartWidgetProps {
@@ -33,23 +35,24 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
     if (!data || !data.data || data.data.length === 0) {
       return (
         <EmptyState>
-          <EmptyIcon>📊</EmptyIcon>
+          <EmptyIcon><BarChart3 size={32} strokeWidth={1.6} /></EmptyIcon>
           <EmptyText>No data available</EmptyText>
         </EmptyState>
       );
     }
 
     // Fallback qualitative palette when the caller doesn't supply per-series
-    // colors. The brand offers four chromatic voices (lapis/emerald/gold/
-    // terracotta) for categorical use — cycled through two shades each to
-    // give six visually distinct slots for multi-series charts.
+    // colors — spec §4 "Charts" series order (celeste, gold, emerald, lapis,
+    // terra, lavender). Gold appears here only as the SECOND series colour in
+    // a cycling categorical palette, not as a status/emphasis colour — it is
+    // the spec's own prescribed order, not a gold-discipline violation.
     const colors = data.series?.map(s => s.color) || [
-      theme.colors.lapis[500],
-      theme.colors.emerald[500],
-      theme.colors.gold[500],
-      theme.colors.terracotta[500],
-      theme.colors.lapis[300],
-      theme.colors.emerald[300],
+      theme.colors.celeste,
+      theme.colors.bright.gold,
+      theme.colors.bright.emerald,
+      theme.colors.bright.lapis,
+      theme.colors.bright.terra,
+      theme.colors.bright.lavender,
     ];
 
     switch (chartType) {
@@ -57,15 +60,25 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
         return (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.data}>
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
-              <XAxis dataKey={data.xKey} stroke={theme.colors.textSecondary} fontSize={12} />
-              <YAxis stroke={theme.colors.textSecondary} fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.line} />
+              <XAxis
+                dataKey={data.xKey}
+                stroke={theme.colors.line}
+                tick={{ fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono, fontSize: 11 }}
+              />
+              <YAxis
+                stroke={theme.colors.line}
+                tick={{ fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono, fontSize: 11 }}
+              />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: theme.colors.background,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '0.5rem',
+                  backgroundColor: theme.colors.cosmosHi,
+                  border: `1px solid ${theme.colors.glass.border}`,
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
+                  color: theme.colors.textPrimary,
                 }}
+                labelStyle={{ color: theme.colors.celeste }}
               />
               <Legend />
               {data.series ? (
@@ -99,15 +112,25 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.data}>
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
-              <XAxis dataKey={data.xKey} stroke={theme.colors.textSecondary} fontSize={12} />
-              <YAxis stroke={theme.colors.textSecondary} fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.line} />
+              <XAxis
+                dataKey={data.xKey}
+                stroke={theme.colors.line}
+                tick={{ fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono, fontSize: 11 }}
+              />
+              <YAxis
+                stroke={theme.colors.line}
+                tick={{ fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono, fontSize: 11 }}
+              />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: theme.colors.background,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '0.5rem',
+                  backgroundColor: theme.colors.cosmosHi,
+                  border: `1px solid ${theme.colors.glass.border}`,
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
+                  color: theme.colors.textPrimary,
                 }}
+                labelStyle={{ color: theme.colors.celeste }}
               />
               <Legend />
               {data.series ? (
@@ -151,9 +174,11 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: theme.colors.background,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '0.5rem',
+                  backgroundColor: theme.colors.cosmosHi,
+                  border: `1px solid ${theme.colors.glass.border}`,
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
+                  color: theme.colors.textPrimary,
                 }}
               />
               <Legend />
@@ -175,7 +200,7 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
         </WidgetHeaderLeft>
         {onRefresh && (
           <RefreshButton onClick={onRefresh} disabled={loading} aria-label={`Refresh ${widget.title}`}>
-            🔄
+            <RefreshCw size={14} strokeWidth={1.8} />
           </RefreshButton>
         )}
       </WidgetHeader>
@@ -190,7 +215,7 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
           </LoadingContainer>
         ) : error ? (
           <ErrorContainer>
-            <ErrorIcon>⚠️</ErrorIcon>
+            <ErrorIcon><AlertTriangle size={28} strokeWidth={1.6} /></ErrorIcon>
             <ErrorText>{error}</ErrorText>
             {onRefresh && <RetryButton onClick={onRefresh}>Retry</RetryButton>}
           </ErrorContainer>
@@ -203,9 +228,7 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
 }
 
 const WidgetCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -255,7 +278,7 @@ const WidgetTitle = styled.h3`
 
 const WidgetDescription = styled.p`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 0.75rem 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -267,16 +290,16 @@ const WidgetDescription = styled.p`
 `;
 
 const RefreshButton = styled.button`
+  display: flex;
   background: none;
   border: none;
-  font-size: 1rem;
   cursor: pointer;
   padding: 0.25rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   transition: color 0.2s ease;
 
   &:hover:not(:disabled) {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.celeste};
   }
 
   &:disabled {
@@ -311,7 +334,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
 `;
 
@@ -325,7 +348,8 @@ const ErrorContainer = styled.div`
 `;
 
 const ErrorIcon = styled.div`
-  font-size: 2rem;
+  display: flex;
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const ErrorText = styled.p`
@@ -336,9 +360,9 @@ const ErrorText = styled.p`
 
 const RetryButton = styled.button`
   padding: 0.5rem 1rem;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: 0.875rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
@@ -346,7 +370,7 @@ const RetryButton = styled.button`
   transition: background 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -359,11 +383,12 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 2.5rem;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const EmptyText = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
 `;

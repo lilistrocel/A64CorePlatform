@@ -7,9 +7,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { AlertTriangle } from 'lucide-react';
 import { hrApi } from '../../services/hrService';
 import { formatNumber } from '../../utils/formatNumber';
 import type { HRDashboardStats } from '../../types/hr';
+import { PageHeader, glassPanel, glassPanelHover, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -21,23 +23,6 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
-  margin-bottom: 32px;
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 8px 0;
-`;
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -46,27 +31,22 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 16px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-  }
 `;
 
 const StatLabel = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: 8px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.muted};
+  margin-bottom: 10px;
 `;
 
-const StatValue = styled.div`
+const StatValue = styled.div<{ $color?: string }>`
   font-size: 36px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 800;
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
 const WidgetsRow = styled.div`
@@ -81,10 +61,9 @@ const WidgetsRow = styled.div`
 `;
 
 const Widget = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 16px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const WidgetTitle = styled.h3`
@@ -101,18 +80,12 @@ const EmployeeList = styled.div`
 `;
 
 const EmployeeItem = styled.div`
+  ${glassPanelHover}
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-  }
+  border-radius: 10px;
 `;
 
 const EmployeeName = styled.span`
@@ -122,27 +95,34 @@ const EmployeeName = styled.span`
 `;
 
 const EmployeeDate = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+/* Upcoming visa expirations are the "pending / awaiting approval" phase
+   (fruitingInit / terra), not gold — gold is reserved for the Harvesting
+   status only (spec §5.2), matching the treatment in VisaTab.tsx. */
 const VisaItem = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.gold[200]};
-  border-radius: 8px;
+  background: rgba(232, 147, 95, 0.16);
+  border: 1px solid rgba(232, 147, 95, 0.45);
+  border-radius: 10px;
   margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 `;
 
 const VisaEmployee = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.bright.terra};
 `;
 
 const VisaExpiry = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.bright.terra};
   margin-top: 4px;
 `;
 
@@ -152,19 +132,36 @@ const QuickActions = styled.div`
   margin-top: 24px;
 `;
 
-const ActionButton = styled.button`
+const PrimaryActionButton = styled.button`
   padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+`;
+
+const SecondaryActionButton = styled.button`
+  padding: 12px 24px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -174,22 +171,22 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const EmptyText = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const DepartmentItem = styled.div`
@@ -197,8 +194,9 @@ const DepartmentItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   margin-bottom: 8px;
 
   &:last-child {
@@ -213,10 +211,12 @@ const DepartmentName = styled.span`
 `;
 
 const DepartmentCount = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.info};
-  background: ${({ theme }) => theme.colors.infoBg};
+  ${monoLabel}
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  background: rgba(107, 138, 224, 0.16);
+  border: 1px solid rgba(107, 138, 224, 0.35);
   padding: 4px 12px;
   border-radius: 16px;
 `;
@@ -280,10 +280,12 @@ export function HRDashboardPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Human Resources</Title>
-        <Subtitle>Employee management and HR overview</Subtitle>
-      </Header>
+      <PageHeader
+        breadcrumb="HR · LIVE"
+        title="Human Resources"
+        emphasizeLastWord
+        description="Employee management and HR overview"
+      />
 
       <StatsGrid>
         <StatCard>
@@ -293,12 +295,12 @@ export function HRDashboardPage() {
 
         <StatCard>
           <StatLabel>Active</StatLabel>
-          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.activeEmployees)}</StatValue>
+          <StatValue $color={theme.colors.bright.emerald}>{formatNumber(stats.activeEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>On Leave</StatLabel>
-          <StatValue style={{ color: theme.colors.warning }}>{formatNumber(stats.onLeaveEmployees)}</StatValue>
+          <StatValue $color={theme.colors.bright.rose}>{formatNumber(stats.onLeaveEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>
@@ -336,10 +338,13 @@ export function HRDashboardPage() {
           {stats.upcomingVisaExpirations && stats.upcomingVisaExpirations.length > 0 ? (
             stats.upcomingVisaExpirations.map((visa) => (
               <VisaItem key={visa.visaId}>
-                <VisaEmployee>Employee ID: {visa.employeeId}</VisaEmployee>
-                <VisaExpiry>
-                  {visa.visaType} expires: {new Date(visa.expiryDate).toLocaleDateString()}
-                </VisaExpiry>
+                <AlertTriangle size={15} strokeWidth={1.8} />
+                <div>
+                  <VisaEmployee>Employee ID: {visa.employeeId}</VisaEmployee>
+                  <VisaExpiry>
+                    {visa.visaType} expires: {new Date(visa.expiryDate).toLocaleDateString()}
+                  </VisaExpiry>
+                </div>
               </VisaItem>
             ))
           ) : (
@@ -365,8 +370,8 @@ export function HRDashboardPage() {
       </WidgetsRow>
 
       <QuickActions>
-        <ActionButton onClick={handleViewEmployeeList}>View All Employees</ActionButton>
-        <ActionButton onClick={handleAddEmployee}>Add New Employee</ActionButton>
+        <SecondaryActionButton onClick={handleViewEmployeeList}>View All Employees</SecondaryActionButton>
+        <PrimaryActionButton onClick={handleAddEmployee}>Add New Employee</PrimaryActionButton>
       </QuickActions>
     </Container>
   );

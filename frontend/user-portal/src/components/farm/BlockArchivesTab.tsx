@@ -6,6 +6,8 @@
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { Package, Trash2, AlertTriangle } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
 import { farmApi } from '../../services/farmApi';
 import type { BlockArchive, BlockCycleHistory } from '../../types/farm';
 
@@ -13,32 +15,34 @@ import type { BlockArchive, BlockCycleHistory } from '../../types/farm';
 // DELETE CONFIRMATION MODAL
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers").
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 24px;
   max-width: 450px;
   width: 90%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 `;
 
 const ModalTitle = styled.h3`
   font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  font-weight: 800;
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -47,19 +51,21 @@ const ModalTitle = styled.h3`
 
 const ModalText = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 8px 0;
   line-height: 1.6;
 `;
 
+// Permanent-deletion warning — coral (quarantined), not gold-b (spec §3: gold
+// is never a status colour except Harvesting).
 const ModalWarning = styled.div`
-  background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 10px;
   padding: 12px;
   margin: 16px 0;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const ModalButtons = styled.div`
@@ -71,37 +77,39 @@ const ModalButtons = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const DeleteConfirmButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.terracotta[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[700]};
+    background: rgba(240, 138, 112, 0.28);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.terracotta[200]};
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
@@ -124,19 +132,18 @@ const Header = styled.div`
 
 const Title = styled.h2`
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 // Summary Cards Section
 const SummaryGrid = styled.div`
+  ${glassPanel}
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
 `;
 
 const SummaryCard = styled.div`
@@ -144,23 +151,21 @@ const SummaryCard = styled.div`
 `;
 
 const SummaryLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
 const SummaryValue = styled.div`
   font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 800;
+  color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
@@ -172,15 +177,8 @@ const ArchivesList = styled.div`
 `;
 
 const ArchiveCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanel}
   padding: 20px;
-  transition: box-shadow 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
 `;
 
 const ArchiveHeader = styled.div`
@@ -194,29 +192,33 @@ const ArchiveTitleSection = styled.div``;
 
 const ArchiveTitle = styled.h3`
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
 const ArchiveMeta = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+// Efficiency tiers extrapolate the phase vocabulary (spec §5.2) rather than
+// reusing `warning`/gold-b for the mid tier — gold stays reserved for the
+// literal Harvesting phase (spec §3).
 const EfficiencyBadge = styled.span<{ $efficiency: number }>`
+  ${monoLabel}
   display: inline-block;
   padding: 6px 16px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 99px;
+  font-size: 0.72rem;
   background: ${({ $efficiency, theme }) => {
-    if ($efficiency >= 90) return theme.colors.success;
-    if ($efficiency >= 75) return theme.colors.emerald[400];
-    if ($efficiency >= 60) return theme.colors.warning;
-    return theme.colors.terracotta[400];
+    if ($efficiency >= 90) return theme.colors.phase.fruiting;
+    if ($efficiency >= 75) return theme.colors.phase.colonizing;
+    if ($efficiency >= 60) return theme.colors.phase.fruitingInit;
+    return theme.colors.phase.quarantined;
   }};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
 `;
 
 const ArchiveStats = styled.div`
@@ -225,8 +227,8 @@ const ArchiveStats = styled.div`
   gap: 16px;
   margin-bottom: 16px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 6px;
+  background: rgba(180, 200, 220, 0.05);
+  border-radius: 10px;
 `;
 
 const StatItem = styled.div`
@@ -235,23 +237,21 @@ const StatItem = styled.div`
 `;
 
 const StatLabel = styled.span`
-  font-size: 11px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.58rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
 const StatValue = styled.span`
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const QualitySection = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   line-height: 1.6;
 `;
 
@@ -265,39 +265,39 @@ const ArchiveActions = styled.div`
   justify-content: flex-end;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const DeleteButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[100]};
-    border-color: ${({ theme }) => theme.colors.terracotta[600]};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 
   p {
     margin: 8px 0;
@@ -426,7 +426,7 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
 
       {archives.length === 0 ? (
         <EmptyState>
-          <p>📦 No archived cycles yet</p>
+          <p><Package size={16} strokeWidth={1.8} style={{ verticalAlign: '-3px', marginRight: '6px' }} />No archived cycles yet</p>
           <p>
             Complete a full growing cycle (plant → harvest → reset to empty) to see historical
             performance data here
@@ -499,7 +499,7 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
 
               <ArchiveActions>
                 <DeleteButton onClick={() => handleDeleteClick(archive)}>
-                  <span>🗑️</span>
+                  <Trash2 size={13} strokeWidth={1.8} />
                   Delete History
                 </DeleteButton>
               </ArchiveActions>
@@ -513,7 +513,7 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
         <ModalOverlay>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
-              <span>⚠️</span>
+              <AlertTriangle size={18} strokeWidth={1.8} />
               Delete Archived Cycle
             </ModalTitle>
             <ModalText>

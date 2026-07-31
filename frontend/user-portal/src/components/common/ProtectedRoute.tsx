@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useDivisionStore } from '../../stores/division.store';
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { ShieldAlert } from 'lucide-react';
 import { Spinner } from '@a64core/shared';
 
 // Routes allowed during MFA setup period (without full access)
@@ -160,7 +161,7 @@ export function ProtectedRoute() {
     return (
       <>
         <MfaSetupBanner role="alert" aria-live="polite">
-          <BannerIcon>🔐</BannerIcon>
+          <BannerIcon><ShieldAlert size={20} strokeWidth={1.8} /></BannerIcon>
           <BannerText>
             Please set up two-factor authentication to continue using the platform.
           </BannerText>
@@ -187,6 +188,8 @@ const LoadingText = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
+// Status semantics ("action required") — the warning phase colour, not the
+// rare chrome gold ramp (spec §3 gold-discipline budget).
 const MfaSetupBanner = styled.div`
   position: fixed;
   top: 0;
@@ -198,20 +201,20 @@ const MfaSetupBanner = styled.div`
   justify-content: center;
   gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => theme.spacing.md};
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gold[500]} 0%, ${({ theme }) => theme.colors.gold[600]} 100%);
+  background: ${({ theme }) => theme.colors.warning};
   color: ${({ theme }) => theme.colors.onAccent};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const BannerIcon = styled.span`
-  font-size: 1.25rem;
+  display: flex;
 `;
 
 const BannerText = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 
   @media (min-width: 640px) {
-    font-size: ${({ theme }) => theme.typography.fontSize.md};
+    font-size: ${({ theme }) => theme.typography.fontSize.base};
   }
 `;

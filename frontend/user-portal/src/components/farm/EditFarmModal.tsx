@@ -10,6 +10,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { farmApi } from '../../services/farmApi';
 import { useUpdateFarm } from '../../hooks/queries/useFarms';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
@@ -54,22 +56,23 @@ type FormData = z.infer<typeof farmUpdateSchema>;
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers").
 const Overlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 14, 36, 0.6);
   display: ${({ $isOpen }) => ($isOpen ? 'flex' : 'none')};
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  z-index: ${({ theme }) => theme.zIndex.modal};
   padding: 16px;
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   max-width: 700px;
   width: 100%;
   max-height: 90vh;
@@ -78,7 +81,7 @@ const Modal = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -86,7 +89,7 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -94,13 +97,15 @@ const ModalTitle = styled.h2`
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 24px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   padding: 4px 8px;
-  transition: color 150ms ease-in-out;
+  border-radius: 8px;
+  display: flex;
+  transition: all 150ms ease-in-out;
 
   &:hover {
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -116,14 +121,12 @@ const Form = styled.form`
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.secondary[500]};
   margin: 0 0 8px 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const FormGroup = styled.div`
@@ -133,61 +136,59 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
-  background: ${({ theme }) => theme.colors.background};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const GridRow = styled.div`
@@ -206,11 +207,11 @@ const CheckboxContainer = styled.label`
   gap: 12px;
   cursor: pointer;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
@@ -218,6 +219,7 @@ const Checkbox = styled.input`
   width: 20px;
   height: 20px;
   cursor: pointer;
+  accent-color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const CheckboxLabel = styled.div`
@@ -227,37 +229,42 @@ const CheckboxLabel = styled.div`
 
 const ModalFooter = styled.div`
   padding: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 `;
 
+// Primary: the one gold-gradient CTA on this view (spec §3). Secondary: glass
+// ghost text (spec §4 "Buttons").
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
-  border: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  border: 1px solid transparent;
 
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.primary[500]};
+        background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
         color: ${theme.colors.onAccent};
+        box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
         &:hover:not(:disabled) {
-          background: ${theme.colors.primary[600]};
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
         }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
+      color: ${theme.colors.celeste};
+      border-color: ${theme.colors.glass.border};
       &:hover:not(:disabled) {
-        background: ${theme.colors.surface};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
@@ -265,19 +272,20 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
 const CoordinatesHelp = styled.div`
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[100]};
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid rgba(107, 138, 224, 0.3);
+  border-radius: 10px;
   padding: 12px 16px;
   margin-top: 8px;
 
   p {
     font-size: 13px;
-    color: ${({ theme }) => theme.colors.primary[800]};
+    color: ${({ theme }) => theme.colors.onDark};
     margin: 0;
     line-height: 1.5;
   }
@@ -482,8 +490,8 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
       <Modal>
         <ModalHeader>
           <ModalTitle>Edit Farm</ModalTitle>
-          <CloseButton onClick={handleClose} disabled={submitting}>
-            ✕
+          <CloseButton onClick={handleClose} disabled={submitting} aria-label="Close">
+            <X size={20} strokeWidth={1.8} />
           </CloseButton>
         </ModalHeader>
 

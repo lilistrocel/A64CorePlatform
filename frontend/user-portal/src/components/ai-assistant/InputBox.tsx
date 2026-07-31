@@ -10,6 +10,7 @@
 import { useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
 import styled from 'styled-components';
 import { Send, Square } from 'lucide-react';
+import { glassControl } from '@a64core/shared';
 
 interface InputBoxProps {
   value: string;
@@ -113,8 +114,7 @@ export function InputBox({
 
 const Container = styled.div`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -128,14 +128,13 @@ const InputRow = styled.div`
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   flex: 1;
   padding: 9px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 20px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
   resize: none;
   line-height: 1.5;
   min-height: 38px;
@@ -145,13 +144,12 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}25;
-    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:disabled {
@@ -164,7 +162,7 @@ const Textarea = styled.textarea`
     width: 4px;
   }
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.cosmosHi};
     border-radius: 2px;
   }
 `;
@@ -182,7 +180,9 @@ const ActionButton = styled.button<{ $variant: 'send' | 'cancel' }>`
   transition: all 150ms ease;
   background: ${({ $variant, theme }) =>
     $variant === 'send' ? theme.colors.primary[500] : theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* Both fills (lapis/coral) are bright, not gold — onDark, not onAccent
+     (spec §1.1 onAccent audit). */
+  color: ${({ theme }) => theme.colors.onDark};
 
   &:hover:not(:disabled) {
     background: ${({ $variant, theme }) =>

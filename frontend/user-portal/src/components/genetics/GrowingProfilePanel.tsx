@@ -46,19 +46,26 @@ const Muted = styled.span`
   line-height: 1.55;
 `;
 
+// Secondary emphasis — celeste, never gold (spec §3).
 const LinkButton = styled.button`
   background: none;
   border: none;
   padding: 0;
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   margin-top: 12px;
   align-self: flex-start;
 
   &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
     text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 

@@ -5,9 +5,10 @@
  * Based on the backend API response schemas.
  */
 
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 
-const c = lightTheme.colors;
+const c = theme.colors;
 
 // ============================================================================
 // ENUMS
@@ -70,20 +71,40 @@ export type ContaminationSeverity = 'low' | 'medium' | 'high' | 'critical';
 // PHASE COLOR MAPPING
 // ============================================================================
 
-export const PHASE_COLORS: Record<RoomPhase, string> = {
-  empty: c.neutral[600],             // was mid gray
-  preparing: c.primary[200],         // was light blue
-  inoculated: c.primary[500],        // lapis (was medium blue)
-  colonizing: c.gold[300],           // gold-hi (was yellow)
-  fruiting_initiation: c.terracotta[300], // was orange
-  fruiting: c.emerald[400],          // was green
-  harvesting: c.emerald[700],        // deep emerald (was dark green)
-  resting: c.primary[100],           // was light cyan — art-only hue, spec §3
-  cleaning: c.neutral[300],          // was light gray
-  quarantined: c.error,              // terracotta (was red)
-  decommissioned: c.neutral[700],    // was dark gray
-  maintenance: c.gold[200],          // was light purple — categorical judgement call, spec §3
+// Night Observatory (T-901): RoomPhase IS the spec §5.1 room-phase
+// vocabulary verbatim (fruiting_initiation === fruitingInit), so this maps
+// 1:1 onto colors.phase.* rather than any derived/extrapolated rule.
+// `harvesting` is the one sanctioned gold status (spec §3); every other
+// entry that previously reached into the raw gold ramp (`colonizing`,
+// `maintenance`) has moved off gold entirely.
+//
+// Consolidation pass (T-901 shard NON-UI-CLEANUP): PHASE_COLORS below is now
+// DERIVED from ROOM_PHASE_TO_PHASE_KEY rather than a second hand-written
+// table. `components/mushroom/phaseTheme.ts` (a sibling shard's file,
+// components/ is out of this shard's scope to edit) currently declares its
+// own copy of this exact mapping as `ROOM_PHASE_TO_KEY` — that copy is now
+// redundant and can be replaced with an import of ROOM_PHASE_TO_PHASE_KEY
+// from here in a follow-up pass.
+export const ROOM_PHASE_TO_PHASE_KEY: Record<RoomPhase, PhaseKey> = {
+  empty: 'empty',
+  preparing: 'preparing',
+  inoculated: 'inoculated',
+  colonizing: 'colonizing',
+  fruiting_initiation: 'fruitingInit',
+  fruiting: 'fruiting',
+  harvesting: 'harvesting',
+  resting: 'resting',
+  cleaning: 'cleaning',
+  quarantined: 'quarantined',
+  decommissioned: 'decommissioned',
+  maintenance: 'maintenance',
 };
+
+export const PHASE_COLORS: Record<RoomPhase, string> = Object.fromEntries(
+  (Object.entries(ROOM_PHASE_TO_PHASE_KEY) as Array<[RoomPhase, PhaseKey]>).map(
+    ([phase, key]) => [phase, c.phase[key]]
+  )
+) as Record<RoomPhase, string>;
 
 export const PHASE_LABELS: Record<RoomPhase, string> = {
   empty: 'Empty',
@@ -100,22 +121,29 @@ export const PHASE_LABELS: Record<RoomPhase, string> = {
   maintenance: 'Maintenance',
 };
 
-// Text colours chosen for contrast against the matching PHASE_COLORS
-// background — light backgrounds get a dark same-hue text, dark/mid
-// backgrounds get onAccent (never pure white, spec §2).
+// Text colours chosen for WCAG contrast against the matching PHASE_COLORS
+// solid background (verified against the darkTheme phase hexes, spec §1.2).
+// Every `phase.*` value except `decommissioned` is a "-b" brightened/pastel
+// tone (they're built to glow on a dark ground), so cosmos (dark, `onAccent`
+// — spec §1.1's flipped meaning: "text on a bright fill") reads correctly on
+// all of them; only `decommissioned` (dim, no-glow slate) is dark enough to
+// need cream (`onDark`) instead. Never dark text on a phase-tinted
+// *transparent* badge background (spec §9) — this map is for the SOLID chip
+// pattern these three consumers use (MushroomRoomMonitor, RoomDetailsModal,
+// GrowingRoomCard), which is a different pattern from the §4 16%-tint badge.
 export const PHASE_TEXT_COLORS: Record<RoomPhase, string> = {
   empty: c.onAccent,
-  preparing: c.primary[800],
+  preparing: c.onAccent,
   inoculated: c.onAccent,
-  colonizing: c.gold[900],
-  fruiting_initiation: c.terracotta[900],
+  colonizing: c.onAccent,
+  fruiting_initiation: c.onAccent,
   fruiting: c.onAccent,
   harvesting: c.onAccent,
-  resting: c.primary[900],
-  cleaning: c.neutral[800],
+  resting: c.onAccent,
+  cleaning: c.onAccent,
   quarantined: c.onAccent,
-  decommissioned: c.onAccent,
-  maintenance: c.gold[800],
+  decommissioned: c.onDark,
+  maintenance: c.onAccent,
 };
 
 // ============================================================================

@@ -28,7 +28,7 @@
 
 import { useState, useMemo } from 'react';
 import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { PageHeader, glassPanel, glassControl, monoLabel, type Theme } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceCompanies } from '../../hooks/queries/useFinanceCompanies';
 import { useApAging } from '../../hooks/queries/useFinanceReports';
@@ -102,38 +102,17 @@ async function fetchAllApprovedInvoices(
 
 // ─── Styled Components ─────────────────────────────────────────────────────────
 
+// Page floor stays transparent — the sky shows through; only cards/panels below get glass.
 const PageContainer = styled.div`
   padding: 24px 32px;
   max-width: 1400px;
   margin: 0 auto;
 `;
 
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 0 24px;
-  line-height: 1.55;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  margin-bottom: 24px;
-`;
-
 // ─── Toolbar ───────────────────────────────────────────────────────────────────
 
 const ToolbarCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 18px 22px;
   margin-bottom: 24px;
 `;
@@ -152,61 +131,65 @@ const ToolbarField = styled.div`
 `;
 
 const ToolbarLabel = styled.label`
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ToolbarSelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 200px;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const ToolbarDateInput = styled.input`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// This page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Was `primary[500]` (lapis) + `onAccent`, the exact
+// onAccent-on-non-gold bug the redesign flags — "Generate" is this page's
+// single primary action, so it earns the gold treatment (spec §3), which
+// makes onAccent correct again (dark text on a genuinely gold fill).
 const GenerateButton = styled.button`
   padding: 10px 22px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
@@ -220,55 +203,55 @@ const TotalsRow = styled.div`
 `;
 
 interface BucketCardProps {
-  $color: string;
-  $textColor: string;
+  $accent: string;
 }
 
+// Each bucket is its own small glass card (not nested inside another glass
+// panel — a row of independent tiles, same idea as PageHeader's stat tiles)
+// with a severity-coloured top accent, spec §5.2 extrapolation.
 const BucketCard = styled.div<BucketCardProps>`
+  ${glassPanel}
   flex: 1;
   min-width: 120px;
   padding: 16px 18px;
-  border-radius: 12px;
-  background: ${({ $color }) => $color};
-  border: 1px solid rgba(59, 44, 24, 0.06);
+  border-top: 2px solid ${({ $accent }) => $accent};
 `;
 
-const BucketLabel = styled.div<{ $textColor: string }>`
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ $textColor }) => $textColor};
+const BucketLabel = styled.div<{ $accent: string }>`
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ $accent }) => $accent};
   margin-bottom: 6px;
-  opacity: 0.8;
 `;
 
-const BucketAmount = styled.div<{ $textColor: string }>`
+const BucketAmount = styled.div<{ $accent: string }>`
   font-size: 18px;
   font-weight: 700;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-  color: ${({ $textColor }) => $textColor};
+  color: ${({ $accent }) => $accent};
 `;
 
-const BucketSub = styled.div<{ $textColor: string }>`
+const BucketSub = styled.div`
   font-size: 11px;
-  color: ${({ $textColor }) => $textColor};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 2px;
-  opacity: 0.65;
 `;
 
-// ─── Report meta bar ───────────────────────────────────────────────────────────
+// ─── Report panel (meta bar + table, one glass layer) ──────────────────────────
+
+const ReportPanel = styled.div`
+  ${glassPanel}
+  overflow: hidden;
+`;
 
 const ReportMetaBar = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 10px 10px 0 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ReportMetaTitle = styled.span`
@@ -277,13 +260,12 @@ const ReportMetaTitle = styled.span`
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
+// Dense table, spec §4: transparent rows/header, Space Mono uppercase celeste
+// column headers, `line` row dividers. Already sits inside ReportPanel — no
+// per-row glass.
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top: none;
-  border-radius: 0 0 12px 12px;
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const AgingTable = styled.table`
@@ -293,21 +275,16 @@ const AgingTable = styled.table`
 `;
 
 const AgingTHead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  background: transparent;
 `;
 
 const AgingTh = styled.th`
+  ${monoLabel}
   padding: 12px 14px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -316,9 +293,10 @@ const AgingThRight = styled(AgingTh)`
 `;
 
 const AgingTr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  transition: background 100ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -337,7 +315,7 @@ const AgingTdMono = styled.td`
 `;
 
 const AgingTdMonoDimmed = styled(AgingTdMono)`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 interface TotalTrProps {
@@ -345,9 +323,8 @@ interface TotalTrProps {
 }
 
 const TotalTr = styled.tr<TotalTrProps>`
-  border-top: ${({ $isFooter, theme }) => ($isFooter ? `3px double ${theme.colors.border}` : 'none')};
-  background: ${({ $isFooter, theme }) =>
-    $isFooter ? theme.colors.neutral[50] : 'transparent'};
+  border-top: ${({ $isFooter, theme }) => ($isFooter ? `2px solid ${theme.colors.line}` : 'none')};
+  background: ${({ $isFooter }) => ($isFooter ? 'rgba(180, 200, 220, 0.05)' : 'transparent')};
 `;
 
 const TotalTd = styled.td`
@@ -371,15 +348,25 @@ const TotalTdMono = styled.td`
 const EmptyState = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   line-height: 1.7;
+`;
+
+// Empty-state headline, spec §4/§9: Fraunces italic celeste.
+const EmptyTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const LoadingOverlay = styled.div`
   padding: 48px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -387,6 +374,7 @@ const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -394,7 +382,7 @@ const ErrorBanner = styled.div`
 
 const StepIndicator = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 8px;
   font-style: italic;
 `;
@@ -405,57 +393,40 @@ interface BucketDef {
   key: keyof ApAgingBuckets;
   label: string;
   sublabel: string;
-  bg: string;
-  text: string;
+  accent: string;
 }
 
-// Aging severity ramp: healthy (emerald) -> early warning (gold) -> escalating
-// overdue (terracotta, light to dark-inverted) -> grand total set apart in the
-// primary (lapis) voice so it doesn't read as "most severe".
-const bucketDefs = (theme: Theme): BucketDef[] => [
-  {
-    key: 'notDue',
-    label: 'Not Due',
-    sublabel: 'Current',
-    bg: theme.colors.emerald[50],
-    text: theme.colors.emerald[800],
-  },
-  {
-    key: 'days1To30',
-    label: '1–30 Days',
-    sublabel: 'Overdue',
-    bg: theme.colors.gold[50],
-    text: theme.colors.gold[800],
-  },
-  {
-    key: 'days31To60',
-    label: '31–60 Days',
-    sublabel: 'Overdue',
-    bg: theme.colors.terracotta[50],
-    text: theme.colors.terracotta[600],
-  },
-  {
-    key: 'days61To90',
-    label: '61–90 Days',
-    sublabel: 'Overdue',
-    bg: theme.colors.terracotta[100],
-    text: theme.colors.terracotta[700],
-  },
-  {
-    key: 'daysOver90',
-    label: '> 90 Days',
-    sublabel: 'Overdue',
-    bg: theme.colors.terracotta[900],
-    text: theme.colors.onAccent,
-  },
-  {
-    key: 'total',
-    label: 'Grand Total',
-    sublabel: 'All vendors',
-    bg: theme.colors.primary[800],
-    text: theme.colors.primary[100],
-  },
+// Aging severity ramp — NOT a phase status, a severity gradient (same
+// convention as PnlArAging's bucketColors, spec §5.2 note on that file):
+// healthy emerald -> early-overdue gold -> escalating terra -> severe coral
+// (`quarantined`, the only red). Five aging buckets map onto four severity
+// steps (clamped, same `Math.min(index, length-1)` idea PnlArAging uses for
+// its bar-chart Cells) so the two most-overdue buckets (61-90d, 90+d) share
+// the "severe" colour — there is no fifth distinct severity hue in the
+// vocabulary and inventing one would violate spec §5's "one semantic
+// vocabulary" rule. Grand Total is deliberately `bright.lapis` (primary
+// voice), NOT part of the severity ramp, so it doesn't read as "most severe"
+// — this was already true in the pre-redesign code's own comment and is
+// preserved.
+const SEVERITY_RAMP = (theme: Theme) => [
+  theme.colors.phase.fruiting,    // healthy
+  theme.colors.warning,           // early overdue
+  theme.colors.bright.terra,      // escalating
+  theme.colors.phase.quarantined, // severe
 ];
+
+const bucketDefs = (theme: Theme): BucketDef[] => {
+  const ramp = SEVERITY_RAMP(theme);
+  const severityFor = (i: number) => ramp[Math.min(i, ramp.length - 1)];
+  return [
+    { key: 'notDue', label: 'Not Due', sublabel: 'Current', accent: severityFor(0) },
+    { key: 'days1To30', label: '1–30 Days', sublabel: 'Overdue', accent: severityFor(1) },
+    { key: 'days31To60', label: '31–60 Days', sublabel: 'Overdue', accent: severityFor(2) },
+    { key: 'days61To90', label: '61–90 Days', sublabel: 'Overdue', accent: severityFor(3) },
+    { key: 'daysOver90', label: '> 90 Days', sublabel: 'Overdue', accent: severityFor(4) },
+    { key: 'total', label: 'Grand Total', sublabel: 'All vendors', accent: theme.colors.bright.lapis },
+  ];
+};
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
@@ -631,12 +602,11 @@ export function APAgingPage() {
 
   return (
     <PageContainer>
-      <PageTitle>AP Aging Report</PageTitle>
-      <PageSubtitle>
-        Outstanding accounts payable balances grouped by how overdue each invoice is.
-        Only Approved invoices with a positive outstanding balance are included.
-      </PageSubtitle>
-      <Divider />
+      <PageHeader
+        breadcrumb="FINANCE · ACCOUNTS PAYABLE"
+        title="AP Aging Report"
+        description="Outstanding accounts payable balances grouped by how overdue each invoice is. Only Approved invoices with a positive outstanding balance are included."
+      />
 
       {/* ── Toolbar ── */}
       <ToolbarCard>
@@ -713,6 +683,7 @@ export function APAgingPage() {
       {/* ── Pre-generate prompt ── */}
       {!isOrchestrating && !report && !errorMessage && (
         <EmptyState>
+          <EmptyTitle>No report generated yet</EmptyTitle>
           Select a company and date above, then click <strong>Generate</strong> to
           view the AP Aging report.
         </EmptyState>
@@ -724,17 +695,12 @@ export function APAgingPage() {
           {/* ── Totals cards ── */}
           <TotalsRow role="list" aria-label="AP Aging bucket totals">
             {bucketDefs(theme).map((bucket) => (
-              <BucketCard
-                key={bucket.key}
-                $color={bucket.bg}
-                $textColor={bucket.text}
-                role="listitem"
-              >
-                <BucketLabel $textColor={bucket.text}>{bucket.label}</BucketLabel>
-                <BucketAmount $textColor={bucket.text}>
+              <BucketCard key={bucket.key} $accent={bucket.accent} role="listitem">
+                <BucketLabel $accent={bucket.accent}>{bucket.label}</BucketLabel>
+                <BucketAmount $accent={bucket.accent}>
                   {formatAed(report.totals[bucket.key])}
                 </BucketAmount>
-                <BucketSub $textColor={bucket.text}>{bucket.sublabel}</BucketSub>
+                <BucketSub>{bucket.sublabel}</BucketSub>
               </BucketCard>
             ))}
           </TotalsRow>
@@ -742,11 +708,11 @@ export function APAgingPage() {
           {/* ── Empty — all paid up ── */}
           {hasNoOutstanding ? (
             <EmptyState>
-              No outstanding AP invoices. All vendors are paid up to{' '}
-              <strong>{report.asOfDate}</strong>.
+              <EmptyTitle>All vendors are paid up</EmptyTitle>
+              No outstanding AP invoices as of <strong>{report.asOfDate}</strong>.
             </EmptyState>
           ) : (
-            <>
+            <ReportPanel>
               <ReportMetaBar>
                 <ReportMetaTitle>
                   AP Aging — {effectiveCompanyCode}
@@ -814,7 +780,7 @@ export function APAgingPage() {
                   </tfoot>
                 </AgingTable>
               </TableWrapper>
-            </>
+            </ReportPanel>
           )}
         </>
       )}

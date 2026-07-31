@@ -1,21 +1,38 @@
 import { useState, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { X } from 'lucide-react';
 import { marketingApi } from '../../services/marketingService';
 import type { MarketingBudget, MarketingBudgetCreate, MarketingBudgetUpdate } from '../../types/marketing';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 
 interface BudgetFormProps { budget: MarketingBudget | null; onClose: () => void; }
 
-const Overlay = styled.div`position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: ${({ theme }) => `${theme.colors.neutral[900]}80`}; display: flex; justify-content: center; align-items: center; z-index: 1000;`;
-const Modal = styled.div`background: ${({ theme }) => theme.colors.background}; border-radius: 12px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;`;
-const Title = styled.h2`font-size: 24px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0 0 24px 0;`;
+const Overlay = styled.div`position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 36, 0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: ${({ theme }) => theme.zIndex.modal};`;
+const Modal = styled.div`${glassPanel} border-radius: 20px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);`;
+const TitleRow = styled.div`display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;`;
+const Title = styled.h2`font-size: 24px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0;`;
+const CloseButton = styled.button`display: flex; align-items: center; justify-content: center; background: none; border: none; color: ${({ theme }) => theme.colors.muted}; cursor: pointer; padding: 4px; &:hover { color: ${({ theme }) => theme.colors.textPrimary}; }`;
 const Form = styled.form``;
 const FormGroup = styled.div`margin-bottom: 20px;`;
-const Label = styled.label`display: block; font-size: 14px; font-weight: 500; color: ${({ theme }) => theme.colors.textPrimary}; margin-bottom: 8px;`;
-const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; } &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }`;
-const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }`;
+const Label = styled.label`${monoLabel} display: block; font-size: 0.68rem; color: ${({ theme }) => theme.colors.celeste}; margin-bottom: 8px;`;
+const inputStyle = css`
+  ${glassControl}
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
+`;
+const Input = styled.input`${inputStyle}`;
+const Select = styled.select`
+  ${inputStyle}
+  cursor: pointer;
+  option { background: ${({ theme }) => theme.colors.cosmosHi}; color: ${({ theme }) => theme.colors.textPrimary}; }
+`;
 const ButtonRow = styled.div`display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;`;
-const Button = styled.button`padding: 10px 24px; background: ${({ theme }) => theme.colors.primary[500]}; color: ${({ theme }) => theme.colors.onAccent}; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: ${({ theme }) => theme.colors.primary[600]}; }`;
-const CancelButton = styled(Button)`background: transparent; color: ${({ theme }) => theme.colors.textSecondary}; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; &:hover { background: ${({ theme }) => theme.colors.surface}; }`;
+const Button = styled.button`padding: 10px 24px; background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]}); color: ${({ theme }) => theme.colors.onAccent}; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 150ms ease-in-out; &:hover { filter: brightness(1.05); } &:disabled { opacity: 0.6; cursor: not-allowed; }`;
+const CancelButton = styled.button`padding: 10px 24px; background: transparent; color: ${({ theme }) => theme.colors.celeste}; border: 1px solid ${({ theme }) => theme.colors.glass.border}; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }`;
 const ErrorText = styled.div`color: ${({ theme }) => theme.colors.error}; font-size: 13px; margin-top: 8px;`;
 
 export function BudgetForm({ budget, onClose }: BudgetFormProps) {
@@ -67,7 +84,12 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
   return (
     <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
-        <Title>{budget ? 'Edit Budget' : 'Create Budget'}</Title>
+        <TitleRow>
+          <Title>{budget ? 'Edit Budget' : 'Create Budget'}</Title>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={20} strokeWidth={1.8} />
+          </CloseButton>
+        </TitleRow>
         <Form onSubmit={handleSubmit}>
           <FormGroup><Label>Budget Name *</Label><Input name="name" value={formData.name} onChange={handleChange} required /></FormGroup>
           <FormGroup><Label>Year *</Label><Input type="number" name="year" value={formData.year} onChange={handleChange} required min="2020" /></FormGroup>

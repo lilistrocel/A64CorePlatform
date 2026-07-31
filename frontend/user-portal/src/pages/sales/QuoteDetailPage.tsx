@@ -25,6 +25,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
 import { ExternalLink } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   useQuote,
   useTransitionQuote,
@@ -33,6 +34,7 @@ import {
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { QuoteStatus, QuoteLine, DocumentLinkRef } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -77,31 +79,12 @@ const Title = styled.h1`
   margin: 0;
 `;
 
+const DocNo = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
 const StatusBadge = styled.span<{ $status: QuoteStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'closed': return theme.colors.neutral[200];
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'closed': return theme.colors.neutral[800];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const ActionBar = styled.div`
@@ -111,62 +94,72 @@ const ActionBar = styled.div`
   align-self: flex-start;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   padding: 10px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 10px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const GhostButton = styled.button`
   padding: 10px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 10px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  transition: background 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.26); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Emerald action (secondary CTA, not the page's gold budget item) — onDark
+// text per the onAccent audit (onAccent is gold-fill-only now).
 const ConvertButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 10px 18px;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -180,8 +173,8 @@ const ConvertButton = styled.button`
     position: absolute;
     bottom: calc(100% + 8px);
     right: 0;
-    background: ${({ theme }) => theme.colors.textPrimary};
-    color: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
     font-size: 12px;
     font-weight: 400;
     white-space: nowrap;
@@ -198,9 +191,7 @@ const ConvertButton = styled.button`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -232,11 +223,8 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const InfoValue = styled.span`
@@ -256,15 +244,11 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-align: left;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -272,16 +256,15 @@ const Td = styled.td`
   padding: 12px 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   &:last-child {
     text-align: right;
   }
 `;
 
 const TotalsCard = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 10px;
+  ${glassPanel}
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
@@ -295,7 +278,8 @@ const TotalsRow = styled.div`
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TotalsGross = styled.div`
@@ -304,24 +288,20 @@ const TotalsGross = styled.div`
   font-size: 16px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   padding-top: 10px;
 `;
 
 const DocChainCard = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 10px;
+  ${glassPanel}
   padding: 16px 20px;
 `;
 
 const DocChainTitle = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 `;
 
 const DocChainLink = styled.button`
@@ -330,7 +310,7 @@ const DocChainLink = styled.button`
   gap: 6px;
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -341,19 +321,21 @@ const DocChainLink = styled.button`
 const ErrorBanner = styled.div`
   padding: 16px 20px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   margin-bottom: 20px;
 `;
 
 // ─── Delete confirmation modal ────────────────────────────────────────────────
+// Canonical modal treatment (spec §4): glassPanel at blur 24px over a
+// cosmos scrim.
 
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -361,12 +343,13 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px;
   max-width: 440px;
   width: calc(100vw - 32px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 `;
 
 const ModalHeader = styled.div`
@@ -388,10 +371,10 @@ const CloseBtn = styled.button`
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   padding: 4px 8px;
   border-radius: 6px;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.07); }
 `;
 
 const ModalText = styled.p`
@@ -529,7 +512,7 @@ export function QuoteDetailPage() {
 
       <TitleRow>
         <TitleGroup>
-          <Title>Sales Quote {quote.docNumber}</Title>
+          <Title>Sales Quote <DocNo>{quote.docNumber}</DocNo></Title>
           <StatusBadge $status={quote.status}>{statusLabel(quote.status)}</StatusBadge>
         </TitleGroup>
 

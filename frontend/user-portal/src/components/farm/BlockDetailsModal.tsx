@@ -10,24 +10,38 @@
 
 import { useState, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import {
+  ClipboardList,
+  Sprout,
+  Flower2,
+  Wheat,
+  Sparkles,
+  Inbox,
+  X,
+} from 'lucide-react';
+import { glassPanel, monoLabel, phaseBadge, hexToRgba } from '@a64core/shared';
+import type { Theme, PhaseKey } from '@a64core/shared';
 import { getBlockHarvestSummary, getBlockHarvests } from '../../services/farmApi';
 import { farmApi } from '../../services/farmApi';
 import type { DashboardBlock, BlockHarvest } from '../../types/farm';
+import { BLOCK_STATE_PHASE_KEYS } from '../../types/farm';
 import { BlockAutomationTab } from './BlockAutomationTab';
 
 type QualityGrade = 'A' | 'B' | 'C';
 
-// Theme-aware — called with `theme` from useTheme() rather than a static
-// object, since some resolved tokens can differ between light/dark.
+// Quality grade extrapolates the phase vocabulary (spec §5.2) — gold/warning
+// stays reserved for the literal Harvesting phase, not an ordinary grade
+// chip (spec §3). This is a distinct vocabulary from block state — see
+// BLOCK_STATE_PHASE_KEYS (types/farm.ts) for the canonical state→phase map.
 function getHarvestGradeColor(theme: Theme, grade: QualityGrade): string {
   const map: Record<QualityGrade, string> = {
-    A: theme.colors.success,
-    B: theme.colors.primary[500],
-    C: theme.colors.warning,
+    A: theme.colors.phase.fruiting,
+    B: theme.colors.phase.inoculated,
+    C: theme.colors.phase.fruitingInit,
   };
   return map[grade];
 }
+
 
 const HARVEST_GRADE_LABELS: Record<QualityGrade, string> = {
   A: 'Premium',
@@ -101,19 +115,6 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
     });
   };
 
-  const getStatusColor = () => {
-    const colors: Record<string, string> = {
-      empty: theme.colors.textSecondary,
-      planned: theme.colors.primary[500],
-      planted: theme.colors.success,
-      growing: theme.colors.success,
-      fruiting: theme.colors.secondary[500],
-      harvesting: theme.colors.warning,
-      cleaning: theme.colors.terracotta[400],
-    };
-    return colors[block.state] || theme.colors.textSecondary;
-  };
-
   const renderGrowthTimeline = () => {
     // Helper to find actual status change date from history
     const getActualChangeDate = (status: string): string | null => {
@@ -128,35 +129,35 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
         label: 'Planned',
         actualDate: getActualChangeDate('planned'),
         expectedDate: null,
-        icon: '📋'
+        icon: ClipboardList
       },
       {
         key: 'growing',
         label: 'Growing/Planted',
         actualDate: getActualChangeDate('growing') || block.plantedDate,
         expectedDate: block.expectedStatusChanges?.growing,
-        icon: '🌱'
+        icon: Sprout
       },
       {
         key: 'fruiting',
         label: 'Fruiting',
         actualDate: getActualChangeDate('fruiting'),
         expectedDate: block.expectedStatusChanges?.fruiting,
-        icon: '🌸'
+        icon: Flower2
       },
       {
         key: 'harvesting',
         label: 'Harvesting',
         actualDate: getActualChangeDate('harvesting'),
         expectedDate: block.expectedHarvestDate || block.expectedStatusChanges?.harvesting,
-        icon: '🧺'
+        icon: Wheat
       },
       {
         key: 'cleaning',
         label: 'Cleaning',
         actualDate: getActualChangeDate('cleaning'),
         expectedDate: null,
-        icon: '🧹'
+        icon: Sparkles
       },
     ];
 
@@ -178,12 +179,13 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
           const hasActualDate = stage.actualDate !== null;
           const hasExpectedDate = stage.expectedDate !== null;
 
+          const StageIcon = stage.icon;
           return (
             <TimelineStage key={stage.key}>
               <TimelineIcon
                 $status={isCompleted ? 'completed' : isCurrent ? 'current' : 'pending'}
               >
-                {stage.icon}
+                <StageIcon size={18} strokeWidth={1.8} />
               </TimelineIcon>
               <TimelineContent>
                 <TimelineLabel $isCurrent={isCurrent}>{stage.label}</TimelineLabel>
@@ -226,7 +228,7 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
     if ((!harvestSummary || harvestSummary.totalHarvests === 0) && harvests.length === 0) {
       return (
         <EmptyState>
-          <EmptyIcon>🧺</EmptyIcon>
+          <EmptyIcon><Inbox size={40} strokeWidth={1.4} /></EmptyIcon>
           <EmptyText>No harvest entries yet</EmptyText>
         </EmptyState>
       );
@@ -362,11 +364,13 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
               <BlockCodeSmall>{block.blockCode}</BlockCodeSmall>
               <BlockName>{block.name || block.blockCode}</BlockName>
             </HeaderTitles>
-            <StatusBadge $color={getStatusColor()}>
+            <StatusBadge $phaseKey={BLOCK_STATE_PHASE_KEYS[block.state] ?? 'empty'}>
               {block.state.charAt(0).toUpperCase() + block.state.slice(1)}
             </StatusBadge>
           </HeaderLeft>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={20} strokeWidth={1.8} />
+          </CloseButton>
         </Header>
 
         <TabBar>
@@ -398,7 +402,9 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
                   {block.targetCropName && (
                     <InfoItem>
                       <InfoLabel>Current Crop:</InfoLabel>
-                      <InfoValue>🌿 {block.targetCropName}</InfoValue>
+                      <InfoValue style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Sprout size={14} strokeWidth={1.8} /> {block.targetCropName}
+                      </InfoValue>
                     </InfoItem>
                   )}
                   <InfoItem>
@@ -508,10 +514,13 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers"). This is a
+// read-only details view (not a data-entry form), so backdrop-click-to-close
+// is existing, intentional behaviour — left unchanged.
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -520,15 +529,16 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 800px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const Header = styled.div`
@@ -536,15 +546,14 @@ const Header = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
   flex-shrink: 0;
 
   &::-webkit-scrollbar {
@@ -552,26 +561,26 @@ const TabBar = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.cosmosHi};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  background: transparent;
+  color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.muted)};
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : 'transparent')};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.textPrimary)};
   }
 `;
 
@@ -587,34 +596,27 @@ const HeaderTitles = styled.div`
 `;
 
 const BlockCodeSmall = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.neutral[400]};
-  font-family: 'Courier New', monospace;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const BlockName = styled.h2`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
-const StatusBadge = styled.div<{ $color: string }>`
-  padding: 4px 12px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  background: ${({ $color }) => `${$color}15`};
-  color: ${({ $color }) => $color};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  text-transform: capitalize;
+// The §4 badge pattern via the shared phaseBadge mixin.
+const StatusBadge = styled.div<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -626,7 +628,7 @@ const CloseButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -651,16 +653,16 @@ const Section = styled.div`
 `;
 
 const SectionTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
 `;
 
 const SectionSubtitle = styled.h4`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 ${({ theme }) => theme.spacing.sm} 0;
 `;
 
@@ -677,14 +679,14 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const InfoValue = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -709,19 +711,19 @@ const TimelineIcon = styled.div<{ $status: 'completed' | 'current' | 'pending' }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
   background: ${({ $status, theme }) => {
     switch ($status) {
       case 'completed':
-        return theme.colors.success;
+        return theme.colors.bright.emerald;
       case 'current':
-        return theme.colors.primary[500];
+        return theme.colors.bright.lapis;
       case 'pending':
-        return theme.colors.neutral[200];
+        return 'rgba(180, 200, 220, 0.1)';
     }
   }};
-  border: 3px solid ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: ${({ $status, theme }) => ($status === 'pending' ? theme.colors.muted : theme.colors.onDark)};
+  border: 3px solid ${({ theme }) => theme.colors.cosmosHi};
+  box-shadow: 0 2px 8px rgba(4, 6, 18, 0.4);
   z-index: 1;
   flex-shrink: 0;
 `;
@@ -735,21 +737,18 @@ const TimelineContent = styled.div`
 
 const TimelineLabel = styled.div<{ $isCurrent: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ $isCurrent, theme }) =>
-    $isCurrent
-      ? theme.typography.fontWeight.semibold
-      : theme.typography.fontWeight.medium};
+  font-weight: ${({ $isCurrent }) => ($isCurrent ? 700 : 500)};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TimelineDate = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TimelineExpected = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.neutral[400]};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
   margin-top: ${({ theme }) => theme.spacing.xs};
 `;
@@ -761,7 +760,7 @@ const TimelineConnector = styled.div<{ $completed: boolean }>`
   width: 2px;
   height: calc(100% + 16px);
   background: ${({ $completed, theme }) =>
-    $completed ? theme.colors.success : theme.colors.neutral[300]};
+    $completed ? theme.colors.bright.emerald : theme.colors.line};
 `;
 
 const HarvestHistorySection = styled.div`
@@ -778,27 +777,27 @@ const HarvestStats = styled.div`
 
 const StatCard = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const StatLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const StatValue = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatSubtext = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
@@ -812,7 +811,7 @@ const GradeGrid = styled.div`
 
 const GradeCard = styled.div<{ $color: string }>`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ $color }) => `${$color}10`};
+  background: ${({ $color }) => hexToRgba($color, 0.16)};
   border: 2px solid ${({ $color }) => $color};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   display: flex;
@@ -834,7 +833,7 @@ const GradeBadge = styled.div`
 const GradeLabel = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const GradeQuantity = styled.div`
@@ -845,14 +844,14 @@ const GradeQuantity = styled.div`
 
 const GradePercentage = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const HarvestDates = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.xl};
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   border-radius: ${({ theme }) => theme.borderRadius.md};
 `;
 
@@ -865,7 +864,7 @@ const DateInfo = styled.div`
 const DateLabel = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const DateValue = styled.div`
@@ -879,9 +878,9 @@ const YieldContainer = styled.div`
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const YieldHeader = styled.div`
@@ -898,27 +897,28 @@ const YieldActual = styled.span`
 
 const YieldSeparator = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  color: ${({ theme }) => theme.colors.neutral[400]};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const YieldPredicted = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const YieldBarBackground = styled.div`
   width: 100%;
   height: 10px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 5px;
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 99px;
   overflow: hidden;
 `;
 
 const YieldBarFill = styled.div<{ $percent: number; $overTarget: boolean }>`
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: ${({ $overTarget, theme }) => ($overTarget ? theme.colors.success : theme.colors.primary[500])};
-  border-radius: 5px;
+  background: ${({ $overTarget, theme }) => ($overTarget ? theme.colors.bright.emerald : theme.colors.bright.lapis)};
+  border-radius: 99px;
   transition: width 0.5s ease-in-out;
 `;
 
@@ -930,13 +930,13 @@ const YieldFooter = styled.div`
 
 const YieldPercent = styled.span<{ $overTarget: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ $overTarget, theme }) => ($overTarget ? theme.colors.success : theme.colors.primary[500])};
+  font-weight: 700;
+  color: ${({ $overTarget, theme }) => ($overTarget ? theme.colors.bright.emerald : theme.colors.bright.lapis)};
 `;
 
 const YieldHarvestCount = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PerformanceGrid = styled.div`
@@ -947,21 +947,21 @@ const PerformanceGrid = styled.div`
 
 const PerformanceCard = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const PerformanceLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const PerformanceValue = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -975,26 +975,26 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 48px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: ${({ theme }) => theme.spacing.md};
-  opacity: 0.5;
 `;
 
 const EmptyText = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const LoadingState = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // Individual Harvest Records Styles
 const HarvestRecordsSection = styled.div`
   margin-top: ${({ theme }) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   padding-top: ${({ theme }) => theme.spacing.lg};
 `;
 
@@ -1007,8 +1007,8 @@ const HarvestRecordsList = styled.div`
 `;
 
 const HarvestRecordCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(180, 200, 220, 0.04);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: ${({ theme }) => theme.spacing.md};
   display: flex;
@@ -1017,7 +1017,7 @@ const HarvestRecordCard = styled.div`
   transition: background-color 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.08);
   }
 `;
 
@@ -1029,7 +1029,7 @@ const HarvestRecordInfo = styled.div`
 
 const HarvestRecordDate = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   display: flex;
   align-items: center;
@@ -1037,14 +1037,14 @@ const HarvestRecordDate = styled.div`
 `;
 
 const HarvestRecordCrop = styled.span`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.normal};
-  color: ${({ theme }) => theme.colors.success};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
+  color: ${({ theme }) => theme.colors.bright.emerald};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
 const HarvestRecordMeta = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.sm};
@@ -1055,33 +1055,36 @@ const HarvestRecordDot = styled.span`
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.neutral[400]};
+  background: ${({ theme }) => theme.colors.muted};
 `;
 
 const HarvestRecordNotes = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
   margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
+// Quality grade extrapolates the phase vocabulary (spec §5.2) — gold/warning
+// stays reserved for the literal Harvesting phase (spec §3). onDark, not
+// onAccent, since these fills are phase colours, not gold.
 const HarvestQualityBadge = styled.span<{ $grade: QualityGrade }>`
   display: inline-block;
   padding: 2px 8px;
   border-radius: 9999px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   background: ${({ $grade, theme }) => {
     switch ($grade) {
       case 'A':
-        return theme.colors.success;
+        return theme.colors.phase.fruiting;
       case 'B':
-        return theme.colors.warning;
+        return theme.colors.phase.inoculated;
       case 'C':
-        return theme.colors.terracotta[400];
+        return theme.colors.phase.fruitingInit;
       default:
-        return theme.colors.textDisabled;
+        return theme.colors.phase.empty;
     }
   }};
 `;

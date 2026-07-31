@@ -33,6 +33,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled, { useTheme } from 'styled-components';
 import { Trash2, Plus } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   useCustomerReceipt,
@@ -91,13 +92,14 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
   &:hover {
     text-decoration: underline;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -109,12 +111,9 @@ const PageTitle = styled.h1`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const CardTitle = styled.h2`
@@ -149,64 +148,63 @@ const FieldFull = styled(Field)`
 `;
 
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
     opacity: 0.7;
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 80px;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const AllocTable = styled.table`
@@ -215,15 +213,11 @@ const AllocTable = styled.table`
 `;
 
 const AllocTh = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const AllocThRight = styled(AllocTh)`
@@ -232,60 +226,63 @@ const AllocThRight = styled(AllocTh)`
 
 const AllocTd = styled.td`
   padding: 8px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SmallInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const IconButton = styled.button`
-  background: none;
-  border: none;
+  background: rgba(240, 138, 112, 0.16);
+  border: 1px solid rgba(240, 138, 112, 0.45);
   padding: 4px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.bright.coral};
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.terracotta[600]};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
+// Ghost/ancillary button — transparent, celeste text/border (spec §4).
 const AddRowButton = styled.button`
   margin-top: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
   background: transparent;
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   padding: 8px 16px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   width: 100%;
   justify-content: center;
+  transition: all 150ms ease;
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -296,17 +293,21 @@ const ActionRow = styled.div`
   margin-top: 24px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   padding: 11px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.6;
@@ -315,22 +316,22 @@ const PrimaryButton = styled.button`
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 11px 24px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const ErrorBanner = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.terracotta[700]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -339,8 +340,8 @@ const ErrorBanner = styled.div`
 
 const InfoBanner = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.lapis[700]};
-  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -354,18 +355,19 @@ const SumRow = styled.div`
   padding: 10px 12px;
   font-size: 14px;
   font-weight: 600;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   margin-top: 4px;
 `;
 
 const SumLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const SumValue = styled.span<{ $hasError?: boolean }>`
   color: ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.textPrimary};
+    $hasError ? theme.colors.bright.coral : theme.colors.textPrimary};
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   min-width: 120px;
   text-align: right;
 `;

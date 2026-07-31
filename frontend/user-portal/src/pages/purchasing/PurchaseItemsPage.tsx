@@ -5,10 +5,23 @@
  * Paginated list with type-filter chips, search, create/edit modals, and soft-delete.
  *
  * Modals do NOT close on overlay click — X button only.
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls/modal, Space Mono metadata,
+ * shared PageHeader/Button. Items have no PR/PO/GR/AP lifecycle status — the
+ * active/inactive toggle is extrapolated onto the phase map per spec §5.2 as
+ * 'fruiting' (active) / 'decommissioned' (inactive), matching VendorsPage's
+ * choice. Item TYPE (raw material/consumable/service/fixed asset) is a
+ * categorical label, not a status, so it intentionally stays a single flat
+ * glass tag rather than inventing a new per-type colour vocabulary (spec:
+ * "do not invent per-module variants"). Logic, routes, data-fetching and
+ * props are unchanged.
  */
 
 import { useState, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { X } from 'lucide-react';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   usePurchaseItems,
   useCreatePurchaseItem,
@@ -21,69 +34,117 @@ import type { PurchaseItem, PurchaseItemCreate, PurchaseItemUpdate, ItemType } f
 // ─── Styled components ──────────────────────────────────────────────────────
 
 const Container = styled.div`padding: 32px; max-width: 1440px; margin: 0 auto;`;
-const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;`;
-const Title = styled.h1`font-size: 28px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0;`;
 const FilterRow = styled.div`display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;`;
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1; min-width: 220px; padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px;
-  font-size: 14px; background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-`;
-const PrimaryButton = styled.button`
-  padding: 10px 20px; background: ${({ theme }) => theme.colors.primary[500]}; color: ${({ theme }) => theme.colors.onAccent};
-  border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
-`;
-const GhostButton = styled.button`
-  padding: 6px 14px; background: transparent; color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 6px; font-size: 13px; cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
 `;
 const DangerButton = styled.button`
-  padding: 6px 14px; background: transparent; color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error}; border-radius: 6px; font-size: 13px; cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  padding: 6px 14px; background: ${({ theme }) => theme.colors.errorBg}; color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4); border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.24); }
 `;
 const ChipRow = styled.div`display: flex; gap: 8px; flex-wrap: wrap;`;
 const Chip = styled.button<{ $active: boolean }>`
-  padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer;
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  background: ${({ $active, theme }) => ($active ? `${theme.colors.primary[500]}15` : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
-  transition: all 150ms ease;
+  ${glassControl}
+  padding: 6px 14px; border-radius: 99px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem; letter-spacing: 0.04em; cursor: pointer; transition: all 150ms ease;
+  color: ${({ theme }) => theme.colors.muted};
+  &:hover { border-color: rgba(180, 200, 220, 0.4); color: ${({ theme }) => theme.colors.textPrimary}; }
+  ${({ $active, theme }) => $active && css`
+    color: ${theme.colors.celeste};
+    border-color: ${theme.colors.celeste};
+    background: rgba(180, 200, 220, 0.14);
+  `}
 `;
-const Table = styled.table`width: 100%; border-collapse: collapse; background: ${({ theme }) => theme.colors.surface}; border-radius: 12px; overflow: hidden; box-shadow: ${({ theme }) => theme.shadows.sm};`;
-const Th = styled.th`padding: 14px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: ${({ theme }) => theme.colors.textSecondary}; background: ${({ theme }) => theme.colors.neutral[50]}; border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};`;
-const Td = styled.td`padding: 14px 16px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary}; border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};`;
-const Tr = styled.tr`cursor: pointer; transition: background 100ms ease; &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; } &:last-child td { border-bottom: none; }`;
-const Badge = styled.span<{ $active: boolean }>`
-  display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600;
-  background: ${({ $active, theme }) => $active ? theme.colors.successBg : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) => $active ? theme.colors.success : theme.colors.textDisabled};
+const TableWrap = styled.div`
+  ${glassPanel}
+  overflow: hidden;
 `;
-const TypeBadge = styled.span`display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${({ theme }) => theme.colors.infoBg}; color: ${({ theme }) => theme.colors.info};`;
-const EmptyState = styled.div`text-align: center; padding: 64px 32px; color: ${({ theme }) => theme.colors.textSecondary}; font-size: 15px;`;
-const Pagination = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 16px 0; font-size: 14px; color: ${({ theme }) => theme.colors.textSecondary};`;
-const PageButtons = styled.div`display: flex; gap: 8px;`;
+const Table = styled.table`width: 100%; border-collapse: collapse;`;
+const Th = styled.th`
+  ${monoLabel}
+  padding: 14px 16px; text-align: left; color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+`;
+const Td = styled.td`padding: 14px 16px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary}; border-bottom: 1px solid ${({ theme }) => theme.colors.line};`;
+const Tr = styled.tr`cursor: pointer; transition: background 100ms ease; &:hover td { background: rgba(180, 200, 220, 0.05); } &:last-child td { border-bottom: none; }`;
+const Mono = styled.span`font-family: ${({ theme }) => theme.typography.fontFamily.mono};`;
+
+/** Active/inactive extrapolated onto the phase map — see file header note. */
+const StatusBadge = styled.span<{ $active: boolean }>`
+  ${({ $active }) => phaseBadge($active ? 'fruiting' : 'decommissioned')}
+`;
+
+/** Item type — categorical, not a status. Single flat glass tag, no
+ * per-type colour vocabulary (see file header note). */
+const TypeBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
+`;
+
+const StatusMessage = styled.p`text-align: center; padding: 48px 32px; color: ${({ theme }) => theme.colors.muted}; font-size: 15px;`;
+const EmptyState = styled.div`text-align: center; padding: 64px 32px;`;
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic; font-size: 1.4rem; color: ${({ theme }) => theme.colors.celeste}; margin: 0 0 8px;
+`;
+const EmptyText = styled.p`color: ${({ theme }) => theme.colors.muted}; font-size: 0.9rem; margin: 0 0 20px;`;
+const Pagination = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 16px 0; font-size: 14px; color: ${({ theme }) => theme.colors.muted};`;
+const PageButtons = styled.div`display: flex; align-items: center; gap: 8px;`;
+const PageIndicator = styled.span`
+  ${monoLabel}
+  padding: 6px 12px; color: ${({ theme }) => theme.colors.celeste};
+`;
 
 // ─── Modal primitives ───────────────────────────────────────────────────────
 
-const Overlay = styled.div`position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px;`;
-const Modal = styled.div`background: ${({ theme }) => theme.colors.surface}; border-radius: 16px; box-shadow: ${({ theme }) => theme.shadows.xl}; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;`;
-const ModalHeader = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 24px 28px 16px; border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]}; flex-shrink: 0;`;
+const Overlay = styled.div`position: fixed; inset: 0; background: rgba(10, 14, 36, 0.6); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px;`;
+const Modal = styled.div`
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;
+`;
+const ModalHeader = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 24px 28px 16px; border-bottom: 1px solid ${({ theme }) => theme.colors.line}; flex-shrink: 0;`;
 const ModalTitle = styled.h2`font-size: 20px; font-weight: 700; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0;`;
-const CloseButton = styled.button`background: none; border: none; font-size: 20px; cursor: pointer; color: ${({ theme }) => theme.colors.textSecondary}; padding: 4px; border-radius: 6px; line-height: 1; &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }`;
+const CloseButton = styled.button`
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer; color: ${({ theme }) => theme.colors.muted};
+  padding: 4px; border-radius: 6px;
+  &:hover { background: rgba(180, 200, 220, 0.1); color: ${({ theme }) => theme.colors.textPrimary}; }
+`;
 const ModalBody = styled.div`padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; flex: 1;`;
-const ModalFooter = styled.div`padding: 16px 28px 24px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]}; flex-shrink: 0;`;
+const ModalFooter = styled.div`padding: 16px 28px 24px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid ${({ theme }) => theme.colors.line}; flex-shrink: 0;`;
 const FormRow = styled.div`display: grid; grid-template-columns: 1fr 1fr; gap: 16px; @media (max-width: 600px) { grid-template-columns: 1fr; }`;
 const Field = styled.div`display: flex; flex-direction: column; gap: 6px;`;
-const Label = styled.label`font-size: 13px; font-weight: 600; color: ${({ theme }) => theme.colors.textSecondary};`;
-const Input = styled.input`padding: 10px 14px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; } &[disabled] { opacity: 0.6; }`;
-const SelectField = styled.select`padding: 10px 14px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }`;
+const Label = styled.label`
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
+`;
+const inputChrome = css`
+  ${glassControl}
+  padding: 10px 14px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15); }
+  &[disabled] { opacity: 0.6; }
+`;
+const Input = styled.input`${inputChrome}`;
+const SelectField = styled.select`${inputChrome} cursor: pointer;`;
 const ErrorText = styled.p`color: ${({ theme }) => theme.colors.error}; font-size: 13px; margin: 0;`;
 
 const ITEM_TYPE_OPTIONS: { value: ItemType; label: string }[] = [
@@ -178,7 +239,9 @@ function ItemFormModal({ item, organizationId, onClose, onSaved }: ItemFormModal
       <Modal onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>{isEdit ? 'Edit Purchase Item' : 'New Purchase Item'}</ModalTitle>
-          <CloseButton onClick={onClose} aria-label="Close">✕</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={1.8} />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           {error && <ErrorText>{error}</ErrorText>}
@@ -228,10 +291,10 @@ function ItemFormModal({ item, organizationId, onClose, onSaved }: ItemFormModal
           </FormRow>
         </ModalBody>
         <ModalFooter>
-          <GhostButton onClick={onClose}>Cancel</GhostButton>
-          <PrimaryButton onClick={handleSubmit} disabled={isLoading || !form.name || !form.uom}>
+          <Button variant="outline" size="small" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="small" onClick={handleSubmit} disabled={isLoading || !form.name || !form.uom}>
             {isLoading ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Item'}
-          </PrimaryButton>
+          </Button>
         </ModalFooter>
       </Modal>
     </Overlay>
@@ -276,10 +339,15 @@ export function PurchaseItemsPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Purchase Items</Title>
-        <PrimaryButton onClick={() => { setEditingItem(null); setShowModal(true); }}>+ New Item</PrimaryButton>
-      </Header>
+      <PageHeader
+        breadcrumb="— PURCHASING · ITEMS"
+        title="Purchase Items"
+        description="Item master data used across purchase requests, orders and receipts."
+        stats={[
+          { value: meta.total, label: 'Total Items' },
+          { value: items.length, label: 'This Page' },
+        ]}
+      />
 
       <FilterRow>
         <SearchInput
@@ -287,6 +355,7 @@ export function PurchaseItemsPage() {
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
+        <Button variant="primary" onClick={() => { setEditingItem(null); setShowModal(true); }}>New Item</Button>
       </FilterRow>
 
       <ChipRow style={{ marginBottom: 20 }}>
@@ -301,48 +370,56 @@ export function PurchaseItemsPage() {
         ))}
       </ChipRow>
 
-      {isLoading && <EmptyState>Loading purchase items...</EmptyState>}
-      {isError && <EmptyState>Failed to load items. Please try again.</EmptyState>}
+      {isLoading && <StatusMessage>Loading purchase items...</StatusMessage>}
+      {isError && <StatusMessage>Failed to load items. Please try again.</StatusMessage>}
       {!isLoading && !isError && items.length === 0 && (
-        <EmptyState>No purchase items found. Create your first item to get started.</EmptyState>
+        <EmptyState>
+          <EmptyHeadline>No purchase items yet</EmptyHeadline>
+          {/* Reason: no separate CTA — "New Item" above in FilterRow already
+              covers this action; a second gold primary button here would
+              breach the spec §3 ≤4-gold-per-view budget. */}
+          <EmptyText style={{ marginBottom: 0 }}>Create your first item above to get started.</EmptyText>
+        </EmptyState>
       )}
 
       {!isLoading && !isError && items.length > 0 && (
         <>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Code</Th>
-                <Th>Name</Th>
-                <Th>Type</Th>
-                <Th>UOM</Th>
-                <Th>Default Cost</Th>
-                <Th>Status</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <Tr key={item.itemId} onClick={() => { setEditingItem(item); setShowModal(true); }}>
-                  <Td><code style={{ fontSize: 12 }}>{item.itemCode}</code></Td>
-                  <Td>{item.name}</Td>
-                  <Td><TypeBadge>{item.itemType.replace(/_/g, ' ')}</TypeBadge></Td>
-                  <Td>{item.uom}</Td>
-                  <Td>{item.defaultUnitCost != null ? `AED ${Number(item.defaultUnitCost).toFixed(2)}` : '—'}</Td>
-                  <Td><Badge $active={item.isActive}>{item.isActive ? 'Active' : 'Inactive'}</Badge></Td>
-                  <Td onClick={(e) => e.stopPropagation()}>
-                    <DangerButton onClick={(e) => handleDelete(item, e)}>Delete</DangerButton>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <TableWrap>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Code</Th>
+                  <Th>Name</Th>
+                  <Th>Type</Th>
+                  <Th>UOM</Th>
+                  <Th>Default Cost</Th>
+                  <Th>Status</Th>
+                  <Th></Th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <Tr key={item.itemId} onClick={() => { setEditingItem(item); setShowModal(true); }}>
+                    <Td><Mono style={{ fontSize: 12 }}>{item.itemCode}</Mono></Td>
+                    <Td>{item.name}</Td>
+                    <Td><TypeBadge>{item.itemType.replace(/_/g, ' ')}</TypeBadge></Td>
+                    <Td>{item.uom}</Td>
+                    <Td><Mono>{item.defaultUnitCost != null ? `AED ${Number(item.defaultUnitCost).toFixed(2)}` : '—'}</Mono></Td>
+                    <Td><StatusBadge $active={item.isActive}>{item.isActive ? 'Active' : 'Inactive'}</StatusBadge></Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
+                      <DangerButton onClick={(e) => handleDelete(item, e)}>Delete</DangerButton>
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrap>
           <Pagination>
             <span>Showing {items.length} of {meta.total} items</span>
             <PageButtons>
-              <GhostButton onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Previous</GhostButton>
-              <span style={{ padding: '6px 12px', fontSize: 13 }}>Page {meta.page} / {meta.totalPages}</span>
-              <GhostButton onClick={() => setPage((p) => p + 1)} disabled={page >= meta.totalPages}>Next</GhostButton>
+              <Button variant="outline" size="small" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Previous</Button>
+              <PageIndicator>Page {meta.page} / {meta.totalPages}</PageIndicator>
+              <Button variant="outline" size="small" onClick={() => setPage((p) => p + 1)} disabled={page >= meta.totalPages}>Next</Button>
             </PageButtons>
           </Pagination>
         </>

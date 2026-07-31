@@ -15,6 +15,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { X, Bot } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 import { ConversationList } from './ConversationList';
 import { MessageList } from './MessageList';
 import { InputBox } from './InputBox';
@@ -164,19 +165,25 @@ const slideOut = keyframes`
 // Backdrop: purely decorative — pointer-events: none always so it NEVER
 // blocks clicks on the dashboard, sidebar, or any other page element.
 // Closing is via X button, Escape key only (per spec).
+// Night Observatory (T-901, spec §4 "Modals/drawers"): retinted to the
+// prescribed rgba(10,14,36,.6) cosmos scrim — was lapis[900] tinted, close
+// but not the frozen recipe.
 const Backdrop = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  /* Dimming scrim retinted off lapis[900] (theme-invariant, always dark)
-     rather than pure black, per spec's warm-shadow direction. */
-  background: ${({ theme }) => theme.colors.primary[900]}26;
+  background: rgba(10, 14, 36, 0.6);
   z-index: 890;
   pointer-events: none;
   opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
   transition: opacity 200ms ease-out;
 `;
 
+// The drawer itself is the app's one glassPanel drawer (spec §4: "glassPanel
+// at blur 24px ... 20px radius") — the outer glass layer for everything it
+// contains; ConversationList/MessageBubble below stay flat/opaque rather
+// than adding a second blurred layer (spec §2 two-layer rule).
 const Panel = styled.aside<{ $isOpen: boolean }>`
+  ${glassPanel}
   position: fixed;
   top: 0;
   right: 0;
@@ -186,13 +193,16 @@ const Panel = styled.aside<{ $isOpen: boolean }>`
   z-index: 900;
   display: flex;
   flex-direction: column;
-  background: ${({ theme }) => theme.colors.background};
-  border-left: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  border-radius: 0;
+  border-right: none;
+  border-top: none;
+  border-bottom: none;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 
   /* Slide transition */
   transform: translateX(${({ $isOpen }) => ($isOpen ? '0' : '100%')});
-  transition: transform 200ms ease-out;
+  transition: transform 200ms ease-out, box-shadow 0.22s;
 
   /* Keep in DOM for animation; hide from screen readers when closed */
   ${({ $isOpen }) =>
@@ -200,6 +210,10 @@ const Panel = styled.aside<{ $isOpen: boolean }>`
     css`
       pointer-events: none;
     `}
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `;
 
 const PanelHeader = styled.div`
@@ -207,8 +221,7 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
   gap: ${({ theme }) => theme.spacing.sm};
 `;
@@ -217,7 +230,7 @@ const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.sm};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const HeaderTitle = styled.div`

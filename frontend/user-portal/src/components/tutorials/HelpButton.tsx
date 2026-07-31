@@ -29,6 +29,10 @@ const Trigger = styled.button`
   vertical-align: middle;
   width: 22px;
   height: 22px;
+  /* Fixed-size circular button — must not inherit padding from the global
+     button reset in index.css, or box-sizing:border-box grows the used
+     width past 22px and pushes the glyph off-centre (belt-and-braces). */
+  padding: 0;
   flex-shrink: 0;
   border-radius: 50%;
   display: inline-grid;
@@ -36,15 +40,15 @@ const Trigger = styled.button`
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[400]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   transition: all 150ms;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
-    color: ${({ theme }) => theme.colors.primary[700]};
+    border-color: ${({ theme }) => theme.colors.celeste};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -80,7 +84,8 @@ const Num = styled.span`
   font-size: 11.5px;
   font-weight: 700;
   background: ${({ theme }) => theme.colors.primary[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* lapis fill — onDark (cream), not onAccent (gold-fill only, spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
 `;
 
 const StepBody = styled.div`
@@ -108,15 +113,17 @@ const ProtocolRow = styled.div`
   align-items: center;
 `;
 
+// Flat/opaque, not another translucent glass layer — this chip sits inside
+// the tutorial Modal, which is already glass (spec §2's two-layer limit).
 const ProtocolCode = styled.span`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 11.5px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: ${({ theme }) => theme.borderRadius.full};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.cosmosDeep};
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 interface HelpButtonProps {

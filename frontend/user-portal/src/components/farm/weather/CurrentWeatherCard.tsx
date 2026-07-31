@@ -5,6 +5,8 @@
  */
 
 import styled from 'styled-components';
+import { Droplet, Wind, CloudRain, Sun, Eye, Gauge } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
 import type { CurrentWeather } from '../../../types/farm';
 import {
   formatTemperature,
@@ -17,12 +19,17 @@ import {
 } from '../../../services/weatherApi';
 import { formatNumber } from '../../../utils';
 
+// Night Observatory (T-901): was a solid lapis gradient hero card with
+// onAccent (white) text. Restyled to the standard glassPanel treatment —
+// hero-stat cards elsewhere in the redesign (e.g. BlockMonitorHero) use glass
+// too, not a solid accent fill; solid gradient fills are reserved for the
+// gold primary-button treatment. onAccent removed entirely (was sitting on a
+// lapis fill, not gold) in favour of the normal textPrimary/celeste/muted
+// tokens the glass surface already contrasts correctly against.
 const Card = styled.div`
-  background: ${({ theme }) => `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[700]} 100%)`};
-  border-radius: 16px;
+  ${glassPanel}
   padding: 24px;
-  color: ${({ theme }) => theme.colors.onAccent};
-  box-shadow: ${({ theme }) => theme.shadows.md};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Header = styled.div`
@@ -37,11 +44,12 @@ const Location = styled.div`
     font-size: 18px;
     font-weight: 600;
     margin: 0 0 4px 0;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   p {
     font-size: 13px;
-    opacity: 0.8;
+    color: ${({ theme }) => theme.colors.muted};
     margin: 0;
   }
 `;
@@ -62,6 +70,7 @@ const Temperature = styled.div`
   font-size: 64px;
   font-weight: 300;
   line-height: 1;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TempDetails = styled.div`
@@ -72,11 +81,12 @@ const TempDetails = styled.div`
     font-weight: 500;
     margin-bottom: 4px;
     text-transform: capitalize;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   .feels-like {
     font-size: 14px;
-    opacity: 0.8;
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -85,7 +95,7 @@ const MetricsGrid = styled.div`
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Metric = styled.div`
@@ -94,27 +104,32 @@ const Metric = styled.div`
   gap: 8px;
 
   .icon {
-    font-size: 20px;
+    display: flex;
+    color: ${({ theme }) => theme.colors.celeste};
+    flex-shrink: 0;
   }
 
   .content {
     .label {
-      font-size: 11px;
-      opacity: 0.7;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      ${monoLabel}
+      font-size: 0.62rem;
+      color: ${({ theme }) => theme.colors.muted};
     }
 
     .value {
-      font-size: 15px;
-      font-weight: 500;
+      ${monoLabel}
+      font-size: 0.82rem;
+      letter-spacing: 0.02em;
+      color: ${({ theme }) => theme.colors.textPrimary};
+      margin-top: 2px;
     }
   }
 `;
 
 const UpdatedAt = styled.div`
-  font-size: 11px;
-  opacity: 0.6;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   text-align: right;
   margin-top: 16px;
 `;
@@ -154,7 +169,7 @@ export function CurrentWeatherCard({ weather }: CurrentWeatherCardProps) {
 
       <MetricsGrid>
         <Metric>
-          <span className="icon">💧</span>
+          <span className="icon"><Droplet size={16} strokeWidth={1.6} /></span>
           <div className="content">
             <div className="label">Humidity</div>
             <div className="value">{formatHumidity(weather.humidity)}</div>
@@ -162,7 +177,7 @@ export function CurrentWeatherCard({ weather }: CurrentWeatherCardProps) {
         </Metric>
 
         <Metric>
-          <span className="icon">🌬️</span>
+          <span className="icon"><Wind size={16} strokeWidth={1.6} /></span>
           <div className="content">
             <div className="label">Wind</div>
             <div className="value">
@@ -173,7 +188,7 @@ export function CurrentWeatherCard({ weather }: CurrentWeatherCardProps) {
         </Metric>
 
         <Metric>
-          <span className="icon">🌧️</span>
+          <span className="icon"><CloudRain size={16} strokeWidth={1.6} /></span>
           <div className="content">
             <div className="label">Precipitation</div>
             <div className="value">{formatPrecipitation(weather.precipitation)}</div>
@@ -181,7 +196,7 @@ export function CurrentWeatherCard({ weather }: CurrentWeatherCardProps) {
         </Metric>
 
         <Metric>
-          <span className="icon">☀️</span>
+          <span className="icon"><Sun size={16} strokeWidth={1.6} /></span>
           <div className="content">
             <div className="label">UV Index</div>
             <div className="value">
@@ -192,7 +207,7 @@ export function CurrentWeatherCard({ weather }: CurrentWeatherCardProps) {
 
         {weather.visibility !== undefined && (
           <Metric>
-            <span className="icon">👁️</span>
+            <span className="icon"><Eye size={16} strokeWidth={1.6} /></span>
             <div className="content">
               <div className="label">Visibility</div>
               <div className="value">{weather.visibility.toFixed(1)} km</div>
@@ -202,7 +217,7 @@ export function CurrentWeatherCard({ weather }: CurrentWeatherCardProps) {
 
         {weather.pressure !== undefined && (
           <Metric>
-            <span className="icon">📊</span>
+            <span className="icon"><Gauge size={16} strokeWidth={1.6} /></span>
             <div className="content">
               <div className="label">Pressure</div>
               <div className="value">{Math.round(weather.pressure)} mb</div>

@@ -17,6 +17,8 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { X, Pencil, Trash2, RotateCcw } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast } from '../../stores/toast.store';
 import {
@@ -111,26 +113,6 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-`;
-
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 4px 0 0;
-`;
-
 const ToolbarRow = styled.div`
   display: flex;
   gap: 12px;
@@ -140,50 +122,76 @@ const ToolbarRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text on the gold fill. This is intentional gold spend (1 of the
+// page's budget), NOT reused as a generic "primary action" colour elsewhere.
 const PrimaryButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(
+    145deg,
+    ${({ theme }) => theme.colors.secondary[500]},
+    ${({ theme }) => theme.colors.secondary[600]}
+  );
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+// Secondary — spec §4 Buttons: glass + glass.border + cream text.
+const SecondaryButton = styled.button`
+  ${glassControl}
+  padding: 8px 16px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
   &:disabled {
     opacity: 0.5;
@@ -191,38 +199,19 @@ const PrimaryButton = styled.button`
   }
 `;
 
-const SecondaryButton = styled.button`
-  padding: 8px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease;
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
+// Destructive — spec §4 Buttons: coral-b tinted glass, never solid red.
 const DangerButton = styled.button`
   padding: 8px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: rgba(240, 138, 112, 0.22);
   }
   &:disabled {
     opacity: 0.5;
@@ -230,18 +219,20 @@ const DangerButton = styled.button`
   }
 `;
 
+// Unused in current call sites but kept for parity with DangerButton — same
+// tinted-glass pattern, emerald for a positive confirming action.
 const SuccessButton = styled.button`
   padding: 8px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.success};
-  border: 1px solid ${({ theme }) => theme.colors.success};
-  border-radius: 6px;
+  background: rgba(84, 211, 155, 0.14);
+  color: ${({ theme }) => theme.colors.bright.emerald};
+  border: 1px solid rgba(84, 211, 155, 0.4);
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.successBg};
+    background: rgba(84, 211, 155, 0.22);
   }
   &:disabled {
     opacity: 0.5;
@@ -257,16 +248,18 @@ const IconButton = styled.button`
   height: 30px;
   padding: 0;
   background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 6px;
-  font-size: 14px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   transition: all 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
-    border-color: ${({ theme }) => theme.colors.neutral[300]};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
   &:disabled {
     opacity: 0.4;
@@ -276,18 +269,19 @@ const IconButton = styled.button`
 
 const DangerIconButton = styled(IconButton)`
   &:hover {
-    color: ${({ theme }) => theme.colors.error};
-    border-color: ${({ theme }) => theme.colors.error};
-    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.bright.coral};
+    border-color: rgba(240, 138, 112, 0.4);
+    background: rgba(240, 138, 112, 0.14);
   }
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
+// Spec §4 "Tables": one glass panel wraps the whole table, transparent
+// header/rows, Space Mono uppercase celeste column headers, `line` row
+// dividers, hover rgba(180,200,220,.05). Numeric/code cells in Space Mono.
 
 const TableWrapper = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   overflow: hidden;
 `;
 
@@ -298,8 +292,8 @@ const Table = styled.table`
 `;
 
 const Thead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 type SortDirection = 'asc' | 'desc';
@@ -311,20 +305,18 @@ interface ThProps {
 }
 
 const Th = styled.th<ThProps>`
-  padding: 10px 14px;
+  ${monoLabel}
+  padding: 12px 14px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.textSecondary};
+    $active ? theme.colors.secondary[500] : theme.colors.celeste};
   white-space: nowrap;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
   &:hover {
     color: ${({ $sortable, theme }) =>
-      $sortable ? theme.colors.textPrimary : theme.colors.textSecondary};
+      $sortable ? theme.colors.textPrimary : theme.colors.celeste};
   }
 `;
 
@@ -335,14 +327,14 @@ interface TrProps {
 }
 
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   opacity: ${({ $inactive }) => ($inactive ? 0.55 : 1)};
   transition: background 100ms ease;
   &:last-child {
     border-bottom: none;
   }
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -364,39 +356,31 @@ const ActionsGroup = styled.div`
 `;
 
 // ─── Pills ─────────────────────────────────────────────────────────────────────
-
+// "Always required" is a categorical flag, not a document status — it reuses
+// the phaseBadge visual pattern (glowing-dot pill) on the `fruiting` (emerald)
+// phase to read as a positive/confirmed marker, without spending gold.
 const AlwaysPill = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 9px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.successBg};
-  color: ${({ theme }) => theme.colors.success};
+  ${phaseBadge('fruiting')}
 `;
 
+// Rule Active/Inactive — spec §5.2 extrapolation: active -> `inoculated`
+// (open/active/in progress), inactive -> `decommissioned` (dim, no glow;
+// cancelled/void/archived family — a disabled rule is functionally retired).
 const StatusBadge = styled.span<{ $active: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 9px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.success : theme.colors.textDisabled};
+  ${({ $active }) => phaseBadge($active ? 'inoculated' : 'decommissioned')}
 `;
 
+// Doc type (PR/PO/GR/AP) is categorical, not a phase status — kept on the
+// existing info (lapis-b) semantic tokens, already remapped for dark ground.
 const DocTypeBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 6px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  letter-spacing: 0.04em;
   background: ${({ theme }) => theme.colors.infoBg};
   color: ${({ theme }) => theme.colors.info};
 `;
@@ -406,8 +390,18 @@ const DocTypeBadge = styled.span`
 const EmptyState = styled.div`
   padding: 48px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
+`;
+
+// Fraunces italic celeste headline, spec §4/§9 empty-state pattern.
+const EmptyTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // ─── Modal styled components ───────────────────────────────────────────────────
@@ -415,7 +409,7 @@ const EmptyState = styled.div`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -423,10 +417,13 @@ const ModalOverlay = styled.div`
   padding: 24px;
 `;
 
+// Spec §4 Modals: glassPanel at blur 24px, 20px radius. Scrim is applied by
+// ModalOverlay below (rgba(10,14,36,.6)).
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
@@ -440,7 +437,7 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -452,16 +449,23 @@ const ModalTitle = styled.h2`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px;
-  border-radius: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
+  padding: 6px;
+  border-radius: 8px;
   line-height: 1;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
@@ -478,7 +482,7 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -497,78 +501,67 @@ const Field = styled.div`
   gap: 6px;
 `;
 
+// Space Mono uppercase micro-label above the control, per spec §4 Inputs.
 const FormLabel = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const FormInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: ${({ theme }) => theme.colors.neutral[50]};
   }
 `;
 
 const FormSelect = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   font-family: inherit;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: ${({ theme }) => theme.colors.neutral[50]};
   }
 `;
 
 const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   resize: vertical;
   min-height: 72px;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: ${({ theme }) => theme.colors.neutral[50]};
   }
 `;
 
@@ -579,11 +572,12 @@ const FieldError = styled.span`
 `;
 
 const BannerError = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 13px;
   margin: 0;
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: rgba(240, 138, 112, 0.14);
+  border: 1px solid rgba(240, 138, 112, 0.4);
   border-radius: 8px;
 `;
 
@@ -598,7 +592,7 @@ const CheckboxRow = styled.label`
 
 const HintText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ─── Radio group for Approval Mode ────────────────────────────────────────────
@@ -618,20 +612,18 @@ const RadioLabel = styled.label`
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   transition: background 100ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 // ─── Test Resolution Widget ────────────────────────────────────────────────────
 
 const TesterCard = styled.div`
+  ${glassPanel}
   margin-top: 28px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
   padding: 20px 24px;
 `;
 
@@ -657,65 +649,62 @@ const TesterField = styled.div`
 `;
 
 const TesterLabel = styled.label`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const TesterInput = styled.input`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const TesterSelect = styled.select`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Test-resolution result — mirrors the debit/credit polarity convention
+// (judgment call carried over from the P&L pages in this shard): an outcome
+// that still needs action reads as `fruitingInit` (terra, "pending/awaiting"
+// per spec §5.2), a satisfied/no-action outcome reads as `fruiting`
+// (emerald, "approved" family). Deliberately NOT the `warning`/gold token —
+// gold is reserved (spec §3) and this result renders on every keystroke of
+// the tester widget, not a rare CTA.
 const TesterResult = styled.div<{ $requiresApproval: boolean | null }>`
   margin-top: 14px;
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 13px;
   line-height: 1.5;
-  background: ${({ $requiresApproval, theme }) => {
-    if ($requiresApproval === null) return theme.colors.neutral[50];
-    return $requiresApproval
-      ? theme.colors.warningBg
-      : theme.colors.successBg;
+  background: ${({ $requiresApproval }) => {
+    if ($requiresApproval === null) return 'rgba(180, 200, 220, 0.06)';
+    return $requiresApproval ? 'rgba(232, 147, 95, 0.14)' : 'rgba(84, 211, 155, 0.14)';
   }};
   color: ${({ $requiresApproval, theme }) => {
-    if ($requiresApproval === null) return theme.colors.textDisabled;
-    return $requiresApproval
-      ? theme.colors.gold[800]
-      : theme.colors.emerald[800];
+    if ($requiresApproval === null) return theme.colors.muted;
+    return $requiresApproval ? theme.colors.phase.fruitingInit : theme.colors.phase.fruiting;
   }};
   border: 1px solid ${({ $requiresApproval, theme }) => {
-    if ($requiresApproval === null) return theme.colors.neutral[200];
-    return $requiresApproval
-      ? theme.colors.gold[200]
-      : theme.colors.emerald[200];
+    if ($requiresApproval === null) return theme.colors.glass.border;
+    return $requiresApproval ? 'rgba(232, 147, 95, 0.4)' : 'rgba(84, 211, 155, 0.4)';
   }};
 `;
 
@@ -735,7 +724,9 @@ function ConfirmDialog({ message, onConfirm, onCancel, isPending }: ConfirmDialo
       <Modal onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
         <ModalHeader>
           <ModalTitle>Confirm</ModalTitle>
-          <CloseButton onClick={onCancel} aria-label="Cancel">✕</CloseButton>
+          <CloseButton onClick={onCancel} aria-label="Cancel">
+            <X size={18} strokeWidth={1.6} aria-hidden="true" />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{message}</p>
@@ -951,7 +942,7 @@ function RuleFormModal({
         <ModalHeader>
           <ModalTitle>{isEdit ? 'Edit Approval Rule' : 'New Approval Rule'}</ModalTitle>
           <CloseButton onClick={onClose} aria-label="Close modal">
-            ✕
+            <X size={18} strokeWidth={1.6} aria-hidden="true" />
           </CloseButton>
         </ModalHeader>
         <ModalBody>
@@ -1536,17 +1527,12 @@ export function ApprovalRulesPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <div>
-          <PageTitle>Approval Rules</PageTitle>
-          <PageSubtitle>
-            Rules that determine whether PRs and POs require approval before processing.
-          </PageSubtitle>
-        </div>
-        {canWrite && (
-          <PrimaryButton onClick={openCreate}>+ New Rule</PrimaryButton>
-        )}
-      </PageHeader>
+      <PageHeader
+        breadcrumb="FINANCE · APPROVAL ENGINE"
+        title="Approval Rules"
+        description="Rules that determine whether PRs and POs require approval before processing."
+        stats={[{ value: data?.total ?? 0, label: 'Total Rules' }]}
+      />
 
       <ToolbarRow>
         <SearchInput
@@ -1594,12 +1580,17 @@ export function ApprovalRulesPage() {
           <option value="active">Active Only</option>
           <option value="inactive">Inactive Only</option>
         </FilterSelect>
+        {canWrite && (
+          <PrimaryButton onClick={openCreate} style={{ marginLeft: 'auto' }}>
+            + New Rule
+          </PrimaryButton>
+        )}
       </ToolbarRow>
 
       {isLoading && <EmptyState>Loading approval rules...</EmptyState>}
 
       {isError && (
-        <EmptyState style={{ color: 'var(--color-error)' }}>
+        <EmptyState style={{ color: theme.colors.bright.coral }}>
           Failed to load approval rules. Please refresh the page.
         </EmptyState>
       )}
@@ -1664,9 +1655,18 @@ export function ApprovalRulesPage() {
                     style={{ padding: '48px 32px', textAlign: 'center' }}
                   >
                     <EmptyState style={{ padding: 0 }}>
-                      {searchText || docTypeFilter || companyFilter || activeFilter !== 'all'
-                        ? 'No rules match the current filters.'
-                        : 'No approval rules yet. Create the first one.'}
+                      {searchText || docTypeFilter || companyFilter || activeFilter !== 'all' ? (
+                        'No rules match the current filters.'
+                      ) : (
+                        <>
+                          <EmptyTitle>No approval rules yet</EmptyTitle>
+                          {canWrite && (
+                            <PrimaryButton onClick={openCreate} style={{ marginTop: 14 }}>
+                              + New Rule
+                            </PrimaryButton>
+                          )}
+                        </>
+                      )}
                     </EmptyState>
                   </td>
                 </tr>
@@ -1681,7 +1681,7 @@ export function ApprovalRulesPage() {
                         style={{
                           fontSize: 11,
                           marginTop: 2,
-                          color: 'var(--color-text-disabled)',
+                          color: theme.colors.muted,
                         }}
                       >
                         {DOC_TYPE_LABELS[rule.docType as DocType] ?? rule.docType}
@@ -1711,7 +1711,7 @@ export function ApprovalRulesPage() {
                             title="Edit rule"
                             aria-label={`Edit approval rule for ${rule.docType}`}
                           >
-                            ✏️
+                            <Pencil size={14} strokeWidth={1.6} aria-hidden="true" />
                           </IconButton>
                           {rule.isActive ? (
                             <DangerIconButton
@@ -1720,7 +1720,7 @@ export function ApprovalRulesPage() {
                               aria-label={`Deactivate approval rule for ${rule.docType}`}
                               disabled={deleteMutation.isPending}
                             >
-                              🗑️
+                              <Trash2 size={14} strokeWidth={1.6} aria-hidden="true" />
                             </DangerIconButton>
                           ) : (
                             <IconButton
@@ -1733,7 +1733,7 @@ export function ApprovalRulesPage() {
                                 borderColor: 'currentColor',
                               }}
                             >
-                              ↩️
+                              <RotateCcw size={14} strokeWidth={1.6} aria-hidden="true" />
                             </IconButton>
                           )}
                         </ActionsGroup>
@@ -1750,8 +1750,8 @@ export function ApprovalRulesPage() {
               style={{
                 padding: '10px 14px',
                 fontSize: 12,
-                color: 'var(--color-text-disabled)',
-                borderTop: '1px solid var(--color-neutral-100)',
+                color: theme.colors.muted,
+                borderTop: `1px solid ${theme.colors.line}`,
               }}
             >
               {filteredRules.length} of {data.total} rule{data.total !== 1 ? 's' : ''}

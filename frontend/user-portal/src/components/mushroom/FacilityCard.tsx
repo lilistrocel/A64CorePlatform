@@ -3,10 +3,18 @@
  *
  * Summary card for a mushroom growing facility.
  * Shows name, type, room count, active rooms, and status badge.
+ *
+ * Night Observatory (T-901 Phase 3): full glass entity-card treatment per
+ * spec §4 (§1's room/entity card pattern) — same recipe as GrowingRoomCard.
+ * `FacilityStatus` isn't one of the 12 room phases, so it's extrapolated
+ * onto the closest phase per spec §5.2 rather than getting its own colour
+ * vocabulary.
  */
 
-import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import styled from 'styled-components';
+import { Factory, MapPin } from 'lucide-react';
+import type { PhaseKey } from '@a64core/shared';
+import { glassPanel, glassPanelHover, monoLabel, phaseBadge, sheen } from '@a64core/shared';
 import type { Facility, FacilityStatus, FacilityType } from '../../types/mushroom';
 
 interface FacilityCardProps {
@@ -15,23 +23,16 @@ interface FacilityCardProps {
   selected?: boolean;
 }
 
-function getStatusColors(theme: Theme): Record<FacilityStatus, string> {
-  return {
-    active: theme.colors.success,
-    inactive: theme.colors.neutral[500],
-    maintenance: theme.colors.warning,
-    construction: theme.colors.info,
-  };
-}
-
-function getStatusBg(theme: Theme): Record<FacilityStatus, string> {
-  return {
-    active: theme.colors.successBg,
-    inactive: theme.colors.neutral[100],
-    maintenance: theme.colors.warningBg,
-    construction: theme.colors.infoBg,
-  };
-}
+// Extrapolated per spec §5.2 — "open/active/in progress" -> inoculated,
+// "maintenance/on hold" -> maintenance (literal match), "cancelled/archived"
+// -> decommissioned, and "construction" reads closest to the literal
+// `preparing` room phase (a facility being made ready).
+const FACILITY_STATUS_TO_PHASE: Record<FacilityStatus, PhaseKey> = {
+  active: 'inoculated',
+  inactive: 'decommissioned',
+  maintenance: 'maintenance',
+  construction: 'preparing',
+};
 
 const TYPE_LABELS: Record<FacilityType, string> = {
   indoor: 'Indoor',
@@ -43,13 +44,11 @@ const TYPE_LABELS: Record<FacilityType, string> = {
 };
 
 export function FacilityCard({ facility, onClick, selected = false }: FacilityCardProps) {
-  const theme = useTheme();
-  const statusColors = getStatusColors(theme);
-  const statusBg = getStatusBg(theme);
   const activePercent =
     facility.totalRooms > 0
       ? Math.round((facility.activeRooms / facility.totalRooms) * 100)
       : 0;
+  const statusPhase = FACILITY_STATUS_TO_PHASE[facility.status];
 
   return (
     <CardWrapper
@@ -67,23 +66,21 @@ export function FacilityCard({ facility, onClick, selected = false }: FacilityCa
       aria-label={`Facility: ${facility.name}`}
       aria-pressed={onClick ? selected : undefined}
     >
-      <CardHeader>
-        <FacilityIcon>🏭</FacilityIcon>
-        <HeaderInfo>
-          <FacilityName>{facility.name}</FacilityName>
-          <FacilityType>{TYPE_LABELS[facility.facilityType]}</FacilityType>
-        </HeaderInfo>
-        <StatusBadge
-          $color={statusColors[facility.status]}
-          $bg={statusBg[facility.status]}
-        >
+      <Top>
+        <FacilityName>{facility.name}</FacilityName>
+        <StatusBadge $phaseKey={statusPhase}>
           {facility.status.charAt(0).toUpperCase() + facility.status.slice(1)}
         </StatusBadge>
-      </CardHeader>
+      </Top>
+
+      <UseLine>
+        <Factory size={13} strokeWidth={1.6} />
+        {TYPE_LABELS[facility.facilityType]}
+      </UseLine>
 
       {facility.location && (
         <LocationRow>
-          <LocationIcon aria-hidden="true">📍</LocationIcon>
+          <MapPin size={12} strokeWidth={1.6} aria-hidden="true" />
           <LocationText>{facility.location}</LocationText>
         </LocationRow>
       )}
@@ -91,7 +88,7 @@ export function FacilityCard({ facility, onClick, selected = false }: FacilityCa
       <StatsRow>
         <StatItem>
           <StatValue>{facility.totalRooms}</StatValue>
-          <StatLabel>Total Rooms</StatLabel>
+          <StatLabel>Total</StatLabel>
         </StatItem>
         <Divider />
         <StatItem>
@@ -105,7 +102,6 @@ export function FacilityCard({ facility, onClick, selected = false }: FacilityCa
         </StatItem>
       </StatsRow>
 
-      {/* Utilization bar */}
       <UtilizationTrack>
         <UtilizationFill $percent={activePercent} />
       </UtilizationTrack>
@@ -114,7 +110,7 @@ export function FacilityCard({ facility, onClick, selected = false }: FacilityCa
 }
 
 // ============================================================================
-// STYLED COMPONENTS
+// STYLED COMPONENTS — glass entity card, spec §4 / mockup `.card` pattern
 // ============================================================================
 
 interface CardWrapperProps {
@@ -123,93 +119,72 @@ interface CardWrapperProps {
 }
 
 const CardWrapper = styled.div<CardWrapperProps>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  border: 2px solid ${({ $selected, theme }) => ($selected ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  padding: 16px;
-  box-shadow: ${({ $selected, theme }) =>
-    $selected
-      ? `0 0 0 3px ${theme.colors.primary[500]}2e`
-      : '0 2px 6px rgba(0,0,0,0.07)'};
-  transition: all 150ms ease-in-out;
+  ${({ $clickable }) => ($clickable ? glassPanelHover : glassPanel)}
+  ${sheen}
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 20px 20px 18px;
 
-  ${({ $clickable, theme }) =>
-    $clickable &&
+  ${({ $selected, theme }) =>
+    $selected &&
     `
-    cursor: pointer;
-    &:hover {
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-      transform: translateY(-1px);
-    }
-    &:focus-visible {
-      outline: 2px solid ${theme.colors.primary[500]};
-      outline-offset: 2px;
-    }
+    border-color: ${theme.colors.celeste};
+    box-shadow: 0 0 0 3px rgba(180, 200, 220, 0.18);
   `}
 `;
 
-const CardHeader = styled.div`
+const Top = styled.div`
   display: flex;
+  justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 10px;
-`;
-
-const FacilityIcon = styled.span`
-  font-size: 24px;
-  line-height: 1;
-  margin-top: 2px;
-`;
-
-const HeaderInfo = styled.div`
-  flex: 1;
-  min-width: 0;
+  margin-bottom: 4px;
 `;
 
 const FacilityName = styled.h3`
-  font-size: 15px;
-  font-weight: 600;
+  font-weight: 800;
+  font-size: 1.05rem;
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 2px 0;
-  white-space: nowrap;
+  letter-spacing: 0.01em;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-`;
-
-const FacilityType = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
-
-interface StatusBadgeProps {
-  $color: string;
-  $bg: string;
-}
-
-const StatusBadge = styled.span<StatusBadgeProps>`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ $color }) => $color};
-  background: ${({ $bg }) => $bg};
-  border-radius: 20px;
-  padding: 3px 9px;
   white-space: nowrap;
+`;
+
+const StatusBadge = styled.span<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
+  flex-shrink: 0;
+`;
+
+const UseLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.76rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 12px;
+
+  svg {
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
 `;
 
 const LocationRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 12px;
-`;
+  gap: 5px;
+  margin-bottom: 14px;
+  color: ${({ theme }) => theme.colors.muted};
 
-const LocationIcon = styled.span`
-  font-size: 12px;
+  svg {
+    flex-shrink: 0;
+  }
 `;
 
 const LocationText = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.76rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -219,7 +194,7 @@ const StatsRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 `;
 
 const StatItem = styled.div`
@@ -232,30 +207,31 @@ interface StatValueProps {
 }
 
 const StatValue = styled.div<StatValueProps>`
-  font-size: 18px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 1.05rem;
   font-weight: 700;
-  color: ${({ $highlight, theme }) => ($highlight ? theme.colors.success : theme.colors.textPrimary)};
+  color: ${({ $highlight, theme }) => ($highlight ? theme.colors.bright.emerald : theme.colors.textPrimary)};
   line-height: 1;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 `;
 
 const StatLabel = styled.div`
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  ${monoLabel}
+  font-size: 0.58rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Divider = styled.div`
   width: 1px;
   height: 28px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.line};
 `;
 
 const UtilizationTrack = styled.div`
-  height: 4px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 4px;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid rgba(180, 200, 220, 0.1);
   overflow: hidden;
 `;
 
@@ -266,7 +242,11 @@ interface UtilizationFillProps {
 const UtilizationFill = styled.div<UtilizationFillProps>`
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: ${({ theme }) => `linear-gradient(90deg, ${theme.colors.success}, ${theme.colors.info})`};
-  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    ${({ theme }) => theme.colors.bright.emerald},
+    ${({ theme }) => theme.colors.bright.lapis}
+  );
+  border-radius: 99px;
   transition: width 400ms ease-in-out;
 `;

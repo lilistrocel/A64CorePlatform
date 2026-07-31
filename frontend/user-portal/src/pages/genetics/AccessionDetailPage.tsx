@@ -17,6 +17,7 @@ import { LineageTree } from '../../components/genetics/LineageTree';
 import { ObservationModal } from '../../components/genetics/ObservationModal';
 import { PromoteTraitModal } from '../../components/genetics/PromoteTraitModal';
 import { PropagateModal } from '../../components/genetics/PropagateModal';
+import { PrintLabelsModal } from '../../components/genetics/PrintLabelsModal';
 import { SplitAccessionModal } from '../../components/genetics/SplitAccessionModal';
 import {
   Banner,
@@ -156,12 +157,14 @@ const Timeline = styled.div`
   gap: 10px;
 `;
 
+// Same "novel trait" accent as ObservationModal's NovelBox — bright.lavender,
+// never gold (spec §3: gold is reserved for Harvesting/CTA use).
 const ObsCard = styled.div<{ $novel: boolean }>`
   padding: 12px 14px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   border: 1px solid
-    ${({ $novel, theme }) => ($novel ? theme.colors.warning : theme.colors.neutral[200])};
-  background: ${({ $novel, theme }) => ($novel ? theme.colors.warningBg : 'transparent')};
+    ${({ $novel, theme }) => ($novel ? theme.colors.bright.lavender : theme.colors.line)};
+  background: ${({ $novel, theme }) => ($novel ? `${theme.colors.bright.lavender}1f` : 'transparent')};
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -203,6 +206,7 @@ export function AccessionDetailPage() {
   const [showObserve, setShowObserve] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [showPropagate, setShowPropagate] = useState(false);
+  const [showPrintLabels, setShowPrintLabels] = useState(false);
   const [promoting, setPromoting] = useState<Observation | null>(null);
 
   const { data: accession, isLoading } = useAccession(accessionId);
@@ -280,6 +284,9 @@ export function AccessionDetailPage() {
             Split
           </Button>
           <Button onClick={() => setShowPropagate(true)}>Propagate from this</Button>
+          <Button $variant="ghost" onClick={() => setShowPrintLabels(true)}>
+            Print labels
+          </Button>
         </Actions>
       </PageHeader>
 
@@ -387,11 +394,12 @@ export function AccessionDetailPage() {
                   <Dt>Parents</Dt>
                   <Dd>
                     {accession.parents
-                      .map((p) =>
-                        p.accessionId
+                      .map((p) => {
+                        const base = p.accessionId
                           ? ROLE_LABELS[p.role]
-                          : `${ROLE_LABELS[p.role]} (unidentified)`
-                      )
+                          : `${ROLE_LABELS[p.role]} (unidentified)`;
+                        return p.vesselNo != null ? `${base} ← #${p.vesselNo}` : base;
+                      })
                       .join(', ')}
                   </Dd>
                 </>
@@ -559,6 +567,9 @@ export function AccessionDetailPage() {
           onClose={() => setShowPropagate(false)}
           onDone={(ids) => ids[0] && navigate(`/genetics/accessions/${ids[0]}`)}
         />
+      )}
+      {showPrintLabels && (
+        <PrintLabelsModal accession={accession} onClose={() => setShowPrintLabels(false)} />
       )}
       {promoting && (
         <PromoteTraitModal

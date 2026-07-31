@@ -5,9 +5,11 @@
  */
 
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import type { Employee } from '../../types/hr';
-import { getEmployeeFullName, getEmployeeStatusColor, getEmployeeStatusLabel } from '../../services/hrService';
+import { getEmployeeFullName, getEmployeeStatusLabel, getEmployeeStatusColor } from '../../services/hrService';
+import { glassPanel, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -28,9 +30,8 @@ type SortDirection = 'asc' | 'desc';
 // ============================================================================
 
 const TableContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  ${glassPanel}
+  border-radius: 16px;
   overflow-x: auto;
 `;
 
@@ -40,49 +41,39 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
+  ${monoLabel}
   padding: 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
-  transition: background 150ms ease-in-out;
+  transition: color 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.neutral[200] : theme.colors.surface)};
+    color: ${({ $sortable, theme }) => ($sortable ? theme.colors.textPrimary : theme.colors.celeste)};
   }
 `;
 
 const SortIndicator = styled.span`
+  display: inline-flex;
+  vertical-align: middle;
   margin-left: 4px;
-  font-size: 10px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   transition: background 150ms ease-in-out;
 
-  /* Striped rows for readability - alternating row colors */
-  &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-  }
-
-  &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
-  }
-
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.05);
   }
 
   &:last-child {
@@ -123,20 +114,34 @@ const EmployeeName = styled.span`
 `;
 
 const EmployeeCode = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+/* Status colour comes from hrService.getEmployeeStatusColor(), already
+   routed onto colors.phase.* (spec §5.2) — applies the §4 badge visual. */
 const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.64rem;
+  font-weight: 700;
+  background: ${({ $color }) => `${$color}29`};
   color: ${({ $color }) => $color};
-  text-transform: capitalize;
+  border: 1px solid ${({ $color }) => `${$color}73`};
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
 `;
 
 const Actions = styled.div`
@@ -144,50 +149,57 @@ const Actions = styled.div`
   gap: 8px;
 `;
 
+/* Lapis — the ordinary interactive accent for the row's primary action,
+   restored per the gold-audit correction. */
+const primaryVariant = css`
+  background: rgba(107, 138, 224, 0.12);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.35);
+  &:hover {
+    background: rgba(107, 138, 224, 0.2);
+  }
+`;
+
+const dangerVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+  }
+`;
+
+const secondaryVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.muted};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
+    background: rgba(180, 200, 220, 0.07);
+  }
+`;
+
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   padding: 6px 12px;
-  border-radius: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant, theme }) => {
-    if ($variant === 'primary') {
-      return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
-        &:hover {
-          background: ${theme.colors.primary[600]};
-        }
-      `;
-    }
-    if ($variant === 'danger') {
-      return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
-        &:hover {
-          background: ${theme.colors.errorBg};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
-      &:hover {
-        background: ${theme.colors.primary[50]};
-      }
-    `;
+  ${({ $variant }) => {
+    if ($variant === 'primary') return primaryVariant;
+    if ($variant === 'danger') return dangerVariant;
+    return secondaryVariant;
   }}
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -221,9 +233,13 @@ export function EmployeeTable({ employees, onView, onEdit, onDelete }: EmployeeT
     return 0;
   });
 
-  const getSortIndicator = (field: SortField) => {
-    if (sortField !== field) return '⇅';
-    return sortDirection === 'asc' ? '↑' : '↓';
+  const renderSortIndicator = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown size={11} strokeWidth={1.8} />;
+    return sortDirection === 'asc' ? (
+      <ArrowUp size={11} strokeWidth={1.8} />
+    ) : (
+      <ArrowDown size={11} strokeWidth={1.8} />
+    );
   };
 
   const handleView = (employeeId: string) => {
@@ -265,7 +281,7 @@ export function EmployeeTable({ employees, onView, onEdit, onDelete }: EmployeeT
               onClick={() => handleSort('firstName')}
               aria-sort={getAriaSort('firstName')}
             >
-              Employee <SortIndicator aria-hidden="true">{getSortIndicator('firstName')}</SortIndicator>
+              Employee <SortIndicator aria-hidden="true">{renderSortIndicator('firstName')}</SortIndicator>
             </TableHeaderCell>
             <TableHeaderCell
               scope="col"
@@ -273,7 +289,7 @@ export function EmployeeTable({ employees, onView, onEdit, onDelete }: EmployeeT
               onClick={() => handleSort('email')}
               aria-sort={getAriaSort('email')}
             >
-              Email <SortIndicator aria-hidden="true">{getSortIndicator('email')}</SortIndicator>
+              Email <SortIndicator aria-hidden="true">{renderSortIndicator('email')}</SortIndicator>
             </TableHeaderCell>
             <TableHeaderCell scope="col">Phone</TableHeaderCell>
             <TableHeaderCell
@@ -282,7 +298,7 @@ export function EmployeeTable({ employees, onView, onEdit, onDelete }: EmployeeT
               onClick={() => handleSort('department')}
               aria-sort={getAriaSort('department')}
             >
-              Department <SortIndicator aria-hidden="true">{getSortIndicator('department')}</SortIndicator>
+              Department <SortIndicator aria-hidden="true">{renderSortIndicator('department')}</SortIndicator>
             </TableHeaderCell>
             <TableHeaderCell scope="col">Position</TableHeaderCell>
             <TableHeaderCell
@@ -291,7 +307,7 @@ export function EmployeeTable({ employees, onView, onEdit, onDelete }: EmployeeT
               onClick={() => handleSort('status')}
               aria-sort={getAriaSort('status')}
             >
-              Status <SortIndicator aria-hidden="true">{getSortIndicator('status')}</SortIndicator>
+              Status <SortIndicator aria-hidden="true">{renderSortIndicator('status')}</SortIndicator>
             </TableHeaderCell>
             <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>

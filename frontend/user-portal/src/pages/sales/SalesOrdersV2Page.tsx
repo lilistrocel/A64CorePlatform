@@ -12,19 +12,30 @@
  *
  * Modals do NOT close on overlay click — X button only (project rule).
  * NO Audit History button — sales audit endpoint pending T-200.x.
+ *
+ * Night Observatory reskin (T-901): status filter chips and the status
+ * column both route through the single canonical helper in
+ * components/sales/statusPhase.ts — see StatusBadge / Chip below.
  */
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
 import { ShoppingCart } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge, PageHeader } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { useSalesOrdersV2 } from '../../hooks/queries/useSalesOrders';
 import { useAuthStore } from '../../stores/auth.store';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { SalesOrderStatus, SalesOrderListItem } from '../../services/salesApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type StatusFilter = SalesOrderStatus | 'ALL';
+
+function chipPhase(value: StatusFilter): PhaseKey | null {
+  return value === 'ALL' ? null : salesStatusToPhase(value);
+}
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -34,18 +45,10 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
+const ActionRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 `;
 
 const FilterRow = styled.div`
@@ -57,33 +60,31 @@ const FilterRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 220px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const DateInput = styled.input`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  color-scheme: dark;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
   }
 `;
 
@@ -94,46 +95,51 @@ const FilterChips = styled.div`
   margin-bottom: 20px;
 `;
 
-const Chip = styled.button<{ $active: boolean }>`
+const Chip = styled.button<{ $active: boolean; $phase?: PhaseKey | null }>`
+  ${({ $active, $phase }) => ($active && $phase ? phaseBadge($phase) : glassControl)}
   padding: 6px 14px;
   border-radius: 99px;
-  border: 1px solid
-    ${({ $active, theme }) =>
-      $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[600] : theme.colors.textSecondary};
-  font-size: 13px;
-  font-weight: 500;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
+
+  ${({ $active, $phase, theme }) =>
+    !($active && $phase) &&
+    css`
+      color: ${$active ? theme.colors.celeste : theme.colors.muted};
+    `}
+
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[400]};
-    color: ${({ theme }) => theme.colors.primary[600]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const NewButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;
 
+// A dense results table lives inside one glass panel — no nested glass.
 const TableWrapper = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
+  padding: 8px;
   overflow: hidden;
 `;
 
@@ -143,15 +149,11 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-align: left;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -159,78 +161,47 @@ const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const TdMono = styled(Td)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const ClickableTr = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
   &:hover td {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
   &:last-child td {
     border-bottom: none;
   }
 `;
 
-// Status badge colours — A20Core document-status canon, shared across all
-// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md). This page
-// previously used a distinct amber for `partly_closed`; converged onto the
-// shared lapis/info treatment used by every other sales list/detail page
-// (matches SalesOrderDetailPage.tsx) — a deliberate visual change from amber
-// to blue, flagged for review.
-//   draft            → neutral   (neutral[100] / textSecondary)
-//   open              → emerald   (successBg / emerald[700])
-//   partly_closed     → lapis     (infoBg / lapis[700])
-//   closed             → neutral (dark) (neutral[200] / neutral[800])
-//   cancelled          → terracotta (errorBg / terracotta[700])
 const StatusBadge = styled.span<{ $status: SalesOrderStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'partly_closed': return theme.colors.infoBg;
-      case 'closed': return theme.colors.neutral[200];
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'partly_closed': return theme.colors.lapis[700];
-      case 'closed': return theme.colors.neutral[800];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const ProgressPill = styled.span`
+  ${glassControl}
   display: inline-block;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.celeste};
   border-radius: 99px;
   padding: 2px 8px;
 `;
 
-// T-201.10 — amber badge for SOs with unbilled service-line qty.
-// Mirrors DeliveriesPage's Open-Qty badge palette; amber signals "action needed".
+// T-201.10 — badge for SOs with unbilled service-line qty. Terra tint
+// signals "action needed" without spending gold budget (spec §3).
 const ServiceOpenBadge = styled.span`
   display: inline-block;
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: ${({ theme }) => theme.colors.gold[800]};
-  background: ${({ theme }) => theme.colors.warningBg};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme }) => theme.colors.bright.terra};
+  background: rgba(232, 147, 95, 0.16);
   border-radius: 99px;
   padding: 2px 10px;
 `;
@@ -239,10 +210,9 @@ const PaginationRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: 16px 8px 4px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PaginationButtons = styled.div`
@@ -251,15 +221,10 @@ const PaginationButtons = styled.div`
 `;
 
 const PageBtn = styled.button<{ $active?: boolean }>`
+  ${glassControl}
   padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid
-    ${({ $active, theme }) =>
-      $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.onAccent : theme.colors.textPrimary};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.celeste)};
+  border-color: ${({ $active, theme }) => ($active ? 'rgba(180, 200, 220, 0.35)' : theme.colors.glass.border)};
   font-size: 13px;
   cursor: pointer;
   &:disabled {
@@ -271,32 +236,35 @@ const PageBtn = styled.button<{ $active?: boolean }>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 24px;
-  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const EmptyIcon = styled.div`
   margin-bottom: 16px;
-  opacity: 0.3;
+  color: ${({ theme }) => theme.colors.muted};
+  display: flex;
+  justify-content: center;
 `;
 
 const EmptyTitle = styled.p`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 18px;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 8px;
 `;
 
 const EmptyText = styled.p`
   font-size: 14px;
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
 const ErrorBanner = styled.div`
-  padding: 16px 20px;
+  padding: 12px 16px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   margin-bottom: 24px;
 `;
@@ -405,12 +373,17 @@ export function SalesOrdersV2Page() {
 
   return (
     <Container>
-      <Header>
-        <Title>Sales Orders</Title>
+      <PageHeader
+        breadcrumb="SALES · LIVE"
+        title="Sales Orders"
+        stats={[{ value: meta?.total ?? 0, label: 'Total Orders' }]}
+      />
+
+      <ActionRow>
         <NewButton onClick={() => navigate('/sales/orders-v2/new')}>
           + New Sales Order
         </NewButton>
-      </Header>
+      </ActionRow>
 
       {isError && (
         <ErrorBanner>
@@ -454,6 +427,7 @@ export function SalesOrdersV2Page() {
           <Chip
             key={value}
             $active={statusFilter === value}
+            $phase={chipPhase(value)}
             onClick={() => handleStatusChip(value)}
           >
             {label}
@@ -462,7 +436,8 @@ export function SalesOrdersV2Page() {
         {/* T-201.10: filter chip for SOs with unbilled service lines.
             Note: requires backend support for has_service_open_lines param.
             The chip is visible and toggleable; when the backend param is not
-            yet supported, the filter will silently return all results. */}
+            yet supported, the filter will silently return all results. This
+            is a boolean toggle, not a status — no phase colour. */}
         <Chip
           $active={hasServiceOpenLines}
           onClick={() => {
@@ -475,25 +450,25 @@ export function SalesOrdersV2Page() {
         </Chip>
       </FilterChips>
 
-      <TableWrapper>
-        {isLoading ? (
-          <EmptyState>
-            <EmptyText>Loading…</EmptyText>
-          </EmptyState>
-        ) : filteredItems.length === 0 ? (
-          <EmptyState>
-            <EmptyIcon>
-              <ShoppingCart size={48} />
-            </EmptyIcon>
-            <EmptyTitle>No Sales Orders found</EmptyTitle>
-            <EmptyText>
-              {statusFilter !== 'ALL' || searchText || dateFrom || dateTo
-                ? 'Try adjusting your filters.'
-                : 'Create your first Sales Order using the "+ New Sales Order" button, or convert a Quote.'}
-            </EmptyText>
-          </EmptyState>
-        ) : (
-          <>
+      {isLoading ? (
+        <EmptyState>
+          <EmptyText>Loading…</EmptyText>
+        </EmptyState>
+      ) : filteredItems.length === 0 ? (
+        <EmptyState>
+          <EmptyIcon>
+            <ShoppingCart size={40} strokeWidth={1.6} />
+          </EmptyIcon>
+          <EmptyTitle>No Sales Orders found</EmptyTitle>
+          <EmptyText>
+            {statusFilter !== 'ALL' || searchText || dateFrom || dateTo
+              ? 'Try adjusting your filters.'
+              : 'Create your first Sales Order using the "+ New Sales Order" button, or convert a Quote.'}
+          </EmptyText>
+        </EmptyState>
+      ) : (
+        <>
+          <TableWrapper>
             <Table>
               <thead>
                 <tr>
@@ -514,14 +489,14 @@ export function SalesOrdersV2Page() {
                     key={item.docEntry}
                     onClick={() => handleRowClick(item.docEntry)}
                   >
-                    <Td>
-                      <strong style={{ color: theme.colors.primary[500] }}>{item.docNumber}</strong>
-                    </Td>
-                    <Td>{formatDate(item.docDate)}</Td>
-                    <Td>{formatDate(item.deliveryDate)}</Td>
+                    <TdMono>
+                      <strong style={{ color: theme.colors.celeste }}>{item.docNumber}</strong>
+                    </TdMono>
+                    <TdMono>{formatDate(item.docDate)}</TdMono>
+                    <TdMono>{formatDate(item.deliveryDate)}</TdMono>
                     <Td>{item.customerName}</Td>
                     <Td>{item.bpRefNo ?? '—'}</Td>
-                    <Td style={{ textAlign: 'right' }}>
+                    <Td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontFamily: theme.typography.fontFamily.mono }}>
                       {formatAmount(item.totals.gross, item.currency)}
                     </Td>
                     <Td style={{ textAlign: 'right' }}>
@@ -530,7 +505,7 @@ export function SalesOrdersV2Page() {
                           {item.serviceOpenInvoiceQty.toLocaleString()}
                         </ServiceOpenBadge>
                       ) : (
-                        <span style={{ color: theme.colors.textDisabled }}>—</span>
+                        <span style={{ color: theme.colors.muted }}>—</span>
                       )}
                     </Td>
                     <Td>
@@ -549,43 +524,43 @@ export function SalesOrdersV2Page() {
                 ))}
               </tbody>
             </Table>
+          </TableWrapper>
 
-            {meta && totalPages > 1 && (
-              <PaginationRow>
-                <span>
-                  Showing {((page - 1) * PAGE_SIZE) + 1}–
-                  {Math.min(page * PAGE_SIZE, meta.total)} of {meta.total}
-                </span>
-                <PaginationButtons>
-                  <PageBtn
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    ← Prev
-                  </PageBtn>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((p) => Math.abs(p - page) <= 2)
-                    .map((p) => (
-                      <PageBtn
-                        key={p}
-                        $active={p === page}
-                        onClick={() => setPage(p)}
-                      >
-                        {p}
-                      </PageBtn>
-                    ))}
-                  <PageBtn
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next →
-                  </PageBtn>
-                </PaginationButtons>
-              </PaginationRow>
-            )}
-          </>
-        )}
-      </TableWrapper>
+          {meta && totalPages > 1 && (
+            <PaginationRow>
+              <span>
+                Showing {((page - 1) * PAGE_SIZE) + 1}–
+                {Math.min(page * PAGE_SIZE, meta.total)} of {meta.total}
+              </span>
+              <PaginationButtons>
+                <PageBtn
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  ← Prev
+                </PageBtn>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => Math.abs(p - page) <= 2)
+                  .map((p) => (
+                    <PageBtn
+                      key={p}
+                      $active={p === page}
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </PageBtn>
+                  ))}
+                <PageBtn
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next →
+                </PageBtn>
+              </PaginationButtons>
+            </PaginationRow>
+          )}
+        </>
+      )}
     </Container>
   );
 }

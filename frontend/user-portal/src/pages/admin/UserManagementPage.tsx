@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { Card } from '@a64core/shared';
+import { Card, PageHeader, glassPanel, phaseBadge } from '@a64core/shared';
 import { apiClient } from '../../services/api';
 import { useAuthStore } from '../../stores/auth.store';
 import { useToastStore } from '../../stores/toast.store';
@@ -172,10 +172,12 @@ export function UserManagementPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>User Management</Title>
-        <Subtitle>Manage system users, roles, and permissions</Subtitle>
-      </Header>
+      <PageHeader
+        breadcrumb="Admin · Users"
+        title="User Management"
+        description="Manage system users, roles, and permissions"
+        stats={[{ value: meta.total, label: 'Total users' }]}
+      />
 
       <FiltersCard>
         <FiltersRow>
@@ -370,33 +372,10 @@ const Container = styled.div`
   }
 `;
 
-const Header = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-`;
-
-const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
-
-  @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  }
-`;
-
-const Subtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
 const FiltersCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 8px;
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.md};
   margin-bottom: ${({ theme }) => theme.spacing.md};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const FiltersRow = styled.div`
@@ -414,49 +393,52 @@ const SearchForm = styled.form`
 const SearchInput = styled.input`
   width: 100%;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FilterSelect = styled.select`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   min-width: 140px;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Destructive-adjacent action — coral-b tinted glass, never solid red (spec §4).
 const ClearButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
@@ -469,7 +451,7 @@ const LoadingText = styled.div`
 const ErrorText = styled.div`
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const EmptyText = styled.div`
@@ -483,35 +465,28 @@ const Table = styled.table`
   border-collapse: collapse;
 `;
 
+// Tables — spec §4: no solid chrome, Space Mono uppercase celeste headers,
+// `line` row dividers, transparent rows, hover rgba(180,200,220,.05).
 const TableHeader = styled.th`
   text-align: left;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TableRow = styled.tr`
-  /* Striped rows for readability - alternating row colors */
-  &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-  }
-
-  &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
-  }
-
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const TableCell = styled.td`
   padding: ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
@@ -525,8 +500,8 @@ const UserName = styled.div`
 
 const YouBadge = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  background: ${({ theme }) => theme.colors.primary[100]};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: normal;
@@ -538,13 +513,15 @@ const EmailText = styled.div`
 
 const UnverifiedBadge = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  background: ${({ theme }) => theme.colors.gold[100]};
-  color: ${({ theme }) => theme.colors.gold[700]};
+  background: ${({ theme }) => theme.colors.warningBg};
+  color: ${({ theme }) => theme.colors.warning};
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: ${({ theme }) => theme.spacing.xs};
 `;
 
+// Categorical role chip — not a status, so it draws from the `bright.*`
+// palette rather than the phase vocabulary (spec §5 is for status only).
 const RoleBadge = styled.span<{ role: string }>`
   display: inline-block;
   padding: 4px 8px;
@@ -552,34 +529,30 @@ const RoleBadge = styled.span<{ role: string }>`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   text-transform: capitalize;
-  background: ${({ role, theme }) => {
+  background: ${({ role }) => {
     switch (role) {
-      case 'super_admin': return theme.colors.terracotta[100];
-      case 'admin': return theme.colors.gold[100];
-      case 'moderator': return theme.colors.primary[100];
-      case 'user': return theme.colors.emerald[100];
-      default: return theme.colors.neutral[100];
+      case 'super_admin': return 'rgba(232, 147, 95, 0.16)';
+      case 'admin': return 'rgba(195, 160, 207, 0.16)';
+      case 'moderator': return 'rgba(107, 138, 224, 0.16)';
+      case 'user': return 'rgba(84, 211, 155, 0.16)';
+      default: return 'rgba(180, 200, 220, 0.1)';
     }
   }};
   color: ${({ role, theme }) => {
     switch (role) {
-      case 'super_admin': return theme.colors.terracotta[700];
-      case 'admin': return theme.colors.gold[700];
-      case 'moderator': return theme.colors.primary[700];
-      case 'user': return theme.colors.emerald[700];
-      default: return theme.colors.neutral[700];
+      case 'super_admin': return theme.colors.bright.terra;
+      case 'admin': return theme.colors.bright.lavender;
+      case 'moderator': return theme.colors.bright.lapis;
+      case 'user': return theme.colors.bright.emerald;
+      default: return theme.colors.muted;
     }
   }};
 `;
 
+// Active/inactive account — the closest §5.2 extrapolation is
+// approved/posted ("fruiting") vs. cancelled/archived ("decommissioned").
 const StatusBadge = styled.span<{ $active: boolean }>`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ $active, theme }) => $active ? theme.colors.emerald[100] : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) => $active ? theme.colors.emerald[700] : theme.colors.neutral[600]};
+  ${({ $active }) => phaseBadge($active ? 'fruiting' : 'decommissioned')}
 `;
 
 const RoleEditRow = styled.div`
@@ -590,23 +563,24 @@ const RoleEditRow = styled.div`
 
 const RoleSelect = styled.select`
   padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 4px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SmallButton = styled.button`
   padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 4px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -617,67 +591,51 @@ const ActionsRow = styled.div`
 
 const ActionButton = styled.button`
   padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 4px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   cursor: pointer;
   color: ${({ theme }) => theme.colors.textSecondary};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
+// Destructive action — coral-b tinted glass, never solid red (spec §4).
 const DeleteButton = styled(ActionButton)`
-  border-color: ${({ theme }) => theme.colors.terracotta[300]};
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border-color: rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.terracotta[700]};
+    background: rgba(240, 138, 112, 0.16);
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 `;
 
+// Security-sensitive action — warning-tinted, not the rare chrome gold.
 const ResetMfaButton = styled(ActionButton)`
-  border-color: ${({ theme }) => theme.colors.gold[300]};
-  color: ${({ theme }) => theme.colors.gold[700]};
+  border-color: rgba(232, 200, 106, 0.45);
+  color: ${({ theme }) => theme.colors.warning};
 
   &:hover {
     background: ${({ theme }) => theme.colors.warningBg};
-    color: ${({ theme }) => theme.colors.gold[800]};
+    color: ${({ theme }) => theme.colors.warning};
   }
 `;
 
 const MfaEnabledBadge = styled.span`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.emerald[100]};
-  color: ${({ theme }) => theme.colors.emerald[700]};
+  ${phaseBadge('fruiting')}
 `;
 
 const MfaPendingBadge = styled.span`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.gold[100]};
-  color: ${({ theme }) => theme.colors.gold[700]};
+  ${phaseBadge('fruitingInit')}
 `;
 
 const MfaDisabledBadge = styled.span`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.neutral[600]};
+  ${phaseBadge('empty')}
 `;
 
 const Pagination = styled.div`
@@ -685,7 +643,7 @@ const Pagination = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const PageInfo = styled.div`
@@ -701,14 +659,15 @@ const PageButtons = styled.div`
 
 const PageButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {

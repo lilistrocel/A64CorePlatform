@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
+import { AlertTriangle, Check, Download } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 
 interface BackupCodesModalProps {
   isOpen: boolean;
@@ -72,7 +74,7 @@ these codes to sign in to your account.
 
         <ModalBody>
           <WarningBanner>
-            <WarningIcon>&#9888;</WarningIcon>
+            <WarningIcon><AlertTriangle size={20} strokeWidth={1.8} /></WarningIcon>
             <WarningText>
               <strong>Save these codes securely. They will not be shown again.</strong>
               <br />
@@ -94,10 +96,10 @@ these codes to sign in to your account.
 
           <ButtonRow>
             <ActionButton onClick={handleCopyAll}>
-              {copied ? '✓ Copied!' : 'Copy All'}
+              {copied ? (<><Check size={15} strokeWidth={2} /> Copied!</>) : 'Copy All'}
             </ActionButton>
             <ActionButton onClick={handleDownload}>
-              ⬇ Download
+              <Download size={15} strokeWidth={1.8} /> Download
             </ActionButton>
           </ButtonRow>
 
@@ -128,15 +130,21 @@ these codes to sign in to your account.
   );
 }
 
-// Styled Components
+// Styled Components — Night Observatory (T-901 Phase 2, deliverable E). This
+// is the second of the two canonical reference modals (see
+// UnsavedChangesDialog.tsx for the "no shared modal shell exists" note). This
+// modal's Overlay already closed on backdrop click (gated behind the
+// `acknowledged` checkbox) BEFORE this pass — that click-to-close behaviour
+// is preserved untouched here; only colours/radius/blur change, per the
+// explicit instruction not to alter existing close behaviour in this pass.
 const Overlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
-  background: rgba(14, 19, 48, 0.6);
+  /* Cosmos scrim, spec §4 "Modals/drawers" (rgba(10,14,36,.6)). */
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -149,9 +157,10 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 500px;
   max-height: 100vh;
@@ -206,9 +215,11 @@ const ModalFooter = styled.div`
 `;
 
 const WarningBanner = styled.div`
+  /* Warning banner uses the phase/status warning tint (gold-b at 16%), not
+     the rare chrome gold — consistent with spec §1.1 warningBg semantics. */
   background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid ${({ theme }) => theme.colors.warning};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 12px;
   padding: 0.75rem;
   margin-bottom: 1rem;
   display: flex;
@@ -223,17 +234,13 @@ const WarningBanner = styled.div`
 `;
 
 const WarningIcon = styled.span`
-  font-size: 1.25rem;
-  color: ${({ theme }) => theme.colors.gold[700]};
+  display: flex;
+  color: ${({ theme }) => theme.colors.warning};
   flex-shrink: 0;
-
-  @media (min-width: 480px) {
-    font-size: 1.5rem;
-  }
 `;
 
 const WarningText = styled.div`
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 0.8125rem;
   line-height: 1.4;
 
@@ -244,9 +251,9 @@ const WarningText = styled.div`
 `;
 
 const BackupCodesContainer = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.cosmosDeep};
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 12px;
   padding: 0.75rem;
   margin-bottom: 0.75rem;
 
@@ -271,11 +278,11 @@ const BackupCode = styled.div`
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  font-family: 'Courier New', monospace;
-  background: ${({ theme }) => theme.colors.background};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  background: ${({ theme }) => theme.colors.glass.base};
   padding: 0.5rem 0.625rem;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 
   @media (min-width: 480px) {
     gap: 0.5rem;
@@ -284,7 +291,7 @@ const BackupCode = styled.div`
 `;
 
 const CodeNumber = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 0.75rem;
   min-width: 1.25rem;
 
@@ -319,15 +326,19 @@ const ButtonRow = styled.div`
 `;
 
 const ActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
   flex: 1;
   min-height: 44px; /* Touch-friendly */
   padding: 0.625rem 1rem;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.primary[600]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
@@ -338,8 +349,7 @@ const ActionButton = styled.button`
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -348,8 +358,9 @@ const AcknowledgmentSection = styled.div`
   align-items: flex-start;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
 
   @media (min-width: 480px) {
     gap: 0.75rem;
@@ -363,7 +374,7 @@ const Checkbox = styled.input`
   min-width: 1.25rem; /* Prevent shrinking */
   margin-top: 0.125rem;
   cursor: pointer;
-  accent-color: ${({ theme }) => theme.colors.primary[500]};
+  accent-color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const CheckboxLabel = styled.label`
@@ -382,13 +393,17 @@ const CloseButton = styled.button<{ $acknowledged: boolean }>`
   width: 100%;
   min-height: 44px; /* Touch-friendly */
   padding: 0.75rem;
+  /* Primary-CTA gold gradient once acknowledged (spec §4 Buttons) — the
+     button is inert/muted glass until the user has checked the box. */
   background: ${({ $acknowledged, theme }) =>
-    $acknowledged ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ $acknowledged, theme }) => $acknowledged ? theme.colors.onAccent : theme.colors.textSecondary};
+    $acknowledged
+      ? `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`
+      : theme.colors.glass.base};
+  border: 1px solid ${({ $acknowledged, theme }) => ($acknowledged ? 'transparent' : theme.colors.glass.border)};
+  border-radius: 10px;
+  color: ${({ $acknowledged, theme }) => $acknowledged ? theme.colors.onAccent : theme.colors.muted};
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 700;
   cursor: ${({ $acknowledged }) => $acknowledged ? 'pointer' : 'not-allowed'};
   transition: all 0.2s;
 
@@ -399,6 +414,8 @@ const CloseButton = styled.button<{ $acknowledged: boolean }>`
 
   &:hover:not(:disabled) {
     background: ${({ $acknowledged, theme }) =>
-      $acknowledged ? theme.colors.primary[600] : theme.colors.neutral[300]};
+      $acknowledged
+        ? `linear-gradient(145deg, ${theme.colors.secondary[400]}, ${theme.colors.secondary[500]})`
+        : theme.colors.glass.base};
   }
 `;

@@ -2,12 +2,29 @@
  * VehicleTable Component
  *
  * Displays vehicles in a sortable table format with action buttons.
+ *
+ * Night Observatory (T-901 Phase 3): glass table per spec §4 "Tables". See
+ * `VEHICLE_STATUS_TO_PHASE` — the same literal map is duplicated in
+ * `VehicleCard.tsx` (the only other consumer); kept as two small inline
+ * maps rather than a new shared file per the shard brief.
  */
 
 import { useState } from 'react';
 import styled from 'styled-components';
-import type { Vehicle } from '../../types/logistics';
-import { getVehicleStatusColor, getVehicleTypeLabel, formatCapacity } from '../../services/logisticsService';
+import { ArrowUpDown, ArrowUp, ArrowDown, Eye, Pencil, Trash2 } from 'lucide-react';
+import type { PhaseKey } from '@a64core/shared';
+import { glassPanel, monoLabel, phaseBadge } from '@a64core/shared';
+import type { Vehicle, VehicleStatus } from '../../types/logistics';
+import { getVehicleTypeLabel, formatCapacity } from '../../services/logisticsService';
+
+// Vehicle status -> phase key (spec §5.2 extrapolation) — identical map to
+// VehicleCard.tsx, see that file's header comment for the reasoning.
+const VEHICLE_STATUS_TO_PHASE: Record<VehicleStatus, PhaseKey> = {
+  available: 'fruiting',
+  in_use: 'inoculated',
+  maintenance: 'maintenance',
+  retired: 'decommissioned',
+};
 
 // ============================================================================
 // COMPONENT PROPS
@@ -28,9 +45,7 @@ type SortDirection = 'asc' | 'desc';
 // ============================================================================
 
 const TableContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  ${glassPanel}
   overflow: hidden;
 `;
 
@@ -40,49 +55,39 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
-  padding: 16px;
+  padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
-  transition: background 150ms ease-in-out;
+  transition: color 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.neutral[200] : theme.colors.surface)};
+    color: ${({ $sortable, theme }) => ($sortable ? theme.colors.textPrimary : theme.colors.celeste)};
   }
 `;
 
 const SortIndicator = styled.span`
+  display: inline-flex;
+  vertical-align: middle;
   margin-left: 4px;
-  font-size: 10px;
+  opacity: 0.75;
 `;
 
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   transition: background 150ms ease-in-out;
 
-  /* Striped rows for readability - alternating row colors */
-  &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-  }
-
-  &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
-  }
-
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.05);
   }
 
   &:last-child {
@@ -91,7 +96,7 @@ const TableRow = styled.tr`
 `;
 
 const TableCell = styled.td`
-  padding: 16px;
+  padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -109,19 +114,12 @@ const VehicleName = styled.span`
 
 const VehicleCode = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
-const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
-  color: ${({ $color }) => $color};
-  text-transform: capitalize;
+const StatusBadge = styled.span<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
 `;
 
 const TypeBadge = styled.span`
@@ -130,8 +128,9 @@ const TypeBadge = styled.span`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Actions = styled.div`
@@ -139,41 +138,49 @@ const Actions = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
+const ActionButton = styled.button<{ $variant?: 'ghost' | 'secondary' | 'danger' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   ${({ $variant, theme }) => {
-    if ($variant === 'primary') {
+    if ($variant === 'secondary') {
       return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
+        background: ${theme.colors.glass.base};
+        color: ${theme.colors.textPrimary};
+        border: 1px solid ${theme.colors.glass.border};
         &:hover {
-          background: ${theme.colors.primary[600]};
+          background: ${theme.colors.glass.hi};
         }
       `;
     }
     if ($variant === 'danger') {
       return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
+        background: rgba(240, 138, 112, 0.12);
+        color: ${theme.colors.bright.coral};
+        border: 1px solid rgba(240, 138, 112, 0.35);
         &:hover {
-          background: ${theme.colors.terracotta[100]};
+          background: rgba(240, 138, 112, 0.2);
         }
       `;
     }
+    // 'ghost' — the View action. Previously a solid primary[500] fill with
+    // onAccent text (flagged onAccent misuse — the fill is lapis, not
+    // gold). Repeated per-row actions must not consume the gold budget, so
+    // this is restyled as the spec's Ghost button: transparent, celeste.
     return `
       background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      color: ${theme.colors.celeste};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.primary[50]};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
@@ -181,8 +188,22 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  padding: 56px 24px;
+`;
+
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 8px;
+`;
+
+const EmptyBody = styled.p`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.muted};
+  margin: 0;
 `;
 
 // ============================================================================
@@ -217,8 +238,10 @@ export function VehicleTable({ vehicles, onView, onEdit, onDelete }: VehicleTabl
   });
 
   const getSortIndicator = (field: SortField) => {
-    if (sortField !== field) return '⇅';
-    return sortDirection === 'asc' ? '↑' : '↓';
+    if (sortField !== field) return <ArrowUpDown size={11} strokeWidth={1.8} aria-hidden="true" />;
+    return sortDirection === 'asc'
+      ? <ArrowUp size={11} strokeWidth={1.8} aria-hidden="true" />
+      : <ArrowDown size={11} strokeWidth={1.8} aria-hidden="true" />;
   };
 
   // Helper to get aria-sort value for sortable columns
@@ -231,7 +254,8 @@ export function VehicleTable({ vehicles, onView, onEdit, onDelete }: VehicleTabl
     return (
       <TableContainer>
         <EmptyState>
-          <p>No vehicles found</p>
+          <EmptyHeadline>No vehicles found</EmptyHeadline>
+          <EmptyBody>Vehicles you add to the fleet will appear here.</EmptyBody>
         </EmptyState>
       </TableContainer>
     );
@@ -302,20 +326,20 @@ export function VehicleTable({ vehicles, onView, onEdit, onDelete }: VehicleTabl
               <TableCell>{formatCapacity(vehicle.capacity)}</TableCell>
               <TableCell style={{ textTransform: 'capitalize' }}>{vehicle.ownership}</TableCell>
               <TableCell>
-                <StatusBadge $color={getVehicleStatusColor(vehicle.status)}>
+                <StatusBadge $phaseKey={VEHICLE_STATUS_TO_PHASE[vehicle.status]}>
                   {vehicle.status.replace('_', ' ')}
                 </StatusBadge>
               </TableCell>
               <TableCell>
                 <Actions>
                   {onView && (
-                    <ActionButton $variant="primary" onClick={() => onView(vehicle.vehicleId)}>
-                      View
+                    <ActionButton $variant="ghost" onClick={() => onView(vehicle.vehicleId)}>
+                      <Eye size={12} strokeWidth={1.8} /> View
                     </ActionButton>
                   )}
                   {onEdit && (
                     <ActionButton $variant="secondary" onClick={() => onEdit(vehicle.vehicleId)}>
-                      Edit
+                      <Pencil size={12} strokeWidth={1.8} /> Edit
                     </ActionButton>
                   )}
                   {onDelete && (
@@ -327,7 +351,7 @@ export function VehicleTable({ vehicles, onView, onEdit, onDelete }: VehicleTabl
                         }
                       }}
                     >
-                      Delete
+                      <Trash2 size={12} strokeWidth={1.8} /> Delete
                     </ActionButton>
                   )}
                 </Actions>

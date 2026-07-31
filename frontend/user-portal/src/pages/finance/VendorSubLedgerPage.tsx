@@ -25,6 +25,7 @@
 import { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceCompanies } from '../../hooks/queries/useFinanceCompanies';
 import { useVendorSubLedger } from '../../hooks/queries/useFinanceReports';
@@ -68,38 +69,17 @@ function formatDateTime(iso: string): string {
 
 // ─── Styled Components ─────────────────────────────────────────────────────────
 
+// Page floor stays transparent — the sky shows through; only cards/panels below get glass.
 const PageContainer = styled.div`
   padding: 24px 32px;
   max-width: 1400px;
   margin: 0 auto;
 `;
 
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 0 24px;
-  line-height: 1.55;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  margin-bottom: 24px;
-`;
-
 // ─── Toolbar ───────────────────────────────────────────────────────────────────
 
 const ToolbarCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 18px 22px;
   margin-bottom: 24px;
 `;
@@ -118,49 +98,43 @@ const ToolbarField = styled.div`
 `;
 
 const ToolbarLabel = styled.label`
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ToolbarSelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 200px;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const ToolbarDateInput = styled.input`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 // ─── Total outstanding card ────────────────────────────────────────────────────
 
 const SummaryCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 20px 24px;
   margin-bottom: 24px;
   display: flex;
@@ -175,11 +149,9 @@ const SummaryBlock = styled.div`
 `;
 
 const SummaryLabel = styled.span`
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const SummaryValue = styled.span`
@@ -191,7 +163,7 @@ const SummaryValue = styled.span`
 
 const SummaryMeta = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ─── Report meta bar ───────────────────────────────────────────────────────────
@@ -201,11 +173,9 @@ const ReportMetaBar = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 10px 10px 0 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ReportMetaTitle = styled.span`
@@ -214,13 +184,16 @@ const ReportMetaTitle = styled.span`
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
+// One glass panel wraps the whole report (meta bar + table) — transparent rows,
+// Space Mono uppercase celeste column headers, `line` row dividers (spec §4).
+
+const ReportPanel = styled.div`
+  ${glassPanel}
+  overflow: hidden;
+`;
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top: none;
-  border-radius: 0 0 12px 12px;
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const SubLedgerTable = styled.table`
@@ -230,21 +203,16 @@ const SubLedgerTable = styled.table`
 `;
 
 const SLTHead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  background: transparent;
 `;
 
 const SLTh = styled.th`
+  ${monoLabel}
   padding: 12px 14px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -257,9 +225,10 @@ const SLThCenter = styled(SLTh)`
 `;
 
 const SLTr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  transition: background 100ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -281,21 +250,25 @@ const SLTdCenter = styled.td`
   padding: 11px 14px;
   font-size: 13px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 interface BalanceTdProps {
   $negative: boolean;
 }
 
+// Debit/credit polarity — the old theme.colors.terracotta[600]/emerald[600]
+// were tuned for contrast against the cream ground and read as near-black on
+// the new Cosmos Ink surface. Swapped to bright.coral (negative) /
+// bright.emerald (positive) — bright.coral is also the app's "only red" used
+// for errors/overdue elsewhere, keeping the vocabulary consistent (spec §5.1).
 const BalanceTd = styled.td<BalanceTdProps>`
   padding: 11px 14px;
   font-size: 13px;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
   font-weight: 600;
-  /* Debit/credit polarity — deepened 600s for legibility at this size. */
-  color: ${({ $negative, theme }) => ($negative ? theme.colors.terracotta[600] : theme.colors.emerald[600])};
+  color: ${({ $negative, theme }) => ($negative ? theme.colors.bright.coral : theme.colors.bright.emerald)};
 `;
 
 const ViewEntriesLink = styled.button`
@@ -303,18 +276,18 @@ const ViewEntriesLink = styled.button`
   border: none;
   cursor: pointer;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   padding: 4px 8px;
   border-radius: 6px;
   font-family: inherit;
   white-space: nowrap;
   transition: background 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     text-decoration: underline;
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -324,15 +297,25 @@ const ViewEntriesLink = styled.button`
 const EmptyState = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   line-height: 1.7;
+`;
+
+// Empty-state headline, spec §4/§9: Fraunces italic celeste.
+const EmptyTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const LoadingOverlay = styled.div`
   padding: 48px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -340,6 +323,7 @@ const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -349,7 +333,7 @@ const VendorCodeCell = styled.td`
   padding: 11px 14px;
   font-size: 12px;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
 `;
 
@@ -463,13 +447,11 @@ export function VendorSubLedgerPage() {
 
   return (
     <PageContainer>
-      <PageTitle>Vendor Sub-Ledger</PageTitle>
-      <PageSubtitle>
-        A detailed ledger of all AP transactions per vendor. Shows total debits, credits,
-        and outstanding balance. Use "View Entries" to drill into the journal entries for
-        a vendor.
-      </PageSubtitle>
-      <Divider />
+      <PageHeader
+        breadcrumb="FINANCE · ACCOUNTS PAYABLE"
+        title="Vendor Sub-Ledger"
+        description="A detailed ledger of all AP transactions per vendor. Shows total debits, credits, and outstanding balance."
+      />
 
       {/* ── Toolbar ── */}
       <ToolbarCard>
@@ -575,12 +557,12 @@ export function VendorSubLedgerPage() {
           {/* ── Empty state ── */}
           {sortedRows.length === 0 ? (
             <EmptyState>
-              No AP activity found
+              <EmptyTitle>No AP activity found</EmptyTitle>
               {selectedVendorId ? ' for this vendor' : ''} as of{' '}
               <strong>{subLedger.asOfDate}</strong>.
             </EmptyState>
           ) : (
-            <>
+            <ReportPanel>
               <ReportMetaBar>
                 <ReportMetaTitle>
                   Vendor Sub-Ledger — {effectiveCompanyCode}
@@ -646,7 +628,7 @@ export function VendorSubLedgerPage() {
                   </tbody>
                 </SubLedgerTable>
               </TableWrapper>
-            </>
+            </ReportPanel>
           )}
         </>
       )}

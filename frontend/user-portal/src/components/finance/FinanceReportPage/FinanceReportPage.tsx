@@ -40,6 +40,8 @@
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl } from '@a64core/shared';
 import { useAuthStore } from '../../../stores/auth.store';
 import { useFinanceCompanies } from '../../../hooks/queries/useFinanceCompanies';
 import { useFinancePeriods } from '../../../hooks/queries/useTrialBalance';
@@ -107,25 +109,13 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  margin: 16px 0 24px;
-`;
-
 // ─── Toolbar ─────────────────────────────────────────────────────────────────
+// The one glass layer for this shell — the statement table rendered by the
+// consumer (children render-prop) is its own glass panel below, so nothing
+// here nests glass inside glass (spec §2 two-layer limit).
 
 const ToolbarCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 18px 22px;
   margin-bottom: 20px;
 `;
@@ -149,38 +139,34 @@ const ToolbarLabel = styled.label`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ToolbarSelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 160px;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const ToolbarDateInput = styled.input`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -189,7 +175,7 @@ const ToggleLabel = styled.label`
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   user-select: none;
   padding-bottom: 2px;
@@ -204,7 +190,7 @@ const DisplayRow = styled.div`
   align-items: center;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const DisplayChipGroup = styled.div`
@@ -224,19 +210,16 @@ const Chip = styled.button<ChipProps>`
   font-family: inherit;
   cursor: pointer;
   border: 1.5px solid
-    ${({ $active, theme }) =>
-      $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
+    ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.glass.border)};
+  background: ${({ $active }) => ($active ? 'rgba(107, 138, 224, 0.16)' : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[300] : theme.colors.celeste)};
   transition: all 150ms ease;
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary[400]};
-    color: ${({ theme }) => theme.colors.primary[700]};
+    color: ${({ theme }) => theme.colors.primary[300]};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -271,8 +254,7 @@ const ExportButton = styled.button<ExportButtonProps>`
   color: ${({ $variant, theme }) =>
     $variant === 'pdf' ? theme.colors.error : theme.colors.primary[500]};
   &:hover:not(:disabled) {
-    background: ${({ $variant, theme }) =>
-      $variant === 'pdf' ? theme.colors.errorBg : theme.colors.primary[50]};
+    background: ${({ $variant, theme }) => ($variant === 'pdf' ? theme.colors.errorBg : theme.colors.infoBg)};
   }
   &:focus-visible {
     outline: 2px solid
@@ -295,14 +277,12 @@ const CostCenterContainer = styled.div`
 `;
 
 const CostCenterChips = styled.div`
+  ${glassControl}
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   min-height: 36px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   padding: 4px 8px;
-  background: ${({ theme }) => theme.colors.background};
   max-width: 280px;
   cursor: pointer;
   position: relative;
@@ -312,6 +292,10 @@ interface SelectedChipProps {
   $isSelected: boolean;
 }
 
+// Selected fill is `primary[500]` (lapis-b) — this needs `onDark` (cream)
+// text, NOT `onAccent` (which now means "text on a GOLD fill" and renders
+// near-invisible cosmos-on-lapis). This was the exact onAccent misuse the
+// spec flags call sites to audit for.
 const CCChip = styled.button<SelectedChipProps>`
   padding: 2px 10px;
   border-radius: 99px;
@@ -320,14 +304,12 @@ const CCChip = styled.button<SelectedChipProps>`
   font-family: inherit;
   cursor: pointer;
   border: 1px solid
-    ${({ $isSelected, theme }) =>
-      $isSelected ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $isSelected, theme }) =>
-    $isSelected ? theme.colors.primary[500] : 'transparent'};
-  color: ${({ $isSelected, theme }) => ($isSelected ? theme.colors.onAccent : 'inherit')};
+    ${({ $isSelected, theme }) => ($isSelected ? theme.colors.primary[500] : theme.colors.glass.border)};
+  background: ${({ $isSelected, theme }) => ($isSelected ? theme.colors.primary[500] : 'transparent')};
+  color: ${({ $isSelected, theme }) => ($isSelected ? theme.colors.onDark : theme.colors.celeste)};
   white-space: nowrap;
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 1px;
   }
 `;
@@ -347,7 +329,7 @@ const CustomDateRow = styled.div`
 const ModalBackdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -356,9 +338,10 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalPanel = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(59, 44, 24, 0.15);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 90vw;
   max-width: 860px;
   max-height: 85vh;
@@ -372,7 +355,7 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 18px 24px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -393,16 +376,15 @@ const ModalCloseButton = styled.button`
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 20px;
+  color: ${({ theme }) => theme.colors.celeste};
   line-height: 1;
   font-family: inherit;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -775,8 +757,7 @@ export function FinanceReportPage({
 
   return (
     <PageContainer>
-      <PageTitle>{title}</PageTitle>
-      <Divider />
+      <PageHeader title={title} />
 
       {/* ── Toolbar ── */}
       <ToolbarCard>
@@ -1063,7 +1044,7 @@ export function FinanceReportPage({
                 onClick={closeDrillDown}
                 aria-label="Close drill-down"
               >
-                &#x2715;
+                <X size={17} strokeWidth={1.6} aria-hidden="true" />
               </ModalCloseButton>
             </ModalHeader>
             <ModalBody>{drillDown.content}</ModalBody>

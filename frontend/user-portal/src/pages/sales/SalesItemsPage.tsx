@@ -24,6 +24,10 @@
  *  - Does NOT close on overlay click (project rule — data-entry modals).
  *  - Closes only via the X button.
  *  - Save → PATCH /api/v1/finance/item-finance-ext/{itemId}
+ *
+ * Night Observatory (T-901): the page's own local "PageHeader" styled div
+ * has been replaced by the shared PageHeader component. The edit modal now
+ * uses the canonical glassPanel-at-blur-24px modal treatment (spec §4).
  */
 
 import {
@@ -33,6 +37,8 @@ import {
   useMemo,
 } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { X } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, PageHeader } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   useSaleItemFinanceExtList,
@@ -52,35 +58,9 @@ const PageWrapper = styled.div`
   margin: 0 auto;
 `;
 
-const PageHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
-const Subtitle = styled.p`
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 4px 0 0;
-`;
-
-const HeaderText = styled.div``;
-
 const TableWrapper = styled.div`
+  ${glassPanel}
   overflow-x: auto;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const Table = styled.table`
@@ -90,18 +70,17 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   text-align: left;
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const Td = styled.td`
   padding: 10px 14px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -111,15 +90,15 @@ const Tr = styled.tr`
     border-bottom: none;
   }
   &:hover td {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const ItemCodeBadge = styled.span`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 0.8rem;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 4px;
   padding: 2px 6px;
   white-space: nowrap;
@@ -132,12 +111,12 @@ const AccountLabel = styled.span`
 const AccountNumber = styled.span`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 0.8rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-right: 6px;
 `;
 
 const UnconfiguredBadge = styled.span`
-  color: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.bright.gold};
   font-size: 0.8rem;
   font-style: italic;
 `;
@@ -148,8 +127,8 @@ const TaxCodePill = styled.span`
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const SellableChip = styled.span<{ $active: boolean }>`
@@ -158,20 +137,15 @@ const SellableChip = styled.span<{ $active: boolean }>`
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: ${({ $active, theme }) =>
-    $active
-      ? theme.colors.successBg
-      : (theme.colors.neutral[100])};
-  color: ${({ $active, theme }) =>
-    $active
-      ? theme.colors.emerald[700]
-      : theme.colors.textSecondary};
+  background: ${({ $active, theme }) => ($active ? theme.colors.successBg : 'transparent')};
+  border: 1px solid ${({ $active, theme }) => ($active ? 'transparent' : theme.colors.line)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.bright.emerald : theme.colors.muted)};
 `;
 
 /**
- * T-201.8 — Type badge: Stock (teal) / Service (amber).
- * $isStock=true  → Stock   (teal/green family, mirrors the positive SellableChip colour)
- * $isStock=false → Service (amber, visually distinct but not alarming)
+ * T-201.8 — Type badge: Stock (lapis) / Service (gold-b warning tint).
+ * $isStock=true  → Stock   (lapis family, mirrors "active/in-progress" phase language)
+ * $isStock=false → Service (gold-b warning tint, visually distinct but not alarming)
  */
 const TypeChip = styled.span<{ $isStock: boolean }>`
   display: inline-block;
@@ -179,14 +153,8 @@ const TypeChip = styled.span<{ $isStock: boolean }>`
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: ${({ $isStock, theme }) =>
-    $isStock
-      ? (theme.colors.primary[50])
-      : theme.colors.warningBg};
-  color: ${({ $isStock, theme }) =>
-    $isStock
-      ? (theme.colors.primary[500])
-      : theme.colors.gold[800]};
+  background: ${({ $isStock, theme }) => ($isStock ? theme.colors.infoBg : theme.colors.warningBg)};
+  color: ${({ $isStock, theme }) => ($isStock ? theme.colors.bright.lapis : theme.colors.bright.gold)};
 `;
 
 const ActionBtn = styled.button`
@@ -197,43 +165,46 @@ const ActionBtn = styled.button`
   border-radius: 6px;
   font-size: 0.8125rem;
   font-weight: 500;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorState = styled.div`
   padding: 16px;
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 0.875rem;
 `;
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
+// Canonical modal treatment (spec §4): glassPanel at blur 24px over a cosmos
+// scrim, 20px radius. Does NOT close on overlay click (project rule).
 
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,9 +213,10 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 560px;
   max-width: calc(100vw - 32px);
   max-height: 90vh;
@@ -266,16 +238,19 @@ const ModalTitle = styled.h2`
 `;
 
 const ModalClose = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 1.25rem;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   padding: 4px;
   border-radius: 4px;
   line-height: 1;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -291,7 +266,7 @@ const ModalFooter = styled.div`
   justify-content: flex-end;
   gap: 10px;
   padding: 12px 24px 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const FormField = styled.div`
@@ -308,22 +283,20 @@ const FormLabel = styled.label`
 
 const FormHint = styled.span`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const FormSelect = styled.select`
+  ${glassControl}
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 6px;
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -337,36 +310,36 @@ const ToggleInput = styled.input`
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: ${({ theme }) => theme.colors.primary[500]};
+  accent-color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const SaveButton = styled.button<{ $loading?: boolean }>`
   padding: 9px 20px;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
   opacity: ${({ $loading }) => ($loading ? 0.7 : 1)};
-  transition: opacity 0.15s;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
   &:hover:not([disabled]) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;
 
 const CancelButton = styled.button`
+  ${glassControl}
   padding: 9px 20px;
-  border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -374,8 +347,8 @@ const ErrorBanner = styled.div`
   padding: 10px 14px;
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 0.8125rem;
 `;
 
@@ -492,7 +465,7 @@ function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps
             Edit Finance Config — {ext.itemCode ?? ext.itemId}
           </ModalTitle>
           <ModalClose onClick={onClose} aria-label="Close modal">
-            ✕
+            <X size={18} strokeWidth={1.8} />
           </ModalClose>
         </ModalHeader>
 
@@ -638,12 +611,14 @@ function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps
               style={{
                 width: '100%',
                 padding: '8px 12px',
-                border: `1px solid ${theme.colors.border}`,
+                border: `1px solid ${theme.colors.line}`,
                 borderRadius: '6px',
                 fontSize: '0.875rem',
                 resize: 'vertical',
                 boxSizing: 'border-box',
                 fontFamily: 'inherit',
+                background: theme.colors.glass.base,
+                color: theme.colors.textPrimary,
               }}
               placeholder="Optional notes about this item's finance config…"
             />
@@ -719,15 +694,11 @@ export function SalesItemsPage() {
 
   return (
     <PageWrapper>
-      <PageHeader>
-        <HeaderText>
-          <Title>Sales Items — Finance Config</Title>
-          <Subtitle>
-            Per-item GL account and VAT code settings used by the AR Invoice and
-            Delivery journal entry handlers. Changes take effect on new documents only.
-          </Subtitle>
-        </HeaderText>
-      </PageHeader>
+      <PageHeader
+        breadcrumb="SALES · SETUP"
+        title="Sales Items — Finance Config"
+        description="Per-item GL account and VAT code settings used by the AR Invoice and Delivery journal entry handlers. Changes take effect on new documents only."
+      />
 
       {isLoading && (
         <LoadingState>Loading item finance configurations…</LoadingState>

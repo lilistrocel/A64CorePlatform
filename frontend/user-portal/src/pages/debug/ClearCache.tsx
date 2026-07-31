@@ -7,10 +7,13 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { Check, Key, RefreshCw, Settings, Trash2, X, Lightbulb } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 
+// Night Observatory (T-901): standalone debug route outside MainLayout (no
+// sidebar) — the fixed Sky layer at the app shell is the entire backdrop here.
 const Container = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,12 +21,11 @@ const Container = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
+  ${glassPanel}
+  border-radius: 20px;
   padding: 48px;
   max-width: 600px;
   width: 100%;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const Title = styled.h1`
@@ -44,7 +46,8 @@ const Subtitle = styled.p`
 const Section = styled.div`
   margin-bottom: 24px;
   padding: 20px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
 `;
 
@@ -59,7 +62,7 @@ const InfoRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   &:last-child {
     border-bottom: none;
@@ -94,27 +97,30 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   transition: all 0.2s;
 
   ${props => {
+    // Destructive action — coral-b tinted glass, never solid red (spec §4).
     if (props.$variant === 'danger') {
       return `
-        background: ${props.theme.colors.terracotta[600]};
-        color: ${props.theme.colors.onAccent};
+        background: rgba(240, 138, 112, 0.16);
+        color: ${props.theme.colors.bright.coral};
+        border: 1px solid rgba(240, 138, 112, 0.45);
         &:hover {
-          background: ${props.theme.colors.terracotta[700]};
+          background: rgba(240, 138, 112, 0.26);
         }
       `;
     }
     if (props.$variant === 'secondary') {
       return `
-        background: ${props.theme.colors.neutral[300]};
+        background: ${props.theme.colors.glass.base};
+        border: 1px solid ${props.theme.colors.glass.border};
         color: ${props.theme.colors.textPrimary};
         &:hover {
-          background: ${props.theme.colors.neutral[400]};
+          background: ${props.theme.colors.glass.hi};
         }
       `;
     }
     return `
       background: ${props.theme.colors.primary[500]};
-      color: ${props.theme.colors.onAccent};
+      color: ${props.theme.colors.onDark};
       &:hover {
         background: ${props.theme.colors.primary[600]};
       }
@@ -138,20 +144,20 @@ const Message = styled.div<{ $type: 'success' | 'error' | 'info' }>`
     if ($type === 'success') {
       return `
         background: ${theme.colors.successBg};
-        color: ${theme.colors.emerald[700]};
+        color: ${theme.colors.bright.emerald};
         border: 1px solid ${theme.colors.success};
       `;
     }
     if ($type === 'error') {
       return `
         background: ${theme.colors.errorBg};
-        color: ${theme.colors.terracotta[700]};
+        color: ${theme.colors.bright.coral};
         border: 1px solid ${theme.colors.error};
       `;
     }
     return `
       background: ${theme.colors.infoBg};
-      color: ${theme.colors.primary[700]};
+      color: ${theme.colors.bright.lapis};
       border: 1px solid ${theme.colors.info};
     `;
   }}
@@ -221,7 +227,10 @@ export function ClearCache() {
   return (
     <Container>
       <Card>
-        <Title>🔧 Cache Debug Tool</Title>
+        <Title>
+          <Settings size={26} strokeWidth={1.8} style={{ verticalAlign: 'middle', marginRight: 10 }} />
+          Cache Debug Tool
+        </Title>
         <Subtitle>Clear browser cache and storage during development</Subtitle>
 
         <Section>
@@ -236,11 +245,19 @@ export function ClearCache() {
           </InfoRow>
           <InfoRow>
             <Label>Access Token:</Label>
-            <Value>{cacheInfo.hasAccessToken ? '✓ Present' : '✗ Missing'}</Value>
+            <Value>
+              {cacheInfo.hasAccessToken
+                ? <><Check size={13} strokeWidth={2.2} style={{ verticalAlign: 'middle' }} /> Present</>
+                : <><X size={13} strokeWidth={2.2} style={{ verticalAlign: 'middle' }} /> Missing</>}
+            </Value>
           </InfoRow>
           <InfoRow>
             <Label>Auth Storage:</Label>
-            <Value>{cacheInfo.hasAuthStorage ? '✓ Present' : '✗ Missing'}</Value>
+            <Value>
+              {cacheInfo.hasAuthStorage
+                ? <><Check size={13} strokeWidth={2.2} style={{ verticalAlign: 'middle' }} /> Present</>
+                : <><X size={13} strokeWidth={2.2} style={{ verticalAlign: 'middle' }} /> Missing</>}
+            </Value>
           </InfoRow>
         </Section>
 
@@ -249,16 +266,19 @@ export function ClearCache() {
 
           <ButtonGroup>
             <Button onClick={hardReload} $variant="secondary">
-              🔄 Hard Reload
+              <RefreshCw size={16} strokeWidth={1.8} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Hard Reload
             </Button>
             <Button onClick={clearAuthOnly} $variant="secondary">
-              🔑 Clear Auth Only
+              <Key size={16} strokeWidth={1.8} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Clear Auth Only
             </Button>
           </ButtonGroup>
 
           <ButtonGroup>
             <Button onClick={clearAllCache} $variant="danger">
-              🗑️ Clear All & Reload
+              <Trash2 size={16} strokeWidth={1.8} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Clear All &amp; Reload
             </Button>
           </ButtonGroup>
         </Section>
@@ -270,7 +290,8 @@ export function ClearCache() {
         )}
 
         <Message $type="info">
-          💡 Tip: Bookmark this page for quick access during development!<br/>
+          <Lightbulb size={14} strokeWidth={1.8} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+          Tip: Bookmark this page for quick access during development!<br/>
           URL: <strong>http://localhost:5173/debug/clear-cache</strong>
         </Message>
       </Card>

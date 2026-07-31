@@ -28,6 +28,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
 import { ExternalLink, Truck, FileText } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   useSalesOrderV2,
   useTransitionSalesOrderV2,
@@ -37,6 +38,7 @@ import { useSaleItemFinanceExtList } from '../../hooks/queries/useSaleItemFinanc
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { SalesOrderStatus, SalesOrderLine, DocumentLinkRef } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -81,33 +83,12 @@ const Title = styled.h1`
   margin: 0;
 `;
 
+const DocNo = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
 const StatusBadge = styled.span<{ $status: SalesOrderStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'partly_closed': return theme.colors.infoBg;
-      case 'closed': return theme.colors.neutral[200];
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'partly_closed': return theme.colors.lapis[700];
-      case 'closed': return theme.colors.neutral[800];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const ActionBar = styled.div`
@@ -117,62 +98,72 @@ const ActionBar = styled.div`
   align-self: flex-start;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   padding: 10px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 10px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const GhostButton = styled.button`
   padding: 10px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 10px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  transition: background 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.26); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Emerald action (secondary CTA, not this page's gold budget item) —
+// onDark text per the onAccent audit (onAccent is gold-fill-only now).
 const DeliveryButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -181,28 +172,30 @@ const DeliveryButton = styled.button`
 `;
 
 /**
- * T-201.10 — "Generate Service Invoice" primary action button.
- * Lapis (primary) to distinguish from the emerald (success) Delivery button.
+ * T-201.10 — "Generate Service Invoice" secondary action button. Lapis to
+ * distinguish from the emerald Delivery button — onDark text (not
+ * onAccent, which is gold-fill-only per the Night Observatory redesign).
  */
 const ServiceInvoiceButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.primary[600]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 /**
- * T-201.10 — Type badge for SO Lines table.
- * Mirrors the TypeChip from SalesItemsPage (T-201.8).
+ * T-201.10 — Type badge for SO Lines table. Repeats per-row, so kept off
+ * gold (spec §3 gold-discipline) — "Service" uses terra instead of the
+ * former warning/gold treatment.
  */
 const TypeChip = styled.span<{ $isStock: boolean }>`
   display: inline-block;
@@ -210,20 +203,19 @@ const TypeChip = styled.span<{ $isStock: boolean }>`
   border-radius: 10px;
   font-size: 0.72rem;
   font-weight: 600;
-  background: ${({ $isStock, theme }) =>
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  background: ${({ $isStock }) =>
     $isStock
-      ? theme.colors.primary[50]
-      : theme.colors.warningBg};
+      ? 'rgba(107, 138, 224, 0.16)'
+      : 'rgba(232, 147, 95, 0.16)'};
   color: ${({ $isStock, theme }) =>
     $isStock
-      ? theme.colors.primary[500]
-      : theme.colors.gold[800]};
+      ? theme.colors.bright.lapis
+      : theme.colors.bright.terra};
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -248,11 +240,8 @@ const InfoGrid = styled.div`
 const InfoItem = styled.div``;
 
 const InfoLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 4px;
 `;
 
@@ -274,15 +263,11 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-align: left;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -290,7 +275,7 @@ const Td = styled.td`
   padding: 12px 12px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
@@ -300,13 +285,17 @@ const ThRight = styled(Th)`
 
 const TdRight = styled(Td)`
   text-align: right;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
-// Progress bar
+// Progress bar — segments in phase-adjacent colours per spec §4
+// "Progress/distribution bars": emerald for complete, terra (not gold) for
+// in-progress since this repeats per table row.
 const ProgressBar = styled.div`
   width: 100%;
   height: 6px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 99px;
   overflow: hidden;
   margin-top: 4px;
@@ -316,7 +305,7 @@ const ProgressFill = styled.div<{ $pct: number }>`
   height: 100%;
   width: ${({ $pct }) => Math.min(100, Math.max(0, $pct))}%;
   background: ${({ $pct, theme }) =>
-    $pct >= 100 ? theme.colors.success : $pct > 0 ? theme.colors.warning : theme.colors.neutral[200]};
+    $pct >= 100 ? theme.colors.bright.emerald : $pct > 0 ? theme.colors.bright.terra : 'transparent'};
   border-radius: 99px;
   transition: width 300ms ease;
 `;
@@ -341,7 +330,7 @@ const DocChainItem = styled.li`
 const DocLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -353,26 +342,25 @@ const DocLink = styled.button`
 `;
 
 const DocTypeTag = styled.span`
-  font-size: 11px;
+  ${monoLabel}
   padding: 2px 8px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: rgba(180, 200, 220, 0.07);
   border-radius: 99px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const EmptyDocChain = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
-// Modal
+// Modal — canonical treatment (spec §4): glassPanel at blur 24px over a
+// cosmos scrim.
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -380,12 +368,13 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px;
   max-width: 440px;
   width: 90%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 `;
 
 const ModalTitle = styled.h3`
@@ -424,9 +413,9 @@ const ModalCloseBtn = styled.button`
 const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   margin-bottom: 20px;
 `;
@@ -601,7 +590,7 @@ export function SalesOrderDetailPage() {
 
       <TitleRow>
         <TitleGroup>
-          <Title>Sales Order {so.docNumber}</Title>
+          <Title>Sales Order <DocNo>{so.docNumber}</DocNo></Title>
           <StatusBadge $status={so.status}>{statusLabel(so.status)}</StatusBadge>
         </TitleGroup>
 
@@ -757,15 +746,15 @@ export function SalesOrderDetailPage() {
                     <TdRight>{formatAmount(line.lineGross, so.currency)}</TdRight>
                     <TdRight style={{ fontWeight: 600 }}>{line.orderedQty}</TdRight>
                     {/* Stock: show deliveredQty; Service: show — */}
-                    <TdRight style={{ color: theme.colors.emerald[600] }}>
+                    <TdRight style={{ color: theme.colors.bright.emerald }}>
                       {isService ? '—' : line.deliveredQty}
                     </TdRight>
                     {/* Service: show invoicedQty; Stock: show — */}
-                    <TdRight style={{ color: theme.colors.emerald[600] }}>
+                    <TdRight style={{ color: theme.colors.bright.emerald }}>
                       {isService ? line.invoicedQty : '—'}
                     </TdRight>
-                    <TdRight style={{ color: theme.colors.error }}>{line.cancelledQty}</TdRight>
-                    <TdRight style={{ fontWeight: 600, color: (isService ? serviceOpenQty : oQty) > 0 ? theme.colors.gold[700] : theme.colors.textSecondary }}>
+                    <TdRight style={{ color: theme.colors.bright.coral }}>{line.cancelledQty}</TdRight>
+                    <TdRight style={{ fontWeight: 600, color: (isService ? serviceOpenQty : oQty) > 0 ? theme.colors.bright.terra : theme.colors.celeste }}>
                       {isService ? serviceOpenQty : oQty}
                     </TdRight>
                     <Td>

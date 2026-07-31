@@ -2,15 +2,46 @@
  * LogisticsDashboardPage Component
  *
  * Overview dashboard with fleet statistics and shipment tracking.
+ *
+ * Night Observatory (T-901 Phase 3): PageHeader for the title block, plain
+ * glass stat tiles (no chart library here — spec §4 "Charts" doesn't apply).
+ * Per-stat numeral colours route through the same phase vocabulary as the
+ * rest of the logistics module (`VEHICLE_STATUS_TO_PHASE` /
+ * `SHIPMENT_STATUS_TO_PHASE`, matching VehicleCard/Table and
+ * ShipmentCard/Table) rather than the old ad hoc `theme.colors.warning`/
+ * `primary[500]` picks — two of those picks (Maintenance, Scheduled/In
+ * Transit) previously landed on the wrong colour for their phase meaning;
+ * see the inline notes below. Quick-action buttons are Secondary (glass),
+ * not gold — three simultaneous nav shortcuts of equal weight would blow
+ * the gold budget if all three were Primary.
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
+import styled from 'styled-components';
+import type { PhaseKey } from '@a64core/shared';
+import { PageHeader, Button, glassPanel, monoLabel } from '@a64core/shared';
 import { logisticsApi } from '../../services/logisticsService';
 import { formatNumber } from '../../utils/formatNumber';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
-import type { LogisticsDashboardStats } from '../../types/logistics';
+import type { LogisticsDashboardStats, ShipmentStatus, VehicleStatus } from '../../types/logistics';
+
+// Same phase maps as VehicleCard.tsx / VehicleTable.tsx and
+// ShipmentCard.tsx / ShipmentTable.tsx (spec §5.2) — duplicated here rather
+// than shared per the shard brief; kept literal-identical for consistency.
+const VEHICLE_STATUS_TO_PHASE: Record<VehicleStatus, PhaseKey> = {
+  available: 'fruiting',
+  in_use: 'inoculated',
+  maintenance: 'maintenance',
+  retired: 'decommissioned',
+};
+
+const SHIPMENT_STATUS_TO_PHASE: Record<ShipmentStatus, PhaseKey> = {
+  scheduled: 'fruitingInit',
+  in_transit: 'inoculated',
+  delivered: 'fruiting',
+  cancelled: 'decommissioned',
+};
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -22,65 +53,30 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-`;
-
-const HeaderLeft = styled.div`
-  flex: 1;
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 8px 0;
-`;
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: 20px;
+  margin-bottom: 24px;
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
+  ${glassPanel}
+  padding: 20px 22px;
 `;
 
 const StatLabel = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: 8px;
+  ${monoLabel}
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 10px;
 `;
 
-const StatValue = styled.div`
-  font-size: 36px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+const StatValue = styled.div<{ $phaseKey?: PhaseKey }>`
+  font-size: 32px;
+  font-weight: 800;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme, $phaseKey }) => ($phaseKey ? theme.colors.phase[$phaseKey] : theme.colors.textPrimary)};
 `;
 
 const WidgetsRow = styled.div`
@@ -95,23 +91,21 @@ const WidgetsRow = styled.div`
 `;
 
 const Widget = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  ${glassPanel}
+  padding: 22px 24px;
 `;
 
 const WidgetTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px 0;
 `;
 
 const ShipmentList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 `;
 
 const ShipmentItem = styled.div`
@@ -119,13 +113,14 @@ const ShipmentItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.05);
+    border-color: rgba(180, 200, 220, 0.3);
   }
 `;
 
@@ -137,8 +132,9 @@ const ShipmentCode = styled.span`
 `;
 
 const ShipmentDate = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const QuickActions = styled.div`
@@ -148,58 +144,29 @@ const QuickActions = styled.div`
   margin-top: 24px;
 `;
 
-const ActionButton = styled.button`
-  padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
-  }
-`;
-
 const LoadingContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
-  background: ${({ theme }) => theme.colors.terracotta[100]};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const EmptyText = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-`;
-
-const FarmingYearBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary[600]};
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[100]};
-  border-radius: 16px;
-  margin-left: 8px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -208,7 +175,6 @@ const FarmingYearBadge = styled.span`
 
 export function LogisticsDashboardPage() {
   const navigate = useNavigate();
-  const theme = useTheme();
   const [stats, setStats] = useState<LogisticsDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -259,22 +225,17 @@ export function LogisticsDashboardPage() {
 
   return (
     <Container>
-      <Header>
-        <HeaderLeft>
-          <Title>
-            Logistics Management
-            {selectedYear !== null && (
-              <FarmingYearBadge>
-                Year {selectedYear}
-              </FarmingYearBadge>
-            )}
-          </Title>
-          <Subtitle>
-            Fleet and shipment tracking overview
-            {selectedYear !== null && ' - Filtered by farming year'}
-          </Subtitle>
-        </HeaderLeft>
-      </Header>
+      <PageHeader
+        breadcrumb="Logistics · Live"
+        title="Logistics Management"
+        emphasizeLastWord
+        description={`Fleet and shipment tracking overview${selectedYear !== null ? ' — filtered by farming year' : ''}.`}
+        stats={[
+          { value: formatNumber(stats.totalVehicles), label: 'Vehicles' },
+          { value: formatNumber(stats.totalShipments), label: 'Shipments' },
+          ...(selectedYear !== null ? [{ value: selectedYear, label: 'Farming Year' }] : []),
+        ]}
+      />
 
       <StatsGrid>
         <StatCard>
@@ -282,19 +243,27 @@ export function LogisticsDashboardPage() {
           <StatValue>{formatNumber(stats.totalVehicles)}</StatValue>
         </StatCard>
 
+        {/* phase.fruiting (bright.emerald) — matches VehicleCard/Table's
+            VEHICLE_STATUS_TO_PHASE.available. */}
         <StatCard>
           <StatLabel>Available</StatLabel>
-          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.availableVehicles)}</StatValue>
+          <StatValue $phaseKey={VEHICLE_STATUS_TO_PHASE.available}>
+            {formatNumber(stats.availableVehicles)}
+          </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Use</StatLabel>
-          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.inUseVehicles)}</StatValue>
+          <StatValue $phaseKey={VEHICLE_STATUS_TO_PHASE.in_use}>{formatNumber(stats.inUseVehicles)}</StatValue>
         </StatCard>
 
+        {/* phase.maintenance (rose-b #EDD1BE) — was `theme.colors.warning`
+            (gold-b) before this reskin, which reads as a status gold and
+            collides with spec §3 ("gold is not a status colour except
+            Harvesting"). Corrected to match VehicleCard/Table. */}
         <StatCard>
           <StatLabel>Maintenance</StatLabel>
-          <StatValue style={{ color: theme.colors.warning }}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
+          <StatValue $phaseKey={VEHICLE_STATUS_TO_PHASE.maintenance}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -304,19 +273,26 @@ export function LogisticsDashboardPage() {
           <StatValue>{formatNumber(stats.totalShipments)}</StatValue>
         </StatCard>
 
+        {/* phase.fruitingInit (terra-b) — was `primary[500]` (lapis) before
+            this reskin; corrected to match ShipmentCard/Table's
+            SHIPMENT_STATUS_TO_PHASE.scheduled. */}
         <StatCard>
           <StatLabel>Scheduled</StatLabel>
-          <StatValue style={{ color: theme.colors.primary[500] }}>{formatNumber(stats.scheduledShipments)}</StatValue>
+          <StatValue $phaseKey={SHIPMENT_STATUS_TO_PHASE.scheduled}>{formatNumber(stats.scheduledShipments)}</StatValue>
         </StatCard>
 
+        {/* phase.inoculated (lapis-b) — was `theme.colors.warning` (gold-b)
+            before this reskin, same gold-discipline collision as
+            Maintenance above; corrected to match
+            SHIPMENT_STATUS_TO_PHASE.in_transit. */}
         <StatCard>
           <StatLabel>In Transit</StatLabel>
-          <StatValue style={{ color: theme.colors.warning }}>{formatNumber(stats.inTransitShipments)}</StatValue>
+          <StatValue $phaseKey={SHIPMENT_STATUS_TO_PHASE.in_transit}>{formatNumber(stats.inTransitShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: theme.colors.success }}>{formatNumber(stats.deliveredShipments)}</StatValue>
+          <StatValue $phaseKey={SHIPMENT_STATUS_TO_PHASE.delivered}>{formatNumber(stats.deliveredShipments)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -342,16 +318,22 @@ export function LogisticsDashboardPage() {
 
         <Widget>
           <WidgetTitle>Active Routes</WidgetTitle>
-          <StatValue style={{ fontSize: '48px', textAlign: 'center', padding: '32px 0' }}>
+          <StatValue style={{ fontSize: '44px', textAlign: 'center', padding: '28px 0', width: '100%' }}>
             {formatNumber(stats.activeRoutes)} / {formatNumber(stats.totalRoutes)}
           </StatValue>
         </Widget>
       </WidgetsRow>
 
       <QuickActions>
-        <ActionButton onClick={() => navigate('/logistics/vehicles')}>Manage Vehicles</ActionButton>
-        <ActionButton onClick={() => navigate('/logistics/routes')}>Manage Routes</ActionButton>
-        <ActionButton onClick={() => navigate('/logistics/shipments')}>Track Shipments</ActionButton>
+        <Button variant="secondary" onClick={() => navigate('/logistics/vehicles')}>
+          Manage Vehicles
+        </Button>
+        <Button variant="secondary" onClick={() => navigate('/logistics/routes')}>
+          Manage Routes
+        </Button>
+        <Button variant="secondary" onClick={() => navigate('/logistics/shipments')}>
+          Track Shipments
+        </Button>
       </QuickActions>
     </Container>
   );

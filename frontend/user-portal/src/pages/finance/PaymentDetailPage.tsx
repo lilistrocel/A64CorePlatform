@@ -13,7 +13,7 @@
 
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { glassPanel, monoLabel, phaseBadge, type Theme } from '@a64core/shared';
 import { usePayment } from '../../hooks/queries/usePayments';
 import { useAuthStore } from '../../stores/auth.store';
 import type { PaymentMethod } from '../../services/paymentsService';
@@ -50,11 +50,12 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
 };
 
-// Payment method is categorical, not a status — one brand voice per method.
-const methodColors = (theme: Theme): Record<PaymentMethod, { bg: string; text: string }> => ({
-  bank_transfer: { bg: theme.colors.primary[100], text: theme.colors.primary[800] },
-  cheque: { bg: theme.colors.gold[100], text: theme.colors.gold[800] },
-  cash: { bg: theme.colors.emerald[100], text: theme.colors.emerald[800] },
+// Payment method is categorical, not a status — same badge-tint palette as
+// PaymentsPage's list (avoids spending the gold budget on "cheque").
+const methodColors = (theme: Theme): Record<PaymentMethod, { bg: string; border: string; text: string }> => ({
+  bank_transfer: { bg: 'rgba(107, 138, 224, 0.16)', border: 'rgba(107, 138, 224, 0.45)', text: theme.colors.bright.lapis },
+  cheque: { bg: 'rgba(195, 160, 207, 0.16)', border: 'rgba(195, 160, 207, 0.45)', text: theme.colors.bright.lavender },
+  cash: { bg: 'rgba(84, 211, 155, 0.16)', border: 'rgba(84, 211, 155, 0.45)', text: theme.colors.bright.emerald },
 });
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -94,7 +95,7 @@ const PageTitle = styled.h1`
 
 const TitleSubLine = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
@@ -104,17 +105,18 @@ const ActionsRow = styled.div`
   flex-shrink: 0;
 `;
 
+// Destructive action — spec §4 Buttons: coral-tinted glass, never solid red.
 const ReverseButton = styled.button`
   padding: 9px 18px;
   background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  border-radius: 10px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.terracotta[100]}; }
+  transition: transform 150ms ease;
+  &:hover { transform: translateY(-1px); }
 `;
 
 const ReversedBanner = styled.div`
@@ -124,44 +126,32 @@ const ReversedBanner = styled.div`
   padding: 14px 18px;
   margin-bottom: 20px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-left: 4px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.terracotta[900]};
+  color: ${({ theme }) => theme.colors.error};
   font-size: 14px;
   line-height: 1.5;
 `;
 
+// "Reversed" -> `decommissioned` (dim slate), same convention as PaymentsPage.
 const ReversedTag = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  background: ${({ theme }) => theme.colors.terracotta[100]};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  ${phaseBadge('decommissioned')}
   margin-left: 10px;
   vertical-align: middle;
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
 
 const CardTitle = styled.h2`
-  font-size: 15px;
+  ${monoLabel}
+  font-size: 0.72rem;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 20px;
 `;
 
@@ -178,11 +168,9 @@ const MetaField = styled.div`
 `;
 
 const MetaLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const MetaValue = styled.span`
@@ -198,14 +186,18 @@ const TotalAmount = styled.span`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
-const MethodPill = styled.span<{ $bg: string; $text: string }>`
+const MethodPill = styled.span<{ $bg: string; $border: string; $text: string }>`
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
   border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   background: ${({ $bg }) => $bg};
+  border: 1px solid ${({ $border }) => $border};
   color: ${({ $text }) => $text};
 `;
 
@@ -214,33 +206,34 @@ const NotesText = styled.p`
   color: ${({ theme }) => theme.colors.textPrimary};
   line-height: 1.6;
   margin: 0;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.06);
   border-radius: 6px;
   padding: 10px 14px;
 `;
 
+// Dense table, spec §4: transparent rows/header, Space Mono uppercase
+// celeste column headers, `line` row dividers. Already sits inside a Card
+// glass panel — no per-row/per-cell glass.
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.celeste};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
@@ -254,7 +247,7 @@ const InvoiceLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
@@ -274,7 +267,7 @@ const JeLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   text-decoration: underline;
@@ -284,8 +277,8 @@ const JeLink = styled.button`
 
 const JeInlineSummary = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  color: ${({ theme }) => theme.colors.muted};
+  background: rgba(180, 200, 220, 0.06);
   border-radius: 6px;
   padding: 4px 10px;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
@@ -297,14 +290,14 @@ const TotalFooter = styled.div`
   gap: 24px;
   align-items: baseline;
   padding-top: 12px;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 2px solid ${({ theme }) => theme.colors.line};
   margin-top: 4px;
 `;
 
 const TotalLabel = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TotalValue = styled.span`
@@ -318,7 +311,7 @@ const LoadingState = styled.div`
   padding: 48px;
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorState = styled.div`
@@ -365,7 +358,7 @@ export function PaymentDetailPage() {
   }
 
   const methodLabel = METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod;
-  const methodColor = methodColors(theme)[payment.paymentMethod] ?? { bg: theme.colors.neutral[100], text: theme.colors.neutral[800] };
+  const methodColor = methodColors(theme)[payment.paymentMethod] ?? { bg: 'rgba(180, 200, 220, 0.1)', border: theme.colors.glass.border, text: theme.colors.muted };
   const isReversed = Boolean(payment.je?.reversedByJeNumber);
 
   const applicationsTotal = payment.applications.reduce(
@@ -455,7 +448,7 @@ export function PaymentDetailPage() {
             <MetaValue>
               <strong>{payment.vendorCode}</strong>
               {payment.vendorName && (
-                <span style={{ fontWeight: 400, marginLeft: 6, color: theme.colors.textSecondary }}>
+                <span style={{ fontWeight: 400, marginLeft: 6, color: theme.colors.muted }}>
                   {payment.vendorName}
                 </span>
               )}
@@ -464,7 +457,7 @@ export function PaymentDetailPage() {
           <MetaField>
             <MetaLabel>Method</MetaLabel>
             <MetaValue>
-              <MethodPill $bg={methodColor.bg} $text={methodColor.text}>
+              <MethodPill $bg={methodColor.bg} $border={methodColor.border} $text={methodColor.text}>
                 {methodLabel}
               </MethodPill>
             </MetaValue>
@@ -472,7 +465,7 @@ export function PaymentDetailPage() {
           <MetaField>
             <MetaLabel>Reference #</MetaLabel>
             <MetaValue>
-              {payment.referenceNumber ?? <span style={{ color: theme.colors.textDisabled }}>—</span>}
+              {payment.referenceNumber ?? <span style={{ color: theme.colors.muted }}>—</span>}
             </MetaValue>
           </MetaField>
           <MetaField>

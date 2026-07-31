@@ -5,7 +5,9 @@
  * Combines current weather, forecast, soil conditions, and insights.
  */
 
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { Wheat, MapPin, BarChart3, RefreshCw, Zap, AlertTriangle } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useWeatherData, useHasWeatherCapability } from '../../../hooks/farm/useWeatherData';
 import { CurrentWeatherCard } from './CurrentWeatherCard';
 import { SoilConditionsCard } from './SoilConditionsCard';
@@ -39,20 +41,20 @@ const Title = styled.h2`
 `;
 
 const RefreshButton = styled.button`
+  ${glassControl}
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: none;
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border-color: ${({ theme }) => theme.colors.glass.border};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -61,21 +63,31 @@ const RefreshButton = styled.button`
   }
 `;
 
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+const SpinningIcon = styled.span`
+  display: flex;
+  animation: ${spin} 1s linear infinite;
+`;
+
 const DataSourceBadge = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.info};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
+  ${monoLabel}
+  font-size: 0.62rem;
 `;
 
 const LastUpdated = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const MainGrid = styled.div`
@@ -104,70 +116,64 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
+  animation: ${spin} 1s linear infinite;
 `;
 
 const LoadingText = styled.p`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   margin: 0;
 `;
 
-const ErrorContainer = styled.div`
-  padding: 24px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 12px;
-  text-align: center;
-`;
-
-const ErrorTitle = styled.h3`
-  color: ${({ theme }) => theme.colors.terracotta[700]};
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-`;
-
-const ErrorMessage = styled.p`
-  color: ${({ theme }) => theme.colors.terracotta[900]};
-  font-size: 14px;
-  margin: 0;
-`;
-
-const NoLocationContainer = styled.div`
+// Empty/error state card — spec §4/§10: glassPanel container, Fraunces
+// italic celeste headline, one muted sentence, no emoji/stock art.
+const StateCard = styled.div`
+  ${glassPanel}
   padding: 48px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
   text-align: center;
 `;
 
-const NoLocationIcon = styled.div`
-  font-size: 48px;
-  margin-bottom: 16px;
+const StateIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
-const NoLocationTitle = styled.h3`
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: 18px;
-  font-weight: 600;
+const ErrorIcon = styled(StateIcon)`
+  color: ${({ theme }) => theme.colors.bright.coral};
+`;
+
+const StateHeadline = styled.h3`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.celeste};
+  font-size: 20px;
   margin: 0 0 8px 0;
 `;
 
-const NoLocationMessage = styled.p`
-  color: ${({ theme }) => theme.colors.textSecondary};
+const StateMessage = styled.p`
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   margin: 0;
   max-width: 400px;
   margin: 0 auto;
+`;
+
+// Error state uses the coral (quarantined/error) hue explicitly, not the
+// neutral celeste empty-state treatment, so a failure still reads as a
+// failure at a glance.
+const ErrorHeadline = styled(StateHeadline)`
+  color: ${({ theme }) => theme.colors.bright.coral};
+`;
+
+const ErrorMessage = styled(StateMessage)`
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 interface AgriDataTabProps {
@@ -185,17 +191,17 @@ export function AgriDataTab({ farm }: AgriDataTabProps) {
     return (
       <Container>
         <Header>
-          <Title>🌾 Agricultural Data</Title>
+          <Title><Wheat size={18} strokeWidth={1.6} /> Agricultural Data</Title>
         </Header>
 
-        <NoLocationContainer>
-          <NoLocationIcon>📍</NoLocationIcon>
-          <NoLocationTitle>Location Required</NoLocationTitle>
-          <NoLocationMessage>
+        <StateCard>
+          <StateIcon><MapPin size={32} strokeWidth={1.6} /></StateIcon>
+          <StateHeadline>Location Required</StateHeadline>
+          <StateMessage>
             To view agricultural weather data, this farm needs GPS coordinates configured.
             Edit the farm to add latitude and longitude coordinates.
-          </NoLocationMessage>
-        </NoLocationContainer>
+          </StateMessage>
+        </StateCard>
       </Container>
     );
   }
@@ -205,7 +211,7 @@ export function AgriDataTab({ farm }: AgriDataTabProps) {
     return (
       <Container>
         <Header>
-          <Title>🌾 Agricultural Data</Title>
+          <Title><Wheat size={18} strokeWidth={1.6} /> Agricultural Data</Title>
         </Header>
 
         <LoadingContainer>
@@ -221,16 +227,17 @@ export function AgriDataTab({ farm }: AgriDataTabProps) {
     return (
       <Container>
         <Header>
-          <Title>🌾 Agricultural Data</Title>
+          <Title><Wheat size={18} strokeWidth={1.6} /> Agricultural Data</Title>
           <RefreshButton onClick={refetch}>
-            🔄 Retry
+            <RefreshCw size={13} strokeWidth={1.6} /> Retry
           </RefreshButton>
         </Header>
 
-        <ErrorContainer>
-          <ErrorTitle>Unable to Load Weather Data</ErrorTitle>
+        <StateCard>
+          <ErrorIcon><AlertTriangle size={32} strokeWidth={1.6} /></ErrorIcon>
+          <ErrorHeadline>Unable to Load Weather Data</ErrorHeadline>
           <ErrorMessage>{error}</ErrorMessage>
-        </ErrorContainer>
+        </StateCard>
       </Container>
     );
   }
@@ -240,19 +247,19 @@ export function AgriDataTab({ farm }: AgriDataTabProps) {
     return (
       <Container>
         <Header>
-          <Title>🌾 Agricultural Data</Title>
+          <Title><Wheat size={18} strokeWidth={1.6} /> Agricultural Data</Title>
           <RefreshButton onClick={refetch}>
-            🔄 Refresh
+            <RefreshCw size={13} strokeWidth={1.6} /> Refresh
           </RefreshButton>
         </Header>
 
-        <NoLocationContainer>
-          <NoLocationIcon>📊</NoLocationIcon>
-          <NoLocationTitle>No Data Available</NoLocationTitle>
-          <NoLocationMessage>
+        <StateCard>
+          <StateIcon><BarChart3 size={32} strokeWidth={1.6} /></StateIcon>
+          <StateHeadline>No Data Available</StateHeadline>
+          <StateMessage>
             Weather data is not available at this time. Please try again later.
-          </NoLocationMessage>
-        </NoLocationContainer>
+          </StateMessage>
+        </StateCard>
       </Container>
     );
   }
@@ -261,10 +268,10 @@ export function AgriDataTab({ farm }: AgriDataTabProps) {
     <Container>
       <Header>
         <div>
-          <Title>🌾 Agricultural Data</Title>
+          <Title><Wheat size={18} strokeWidth={1.6} /> Agricultural Data</Title>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
             <DataSourceBadge>
-              <span>⚡</span> WeatherBit
+              <Zap size={12} strokeWidth={1.6} /> WeatherBit
             </DataSourceBadge>
             {lastUpdated && (
               <LastUpdated>
@@ -274,7 +281,12 @@ export function AgriDataTab({ farm }: AgriDataTabProps) {
           </div>
         </div>
         <RefreshButton onClick={refetch} disabled={loading}>
-          {loading ? '⏳' : '🔄'} Refresh
+          {loading ? (
+            <SpinningIcon><RefreshCw size={13} strokeWidth={1.6} /></SpinningIcon>
+          ) : (
+            <RefreshCw size={13} strokeWidth={1.6} />
+          )}
+          {' '}Refresh
         </RefreshButton>
       </Header>
 

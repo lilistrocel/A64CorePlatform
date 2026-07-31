@@ -18,6 +18,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast } from '../../stores/toast.store';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
@@ -29,6 +30,7 @@ import type { ApiErrorItem } from '../../utils/apiErrors';
 import type { GLAccount } from '../../services/financeAccountsService';
 import type { Company } from '../../services/financeCompaniesService';
 import { AccountCombobox } from '../../components/finance/AccountCombobox';
+import { StatusBadge } from '../../components/finance/StatusBadge';
 
 // ─── Role gates ────────────────────────────────────────────────────────────────
 
@@ -187,16 +189,37 @@ const PageHeaderRow = styled.div`
 
 const PageTitleBlock = styled.div``;
 
+// Space Mono gold kicker, matching the shared PageHeader breadcrumb pattern
+// (spec §4 "Page header") — this header stays hand-rolled (complex right-side
+// row: company picker + status pill + last-updated) rather than migrating to
+// the shared component, but echoes its visual language for consistency.
+const Crumb = styled.div`
+  ${monoLabel}
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: ${({ theme }) => theme.colors.secondary[500]};
+  margin-bottom: 8px;
+
+  &::before {
+    content: '';
+    width: 20px;
+    height: 1px;
+    background: ${({ theme }) => theme.colors.secondary[500]};
+  }
+`;
+
 const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
+  font-size: 1.9rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
+  letter-spacing: -0.01em;
   margin: 0;
 `;
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 6px 0 0;
   max-width: 620px;
   line-height: 1.55;
@@ -219,53 +242,35 @@ const CompanySelectRow = styled.div`
 const CompanySelectLabel = styled.label`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-transform: uppercase;
   letter-spacing: 0.3px;
   white-space: nowrap;
 `;
 
 const CompanySelect = styled.select`
+  ${glassControl}
   padding: 7px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
-`;
-
-interface StatusPillProps {
-  $complete: boolean;
-}
-
-const StatusPill = styled.span<StatusPillProps>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 12px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $complete, theme }) =>
-    $complete ? theme.colors.successBg : theme.colors.warningBg};
-  color: ${({ $complete, theme }) =>
-    $complete ? theme.colors.success : theme.colors.warning};
 `;
 
 const LastUpdatedText = styled.p`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   text-align: right;
 `;
 
 const Divider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.line};
   margin: 20px 0 28px;
 `;
 
@@ -305,19 +310,16 @@ const UnconfiguredHint = styled.div`
 
 /** Section card wrapping a logical group of fields. */
 const SectionCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 14px;
+  ${monoLabel}
+  font-size: 0.72rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 18px;
 `;
 
@@ -340,7 +342,7 @@ const Field = styled.div`
 const FormLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const FieldError = styled.span`
@@ -356,54 +358,57 @@ const FooterRow = styled.div`
   margin-bottom: 48px;
 `;
 
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Was a solid `primary[500]` (lapis) fill with `onAccent`
+// text — dark-on-lapis, near invisible.
 const SaveButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
 const EmptyState = styled.div`
   padding: 64px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
 // ─── Valuation method select (company-level) ──────────────────────────────────
 
 const ValuationSelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 260px;
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1a;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[50]};
     opacity: 0.6;
     cursor: not-allowed;
   }
@@ -411,7 +416,7 @@ const ValuationSelect = styled.select`
 
 const HintText = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 6px 0 0;
   line-height: 1.55;
   max-width: 560px;
@@ -835,6 +840,7 @@ export function PostingSetupPage() {
       {/* ── Page header ── */}
       <PageHeaderRow>
         <PageTitleBlock>
+          <Crumb>FINANCE · POSTING SETUP</Crumb>
           <PageTitle>Posting Setup</PageTitle>
           <PageSubtitle>
             Configure which GL accounts are used for each accounting event.
@@ -866,11 +872,14 @@ export function PostingSetupPage() {
             </CompanySelect>
           </CompanySelectRow>
 
-          {/* Completeness badge */}
+          {/* Completeness badge — routed through the shared finance phase map
+              (statusPhase.ts, spec §5.2): complete -> `fruiting` (approved/
+              done, emerald), incomplete -> `fruitingInit` (pending, terra). */}
           {!isNeverConfigured && (
-            <StatusPill $complete={badgeIsComplete} role="status">
-              {badgeIsComplete ? 'Configured' : 'Setup Incomplete'}
-            </StatusPill>
+            <StatusBadge
+              status={badgeIsComplete ? 'approved' : 'pending'}
+              label={badgeIsComplete ? 'Configured' : 'Setup Incomplete'}
+            />
           )}
 
           {/* Last-updated metadata */}

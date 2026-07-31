@@ -7,6 +7,8 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { Package, Trash2 } from 'lucide-react';
+import { glassControl, monoLabel } from '@a64core/shared';
 import { CompactBlockCard } from './CompactBlockCard';
 import { EmptyVirtualBlockModal } from '../EmptyVirtualBlockModal';
 import type { Block, DashboardBlock } from '../../../types/farm';
@@ -26,8 +28,8 @@ export function BlockGrid({ blocks, farmId, config, onBlockUpdate }: BlockGridPr
   if (blocks.length === 0) {
     return (
       <EmptyState>
-        <EmptyIcon>📦</EmptyIcon>
-        <EmptyTitle>No Blocks Found</EmptyTitle>
+        <EmptyIcon aria-hidden="true"><Package size={40} strokeWidth={1.4} /></EmptyIcon>
+        <EmptyTitle>No blocks found</EmptyTitle>
         <EmptyText>Try adjusting your filters or create new blocks for this farm.</EmptyText>
       </EmptyState>
     );
@@ -56,7 +58,7 @@ export function BlockGrid({ blocks, farmId, config, onBlockUpdate }: BlockGridPr
                   setBlockToArchive(block);
                 }}
               >
-                🗑️
+                <Trash2 size={13} strokeWidth={1.6} />
               </TrashButton>
             )}
           </CardWrapper>
@@ -109,6 +111,7 @@ const CardWrapper = styled.div`
 `;
 
 const TrashButton = styled.button`
+  ${glassControl}
   position: absolute;
   top: 8px;
   right: 8px;
@@ -117,59 +120,55 @@ const TrashButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  font-size: 14px;
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   z-index: 2;
 
   &:hover {
-    background: ${({ theme }) => `${theme.colors.terracotta[600]}1A`};
-    border-color: ${({ theme }) => theme.colors.terracotta[600]};
+    background: rgba(240, 138, 112, 0.14);
+    border-color: ${({ theme }) => theme.colors.bright.coral};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.terracotta[600]};
+    outline: 2px solid ${({ theme }) => theme.colors.bright.coral};
     outline-offset: 2px;
   }
 `;
 
 const Summary = styled.div`
+  ${monoLabel}
   text-align: center;
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.muted};
   padding: 16px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 16px;
-  opacity: 0.5;
 `;
 
 const EmptyTitle = styled.h3`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
   font-size: 24px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 8px 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;

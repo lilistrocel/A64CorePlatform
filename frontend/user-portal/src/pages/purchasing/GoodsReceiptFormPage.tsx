@@ -22,6 +22,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   useCreateGRFromPO,
   useUpdateGoodsReceipt,
@@ -32,8 +33,10 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceEnabled } from '../../hooks/useCapabilities';
 import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import type { GRLineCreate } from '../../services/goodsReceiptsService';
+import { purchasingStatusToPhase } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
+// Night Observatory (T-901 Phase 3). Container stays transparent (spec §7).
 
 const Container = styled.div`
   padding: 32px;
@@ -44,25 +47,17 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
-  &:hover { text-decoration: underline; }
-`;
-
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 24px;
+  transition: color 150ms ease;
+  &:hover { color: ${({ theme }) => theme.colors.textPrimary}; text-decoration: underline; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
@@ -88,44 +83,71 @@ const Field = styled.div`
   gap: 6px;
 `;
 
+// Space Mono uppercase micro-label above each field (spec §4).
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &:disabled { opacity: 0.6; background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+// Numeric variant — Space Mono, tabular figures (spec §6).
+const NumberInput = styled(Input)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
+  width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
-  background: ${({ theme }) => theme.colors.background};
+  box-sizing: border-box;
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const Table = styled.table`
@@ -133,22 +155,24 @@ const Table = styled.table`
   border-collapse: collapse;
 `;
 
+// Space Mono uppercase celeste column headers, no solid chrome (spec §4 "Tables").
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 8px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 10px 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
+`;
+
+const Tr = styled.tr`
+  transition: background 100ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.05); }
 `;
 
 const FooterRow = styled.div`
@@ -158,40 +182,85 @@ const FooterRow = styled.div`
   padding-top: 16px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4). Previously
+// primary[500] (lapis) fill with onAccent text — a mismatch under onAccent's
+// new meaning ("text on a GOLD fill"). Fixed by making the fill gold rather
+// than swapping the text colour.
 const PrimaryButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Ghost — transparent, celeste text/border (spec §4 "Buttons").
 const GhostButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 13px;
   margin: 8px 0 0;
 `;
 
 const ValidationHint = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
+`;
+
+// Status pill for the PO picker — routes through the single canonical
+// purchasingStatusToPhase() map + phaseBadge mixin (./statusPhase.ts),
+// replacing the previous inline-style primary/emerald pill.
+const StatusBadge = styled.span<{ $status: string }>`
+  ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
+`;
+
+// Space Mono for document-code/currency display (spec §6).
+const DocCode = styled.code`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const AmountValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+// Row-level "Select" action in the PO picker table — deliberately NOT the
+// gold PrimaryButton (spec §3 gold-discipline budget): one per row in a
+// list would blow well past the ≤4-gold-elements-per-viewport limit once
+// more than a couple of POs are listed. Secondary glass treatment instead.
+const SelectButton = styled.button`
+  ${glassControl}
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  cursor: pointer;
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 // ─── PO Picker (shown at /purchasing/gr/new before a PO is selected) ──────────
@@ -253,35 +322,25 @@ function POPickerCard({
         </thead>
         <tbody>
           {allReceivable.map((po) => (
-            <tr key={po.docId}>
-              <Td><code style={{ fontWeight: 600 }}>{po.docNumber}</code></Td>
+            <Tr key={po.docId}>
+              <Td><DocCode>{po.docNumber}</DocCode></Td>
               <Td>{po.vendorName ?? po.vendorCode ?? '—'}</Td>
               <Td>
-                <span style={{
-                  background: po.status === 'Open' ? theme.colors.primary[100] : theme.colors.emerald[100],
-                  color: po.status === 'Open' ? theme.colors.primary[700] : theme.colors.emerald[700],
-                  padding: '2px 8px',
-                  borderRadius: 99,
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}>
-                  {po.status}
-                </span>
+                <StatusBadge $status={po.status}>{po.status}</StatusBadge>
               </Td>
               <Td>
-                {new Intl.NumberFormat('en-AE', {
-                  style: 'currency', currency: po.currencyCode,
-                }).format(po.totalGross)}
+                <AmountValue>
+                  {new Intl.NumberFormat('en-AE', {
+                    style: 'currency', currency: po.currencyCode,
+                  }).format(po.totalGross)}
+                </AmountValue>
               </Td>
               <Td>
-                <PrimaryButton
-                  style={{ padding: '6px 14px', fontSize: 13 }}
-                  onClick={() => onSelect(po.docId)}
-                >
+                <SelectButton onClick={() => onSelect(po.docId)}>
                   Select
-                </PrimaryButton>
+                </SelectButton>
               </Td>
-            </tr>
+            </Tr>
           ))}
         </tbody>
       </Table>
@@ -480,7 +539,12 @@ export function GoodsReceiptFormPage() {
     return (
       <Container>
         <BackLink onClick={handleBack}>&larr; Back</BackLink>
-        <Title>New Goods Receipt — Select PO</Title>
+        <PageHeader
+          breadcrumb="— PURCHASING · GOODS RECEIPTS"
+          title="New Goods Receipt"
+          emphasizeLastWord
+          description="Select the source PO to receive against."
+        />
         <POPickerCard
           organizationId={orgId}
           onSelect={(id) => setSelectedPoDocId(id)}
@@ -492,14 +556,20 @@ export function GoodsReceiptFormPage() {
   return (
     <Container>
       <BackLink onClick={handleBack}>&larr; Back</BackLink>
-      <Title>{pageTitle}</Title>
+
+      <PageHeader
+        breadcrumb="— PURCHASING · GOODS RECEIPTS"
+        title={pageTitle}
+        emphasizeLastWord
+        description={isEdit ? `${existingGR?.docNumber ?? ''}` : 'Fill in the header and confirm the quantities received.'}
+      />
 
       <FinanceUnreachableBanner />
 
       {sourcePO && !isEdit && (
-        <Card style={{ borderLeft: `4px solid ${theme.colors.primary[600]}`, padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, fontSize: 14, color: theme.colors.primary[700] }}>
-            Receiving against <strong>{sourcePO.docNumber}</strong>{' '}
+        <Card style={{ borderLeft: `4px solid ${theme.colors.bright.lapis}`, padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, fontSize: 14, color: theme.colors.celeste }}>
+            Receiving against <DocCode>{sourcePO.docNumber}</DocCode>{' '}
             from vendor <strong>{sourcePO.vendorName ?? sourcePO.vendorCode ?? '—'}</strong>
           </p>
         </Card>
@@ -560,15 +630,17 @@ export function GoodsReceiptFormPage() {
                 const isOver = line.quantity > line.maxQuantity;
                 const isZero = line.quantity <= 0;
                 return (
-                  <tr key={line.baseLineId}>
+                  <Tr key={line.baseLineId}>
                     <Td>
                       <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
                       <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>{line.itemName}</div>
                     </Td>
                     <Td>{line.uom}</Td>
-                    <Td style={{ color: theme.colors.textSecondary }}>{line.maxQuantity}</Td>
+                    <Td style={{ color: theme.colors.textSecondary }}>
+                      <AmountValue>{line.maxQuantity}</AmountValue>
+                    </Td>
                     <Td>
-                      <Input
+                      <NumberInput
                         type="number"
                         min="0"
                         max={line.maxQuantity}
@@ -595,7 +667,7 @@ export function GoodsReceiptFormPage() {
                         {line.costCenterId ?? '—'}
                       </Td>
                     )}
-                  </tr>
+                  </Tr>
                 );
               })}
             </tbody>

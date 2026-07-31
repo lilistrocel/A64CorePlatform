@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import styled, { keyframes, useTheme } from 'styled-components';
+import { glassPanel } from '@a64core/shared';
 import type { PnlSummary } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -34,12 +35,12 @@ const shimmer = keyframes`
   100% { background-position: 400px 0; }
 `;
 
+// The one glass layer for this dense statement table — spec §4 "Tables":
+// transparent rows, Space Mono uppercase celeste headers, `line` dividers,
+// hover rgba(180,200,220,.05), all inside a single glass panel.
 const Section = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
   overflow-x: auto;
 `;
@@ -73,18 +74,17 @@ const Tr = styled.tr<RowProps>`
   ${({ $separator, theme }) =>
     $separator &&
     `
-    border-top: 2px solid ${theme.colors.neutral[300]};
+    border-top: 2px solid ${theme.colors.line};
   `}
 
   ${({ $bold, theme }) =>
     $bold &&
     `
-    background: ${theme.colors.neutral[50]};
     font-weight: ${theme.typography.fontWeight.semibold};
   `}
 
   &:hover {
-    background: ${({ theme, $bold }) => ($bold ? theme.colors.neutral[50] : theme.colors.neutral[50])};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -99,11 +99,17 @@ interface TdProps {
 
 const Td = styled.td<TdProps>`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  /* Debit/credit polarity — deepened 600s for legibility at this size. */
+  /* Debit/credit polarity. Previously emerald[600]/terracotta[600] — tuned
+     for contrast against Fresco Cream; those deep 600-steps read as
+     dark-on-dark against Cosmos Ink. Moved to the "bright.*" tokens (spec
+     §1.2), brightened specifically for this ground: bright.emerald for
+     positive figures, bright.coral for negative/cost figures (coral is also
+     the app's "only red" elsewhere — overdue, errors — keeping the
+     financial-figure vocabulary consistent with the rest of the app). */
   color: ${({ theme, $positive, $negative, $muted }) => {
-    if ($positive) return theme.colors.emerald[600];
-    if ($negative) return theme.colors.terracotta[600];
-    if ($muted) return theme.colors.textSecondary;
+    if ($positive) return theme.colors.bright.emerald;
+    if ($negative) return theme.colors.bright.coral;
+    if ($muted) return theme.colors.muted;
     return theme.colors.textPrimary;
   }};
   text-align: ${({ $right }) => ($right ? 'right' : 'left')};
@@ -111,6 +117,10 @@ const Td = styled.td<TdProps>`
     $bold ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.regular};
   padding-left: ${({ $indent, theme }) =>
     $indent ? `calc(${theme.spacing.xl} + ${theme.spacing.md})` : theme.spacing.md};
+  /* Currency/percentage figures — Space Mono per spec §4. Only the
+     right-aligned (numeric) columns; the Line Item label column stays
+     Hanken Grotesk prose. */
+  font-family: ${({ theme, $right }) => ($right ? theme.typography.fontFamily.mono : 'inherit')};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 `;
@@ -120,29 +130,33 @@ const CollapseButton = styled.button`
   border: none;
   cursor: pointer;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   padding: 0 ${({ theme }) => theme.spacing.xs};
   margin-right: ${({ theme }) => theme.spacing.xs};
   vertical-align: middle;
   line-height: 1;
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const Divider = styled.tr`
   td {
-    border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+    border-top: 1px solid ${({ theme }) => theme.colors.line};
     padding: 0;
     height: 1px;
   }
 `;
 
 const SectionHeaderRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: transparent;
   cursor: pointer;
+
+  &:hover {
+    background: rgba(180, 200, 220, 0.05);
+  }
 `;
 
 const SkeletonBlock = styled.div`
@@ -150,9 +164,9 @@ const SkeletonBlock = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.glass.base} 25%,
+    ${({ theme }) => theme.colors.glass.hi} 50%,
+    ${({ theme }) => theme.colors.glass.base} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -170,10 +184,11 @@ const ErrorState = styled.div`
   text-align: center;
 `;
 
+// `primary[500]` is a lapis-b fill — needs `onDark` (cream), not `onAccent`.
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -229,13 +244,13 @@ export function PnlStatementTable({
           </colgroup>
           <thead>
             <tr>
-              <Td as="th" $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.colors.textDisabled, paddingBottom: '8px' }}>
+              <Td as="th" $bold style={{ fontWeight: 600, fontSize: '12px', fontFamily: theme.typography.fontFamily.mono, textTransform: 'uppercase', letterSpacing: '0.13em', color: theme.colors.celeste, paddingBottom: '8px' }}>
                 Line Item
               </Td>
-              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.colors.textDisabled, paddingBottom: '8px' }}>
+              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', fontFamily: theme.typography.fontFamily.mono, textTransform: 'uppercase', letterSpacing: '0.13em', color: theme.colors.celeste, paddingBottom: '8px' }}>
                 Amount (AED)
               </Td>
-              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.colors.textDisabled, paddingBottom: '8px' }}>
+              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', fontFamily: theme.typography.fontFamily.mono, textTransform: 'uppercase', letterSpacing: '0.13em', color: theme.colors.celeste, paddingBottom: '8px' }}>
                 % of Revenue
               </Td>
             </tr>

@@ -11,6 +11,8 @@
 import { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { AxiosError } from 'axios';
+import { Plus, X } from 'lucide-react';
+import { PageHeader as SharedPageHeader, glassPanel, phaseBadge } from '@a64core/shared';
 import {
   useChemicals,
   useCreateChemical,
@@ -67,7 +69,7 @@ function ChemicalFormModal({ initial, onClose, onSave, isSaving }: ChemicalFormM
       <ModalBox role="dialog" aria-modal="true" aria-label={initial ? 'Edit chemical' : 'Add chemical'}>
         <ModalHeader>
           <ModalTitle>{initial ? 'Edit Chemical' : 'Add Chemical'}</ModalTitle>
-          <CloseButton onClick={onClose} aria-label="Close modal" type="button">✕</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close modal" type="button"><X size={16} strokeWidth={1.8} /></CloseButton>
         </ModalHeader>
 
         <form onSubmit={handleSubmit}>
@@ -98,7 +100,7 @@ function ChemicalFormModal({ initial, onClose, onSave, isSaving }: ChemicalFormM
                 {aliases.map((a) => (
                   <Chip key={a}>
                     {a}
-                    <ChipRemove type="button" onClick={() => removeAlias(a)} aria-label={`Remove alias ${a}`}>✕</ChipRemove>
+                    <ChipRemove type="button" onClick={() => removeAlias(a)} aria-label={`Remove alias ${a}`}><X size={10} strokeWidth={2} /></ChipRemove>
                   </Chip>
                 ))}
               </ChipList>
@@ -164,7 +166,7 @@ function ArchiveModal({ chemical, dependents, onClose, onArchiveAnyway, isArchiv
       <ModalBox role="dialog" aria-modal="true" aria-label="Archive chemical">
         <ModalHeader>
           <ModalTitle>Archive "{chemical.name}"?</ModalTitle>
-          <CloseButton onClick={onClose} aria-label="Close" type="button">✕</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close" type="button"><X size={16} strokeWidth={1.8} /></CloseButton>
         </ModalHeader>
         <ModalBody>
           <WarningBanner>
@@ -273,29 +275,35 @@ export function ChemicalsCatalog() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Chemicals Catalog</PageTitle>
-        <HeaderActions>
-          <PrimaryBtn type="button" onClick={() => setAddOpen(true)}>+ Add Chemical</PrimaryBtn>
-          {canDiscover && (
-            <OutlineBtn
-              type="button"
-              onClick={() => discoverMutation.mutate()}
-              disabled={discoverMutation.isPending}
-            >
-              {discoverMutation.isPending ? 'Discovering…' : 'Discover from Plant Library'}
-            </OutlineBtn>
-          )}
-          <ToggleLabel>
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
-            />
-            <span>Show archived</span>
-          </ToggleLabel>
-        </HeaderActions>
-      </PageHeader>
+      <SharedPageHeader
+        breadcrumb="Tools · Library"
+        title="Chemicals Catalog"
+        description="Manage the fertilizer chemicals master list used across plant schedules."
+        stats={[{ value: chemicals.length, label: 'Chemicals' }]}
+      />
+
+      <HeaderActions>
+        <PrimaryBtn type="button" onClick={() => setAddOpen(true)}>
+          <Plus size={15} strokeWidth={2} /> Add Chemical
+        </PrimaryBtn>
+        {canDiscover && (
+          <OutlineBtn
+            type="button"
+            onClick={() => discoverMutation.mutate()}
+            disabled={discoverMutation.isPending}
+          >
+            {discoverMutation.isPending ? 'Discovering…' : 'Discover from Plant Library'}
+          </OutlineBtn>
+        )}
+        <ToggleLabel>
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+          />
+          <span>Show archived</span>
+        </ToggleLabel>
+      </HeaderActions>
 
       <FilterRow>
         <SearchInput
@@ -419,27 +427,12 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-`;
-
-const PageTitle = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
 const HeaderActions = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  margin-bottom: 20px;
 `;
 
 const FilterRow = styled.div`
@@ -448,28 +441,28 @@ const FilterRow = styled.div`
 
 const SearchInput = styled.input`
   padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
   min-width: 280px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}22;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
 const TableWrapper = styled.div`
   overflow-x: auto;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 12px;
 
   @media (max-width: 768px) {
@@ -496,8 +489,8 @@ const Table = styled.table`
 
     tr {
       display: block;
-      background: ${({ theme }) => theme.colors.surface};
-      border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+      background: ${({ theme }) => theme.colors.glass.base};
+      border: 1px solid ${({ theme }) => theme.colors.glass.border};
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 12px;
@@ -524,27 +517,25 @@ const Table = styled.table`
   }
 `;
 
+// Tables — spec §4: no solid chrome, Space Mono uppercase celeste headers,
+// `line` row dividers.
 const Th = styled.th`
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-size: 12px;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.celeste};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  letter-spacing: 0.1em;
   text-align: left;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
-
-  &:first-child { border-radius: 12px 0 0 0; }
-  &:last-child { border-radius: 0 12px 0 0; }
 `;
 
 const Td = styled.td`
   padding: 12px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 
   tr:last-child & {
@@ -569,31 +560,20 @@ const InlineChip = styled.span`
   padding: 2px 8px;
   border-radius: 9999px;
   font-size: 12px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
 `;
 
+// Active/archived — approved ("fruiting") vs. archived ("decommissioned"),
+// spec §5.2 extrapolation.
 const ActiveBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.emerald[100]};
-  color: ${({ theme }) => theme.colors.emerald[800]};
+  ${phaseBadge('fruiting')}
 `;
 
 const ArchivedBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${phaseBadge('decommissioned')}
 `;
 
 const LoadingState = styled.div`
@@ -617,22 +597,34 @@ const ToggleLabel = styled.label`
   color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   user-select: none;
+
+  input[type='checkbox'] {
+    accent-color: ${({ theme }) => theme.colors.secondary[500]};
+  }
 `;
 
 // ─── Buttons ──────────────────────────────────────────────────────────────────
 
+// The primary-CTA gold treatment (spec §4 Buttons) — the one gold budget
+// item for the page-level "Add Chemical" action.
 const PrimaryBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid transparent;
+  background: ${({ theme }) => `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
   color: ${({ theme }) => theme.colors.onAccent};
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
 
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
@@ -643,36 +635,54 @@ const OutlineBtn = styled.button`
   font-weight: 500;
   cursor: pointer;
   background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
   transition: all 150ms ease;
 
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover:not(:disabled) {
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
-const DangerBtn = styled(PrimaryBtn)`
-  background: ${({ theme }) => theme.colors.terracotta[600]};
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.terracotta[700]}; }
+// Destructive action — coral-b tinted glass, never solid red (spec §4).
+const DangerBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  transition: background 150ms ease;
+
+  &:hover:not(:disabled) { background: rgba(240, 138, 112, 0.26); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
+// Secondary emphasis (spec §3: "Secondary emphasis is celeste, never gold").
 const LinkBtn = styled.button`
   background: none;
   border: none;
   padding: 0;
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   text-decoration: underline;
   transition: color 150ms ease;
 
-  &:hover { color: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const DangerLinkBtn = styled(LinkBtn)`
-  color: ${({ theme }) => theme.colors.error};
-  &:hover { color: ${({ theme }) => theme.colors.terracotta[700]}; }
+  color: ${({ theme }) => theme.colors.bright.coral};
+  &:hover { color: ${({ theme }) => theme.colors.bright.coral}; opacity: 0.8; }
 `;
 
 const SmallBtn = styled.button`
@@ -681,13 +691,13 @@ const SmallBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   background: transparent;
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease;
   white-space: nowrap;
 
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.07); }
 `;
 
 // ─── Modal Styled Components ──────────────────────────────────────────────────
@@ -695,8 +705,8 @@ const SmallBtn = styled.button`
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
-  background: rgba(14, 19, 48, 0.5);
+  /* Cosmos scrim, spec §4 "Modals/drawers" (rgba(10,14,36,.6)). */
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1100;
   display: flex;
@@ -706,9 +716,10 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
@@ -722,7 +733,7 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -739,16 +750,15 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
-  font-size: 16px;
   transition: all 150ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -764,7 +774,7 @@ const ModalBody = styled.div`
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -785,45 +795,46 @@ const Label = styled.label`
 
 const Input = styled.input`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   transition: border-color 150ms ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}22;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
 `;
 
 const Select = styled.select`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const TextArea = styled.textarea`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   resize: vertical;
@@ -831,8 +842,8 @@ const TextArea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}22;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -848,8 +859,8 @@ const Chip = styled.span`
   padding: 4px 10px;
   border-radius: 9999px;
   font-size: 12px;
-  background: ${({ theme }) => theme.colors.primary[500]}1a;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const ChipRemove = styled.button`
@@ -881,7 +892,7 @@ const WarningBanner = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const DependentList = styled.ul`

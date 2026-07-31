@@ -18,6 +18,8 @@ import {
 } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { Link } from 'react-router-dom';
+import { AlertTriangle, ArrowLeft, ArrowRight, Trash2, X } from 'lucide-react';
+import { PageHeader as SharedPageHeader, glassPanel } from '@a64core/shared';
 import {
   usePrices,
   useUpdatePrice,
@@ -55,19 +57,23 @@ interface PlantDataOption {
 
 // ─── Shared styled atoms used across panels ───────────────────────────────────
 
+// The primary-CTA gold treatment (spec §4 Buttons).
 const PrimaryBtn = styled.button`
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid transparent;
+  background: ${({ theme }) => `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
   color: ${({ theme }) => theme.colors.onAccent};
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
   white-space: nowrap;
 
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -78,62 +84,66 @@ const OutlineBtn = styled.button`
   font-weight: 500;
   cursor: pointer;
   background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
   transition: all 150ms ease;
   white-space: nowrap;
 
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover:not(:disabled) {
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Secondary emphasis (spec §3: "Secondary emphasis is celeste, never gold").
 const LinkBtn = styled.button`
   background: none;
   border: none;
   padding: 0;
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   text-decoration: underline;
-  &:hover { color: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const DangerLinkBtn = styled(LinkBtn)`
-  color: ${({ theme }) => theme.colors.error};
-  &:hover { color: ${({ theme }) => theme.colors.terracotta[700]}; }
+  color: ${({ theme }) => theme.colors.bright.coral};
+  &:hover { color: ${({ theme }) => theme.colors.bright.coral}; opacity: 0.8; }
 `;
 
 const Input = styled.input`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   width: 100%;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}22;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:disabled { opacity: 0.5; }
 `;
 
 const Select = styled.select`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   cursor: pointer;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -153,7 +163,7 @@ function Modal({ title, onClose, children, footer, maxWidth = '520px' }: ModalPr
       <ModalBox style={{ maxWidth }} role="dialog" aria-modal="true" aria-label={title}>
         <ModalHeader>
           <ModalTitle>{title}</ModalTitle>
-          <CloseButton onClick={onClose} type="button" aria-label="Close modal">✕</CloseButton>
+          <CloseButton onClick={onClose} type="button" aria-label="Close modal"><X size={16} strokeWidth={1.8} /></CloseButton>
         </ModalHeader>
         <ModalBody>{children}</ModalBody>
         {footer && <ModalFooter>{footer}</ModalFooter>}
@@ -307,7 +317,7 @@ function ManageSavedListsModal({ onClose, onRename, onDelete, onLoad, isWorking 
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
-            ← Prev
+            <ArrowLeft size={12} strokeWidth={2} style={{ verticalAlign: 'middle' }} /> Prev
           </LinkBtn>
           <span style={{ fontSize: '13px', color: theme.colors.textSecondary }}>
             Page {page} of {totalPages} · {total.toLocaleString('en-US')} list{total !== 1 ? 's' : ''}
@@ -316,8 +326,7 @@ function ManageSavedListsModal({ onClose, onRename, onDelete, onLoad, isWorking 
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
           >
-            Next →
-          </LinkBtn>
+            Next <ArrowRight size={12} strokeWidth={2} style={{ verticalAlign: 'middle' }} /></LinkBtn>
         </PaginationBar>
       )}
     </Modal>
@@ -458,7 +467,9 @@ function PricebookContent() {
       )}
 
       <PricebookModalFooterLink>
-        <RouterLink to="/tools/chemicals">Manage Catalog →</RouterLink>
+        <RouterLink to="/tools/chemicals">
+          Manage Catalog <ArrowRight size={12} strokeWidth={2} style={{ verticalAlign: 'middle' }} />
+        </RouterLink>
       </PricebookModalFooterLink>
     </>
   );
@@ -928,7 +939,7 @@ function CropListPanel({
                         aria-label={`Remove ${row.plantName}`}
                         title="Remove"
                       >
-                        🗑️
+                        <Trash2 size={15} strokeWidth={1.8} />
                       </IconBtn>
                     </Td>
                   </tr>
@@ -997,7 +1008,7 @@ function CropListPanel({
                         aria-label={`Remove ${row.plantName}`}
                         title="Remove"
                       >
-                        🗑️
+                        <Trash2 size={15} strokeWidth={1.8} />
                       </IconBtn>
                     </Td>
                   </tr>
@@ -1120,14 +1131,20 @@ function OutputPanel({ result, isStale, yieldInfoByPlant }: OutputPanelProps) {
       </PanelHeader>
       {isStale && (
         <StaleBanner>
-          ⚠ Inputs changed since this was calculated — press <strong>Calculate</strong> to update the results below.
+          <AlertTriangle size={14} strokeWidth={1.8} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+          Inputs changed since this was calculated — press <strong>Calculate</strong> to update the results below.
         </StaleBanner>
       )}
       <PanelBody style={isStale ? { opacity: 0.45 } : undefined}>
         {/* Warnings */}
         {result.warnings.length > 0 && (
           <WarningsBanner>
-            {result.warnings.map((w, i) => <div key={i}>⚠ {w}</div>)}
+            {result.warnings.map((w, i) => (
+              <div key={i}>
+                <AlertTriangle size={14} strokeWidth={1.8} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                {w}
+              </div>
+            ))}
           </WarningsBanner>
         )}
 
@@ -1650,8 +1667,12 @@ export function FertilizerCostCalculator() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Fertilizer Cost Calculator</PageTitle>
+      <PageHeaderRow>
+        <SharedPageHeader
+          breadcrumb="Tools · Library"
+          title="Fertilizer Cost Calculator"
+          description="Build a crop list and calculate fertilizer costs from the shared price book."
+        />
         <OutlineBtn
           type="button"
           onClick={() => setPriceBookOpen(true)}
@@ -1659,7 +1680,7 @@ export function FertilizerCostCalculator() {
         >
           Price Book
         </OutlineBtn>
-      </PageHeader>
+      </PageHeaderRow>
 
       <CropListPanel
         rows={rows}
@@ -1729,27 +1750,26 @@ const PageContainer = styled.div`
   gap: 24px;
 `;
 
-const PageHeader = styled.div`
+// Wraps the shared PageHeader plus the page-level "Price Book" action —
+// SharedPageHeader's own layout has no slot for an arbitrary right-side
+// button (only breadcrumb/title/description/stats), so it's composed here.
+const PageHeaderRow = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-`;
 
-const PageTitle = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
+  > *:first-child {
+    flex: 1;
+    min-width: 260px;
+  }
 `;
 
 // ── Panel shell ────────────────────────────────────────────────────────────
 
 const Panel = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   /* Reason: must allow overflow:visible so the typeahead dropdown can extend
      past the panel border. TableWrapper handles its own scroll boundary. */
   overflow: visible;
@@ -1760,7 +1780,7 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   gap: 12px;
   flex-wrap: wrap;
 `;
@@ -1787,7 +1807,7 @@ const PanelBody = styled.div`
 
 const TableWrapper = styled.div`
   overflow-x: auto;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
 
   @media (max-width: 768px) {
@@ -1796,9 +1816,15 @@ const TableWrapper = styled.div`
   }
 `;
 
+// Tables — spec §4: no solid chrome, `line` row dividers, hover
+// rgba(180,200,220,.05).
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
+
+  tbody tr:hover {
+    background: rgba(180, 200, 220, 0.05);
+  }
 
   @media (max-width: 768px) {
     display: block;
@@ -1806,7 +1832,8 @@ const Table = styled.table`
     tbody { display: block; }
     tr {
       display: block;
-      border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+      border: 1px solid ${({ theme }) => theme.colors.glass.border};
+      background: ${({ theme }) => theme.colors.glass.base};
       border-radius: 8px;
       padding: 12px;
       margin-bottom: 8px;
@@ -1828,14 +1855,13 @@ const CropTable = styled(Table)`
 
 const Th = styled.th`
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-size: 11px;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 10px;
+  color: ${({ theme }) => theme.colors.celeste};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  letter-spacing: 0.1em;
   text-align: left;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -1843,7 +1869,7 @@ const Td = styled.td`
   padding: 10px 14px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 
   tr:last-child & { border-bottom: none; }
@@ -1852,34 +1878,36 @@ const Td = styled.td`
 const PriceInput = styled.input`
   width: 110px;
   padding: 6px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-family: inherit;
   transition: border-color 150ms;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
 `;
 
 const PointsInput = styled.input`
   width: 90px;
   padding: 6px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-family: inherit;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -1887,6 +1915,9 @@ interface SourceBadgeProps {
   $source: 'override' | 'inventory' | 'none';
 }
 
+// Categorical source tag (where a price came from), not a status — draws
+// from the `bright.*` palette rather than the phase vocabulary (spec §5 is
+// for status only).
 const SourceBadge = styled.span<SourceBadgeProps>`
   display: inline-flex;
   padding: 2px 8px;
@@ -1895,9 +1926,9 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   font-weight: 600;
   text-transform: capitalize;
   ${({ $source, theme }) => {
-    if ($source === 'override') return `background: ${theme.colors.primary[100]}; color: ${theme.colors.primary[800]};`;
-    if ($source === 'inventory') return `background: ${theme.colors.emerald[100]}; color: ${theme.colors.emerald[800]};`;
-    return `background: ${theme.colors.neutral[200]}; color: ${theme.colors.textSecondary};`;
+    if ($source === 'override') return `background: rgba(107, 138, 224, 0.16); color: ${theme.colors.bright.lapis};`;
+    if ($source === 'inventory') return `background: rgba(84, 211, 155, 0.16); color: ${theme.colors.bright.emerald};`;
+    return `background: rgba(180, 200, 220, 0.1); color: ${theme.colors.muted};`;
   }}
 `;
 
@@ -1912,7 +1943,8 @@ const InlineChip = styled.span`
   padding: 2px 7px;
   border-radius: 9999px;
   font-size: 11px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
 `;
@@ -1922,42 +1954,48 @@ interface RouterLinkProps {
   $asButton?: boolean;
 }
 
+// Secondary emphasis (spec §3: "Secondary emphasis is celeste, never gold").
+// The `$asButton` variant is the primary-CTA gold treatment (spec §4 Buttons).
 const RouterLink = styled(Link)<RouterLinkProps>`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   text-decoration: underline;
   white-space: nowrap;
-  &:hover { color: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { color: ${({ theme }) => theme.colors.textPrimary}; }
 
   ${({ $asButton, theme }) => $asButton && `
     display: inline-block;
     padding: 10px 20px;
     border-radius: 8px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 700;
     text-decoration: none;
-    background: ${theme.colors.primary[500]};
+    background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
     color: ${theme.colors.onAccent};
-    transition: background 150ms ease;
-    &:hover { background: ${theme.colors.primary[700]}; color: ${theme.colors.onAccent}; }
+    transition: transform 150ms ease, box-shadow 150ms ease;
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+      color: ${theme.colors.onAccent};
+    }
   `}
 `;
 
 const SearchInput = styled.input`
   padding: 9px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}22;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
 `;
 
 const LoadingText = styled.div`
@@ -1990,7 +2028,7 @@ const PricebookEmptyState = styled.div`
 const PricebookModalFooterLink = styled.div`
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: flex-end;
 `;
@@ -2002,14 +2040,17 @@ const CalculateRow = styled.div`
 `;
 
 const IconBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
   padding: 4px;
-  font-size: 16px;
+  color: ${({ theme }) => theme.colors.muted};
   opacity: 0.7;
-  transition: opacity 150ms;
-  &:hover { opacity: 1; }
+  transition: opacity 150ms, color 150ms;
+  &:hover { opacity: 1; color: ${({ theme }) => theme.colors.bright.coral}; }
 `;
 
 // ── Typeahead ──────────────────────────────────────────────────────────────
@@ -2025,16 +2066,17 @@ const TypeaheadHint = styled.div`
   margin-top: 4px;
 `;
 
+// Opaque (glassOpaque territory) — dropdown menu, per spec §2/§4.
 const TypeaheadDropdown = styled.ul`
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   margin-top: 4px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.cosmosHi};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  box-shadow: 0 12px 32px rgba(4, 6, 18, 0.5);
   z-index: ${({ theme }) => theme.zIndex.dropdown};
   max-height: 240px;
   overflow-y: auto;
@@ -2059,7 +2101,7 @@ const TypeaheadOption = styled.li<TypeaheadOptionProps>`
   transition: background 100ms;
 
   &:hover {
-    background: ${({ $disabled, theme }) => ($disabled ? 'transparent' : theme.colors.neutral[100])};
+    background: ${({ $disabled }) => ($disabled ? 'transparent' : 'rgba(180, 200, 220, 0.07)')};
   }
 `;
 
@@ -2068,7 +2110,7 @@ const NoScheduleBadge = styled.span`
   padding: 2px 6px;
   border-radius: 4px;
   background: ${({ theme }) => theme.colors.warningBg};
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   white-space: nowrap;
   margin-left: 8px;
 `;
@@ -2082,7 +2124,7 @@ const WarningsBanner = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.textPrimary};
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2095,7 +2137,7 @@ const StaleBanner = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StaleTag = styled.span`
@@ -2116,13 +2158,13 @@ const InfoBanner = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.info};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.primary[800]};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const ResultTabs = styled.div`
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   margin-bottom: 16px;
 `;
 
@@ -2130,9 +2172,9 @@ const ResultTab = styled.button<{ $active: boolean }>`
   background: none;
   border: none;
   border-bottom: 2px solid
-    ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+    ${({ $active, theme }) => ($active ? theme.colors.bright.lapis : 'transparent')};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.textSecondary};
+    $active ? theme.colors.bright.lapis : theme.colors.textSecondary};
   font-size: 14px;
   font-weight: 600;
   padding: 10px 16px;
@@ -2140,12 +2182,12 @@ const ResultTab = styled.button<{ $active: boolean }>`
   transition: color 150ms, border-color 150ms;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.bright.lapis};
   }
 `;
 
 const CropResultBlock = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   margin-bottom: 8px;
   overflow: hidden;
@@ -2157,14 +2199,14 @@ const CropResultHeader = styled.button`
   justify-content: space-between;
   width: 100%;
   padding: 14px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.glass.base};
   border: none;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
   transition: background 150ms;
 
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const CropResultInfo = styled.div`
@@ -2197,21 +2239,20 @@ const IngredientTable = styled.table`
 
 const IngTh = styled.th`
   padding: 8px 14px;
-  font-size: 11px;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 10px;
+  color: ${({ theme }) => theme.colors.celeste};
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  letter-spacing: 0.1em;
   text-align: left;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const IngTd = styled.td`
   padding: 8px 14px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   tr:last-child & { border-bottom: none; }
 `;
@@ -2222,7 +2263,7 @@ const GrandTotalsGrid = styled.div`
   gap: 16px;
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
@@ -2236,14 +2277,10 @@ const GrandTotalBox = styled.div<{ $variant: 'yield' | 'cost' }>`
   padding: 18px 22px;
   border-radius: 12px;
   background: ${({ $variant, theme }) =>
-    $variant === 'yield'
-      ? `${theme.colors.success}11`
-      : `${theme.colors.primary[500]}11`};
+    $variant === 'yield' ? theme.colors.successBg : theme.colors.infoBg};
   border: 1px solid
     ${({ $variant, theme }) =>
-      $variant === 'yield'
-        ? `${theme.colors.success}33`
-        : `${theme.colors.primary[500]}33`};
+      $variant === 'yield' ? theme.colors.success : theme.colors.info};
 `;
 
 const GrandTotalBoxLabel = styled.span`
@@ -2258,7 +2295,7 @@ const GrandTotalBoxValue = styled.span<{ $variant: 'yield' | 'cost' }>`
   font-size: 26px;
   font-weight: 700;
   color: ${({ $variant, theme }) =>
-    $variant === 'yield' ? theme.colors.success : theme.colors.primary[500]};
+    $variant === 'yield' ? theme.colors.bright.emerald : theme.colors.bright.lapis};
   line-height: 1.1;
 `;
 
@@ -2281,7 +2318,7 @@ const ListRow = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   gap: 12px;
 
   &:last-child { border-bottom: none; }
@@ -2311,7 +2348,7 @@ const PaginationBar = styled.div`
   justify-content: space-between;
   padding: 12px 0 0;
   margin-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   gap: 12px;
 `;
 
@@ -2320,8 +2357,8 @@ const PaginationBar = styled.div`
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
-  background: rgba(14, 19, 48, 0.5);
+  /* Cosmos scrim, spec §4 "Modals/drawers" (rgba(10,14,36,.6)). */
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1100;
   display: flex;
@@ -2331,9 +2368,10 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-height: 90vh;
   display: flex;
@@ -2346,7 +2384,7 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -2363,16 +2401,15 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
-  font-size: 16px;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -2385,7 +2422,7 @@ const ModalBody = styled.div`
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -2427,11 +2464,11 @@ const SmallBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   background: transparent;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.07); }
 `;
 
 const Chip = styled.span`
@@ -2441,8 +2478,8 @@ const Chip = styled.span`
   padding: 4px 10px;
   border-radius: 9999px;
   font-size: 12px;
-  background: ${({ theme }) => theme.colors.primary[500]}1a;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const ChipRemove = styled.button`
@@ -2455,7 +2492,6 @@ const ChipRemove = styled.button`
   background: none;
   color: inherit;
   cursor: pointer;
-  font-size: 10px;
   padding: 0;
   opacity: 0.7;
   &:hover { opacity: 1; }
@@ -2463,16 +2499,17 @@ const ChipRemove = styled.button`
 
 const TextArea = styled.textarea`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   resize: vertical;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -2497,7 +2534,7 @@ const VisuallyHidden = styled.span`
 
 const ModeToggle = styled.div`
   display: inline-flex;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
@@ -2513,7 +2550,7 @@ const ModeToggleBtn = styled.button<ModeToggleBtnProps>`
   font-weight: 500;
   cursor: pointer;
   border: none;
-  border-right: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-right: 1px solid ${({ theme }) => theme.colors.glass.border};
   font-family: inherit;
   transition: background 150ms, color 150ms;
   white-space: nowrap;
@@ -2525,10 +2562,10 @@ const ModeToggleBtn = styled.button<ModeToggleBtnProps>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary[500] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.onAccent : theme.colors.textSecondary};
+    $active ? theme.colors.onDark : theme.colors.textSecondary};
 
   &:hover:not([aria-pressed='true']) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;

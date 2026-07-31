@@ -2,10 +2,16 @@
  * RouteManagementPage Component
  *
  * Route management with CRUD operations.
+ *
+ * Night Observatory (T-901 Phase 3): PageHeader for the title block, glass
+ * modal over a cosmos scrim, gold Primary CTA for the single "New Route"
+ * action (spec §3 gold budget: one primary CTA per page).
  */
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { Plus, X } from 'lucide-react';
+import { PageHeader, Button, glassPanel, monoLabel } from '@a64core/shared';
 import { RouteTable } from '../../components/logistics/RouteTable';
 import { RouteForm } from '../../components/logistics/RouteForm';
 import { logisticsApi } from '../../services/logisticsService';
@@ -17,34 +23,10 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
+const ActionRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
-const CreateButton = styled.button`
-  padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
-  }
+  justify-content: flex-end;
+  margin-bottom: 20px;
 `;
 
 const Modal = styled.div`
@@ -53,7 +35,7 @@ const Modal = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -62,8 +44,10 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   padding: 32px;
   max-width: 800px;
   width: 100%;
@@ -80,21 +64,25 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
-  font-size: 24px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 4px;
+  border-radius: 8px;
+  transition: color 150ms ease-in-out;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 `;
 
@@ -103,15 +91,17 @@ const LoadingContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
-  background: ${({ theme }) => theme.colors.terracotta[100]};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
@@ -180,14 +170,26 @@ export function RouteManagementPage() {
     }
   };
 
+  const activeCount = routes.filter((r) => r.isActive).length;
+
   return (
     <Container>
-      <Header>
-        <Title>Route Management</Title>
-        <CreateButton onClick={() => setShowCreateModal(true)}>
-          <span>+</span> New Route
-        </CreateButton>
-      </Header>
+      <PageHeader
+        breadcrumb="Logistics · Live"
+        title="Route Management"
+        emphasizeLastWord
+        description="Origin/destination lanes used to schedule shipments."
+        stats={[
+          { value: routes.length, label: 'Routes' },
+          { value: activeCount, label: 'Active', alive: true },
+        ]}
+      />
+
+      <ActionRow>
+        <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+          <Plus size={16} strokeWidth={2} /> New Route
+        </Button>
+      </ActionRow>
 
       {error && <ErrorContainer>{error}</ErrorContainer>}
 
@@ -206,7 +208,9 @@ export function RouteManagementPage() {
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Create New Route</ModalTitle>
-              <CloseButton onClick={() => setShowCreateModal(false)}>&times;</CloseButton>
+              <CloseButton onClick={() => setShowCreateModal(false)} aria-label="Close">
+                <X size={22} strokeWidth={1.8} />
+              </CloseButton>
             </ModalHeader>
             <RouteForm
               onSubmit={handleCreateRoute}
@@ -222,7 +226,9 @@ export function RouteManagementPage() {
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Edit Route</ModalTitle>
-              <CloseButton onClick={() => setEditingRoute(null)}>&times;</CloseButton>
+              <CloseButton onClick={() => setEditingRoute(null)} aria-label="Close">
+                <X size={22} strokeWidth={1.8} />
+              </CloseButton>
             </ModalHeader>
             <RouteForm
               route={editingRoute}

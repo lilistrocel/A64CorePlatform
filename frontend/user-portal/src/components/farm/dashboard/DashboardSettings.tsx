@@ -6,6 +6,8 @@
  */
 
 import styled from 'styled-components';
+import { Settings, X } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import type { DashboardConfig } from '../../../hooks/farm/useDashboardConfig';
 
 interface DashboardSettingsProps {
@@ -44,8 +46,10 @@ export function DashboardSettings({
       <Backdrop onClick={onClose} />
       <Modal>
         <Header>
-          <Title>⚙️ Dashboard Settings</Title>
-          <CloseButton onClick={onClose}>✕</CloseButton>
+          <Title><Settings size={18} strokeWidth={1.8} /> Dashboard Settings</Title>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={16} strokeWidth={1.8} />
+          </CloseButton>
         </Header>
 
         <Content>
@@ -279,24 +283,26 @@ export function DashboardSettings({
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers").
 const Backdrop = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 9998;
 `;
 
 const Modal = styled.div`
+  ${glassPanel}
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   z-index: 9999;
   width: 90%;
   max-width: 600px;
@@ -310,12 +316,15 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Title = styled.h2`
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -324,17 +333,18 @@ const CloseButton = styled.button`
   width: 32px;
   height: 32px;
   border: none;
-  background: ${({ theme }) => theme.colors.surface};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.muted};
   border-radius: 50%;
-  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 150ms ease-in-out;
+  transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -352,13 +362,16 @@ const Section = styled.div`
   }
 `;
 
+// Celeste, not gold — this modal repeats SectionTitle 4x and gold is
+// budgeted at <=4 elements per view (spec §3); the Save button below is this
+// view's one gold element.
 const SectionTitle = styled.h3`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.neutral[700]};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Setting = styled.div`
@@ -383,35 +396,36 @@ const SettingLabel = styled.label`
 
   input[type='checkbox'] {
     cursor: pointer;
+    accent-color: ${({ theme }) => theme.colors.secondary[500]};
   }
 `;
 
 const RangeInput = styled.input`
   flex: 1;
   cursor: pointer;
+  accent-color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const SettingValue = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  ${monoLabel}
+  font-size: 0.78rem;
+  color: ${({ theme }) => theme.colors.celeste};
   min-width: 30px;
   text-align: right;
 `;
 
 const Select = styled.select`
+  ${glassControl}
   flex: 1;
   padding: 8px 12px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -422,23 +436,24 @@ const IconSetGrid = styled.div`
 `;
 
 const IconSetOption = styled.div<{ $isSelected: boolean }>`
+  ${glassControl}
   padding: 16px;
-  border: 2px solid ${(props) => (props.$isSelected ? props.theme.colors.primary[500] : props.theme.colors.border)};
-  border-radius: 8px;
-  background: ${(props) => (props.$isSelected ? props.theme.colors.infoBg : props.theme.colors.background)};
+  border-width: ${(props) => (props.$isSelected ? '2px' : '1px')};
+  border-color: ${(props) => (props.$isSelected ? props.theme.colors.celeste : props.theme.colors.glass.border)};
+  background: ${(props) => (props.$isSelected ? props.theme.colors.glass.hi : props.theme.colors.glass.base)};
   cursor: pointer;
   text-align: center;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.infoBg};
+    border-color: ${({ theme }) => theme.colors.celeste};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const IconSetName = styled.div`
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
@@ -456,9 +471,9 @@ const ColorPreview = styled.div`
 const ColorGroup = styled.div``;
 
 const ColorGroupTitle = styled.div`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
@@ -471,9 +486,9 @@ const ColorRow = styled.div`
 const ColorSwatch = styled.div<{ $color: string }>`
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: ${(props) => props.$color};
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   cursor: pointer;
   transition: transform 150ms ease-in-out;
 
@@ -486,38 +501,42 @@ const Footer = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 16px 24px;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   gap: 12px;
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const ResetButton = styled.button`
   padding: 10px 20px;
-  border: 2px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 10px;
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
+// This view's one gold-gradient CTA (spec §3).
 const SaveButton = styled.button`
   padding: 10px 20px;
   border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  border-radius: 10px;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease-in-out;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;

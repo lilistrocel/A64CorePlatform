@@ -10,11 +10,11 @@
  *               Cancel (super_admin only, OPEN→CANCELLED)
  *   cancelled → read-only
  *
- * Status badge colours (A20Core tokens — shared vocabulary across all
- * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
- *   draft     → neutral   (neutral[100] / textSecondary)
- *   open      → emerald   (successBg / emerald[700])
- *   cancelled → terracotta (errorBg / terracotta[700])
+ * Status badge colours — Night Observatory phase map (spec §5.2), routed
+ * through the single canonical helper in components/sales/statusPhase.ts:
+ *   draft     → phase.empty
+ *   open      → phase.inoculated
+ *   cancelled → phase.decommissioned
  *
  * Doc-chain card:
  *   baseDocRef   — the RR (if from-RR path) or DN (if from-DN path)
@@ -30,10 +30,12 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
 import { ExternalLink } from 'lucide-react';
+import { glassPanel, glassControl, glassOpaque, monoLabel, phaseBadge } from '@a64core/shared';
 import { useReturn, useTransitionReturn, useDeleteReturn } from '../../hooks/queries/useReturns';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type {
   ReturnNoteStatus,
   ReturnNoteLine,
@@ -82,29 +84,12 @@ const Title = styled.h1`
   margin: 0;
 `;
 
+const DocNo = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
 const StatusBadge = styled.span<{ $status: ReturnNoteStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const ActionBar = styled.div`
@@ -113,71 +98,77 @@ const ActionBar = styled.div`
   flex-wrap: wrap;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   padding: 9px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.primary[600]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 9px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 9px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.terracotta[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.26); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const GhostButton = styled.button`
   padding: 9px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ActionError = styled.div`
   margin-top: 12px;
   padding: 10px 14px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 6px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 13px;
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -202,11 +193,8 @@ const InfoField = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const InfoValue = styled.span`
@@ -220,14 +208,10 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   text-align: left;
   white-space: nowrap;
 `;
@@ -236,12 +220,13 @@ const Td = styled.td`
   padding: 12px 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TotalsRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   font-weight: 600;
 `;
 
@@ -260,9 +245,8 @@ const DocChainRow = styled.div`
 `;
 
 const DocChainLabel = styled.span`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   min-width: 90px;
 `;
 
@@ -272,7 +256,7 @@ const DocLink = styled.button`
   gap: 5px;
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -282,16 +266,17 @@ const DocLink = styled.button`
 
 const NoLink = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
-// Delete modal
+// Delete modal — canonical treatment (spec §4): glassPanel at blur 24px
+// over a cosmos scrim. Closes only via X button — no overlay-click handler.
 
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -299,12 +284,13 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px;
   max-width: 440px;
   width: 90%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
 `;
 
 const ModalTitle = styled.h2`
@@ -316,7 +302,7 @@ const ModalTitle = styled.h2`
 
 const ModalBody = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 24px;
   line-height: 1.6;
 `;
@@ -331,11 +317,14 @@ const ModalCloseBtn = styled.button`
   position: absolute;
   top: 16px;
   right: 16px;
+  /* Own padding, not the (now-removed) global button padding — this glyph
+     has no explicit width/height, so it needs a real click target. */
+  padding: 8px;
   background: none;
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   &:hover { color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
@@ -354,19 +343,19 @@ const Tooltip = styled.span`
 `;
 
 const TooltipText = styled.span`
+  ${glassOpaque}
   visibility: hidden;
   opacity: 0;
   width: 230px;
-  background: ${({ theme }) => theme.colors.textPrimary};
-  color: ${({ theme }) => theme.colors.background};
   text-align: center;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 6px 10px;
   position: absolute;
   bottom: 110%;
   left: 50%;
   transform: translateX(-50%);
   font-size: 12px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: opacity 0.2s;
   z-index: 100;
   pointer-events: none;
@@ -377,7 +366,7 @@ const TooltipText = styled.span`
     left: 50%;
     transform: translateX(-50%);
     border: 5px solid transparent;
-    border-top-color: ${({ theme }) => theme.colors.textPrimary};
+    border-top-color: ${({ theme }) => theme.colors.cosmosHi};
   }
 `;
 
@@ -486,7 +475,7 @@ export function ReturnDetailPage() {
 
       <TitleRow>
         <TitleGroup>
-          <Title>Return Note {rtn.docNumber}</Title>
+          <Title>Return Note <DocNo>{rtn.docNumber}</DocNo></Title>
           <StatusBadge $status={rtn.status}>{statusLabel(rtn.status)}</StatusBadge>
         </TitleGroup>
 

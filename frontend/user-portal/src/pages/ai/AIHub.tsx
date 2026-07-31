@@ -29,17 +29,18 @@ import type { AIHubSection } from '../../types/aiHub';
 // ============================================================================
 
 /**
- * Same 4-section identity colours as AIHubChat's SECTION_BADGE / AIHubTabBar's
- * TABS — keep all three in sync. `report` was purple; kept distinct from
- * `monitor`'s blue via a darker lapis shade rather than gold, since `control`
- * already owns `warning` (== gold[500] at the token level).
+ * Night Observatory (T-901): same 4-section identity colours as AIHubTabBar's
+ * TABS / AIHubChat's SECTION_BADGE — keep all three in sync. Categorical, not
+ * status, so these come from `colors.bright.*` (spec §3) — `warning` (==
+ * gold-b) is reserved and never a categorical tab colour. Four distinct
+ * bright hues, none of them bright.gold.
  */
 function getSectionAccentColors(theme: DefaultTheme): Record<AIHubSection, string> {
   return {
-    control: theme.colors.warning,
-    monitor: theme.colors.info,
-    report:  theme.colors.primary[700],
-    advise:  theme.colors.success,
+    control: theme.colors.bright.terra,
+    monitor: theme.colors.bright.lapis,
+    report:  theme.colors.bright.lavender,
+    advise:  theme.colors.bright.emerald,
   };
 }
 
@@ -47,6 +48,10 @@ function getSectionAccentColors(theme: DefaultTheme): Record<AIHubSection, strin
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory (T-901): AIHub is a full-screen route that still renders
+// under the app shell's single fixed Sky layer (App.tsx) — no opaque
+// full-viewport background here, or it paints over the sky exactly like the
+// Dashboard PageContainer bug (spec §7).
 const FullScreen = styled.div`
   display: flex;
   flex-direction: column;
@@ -54,19 +59,26 @@ const FullScreen = styled.div`
   height: 100vh;
   height: 100dvh; /* Dynamic viewport height for mobile browsers */
   overflow: hidden;
-  background: ${({ theme }) => theme.colors.neutral[50]};
 `;
 
+// Chrome header bar — same rgba+blur glass recipe as MainLayout's
+// sidebar/MobileHeader (spec §4 "Sidebar"), not the glassPanel card mixin.
 const Header = styled.header`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: rgba(14, 19, 48, 0.55);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
   min-height: 56px;
   z-index: 10;
+
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.glass.opaque};
+  }
 
   @media (min-width: 640px) {
     padding: 0 16px;
@@ -132,7 +144,7 @@ const HeaderActions = styled.div`
 const Divider = styled.div`
   width: 1px;
   height: 28px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.line};
   margin: 0 4px;
 `;
 

@@ -9,6 +9,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import styled, { useTheme } from 'styled-components';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { AlertTriangle, Map as MapIcon } from 'lucide-react';
+import { glassOpaque, monoLabel } from '@a64core/shared';
 
 import type { Farm, Block, BlockState } from '../../types/farm';
 import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
@@ -79,14 +81,34 @@ const MapInner = styled.div`
 
   .maplibregl-ctrl-attrib {
     font-size: 10px;
+    /* Intentionally NOT themed — same exception as the block labels below and
+       components/map/MapContainer.tsx (spec §8). MapLibre's own attribution
+       text is hardcoded dark by the library's default stylesheet, so the
+       control needs a light backing to stay legible over the satellite photo
+       basemap regardless of app theme. */
     background: rgba(255, 255, 255, 0.7);
   }
 
+  /* Popup card floats directly over Esri imagery, so it needs an opaque
+     (not glass-translucent) ground per the popup pattern (spec §4/§8
+     screen-sweep brief). MapLibre's own default is a plain white card; both
+     the content box and the anchor "tip" triangle are retinted here since
+     the popup HTML (built via setHTML below) only carries text/row colours,
+     not the card's own background/tip. */
   .maplibregl-popup-content {
     padding: 0;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: ${({ theme }) => theme.shadows.md};
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    border: 1px solid ${({ theme }) => theme.colors.glass.border};
+    box-shadow: ${({ theme }) => theme.shadows.lg};
+  }
+
+  .maplibregl-popup-tip {
+    border-top-color: ${({ theme }) => theme.colors.cosmosHi} !important;
+    border-bottom-color: ${({ theme }) => theme.colors.cosmosHi} !important;
+    border-left-color: ${({ theme }) => theme.colors.cosmosHi} !important;
+    border-right-color: ${({ theme }) => theme.colors.cosmosHi} !important;
   }
 
   .maplibregl-popup-close-button {
@@ -95,7 +117,8 @@ const MapInner = styled.div`
     color: ${({ theme }) => theme.colors.textSecondary};
 
     &:hover {
-      background: ${({ theme }) => theme.colors.neutral[200]};
+      background: ${({ theme }) => theme.colors.glass.hi};
+      color: ${({ theme }) => theme.colors.textPrimary};
     }
   }
 `;
@@ -110,7 +133,7 @@ const LoadingOverlay = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.background}e6;
+  background: ${({ theme }) => theme.colors.glass.opaque};
   z-index: 10;
 `;
 
@@ -135,25 +158,27 @@ const LoadingText = styled.span`
   font-size: 14px;
 `;
 
+// Map overlay control — floats directly over the Esri satellite photo, not
+// the app's own cosmos-gradient background. glassOpaque (solid cosmos-hi,
+// no blur) is used instead of the translucent glassPanel/glassControl
+// recipe: at glass.base's ~42% opacity, bright imagery (satellite greens/
+// browns/greys) bleeds through enough to wreck the legend's own text
+// contrast, so this control needs the fully-opaque variant.
 const Legend = styled.div`
   position: absolute;
   bottom: 24px;
   left: 16px;
-  background: ${({ theme }) => theme.colors.background};
+  ${glassOpaque}
   padding: 12px 16px;
-  border-radius: 8px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
+  border-radius: 12px;
   z-index: 5;
   max-width: 200px;
 `;
 
 const LegendTitle = styled.div`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 `;
 
 const LegendItem = styled.div`
@@ -175,9 +200,12 @@ const LegendColor = styled.div<{ $color: string }>`
   border-radius: 3px;
   background-color: ${(props) => props.$color};
   opacity: 0.7;
-  border: 1px solid ${({ theme }) => `${theme.colors.textPrimary}33`};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 `;
 
+// Same extra-opacity treatment as Legend above — this control floats over
+// bright satellite imagery, so it stays fully opaque (theme.colors.background,
+// solid cosmos-hi) rather than the translucent glassControl recipe.
 const EditBoundaryButton = styled.button`
   position: absolute;
   top: 16px;
@@ -187,19 +215,19 @@ const EditBoundaryButton = styled.button`
   gap: 8px;
   padding: 10px 16px;
   background: ${({ theme }) => theme.colors.background};
-  border: none;
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   box-shadow: ${({ theme }) => theme.shadows.md};
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   z-index: 5;
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    color: ${({ theme }) => theme.colors.secondary[500]};
   }
 
   svg {
@@ -215,23 +243,29 @@ const EditIcon = () => (
   </svg>
 );
 
+// This empty state's one primary button — the map's single sanctioned gold
+// CTA (spec §3/§4 gold discipline). Was previously a lapis (primary[500])
+// fill with onAccent (dark cosmos) text, which was backwards: onAccent is
+// only correct on a gold fill. Promoting the fill to gold makes onAccent
+// correct again instead of swapping it for onDark.
 const AddBoundaryButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
   margin-top: 16px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.onAccent};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[400]}, ${({ theme }) => theme.colors.secondary[500]});
+    transform: translateY(-1px);
   }
 
   svg {
@@ -244,9 +278,15 @@ const PopupContent = styled.div`
   min-width: 200px;
 `;
 
+// $stateColor is one of the 12 phase colours (BLOCK_STATE_COLORS), and only
+// ONE of them — harvesting — is the gold that onAccent is meant for; the
+// other 11 are lapis/coral/emerald/celeste/etc "bright.*" fills that need
+// onDark (cream) text instead. Same conditional applied to the real popup
+// HTML below (search for `headerTextColor`).
 const PopupHeader = styled.div<{ $stateColor: string }>`
   background: ${(props) => props.$stateColor};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme, $stateColor }) =>
+    $stateColor === theme.colors.phase.harvesting ? theme.colors.onAccent : theme.colors.onDark};
   padding: 12px 16px;
 `;
 
@@ -289,7 +329,7 @@ const PopupButton = styled.button`
   width: 100%;
   padding: 10px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   font-size: 13px;
   font-weight: 500;
@@ -314,10 +354,14 @@ const NoBoundaryMessage = styled.div`
   padding: 40px;
 `;
 
+// Icon container for the empty/error states below — matches the sibling
+// BlockGrid.tsx EmptyIcon pattern (lucide icon, not an emoji glyph).
 const NoBoundaryIcon = styled.div`
-  font-size: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 16px;
-  opacity: 0.5;
 `;
 
 const NoBoundaryText = styled.p`
@@ -580,15 +624,24 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
     if (selectedBlock) {
       const { block, coordinates } = selectedBlock;
       const stateColor = BLOCK_STATE_COLORS[block.state] || theme.colors.textSecondary;
+      // Only the harvesting phase colour is the gold onAccent is meant for;
+      // the other 11 phase colours (lapis/coral/emerald/celeste/etc "bright.*"
+      // fills) need onDark (cream) text instead — see the PopupHeader comment
+      // above for the same rule applied to the (unused) styled-component twin.
+      const headerTextColor =
+        stateColor === theme.colors.phase.harvesting ? theme.colors.onAccent : theme.colors.onDark;
       const areaHectares = block.area ? (block.area / 10000).toFixed(2) : 'N/A';
 
       const availableAreaHectares = block.availableArea != null ? (block.availableArea / 10000).toFixed(2) : 'N/A';
 
       // Popup content is rendered by MapLibre via raw HTML (setHTML), so it can't
       // use styled-components — theme values are interpolated directly instead.
+      // Card background/border/tip are handled by the .maplibregl-popup-content /
+      // .maplibregl-popup-tip overrides in MapInner above; this string only
+      // needs to carry the row-level colours.
       const popupHtml = `
         <div style="min-width: 200px;">
-          <div style="background: ${stateColor}; color: ${theme.colors.onAccent}; padding: 12px 16px;">
+          <div style="background: ${stateColor}; color: ${headerTextColor}; padding: 12px 16px;">
             <div style="font-size: 14px; font-weight: 600;">${block.name}</div>
             <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">
               ${BLOCK_STATE_LABELS[block.state]}
@@ -597,11 +650,11 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           <div style="padding: 12px 16px;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
               <span style="color: ${theme.colors.textSecondary};">Area</span>
-              <span style="color: ${theme.colors.textPrimary}; font-weight: 500;">${areaHectares} ha</span>
+              <span style="color: ${theme.colors.textPrimary}; font-weight: 500; font-family: ${theme.typography.fontFamily.mono};">${areaHectares} ha</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
               <span style="color: ${theme.colors.textSecondary};">Available</span>
-              <span style="color: ${theme.colors.textPrimary}; font-weight: 500;">${availableAreaHectares} ha</span>
+              <span style="color: ${theme.colors.textPrimary}; font-weight: 500; font-family: ${theme.typography.fontFamily.mono};">${availableAreaHectares} ha</span>
             </div>
             ${block.targetCropName ? `
               <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
@@ -612,7 +665,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             ${onBlockClick ? `
               <button
                 id="popup-view-btn"
-                style="width: 100%; padding: 10px; background: ${theme.colors.primary[500]}; color: ${theme.colors.onAccent}; border: none; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; border-radius: 4px;"
+                style="width: 100%; padding: 10px; background: ${theme.colors.primary[500]}; color: ${theme.colors.onDark}; border: none; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; border-radius: 4px;"
               >
                 View Details
               </button>
@@ -656,7 +709,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
     return (
       <MapWrapper $height={height}>
         <NoBoundaryMessage>
-          <NoBoundaryIcon>⚠️</NoBoundaryIcon>
+          <NoBoundaryIcon aria-hidden="true"><AlertTriangle size={40} strokeWidth={1.4} /></NoBoundaryIcon>
           <NoBoundaryText>{mapError}</NoBoundaryText>
           <NoBoundaryHint>
             This may happen if WebGL is not available in your browser. Try using a different browser or enabling hardware acceleration.
@@ -671,7 +724,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
     return (
       <MapWrapper $height={height}>
         <NoBoundaryMessage>
-          <NoBoundaryIcon>🗺️</NoBoundaryIcon>
+          <NoBoundaryIcon aria-hidden="true"><MapIcon size={40} strokeWidth={1.4} /></NoBoundaryIcon>
           <NoBoundaryText>No map boundaries defined</NoBoundaryText>
           <NoBoundaryHint>
             Draw boundaries when creating or editing the farm and blocks to see them on the map.

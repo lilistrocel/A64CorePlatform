@@ -5,9 +5,12 @@
  * Matches backend models from farm_manager/models/alert.py
  */
 
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
+import type { LucideIcon } from 'lucide-react';
+import { Info, AlertTriangle, Flame, Siren, Bell, Check, X } from 'lucide-react';
 
-const c = lightTheme.colors;
+const c = theme.colors;
 
 // ============================================================================
 // ENUMS
@@ -150,45 +153,82 @@ export interface AlertStatusConfig {
 // UI HELPER CONSTANTS
 // ============================================================================
 
+// Severity is a danger-depth scale, not a lifecycle status (spec §5.2
+// doesn't cover it) — kept on the success/warning/error family + terracotta
+// ramp depth, same technique as AQI_CATEGORY_COLORS in src/types/farm.ts.
+// `medium` uses the frozen `warning` semantic token (gold-b) — the
+// sanctioned warning/caution slot (spec §1.1), not a generic gold-ramp use.
 export const ALERT_SEVERITY_CONFIG: Record<AlertSeverity, AlertSeverityConfig> = {
   low: {
     label: 'Low',
-    color: c.success, // emerald (was green)
+    color: c.success, // emerald
     icon: 'ℹ️',
   },
   medium: {
     label: 'Medium',
-    color: c.warning, // gold (was orange)
+    color: c.warning, // gold-b — sanctioned warning slot
     icon: '⚠️',
   },
   high: {
     label: 'High',
-    color: c.error, // terracotta (was deep orange)
+    color: c.error, // coral-b
     icon: '🔥',
   },
   critical: {
     label: 'Critical',
-    color: c.terracotta[700], // deepest terracotta (was red) — most severe carries the most weight, spec §1
+    color: c.terracotta[700], // deepest terracotta — most severe carries the most weight
     icon: '🚨',
   },
+};
+
+// Night Observatory (T-901): status vocabulary — routed onto colors.phase.*
+// per spec §5.2 (active→inoculated, resolved≈"approved"→fruiting,
+// dismissed≈"cancelled/void"→decommissioned).
+//
+// Consolidation pass (T-901 shard NON-UI-CLEANUP): `color` below is derived
+// from ALERT_STATUS_PHASE_KEYS instead of being a third hand-written table.
+// Compose with `phaseBadge()` (which takes a PhaseKey, not a colour string)
+// via ALERT_STATUS_PHASE_KEYS directly rather than re-deriving a key from
+// this config's `color` field.
+export const ALERT_STATUS_PHASE_KEYS: Record<AlertStatus, PhaseKey> = {
+  active: 'inoculated',
+  resolved: 'fruiting',
+  dismissed: 'decommissioned',
 };
 
 export const ALERT_STATUS_CONFIG: Record<AlertStatus, AlertStatusConfig> = {
   active: {
     label: 'Active',
-    color: c.primary[500], // lapis (was blue)
+    color: c.phase[ALERT_STATUS_PHASE_KEYS.active],
     icon: '🔔',
   },
   resolved: {
     label: 'Resolved',
-    color: c.success, // emerald (was green)
+    color: c.phase[ALERT_STATUS_PHASE_KEYS.resolved],
     icon: '✅',
   },
   dismissed: {
     label: 'Dismissed',
-    color: c.textDisabled, // (was gray)
+    color: c.phase[ALERT_STATUS_PHASE_KEYS.dismissed],
     icon: '❌',
   },
+};
+
+// Night Observatory (T-901) lucide-react replacements for the emoji `icon`
+// fields above (spec §6). The string fields are left in place for any
+// consumer this shard could not reach; no live consumer of either config's
+// `icon` field was found in this shard's scope at the time of this pass.
+export const ALERT_SEVERITY_ICON_COMPONENTS: Record<AlertSeverity, LucideIcon> = {
+  low: Info,
+  medium: AlertTriangle,
+  high: Flame,
+  critical: Siren,
+};
+
+export const ALERT_STATUS_ICON_COMPONENTS: Record<AlertStatus, LucideIcon> = {
+  active: Bell,
+  resolved: Check,
+  dismissed: X,
 };
 
 export const ALERT_TYPE_LABELS: Record<AlertType, string> = {

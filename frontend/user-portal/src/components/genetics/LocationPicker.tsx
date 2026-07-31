@@ -12,10 +12,11 @@
 
 import { useMemo } from 'react';
 import styled from 'styled-components';
+import { Check } from 'lucide-react';
 import { useFacilities } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms } from '../../hooks/mushroom/useRoomData';
 import type { RoomType } from '../../types/mushroom';
-import { ROOM_TYPE_ICONS, ROOM_TYPE_LABELS } from '../../types/mushroom';
+import { ROOM_TYPE_LABELS } from '../../types/mushroom';
 import type { VesselForm } from '../../types/genetics';
 import { Field, FormRow, Hint, Input, Label, Select } from './styled';
 
@@ -40,9 +41,12 @@ const FORM_ROOM_AFFINITY: Partial<Record<VesselForm, RoomType[]>> = {
 };
 
 const Suggested = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 interface LocationPickerProps {
@@ -120,7 +124,7 @@ export function LocationPicker({
             </option>
             {orderedRooms.map((r) => (
               <option key={r.id} value={r.id}>
-                {ROOM_TYPE_ICONS[r.roomType]} {r.roomCode}
+                {r.roomCode}
                 {r.name ? ` · ${r.name}` : ''} — {ROOM_TYPE_LABELS[r.roomType]}
               </option>
             ))}
@@ -131,7 +135,7 @@ export function LocationPicker({
       {selectedRoom && preferred.length > 0 && (
         <Hint>
           {preferred.includes(selectedRoom.roomType) ? (
-            <Suggested>✓ Typical room for this vessel type.</Suggested>
+            <Suggested><Check size={12} strokeWidth={2.2} /> Typical room for this vessel type.</Suggested>
           ) : (
             <>
               Usually kept in a{' '}

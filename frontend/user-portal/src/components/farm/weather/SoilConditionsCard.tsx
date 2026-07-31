@@ -5,14 +5,14 @@
  */
 
 import styled from 'styled-components';
+import { Sprout } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
 import type { SoilConditions } from '../../../types/farm';
 import { formatTemperature, formatSoilMoisture } from '../../../services/weatherApi';
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -23,6 +23,11 @@ const Title = styled.h3`
   display: flex;
   align-items: center;
   gap: 8px;
+
+  svg {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.celeste};
+  }
 `;
 
 const DepthsGrid = styled.div`
@@ -33,21 +38,23 @@ const DepthsGrid = styled.div`
 
 const Section = styled.div`
   h4 {
-    font-size: 13px;
-    font-weight: 600;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    ${monoLabel}
+    font-size: 0.68rem;
+    color: ${({ theme }) => theme.colors.muted};
     margin: 0 0 12px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
   }
 `;
 
+// Inner row cells — Card is already a glassPanel (layer 1); per the T-901
+// two-glass-layer rule these drop to a plain `line` border with no fill
+// rather than a second translucent glass surface (was theme.colors.surface).
 const DepthItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -56,13 +63,14 @@ const DepthItem = styled.div`
   }
 
   .depth {
-    font-size: 13px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    ${monoLabel}
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   .value {
-    font-size: 14px;
-    font-weight: 600;
+    ${monoLabel}
+    font-size: 0.78rem;
+    font-weight: 700;
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -70,10 +78,14 @@ const DepthItem = styled.div`
 const NoDataMessage = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
+// Depth-vs-colour encoding: sequential single-hue (emerald) ramp, ordering
+// preserved — shallow depths read lighter, deep depths read darker. This is
+// exactly the "walk one bright hue" pattern the T-901 spec calls for; the
+// existing 4-step emerald ramp already satisfies it (kept as-is).
 const DepthIndicator = styled.div<{ $depth: number }>`
   width: 4px;
   height: 100%;
@@ -81,8 +93,6 @@ const DepthIndicator = styled.div<{ $depth: number }>`
   border-radius: 2px;
   margin-right: 12px;
   background: ${({ $depth, theme }) => {
-    // Color gradient from light to dark based on depth — sequential emerald
-    // ramp, ordering preserved (shallow = light, deep = dark).
     if ($depth === 0) return theme.colors.emerald[200];  // surface
     if ($depth === 1) return theme.colors.emerald[400];  // shallow-mid
     if ($depth === 2) return theme.colors.emerald[600];  // deep-mid
@@ -120,7 +130,7 @@ export function SoilConditionsCard({ soil }: SoilConditionsCardProps) {
   if (!hasTemperatureData && !hasMoistureData) {
     return (
       <Card>
-        <Title>🌱 Soil Conditions</Title>
+        <Title><Sprout size={16} strokeWidth={1.6} /> Soil Conditions</Title>
         <NoDataMessage>
           Soil data requires WeatherBit Business or Enterprise plan
         </NoDataMessage>
@@ -137,7 +147,7 @@ export function SoilConditionsCard({ soil }: SoilConditionsCardProps) {
 
   return (
     <Card>
-      <Title>🌱 Soil Conditions</Title>
+      <Title><Sprout size={16} strokeWidth={1.6} /> Soil Conditions</Title>
 
       <DepthsGrid>
         {hasTemperatureData && (

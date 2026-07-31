@@ -3,9 +3,16 @@
  *
  * Warns users when attempting manual block status transitions
  * while there are pending tasks that would trigger the same transition automatically.
+ *
+ * Night Observatory (T-901 GAP-FILL, spec §4 "Modals/drawers"): glassPanel at
+ * blur 24px over an rgba(10,14,36,.6) scrim, 20px radius, X-only close (this
+ * modal never closed on backdrop click — unchanged). Destructive action
+ * (force transition) is coral-tinted glass, never solid — spec §4 "Buttons".
  */
 
 import styled from 'styled-components';
+import { AlertTriangle, ClipboardList, Lightbulb, X } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
 
 interface PendingTask {
   taskId: string;
@@ -52,21 +59,31 @@ export function PendingTasksWarningModal({
 
   return (
     <Overlay>
-      <Modal onClick={(e) => e.stopPropagation()}>
+      <Modal role="dialog" aria-modal="true" aria-label="Pending tasks detected">
         <Header>
-          <WarningIcon>⚠️</WarningIcon>
-          <Title>Pending Tasks Detected</Title>
+          <HeaderLeft>
+            <WarningIconWrap aria-hidden="true">
+              <AlertTriangle size={22} strokeWidth={1.8} />
+            </WarningIconWrap>
+            <Title>Pending Tasks Detected</Title>
+          </HeaderLeft>
+          <CloseButton type="button" onClick={onCancel} aria-label="Close">
+            <X size={18} strokeWidth={2} />
+          </CloseButton>
         </Header>
 
         <Content>
           <Message>
-            You are attempting to manually transition this block to <StatusBadge>{formatStatus(targetStatus)}</StatusBadge> status.
+            You are attempting to manually transition this block to <StatusChip>{formatStatus(targetStatus)}</StatusChip> status.
             However, there {pendingTasks.length === 1 ? 'is' : 'are'} <strong>{pendingTasks.length} pending task{pendingTasks.length === 1 ? '' : 's'}</strong> that will
             automatically trigger this transition when completed.
           </Message>
 
           <Recommendation>
-            <RecommendTitle>💡 Recommended Action</RecommendTitle>
+            <RecommendTitle>
+              <Lightbulb size={14} strokeWidth={1.8} />
+              Recommended Action
+            </RecommendTitle>
             <RecommendText>
               Complete the pending task{pendingTasks.length === 1 ? '' : 's'} below to trigger the automatic transition.
               This ensures proper tracking and workflow continuity.
@@ -74,10 +91,12 @@ export function PendingTasksWarningModal({
           </Recommendation>
 
           <TaskList>
-            <TaskListTitle>Pending Tasks:</TaskListTitle>
+            <TaskListTitle>Pending Tasks</TaskListTitle>
             {pendingTasks.map((task) => (
               <TaskItem key={task.taskId}>
-                <TaskIcon>📋</TaskIcon>
+                <TaskIconWrap aria-hidden="true">
+                  <ClipboardList size={16} strokeWidth={1.8} />
+                </TaskIconWrap>
                 <TaskDetails>
                   <TaskTitle>{task.title}</TaskTitle>
                   <TaskMeta>
@@ -90,7 +109,10 @@ export function PendingTasksWarningModal({
           </TaskList>
 
           <Warning>
-            <WarningTitle>⚠️ Warning</WarningTitle>
+            <WarningTitle>
+              <AlertTriangle size={14} strokeWidth={1.8} />
+              Warning
+            </WarningTitle>
             <WarningText>
               If you force this transition, the pending task{pendingTasks.length === 1 ? '' : 's'} will remain incomplete.
               You should only bypass this warning if you have a specific reason to do so.
@@ -100,7 +122,7 @@ export function PendingTasksWarningModal({
 
         <ButtonGroup>
           <CancelButton onClick={onCancel}>
-            Cancel & Review Tasks
+            Cancel &amp; Review Tasks
           </CancelButton>
           <ForceButton onClick={onForce}>
             Force Transition Anyway
@@ -118,7 +140,9 @@ export function PendingTasksWarningModal({
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,35 +151,66 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const Header = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => `${theme.colors.warning}15`};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
-const WarningIcon = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
+const WarningIconWrap = styled.div`
+  color: ${({ theme }) => theme.colors.warning};
+  display: flex;
 `;
 
 const Title = styled.h2`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
+`;
+
+const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: background 150ms, color 150ms;
+
+  &:hover {
+    background: rgba(180, 200, 220, 0.1);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
+  }
 `;
 
 const Content = styled.div`
@@ -178,11 +233,11 @@ const Message = styled.p`
   }
 `;
 
-const StatusBadge = styled.span`
+const StatusChip = styled.span`
   display: inline-block;
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  background: ${({ theme }) => `${theme.colors.primary[500]}20`};
-  color: ${({ theme }) => theme.colors.primary[600]};
+  padding: 2px 9px;
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -190,12 +245,15 @@ const StatusBadge = styled.span`
 
 const Recommendation = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.primary[500]}10`};
-  border-left: 4px solid ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  border-left: 3px solid ${({ theme }) => theme.colors.bright.lapis};
   border-radius: ${({ theme }) => theme.borderRadius.md};
 `;
 
 const RecommendTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
@@ -204,7 +262,7 @@ const RecommendTitle = styled.div`
 
 const RecommendText = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   line-height: ${({ theme }) => theme.typography.lineHeight.normal};
 `;
@@ -216,9 +274,9 @@ const TaskList = styled.div`
 `;
 
 const TaskListTitle = styled.div`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
+  font-size: 0.64rem;
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
@@ -226,14 +284,16 @@ const TaskItem = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.glass.base};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 `;
 
-const TaskIcon = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+const TaskIconWrap = styled.div`
+  color: ${({ theme }) => theme.colors.celeste};
+  display: flex;
   flex-shrink: 0;
+  margin-top: 2px;
 `;
 
 const TaskDetails = styled.div`
@@ -255,27 +315,30 @@ const TaskMeta = styled.div`
 `;
 
 const TaskType = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: capitalize;
-  padding: ${({ theme }) => `2px ${theme.spacing.xs}`};
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 2px ${({ theme }) => theme.spacing.xs};
+  background: ${({ theme }) => theme.colors.glass.hi};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
 `;
 
 const TaskSchedule = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Warning = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.warning}10`};
-  border-left: 4px solid ${({ theme }) => theme.colors.warning};
+  background: ${({ theme }) => theme.colors.warningBg};
+  border-left: 3px solid ${({ theme }) => theme.colors.warning};
   border-radius: ${({ theme }) => theme.borderRadius.md};
 `;
 
 const WarningTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
@@ -284,7 +347,7 @@ const WarningTitle = styled.div`
 
 const WarningText = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   line-height: ${({ theme }) => theme.typography.lineHeight.normal};
 `;
@@ -293,16 +356,15 @@ const ButtonGroup = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const CancelButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
-  border: none;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.textPrimary};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
@@ -310,16 +372,22 @@ const CancelButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
+// Destructive: coral-b tinted glass, never solid red (spec §4 "Buttons").
 const ForceButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.warning};
-  color: white;
-  border: none;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error}66;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
@@ -327,6 +395,11 @@ const ForceButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    filter: brightness(0.9);
+    background: ${({ theme }) => theme.colors.error}33;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;

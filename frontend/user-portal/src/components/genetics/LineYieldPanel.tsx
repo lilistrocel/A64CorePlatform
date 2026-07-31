@@ -25,7 +25,7 @@ const Head = styled.div`
 `;
 
 const Muted = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 12.5px;
   line-height: 1.5;
 `;
@@ -46,14 +46,18 @@ const Row = styled.div`
 const BarTrack = styled.div`
   height: 22px;
   border-radius: 4px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   overflow: hidden;
 `;
 
+// Senescence-watch is a data encoding, not a status — bright.terra rather
+// than gold (spec §3: gold is reserved for Harvesting/CTA use, not a "watch
+// this generation" cue on a bar chart).
 const BarFill = styled.div<{ $pct: number; $warm: boolean }>`
   height: 100%;
   width: ${({ $pct }) => Math.max(2, Math.min(100, $pct))}%;
-  background: ${({ $warm, theme }) => ($warm ? theme.colors.warning : theme.colors.primary[500])};
+  background: ${({ $warm, theme }) => ($warm ? theme.colors.bright.terra : theme.colors.bright.lapis)};
   transition: width 200ms ease;
 `;
 
@@ -67,23 +71,23 @@ const Figures = styled.div`
 const Be = styled.span<{ $warm: boolean }>`
   font-size: 14px;
   font-weight: 700;
-  color: ${({ $warm, theme }) => ($warm ? theme.colors.gold[800] : theme.colors.textPrimary)};
+  color: ${({ $warm, theme }) => ($warm ? theme.colors.bright.terra : theme.colors.textPrimary)};
 `;
 
 const Sub = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Trend = styled.div<{ $declining: boolean }>`
   margin-top: 14px;
   padding: 10px 12px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: 13px;
   line-height: 1.55;
   background: ${({ $declining, theme }) =>
-    $declining ? theme.colors.warningBg : theme.colors.successBg};
-  color: ${({ $declining, theme }) => ($declining ? theme.colors.gold[800] : theme.colors.emerald[700])};
+    $declining ? `${theme.colors.bright.terra}29` : theme.colors.successBg};
+  color: ${({ $declining, theme }) => ($declining ? theme.colors.bright.terra : theme.colors.bright.emerald)};
 `;
 
 interface LineYieldPanelProps {

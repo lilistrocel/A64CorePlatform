@@ -17,8 +17,11 @@
 
 import { useMemo } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { AlertTriangle } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 import type { LineageGraph, LineageNode } from '../../types/genetics';
 import { METHOD_LABELS, STATUS_LABELS, VESSEL_LABELS } from '../../types/genetics';
+import { ACCESSION_STATUS_TO_PHASE } from './styled';
 
 // Layout constants — node box plus the gaps between boxes and rows.
 const NODE_W = 196;
@@ -34,10 +37,8 @@ interface PositionedNode extends LineageNode {
 }
 
 const Wrap = styled.div`
+  ${glassPanel}
   overflow: auto;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  background: ${({ theme }) => theme.colors.surface};
   padding: 8px;
 `;
 
@@ -69,16 +70,16 @@ const NodeBox = styled.button<{ $x: number; $y: number; $root: boolean; $dim: bo
   flex-direction: column;
   gap: 3px;
   padding: 9px 11px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.cosmosHi};
   border: ${({ $root, theme }) =>
-    $root ? `2px solid ${theme.colors.primary[600]}` : `1px solid ${theme.colors.neutral[300]}`};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+    $root ? `2px solid ${theme.colors.celeste}` : `1px solid ${theme.colors.glass.border}`};
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(4, 6, 18, 0.4);
   opacity: ${({ $dim }) => ($dim ? 0.55 : 1)};
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 
   &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
+    box-shadow: 0 8px 20px rgba(4, 6, 18, 0.5);
     transform: translateY(-1px);
   }
 `;
@@ -95,7 +96,7 @@ const NodeCode = styled.span`
 
 const NodeMeta = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,14 +117,15 @@ const Dot = styled.span<{ $color: string }>`
   flex-shrink: 0;
 `;
 
+// Same categorical, non-gold clone-depth cue as GenerationBadge (styled.ts).
 const Gen = styled.span<{ $warm: boolean }>`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 10.5px;
   font-weight: 700;
   padding: 1px 6px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  background: ${({ $warm, theme }) => ($warm ? theme.colors.warningBg : theme.colors.primary[50])};
-  color: ${({ $warm, theme }) => ($warm ? theme.colors.gold[800] : theme.colors.primary[800])};
+  border-radius: 99px;
+  background: ${({ $warm, theme }) => ($warm ? `${theme.colors.bright.terra}29` : theme.colors.infoBg)};
+  color: ${({ $warm, theme }) => ($warm ? theme.colors.bright.terra : theme.colors.bright.lapis)};
 `;
 
 const Legend = styled.div`
@@ -132,7 +134,7 @@ const Legend = styled.div`
   flex-wrap: wrap;
   padding: 10px 4px 4px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const LegendItem = styled.span`
@@ -151,7 +153,7 @@ const Empty = styled.div`
   padding: 40px;
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 interface LineageTreeProps {
@@ -164,21 +166,22 @@ interface LineageTreeProps {
 export function LineageTree({ graph, onSelectNode, highlightId }: LineageTreeProps) {
   const theme = useTheme();
 
-  // Same categorical status treatment as the accession StatusBadge (genetics
-  // styled.ts) — active/contaminated/senescent map to the semantic tokens,
-  // the inactive states fall back to neutral.
-  const STATUS_DOT: Record<string, string> = {
-    active: theme.colors.success,
-    contaminated: theme.colors.error,
-    senescent: theme.colors.warning,
-    consumed: theme.colors.neutral[500],
-    archived: theme.colors.neutral[500],
-    discarded: theme.colors.neutral[400],
-  };
+  // Same status vocabulary as the accession StatusBadge (genetics styled.ts)
+  // — routed through the exact same ACCESSION_STATUS_TO_PHASE map so a given
+  // status reads as the same colour everywhere in the app (spec §5).
+  const STATUS_DOT: Record<string, string> = Object.fromEntries(
+    Object.entries(ACCESSION_STATUS_TO_PHASE).map(([status, phaseKey]) => [
+      status,
+      theme.colors.phase[phaseKey],
+    ])
+  );
 
-  const ASEXUAL_COLOR = theme.colors.info;
-  const SEXUAL_COLOR = theme.colors.warning;
-  const UNKNOWN_COLOR = theme.colors.neutral[400];
+  // Asexual/sexual is a binary categorical split (which generation counter
+  // moved), not a status — bright.lapis/bright.lavender, same pair the
+  // ModeBadge chip (genetics styled.ts) uses, never gold (spec §3).
+  const ASEXUAL_COLOR = theme.colors.bright.lapis;
+  const SEXUAL_COLOR = theme.colors.bright.lavender;
+  const UNKNOWN_COLOR = theme.colors.muted;
 
   const layout = useMemo(() => {
     if (!graph.nodes.length) {
@@ -333,8 +336,9 @@ export function LineageTree({ graph, onSelectNode, highlightId }: LineageTreePro
           <Swatch $color={UNKNOWN_COLOR} $dashed /> Unidentified parent
         </LegendItem>
         {graph.truncated && (
-          <LegendItem style={{ color: theme.colors.gold[800] }}>
-            ⚠ Graph truncated — showing the first {graph.nodes.length} accessions
+          <LegendItem style={{ color: theme.colors.bright.terra }}>
+            <AlertTriangle size={13} strokeWidth={1.8} /> Graph truncated — showing the first{' '}
+            {graph.nodes.length} accessions
           </LegendItem>
         )}
       </Legend>

@@ -8,6 +8,7 @@
  */
 
 import styled, { keyframes } from 'styled-components';
+import { Check, Wrench } from 'lucide-react';
 import type { ToolCallEntry } from '../../stores/aiAssistant.store';
 
 interface ToolCallCardProps {
@@ -35,7 +36,7 @@ export function ToolCallCard({ toolCall }: ToolCallCardProps) {
 
   return (
     <Card $isPending={isPending}>
-      <ToolIcon aria-hidden="true">{isPending ? '' : ''}</ToolIcon>
+      <ToolIcon aria-hidden="true"><Wrench size={13} strokeWidth={1.8} /></ToolIcon>
       <ToolContent>
         <ToolLabel $isPending={isPending}>
           {label}
@@ -46,7 +47,7 @@ export function ToolCallCard({ toolCall }: ToolCallCardProps) {
         )}
       </ToolContent>
       {isPending && <Spinner aria-label="Tool running" />}
-      {!isPending && <DoneCheck aria-hidden="true">✓</DoneCheck>}
+      {!isPending && <DoneCheck aria-hidden="true"><Check size={13} strokeWidth={2.4} /></DoneCheck>}
     </Card>
   );
 }
@@ -74,7 +75,9 @@ const Card = styled.div<{ $isPending: boolean }>`
 `;
 
 const ToolIcon = styled.span`
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  color: ${({ theme }) => theme.colors.muted};
   flex-shrink: 0;
 `;
 
@@ -116,8 +119,8 @@ const Spinner = styled.div`
 `;
 
 const DoneCheck = styled.span`
+  display: flex;
+  align-items: center;
   color: ${({ theme }) => theme.colors.success};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  font-size: 13px;
   flex-shrink: 0;
 `;

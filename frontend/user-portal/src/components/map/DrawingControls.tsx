@@ -465,9 +465,10 @@ const ToolbarButton = styled.button<{ $variant: 'primary' | 'secondary' | 'dange
   ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
+        // lapis fill — onDark (cream), not onAccent (gold-fill only, spec §1.1).
         return `
           background: ${theme.colors.primary[500]};
-          color: ${theme.colors.onAccent};
+          color: ${theme.colors.onDark};
           &:hover { background: ${theme.colors.primary[700]}; }
         `;
       case 'danger':
@@ -477,8 +478,11 @@ const ToolbarButton = styled.button<{ $variant: 'primary' | 'secondary' | 'dange
           &:hover { background: ${theme.colors.errorBg}; filter: brightness(0.92); }
         `;
       default:
+        /* Opaque (not translucent glass.surface) — this control floats over
+           unpredictable map imagery, not the sky, and needs reliable
+           contrast regardless of the tile underneath (shard note, spec §8). */
         return `
-          background: ${theme.colors.surface};
+          background: ${theme.colors.background};
           color: ${theme.colors.textPrimary};
           &:hover { background: ${theme.colors.neutral[300]}; }
         `;
@@ -496,7 +500,8 @@ const ToolbarInfo = styled.span`
   padding: 8px 12px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
+  /* Opaque — floats over map imagery, not the sky (spec §8). */
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 6px;
 `;
 

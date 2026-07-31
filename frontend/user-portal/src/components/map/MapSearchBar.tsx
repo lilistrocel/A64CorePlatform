@@ -231,8 +231,8 @@ const SearchInput = styled.input`
 const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid ${({ theme }) => theme.colors.border};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.celeste};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
@@ -248,7 +248,8 @@ const ClearButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.surface};
+  /* Opaque — floats over map imagery, not the sky (spec §8). */
+  background: ${({ theme }) => theme.colors.neutral[300]};
   border: none;
   border-radius: 50%;
   width: 20px;
@@ -288,7 +289,7 @@ const ResultItem = styled.li`
   transition: background 0.15s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 

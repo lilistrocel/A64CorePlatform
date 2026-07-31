@@ -7,6 +7,8 @@
 import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import styled from 'styled-components';
 import maplibregl from 'maplibre-gl';
+import { Map as MapIconGlyph } from 'lucide-react';
+import { glassPanel, glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import type { Block, BlockUpdate, GeoJSONPolygon, FarmBoundary, FarmLocation } from '../../types/farm';
 import { useMapDrawing } from '../../hooks/map/useMapDrawing';
 
@@ -18,22 +20,25 @@ const DrawingControls = lazy(() => import('../map/DrawingControls').then(m => ({
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers").
 const Overlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 32px;
   max-width: 700px;
   width: 90%;
@@ -47,14 +52,14 @@ const Header = styled.div`
 
 const Title = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
@@ -71,31 +76,30 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
@@ -107,74 +111,79 @@ const ButtonGroup = styled.div`
   margin-top: 8px;
 `;
 
+// Primary: the one gold-gradient CTA on this view (spec §3). Secondary: glass
+// ghost text (spec §4 "Buttons").
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
-  border: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  border: 1px solid transparent;
 
   ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
-    background: ${theme.colors.primary[500]};
+    background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
     color: ${theme.colors.onAccent};
+    box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
     &:hover:not(:disabled) {
-      background: ${theme.colors.primary[600]};
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
     }
   `
       : `
     background: transparent;
-    color: ${theme.colors.textSecondary};
-    border: 1px solid ${theme.colors.neutral[300]};
+    color: ${theme.colors.celeste};
+    border-color: ${theme.colors.glass.border};
 
     &:hover:not(:disabled) {
-      background: ${theme.colors.surface};
+      background: rgba(180, 200, 220, 0.07);
+      color: ${theme.colors.textPrimary};
     }
   `}
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
 const ErrorMessage = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
 `;
 
 // Map Section Styles
 const MapSection = styled.div`
   margin-top: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 12px;
   overflow: hidden;
 `;
 
 const MapToggleButton = styled.button<{ $active: boolean }>`
+  ${glassControl}
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
   width: 100%;
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 8px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.infoBg : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textPrimary)};
+  border-color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.glass.border)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.textPrimary)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.neutral[200] : theme.colors.surface)};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   svg {
@@ -182,19 +191,21 @@ const MapToggleButton = styled.button<{ $active: boolean }>`
   }
 `;
 
+// A map placeholder sitting inside an already-glass Modal — two-glass-layer
+// rule (spec §2) — drops to glassOpaque rather than stacking a third layer.
 const MapLoadingFallback = styled.div`
+  ${glassOpaque}
   display: flex;
   align-items: center;
   justify-content: center;
   height: 350px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
 const MapHint = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 8px 0 0 0;
 `;
 
@@ -204,19 +215,13 @@ const BoundaryBadge = styled.span`
   gap: 4px;
   padding: 2px 8px;
   background: ${({ theme }) => theme.colors.successBg};
-  color: ${({ theme }) => theme.colors.success};
-  border-radius: 4px;
+  color: ${({ theme }) => theme.colors.bright.emerald};
+  border-radius: 99px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
 `;
 
-const MapIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-    <line x1="8" y1="2" x2="8" y2="18" />
-    <line x1="16" y1="6" x2="16" y2="22" />
-  </svg>
-);
+const MapIcon = () => <MapIconGlyph size={20} strokeWidth={1.8} />;
 
 // ============================================================================
 // COMPONENT

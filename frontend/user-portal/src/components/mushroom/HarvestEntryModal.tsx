@@ -8,13 +8,22 @@
  * a lineage rather than just a species — without it, "Yield by generation" on
  * the line page has nothing to group by. Optional, because a harvest with an
  * unknown block is still worth recording; it just cannot be attributed.
+ *
+ * Night Observatory (T-901 Phase 3): glass modal shell per spec §4. Quality
+ * grade is an ordinal data encoding (A best -> rejected worst) — walked
+ * across distinct `bright.*` hues rather than the out-of-scope
+ * QUALITY_GRADE_COLORS (dead-lightTheme-derived, and its grade C lands on
+ * `warning`/gold-b, which spec §3 reserves for the Harvesting phase).
  */
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { glassPanel, glassOpaque, monoLabel } from '@a64core/shared';
 import { HelpButton } from '../tutorials/HelpButton';
 import type { GrowingRoom, HarvestQualityGrade, CreateHarvestPayload } from '../../types/mushroom';
-import { QUALITY_GRADE_LABELS, QUALITY_GRADE_COLORS } from '../../types/mushroom';
+import { QUALITY_GRADE_LABELS } from '../../types/mushroom';
+import { QUALITY_GRADE_HUE } from './phaseTheme';
 import { useCreateHarvest } from '../../hooks/mushroom/useMushroomHarvests';
 import { useAccessions } from '../../hooks/genetics/useGenetics';
 
@@ -115,7 +124,7 @@ export function HarvestEntryModal({
           <ModalTitle>Log Harvest</ModalTitle>
           <RoomBadge>Room: {room.roomCode}</RoomBadge>
           <CloseButton onClick={handleClose} aria-label="Close harvest modal">
-            &#10005;
+            <X size={16} strokeWidth={2} />
           </CloseButton>
         </ModalHeader>
 
@@ -222,7 +231,7 @@ export function HarvestEntryModal({
                   key={grade}
                   type="button"
                   $selected={qualityGrade === grade}
-                  $color={QUALITY_GRADE_COLORS[grade]}
+                  $hue={QUALITY_GRADE_HUE[grade]}
                   onClick={() => setQualityGrade(grade)}
                   aria-pressed={qualityGrade === grade}
                 >
@@ -267,20 +276,19 @@ export function HarvestEntryModal({
 // ============================================================================
 
 const BlockSelect = styled.select`
+  ${glassOpaque}
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -295,14 +303,16 @@ const FieldNote = styled.p`
   margin: 6px 0 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+// Modal scrim + glass shell — spec §4 "Modals/drawers".
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -311,9 +321,10 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
@@ -329,49 +340,52 @@ const ModalHeader = styled.div`
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   flex: 1;
 `;
 
 const RoomBadge = styled.span`
-  font-size: 13px;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 12px;
+  font-weight: 700;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.primary[700]};
-  border-radius: 20px;
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border-radius: 99px;
   padding: 4px 10px;
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 150ms;
-  line-height: 1;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 150ms, color 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
 const StrainInfo = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 16px;
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border-radius: 10px;
 `;
 
 const Form = styled.form`
@@ -387,8 +401,8 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -408,30 +422,30 @@ interface InputProps {
 }
 
 const Input = styled.input<InputProps>`
+  ${glassOpaque}
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   outline: none;
   transition: border-color 150ms;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const UnitLabel = styled.span`
   font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.muted};
   min-width: 24px;
 `;
 
@@ -443,49 +457,51 @@ const GradeGrid = styled.div`
 
 interface GradeOptionProps {
   $selected: boolean;
-  $color: string;
+  $hue: string;
 }
 
 const GradeOption = styled.button<GradeOptionProps>`
   padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.68rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms;
-  border: 2px solid ${({ $color }) => $color};
-  background: ${({ $selected, $color, theme }) => ($selected ? $color : theme.colors.background)};
-  color: ${({ $selected, $color, theme }) => ($selected ? theme.colors.onAccent : $color)};
+  border: 1px solid ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]};
+  background: ${({ $selected, theme, $hue }) =>
+    $selected ? (theme.colors.bright as Record<string, string>)[$hue] : 'transparent'};
+  color: ${({ $selected, theme, $hue }) =>
+    $selected ? theme.colors.onDark : (theme.colors.bright as Record<string, string>)[$hue]};
 
   &:hover {
-    background: ${({ $color }) => $color};
-    color: ${({ theme }) => theme.colors.onAccent};
+    background: ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]};
+    color: ${({ theme }) => theme.colors.onDark};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const TextArea = styled.textarea`
+  ${glassOpaque}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   font-family: inherit;
   outline: none;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -493,8 +509,8 @@ const ValidationError = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.error};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.error}66;
+  border-radius: 10px;
   padding: 10px 12px;
 `;
 
@@ -507,20 +523,21 @@ const ActionRow = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -528,11 +545,11 @@ const CancelButton = styled.button`
 const SubmitButton = styled.button`
   padding: 10px 24px;
   border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: background 150ms;
 
@@ -544,7 +561,7 @@ const SubmitButton = styled.button`
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;

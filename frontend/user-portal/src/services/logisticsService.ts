@@ -7,7 +7,8 @@
 
 import { apiClient } from './api';
 import { formatNumber } from '../utils/formatNumber';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type {
   Vehicle,
   VehicleCreate,
@@ -262,40 +263,60 @@ export async function getAvailableFarmingYears(): Promise<LogisticsFarmingYearsR
 
 /**
  * Get vehicle status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2.
+ * `maintenance` now uses phase.maintenance (rose-b) — the exact table
+ * entry — rather than the generic `warning` gold slot it borrowed before;
+ * `retired` maps to decommissioned (cancelled/void/archived).
  */
-export function getVehicleStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getVehicleStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'available':
-      return c.success; // emerald
+      return 'fruiting';
     case 'in_use':
-      return c.primary[500]; // lapis
+      return 'inoculated';
     case 'maintenance':
-      return c.warning; // gold
+      return 'maintenance';
     case 'retired':
-      return c.textSecondary;
+      return 'decommissioned';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getVehicleStatusColor(status: string): string {
+  const key = getVehicleStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
  * Get shipment status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.*. `in_transit`
+ * previously (mis)used the generic `warning` gold slot — gold is reserved
+ * for the literal Harvesting phase (spec §3); moved to phase.colonizing
+ * ("partially done" — en route, not yet complete). `cancelled` moved to
+ * decommissioned per the table (cancelled/void/archived), distinct from
+ * quarantined (rejected/failed/overdue/expired).
  */
-export function getShipmentStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getShipmentStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'scheduled':
-      return c.primary[500]; // lapis
+      return 'fruitingInit'; // pending / awaiting departure
     case 'in_transit':
-      return c.warning; // gold
+      return 'colonizing';
     case 'delivered':
-      return c.success; // emerald
+      return 'fruiting';
     case 'cancelled':
-      return c.error; // terracotta
+      return 'decommissioned';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getShipmentStatusColor(status: string): string {
+  const key = getShipmentStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
@@ -405,7 +426,9 @@ export const logisticsApi = {
 
   // Utilities
   getVehicleStatusColor,
+  getVehicleStatusPhaseKey,
   getShipmentStatusColor,
+  getShipmentStatusPhaseKey,
   getVehicleTypeLabel,
   formatCapacity,
   formatLocation,

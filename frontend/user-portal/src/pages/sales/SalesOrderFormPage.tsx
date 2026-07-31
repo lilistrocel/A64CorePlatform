@@ -33,6 +33,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import {
   useSalesOrderV2,
   useCreateSalesOrderV2,
@@ -96,12 +97,12 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
-  &:hover { text-decoration: underline; }
+  &:hover { text-decoration: underline; color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const PageTitle = styled.h1`
@@ -112,9 +113,7 @@ const PageTitle = styled.h1`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -143,44 +142,42 @@ const Field = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $error?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ $error, theme }) =>
-    $error ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $error, theme }) => ($error ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ $error, theme }) =>
-      $error ? theme.colors.error : theme.colors.primary[500]};
+    border-color: ${({ $error, theme }) => ($error ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: ${({ $error }) => ($error ? 'none' : '0 0 0 3px rgba(220, 185, 79, 0.15)')};
   }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 80px;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const LinesHeader = styled.div`
@@ -190,20 +187,23 @@ const LinesHeader = styled.div`
   margin-bottom: 16px;
 `;
 
+// Ghost/ancillary button — transparent, celeste text/border (spec §4).
 const AddLineBtn = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border: 1px dashed ${({ theme }) => theme.colors.primary[400]};
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[600]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[100]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -218,55 +218,54 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-align: left;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const Td = styled.td`
   padding: 8px 6px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: top;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const LineInput = styled.input`
+  ${glassControl}
   padding: 7px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
   width: 100%;
-  background: ${({ theme }) => theme.colors.background};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DeleteLineBtn = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
   border-radius: 6px;
   cursor: pointer;
   padding: 0;
   font-size: 16px;
   line-height: 1;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
-    border-color: ${({ theme }) => theme.colors.terracotta[600]};
+    background: rgba(240, 138, 112, 0.26);
   }
   &:disabled {
     opacity: 0.4;
@@ -281,9 +280,10 @@ const DeleteLineBtn = styled.button`
   }
 `;
 
+// Nested one level inside a glassPanel Card — stays a plain `line` border
+// with no fill rather than a second glass layer (spec §2 two-layer limit).
 const TotalsCard = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 10px;
   padding: 20px 24px;
   display: flex;
@@ -297,7 +297,7 @@ const TotalsRow = styled.div`
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const TotalsGross = styled.div`
@@ -306,16 +306,16 @@ const TotalsGross = styled.div`
   font-size: 16px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   padding-top: 10px;
 `;
 
 const CreditErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   margin-bottom: 16px;
 `;
@@ -323,9 +323,9 @@ const CreditErrorBanner = styled.div`
 const FromQuoteBanner = styled.div`
   padding: 12px 18px;
   background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.lapis[700]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 13px;
   margin-bottom: 20px;
 `;
@@ -337,44 +337,52 @@ const ActionRow = styled.div`
   margin-top: 8px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const SubmitBtn = styled.button`
   padding: 12px 28px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const CancelBtn = styled.button`
+  ${glassControl}
   padding: 12px 20px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const ErrorBanner = styled.div`
   padding: 16px 20px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
   margin-bottom: 24px;
 `;
 
 /**
- * T-201.10 — Type badge for line-type visual hint in the SO form.
- * Mirrors the TypeChip from SalesItemsPage (T-201.8) — same palette.
- * $isStock=true → Stock (blue tint); $isStock=false → Service (amber).
+ * T-201.10 - Type badge for line-type visual hint in the SO form.
+ * $isStock=true -> Stock (lapis tint); $isStock=false -> Service (terra tint).
+ * NOT gold — a per-line-item type chip is exactly the kind of decoration the
+ * gold-discipline rule (spec §3) forbids; gold-b is reserved for the
+ * Harvesting phase and the page's single primary CTA.
  */
 const TypeChip = styled.span<{ $isStock: boolean }>`
   display: inline-block;
@@ -382,21 +390,17 @@ const TypeChip = styled.span<{ $isStock: boolean }>`
   border-radius: 10px;
   font-size: 0.72rem;
   font-weight: 600;
-  background: ${({ $isStock, theme }) =>
-    $isStock
-      ? theme.colors.primary[50]
-      : theme.colors.warningBg};
+  background: ${({ $isStock }) =>
+    $isStock ? 'rgba(107, 138, 224, 0.16)' : 'rgba(232, 147, 95, 0.16)'};
   color: ${({ $isStock, theme }) =>
-    $isStock
-      ? theme.colors.primary[500]
-      : theme.colors.gold[800]};
+    $isStock ? theme.colors.bright.lapis : theme.colors.bright.terra};
 `;
 
 /** T-201.10 — Small subtitle below the page title indicating Service-Only mode. */
 const ServiceOnlySubtitle = styled.p`
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: -20px 0 24px;
 `;
 

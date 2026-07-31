@@ -6,7 +6,8 @@
  */
 
 import { apiClient } from './api';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type {
   Customer,
   CustomerCreate,
@@ -114,21 +115,31 @@ export function formatCustomerAddress(address?: {
 
 /**
  * Get customer status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2
+ * (open/active→inoculated, pending/awaiting→fruitingInit). `lead` and
+ * `inactive` aren't literal §5.2 entries — extrapolated as the earliest
+ * funnel stage (draft-equivalent) and an on-hold/dormant customer
+ * respectively.
  */
-export function getCustomerStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getCustomerStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'active':
-      return c.success; // emerald
+      return 'inoculated';
     case 'inactive':
-      return c.textSecondary;
+      return 'maintenance'; // dormant / on hold, not archived
     case 'lead':
-      return c.primary[500]; // lapis
+      return 'empty'; // earliest funnel stage
     case 'prospect':
-      return c.warning; // gold
+      return 'fruitingInit'; // pending / awaiting conversion
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getCustomerStatusColor(status: string): string {
+  const key = getCustomerStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
@@ -155,6 +166,7 @@ export const crmApi = {
   deleteCustomer,
   formatCustomerAddress,
   getCustomerStatusColor,
+  getCustomerStatusPhaseKey,
   getCustomerTypeLabel,
 };
 

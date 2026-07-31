@@ -7,6 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { Sprout, BarChart3 } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { farmApi, getAvailableFarmingYears, type FarmingYearItem } from '../../services/farmApi';
 import { FarmingYearSelector } from './FarmingYearSelector';
 import type { BlockHarvest, BlockHarvestSummary, QualityGrade } from '../../types/farm';
@@ -38,15 +40,15 @@ const HeaderLeft = styled.div`
 
 const Title = styled.h2`
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const FarmingYearContext = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  font-weight: 500;
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  font-weight: 600;
 `;
 
 const HeaderControls = styled.div`
@@ -62,46 +64,51 @@ const HeaderControls = styled.div`
   }
 `;
 
+// Primary: the one gold-gradient CTA on this view (spec §3). Secondary: glass
+// ghost text (spec §4 "Buttons").
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
-  border: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  border: 1px solid transparent;
 
   ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
-    background: ${theme.colors.primary[500]};
+    background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
     color: ${theme.colors.onAccent};
+    box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
     &:hover:not(:disabled) {
-      background: ${theme.colors.primary[600]};
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
     }
   `
       : `
     background: transparent;
-    color: ${theme.colors.textSecondary};
-    border: 1px solid ${theme.colors.neutral[300]};
+    color: ${theme.colors.celeste};
+    border-color: ${theme.colors.glass.border};
     &:hover:not(:disabled) {
-      background: ${theme.colors.surface};
+      background: rgba(180, 200, 220, 0.07);
+      color: ${theme.colors.textPrimary};
     }
   `}
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
 const SummaryGrid = styled.div`
+  ${glassPanel}
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
 `;
 
 const SummaryCard = styled.div`
@@ -109,23 +116,21 @@ const SummaryCard = styled.div`
 `;
 
 const SummaryLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
 const SummaryValue = styled.div`
   font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 800;
+  color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
@@ -136,9 +141,7 @@ const HarvestsList = styled.div`
 `;
 
 const HarvestCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanel}
   padding: 16px;
   display: flex;
   justify-content: space-between;
@@ -153,67 +156,72 @@ const HarvestInfo = styled.div`
 
 const HarvestDate = styled.div`
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const HarvestMeta = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   display: flex;
   gap: 12px;
 `;
 
+// Quality grade extrapolates the phase vocabulary (spec §5.2) rather than
+// reusing `warning`/gold-b for grade B — gold stays reserved for the literal
+// Harvesting phase (spec §3).
 const QualityBadge = styled.span<{ $grade: QualityGrade }>`
+  ${monoLabel}
   display: inline-block;
   padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: 99px;
+  font-size: 0.68rem;
   background: ${({ $grade, theme }) => {
     switch ($grade) {
       case 'A':
-        return theme.colors.success;
+        return theme.colors.phase.fruiting;
       case 'B':
-        return theme.colors.warning;
+        return theme.colors.phase.fruitingInit;
       case 'C':
-        return theme.colors.terracotta[400];
+        return theme.colors.phase.quarantined;
       default:
-        return theme.colors.textDisabled;
+        return theme.colors.phase.empty;
     }
   }};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-// Modal styles
+// Modal styles — Night Observatory modal recipe (spec §4 "Modals/drawers").
 const Overlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 32px;
   max-width: 500px;
   width: 90%;
@@ -223,7 +231,7 @@ const Modal = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 24px 0;
 `;
@@ -235,19 +243,20 @@ const ButtonGroup = styled.div`
   margin-top: 8px;
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const DeleteButton = styled.button`
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: rgba(240, 138, 112, 0.26);
   }
 
   &:disabled {
@@ -264,32 +273,34 @@ const ConfirmModalContent = styled.div`
 
 const ConfirmText = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   line-height: 1.5;
 `;
 
 const ConfirmHighlight = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: rgba(180, 200, 220, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const DangerButton = styled.button`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border: none;
-  background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.terracotta[600]};
+    background: rgba(240, 138, 112, 0.28);
   }
 
   &:disabled {
@@ -300,16 +311,16 @@ const DangerButton = styled.button`
 
 const VirtualBlockInfoBanner = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[300]};
-  border-radius: 8px;
+  border: 1px solid rgba(107, 138, 224, 0.3);
+  border-radius: 10px;
   padding: 16px;
   margin-bottom: 16px;
 `;
 
 const BannerTitle = styled.div`
   font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.onDark};
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -318,39 +329,39 @@ const BannerTitle = styled.div`
 
 const BannerText = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.onDark};
   line-height: 1.5;
 `;
 
 const ViewHistoryLink = styled.button`
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 8px 16px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   margin-top: 12px;
-  transition: background 150ms ease-in-out;
+  transition: transform 150ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
   }
 `;
 
 const PhysicalBlockBanner = styled.div`
   background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.success}40;
-  border-radius: 8px;
+  border: 1px solid rgba(84, 211, 155, 0.3);
+  border-radius: 10px;
   padding: 16px;
   margin-bottom: 16px;
 `;
 
 const PhysicalBannerTitle = styled.div`
   font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.onDark};
   margin-bottom: 4px;
   display: flex;
   align-items: center;
@@ -475,7 +486,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
       {isVirtualBlock && (
         <VirtualBlockInfoBanner>
           <BannerTitle>
-            <span>&#x1F331;</span> Current Crop Cycle Harvests
+            <Sprout size={16} strokeWidth={1.8} /> Current Crop Cycle Harvests
           </BannerTitle>
           <BannerText>
             This virtual block shows harvests from the current crop cycle only
@@ -494,9 +505,9 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
       {blockCategory === 'physical' && (
         <PhysicalBlockBanner>
           <PhysicalBannerTitle>
-            <span>&#x1F4CA;</span> Complete Harvest History
+            <BarChart3 size={16} strokeWidth={1.8} /> Complete Harvest History
           </PhysicalBannerTitle>
-          <BannerText style={{ color: theme.colors.emerald[700] }}>
+          <BannerText style={{ color: theme.colors.onDark }}>
             This physical block displays all historical harvests across all crop cycles and virtual blocks.
           </BannerText>
         </PhysicalBlockBanner>

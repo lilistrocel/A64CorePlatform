@@ -5,9 +5,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import styled, { useTheme } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
+import { Plus, X } from 'lucide-react';
 import { hrApi, getInsuranceTypeLabel, formatCurrency, formatDate } from '../../services/hrService';
 import type { Insurance, InsuranceCreate, InsuranceUpdate, InsuranceType } from '../../types/hr';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import type { Theme } from '@a64core/shared';
 
 // ============================================================================
@@ -39,18 +41,22 @@ const Title = styled.h3`
 `;
 
 const AddButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -61,9 +67,8 @@ const CardList = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanel}
+  border-radius: 16px;
   padding: 16px;
 `;
 
@@ -86,8 +91,9 @@ const TypeBadge = styled.span<{ $color: string }>`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $color }) => $color}20;
+  background: ${({ $color }) => `${$color}29`};
   color: ${({ $color }) => $color};
+  border: 1px solid ${({ $color }) => `${$color}73`};
   text-transform: capitalize;
 `;
 
@@ -98,49 +104,51 @@ const CardDetails = styled.div`
   margin-bottom: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textSecondary};
+
+  span.figure {
+    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  }
 `;
 
 const Actions = styled.div`
   display: flex;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const dangerVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+  }
+`;
+
+const defaultVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'danger') {
-      return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
-        &:hover {
-          background: ${theme.colors.errorBg};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
-      &:hover {
-        background: ${theme.colors.primary[50]};
-      }
-    `;
-  }}
+  ${({ $variant }) => ($variant === 'danger' ? dangerVariant : defaultVariant)}
 `;
 
 const EmptyText = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Modal = styled.div<{ $isOpen: boolean }>`
@@ -150,21 +158,23 @@ const Modal = styled.div<{ $isOpen: boolean }>`
   left: 0;
   width: 100%;
   height: 100%;
-  background: ${({ theme }) => `${theme.colors.neutral[900]}80`};
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
   justify-content: center;
   align-items: center;
-  z-index: 1100;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
   padding: 32px;
   max-width: 600px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 `;
 
 const ModalHeader = styled.div`
@@ -182,16 +192,18 @@ const ModalTitle = styled.h3`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
   line-height: 1;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -208,32 +220,45 @@ const FormField = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const FormActions = styled.div`
@@ -243,34 +268,33 @@ const FormActions = styled.div`
   margin-top: 16px;
 `;
 
+const primaryVariant = css`
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
+  color: ${({ theme }) => theme.colors.onAccent};
+  font-weight: 700;
+  border: none;
+  &:hover {
+    filter: brightness(1.05);
+  }
+`;
+
+const secondaryVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+  }
+`;
+
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'primary') {
-      return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
-        border: none;
-        &:hover {
-          background: ${theme.colors.primary[600]};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
-      &:hover {
-        background: ${theme.colors.surface};
-      }
-    `;
-  }}
+  ${({ $variant }) => ($variant === 'primary' ? primaryVariant : secondaryVariant)}
 `;
 
 // ============================================================================
@@ -297,21 +321,23 @@ function getDateYearsFromNow(years: number): string {
 // HELPER FUNCTIONS
 // ============================================================================
 
-// Four insurance categories mapped onto the brand's four chromatic voices
-// (spec §3: 4+ distinguishable categories build from lapis/emerald/terracotta/gold)
-// rather than reusing a semantic state color out of context.
+// Four insurance categories mapped onto the brand's categorical `bright.*`
+// voices (spec §3/SHARD notes: gold is hard-limited to the Harvesting phase
+// and must never be a category colour — 'vision' previously used
+// `theme.colors.gold[500]`, moved to `bright.lavender`, the palette's actual
+// purple-family voice).
 function getInsuranceTypeColor(type: string, theme: Theme): string {
   switch (type) {
     case 'health':
-      return theme.colors.emerald[500];
+      return theme.colors.bright.emerald;
     case 'life':
-      return theme.colors.lapis[500];
+      return theme.colors.bright.lapis;
     case 'dental':
-      return theme.colors.terracotta[500];
+      return theme.colors.bright.terra;
     case 'vision':
-      return theme.colors.gold[500];
+      return theme.colors.bright.lavender;
     default:
-      return theme.colors.neutral[500];
+      return theme.colors.muted;
   }
 }
 
@@ -426,7 +452,9 @@ export function InsuranceTab({ employeeId }: InsuranceTabProps) {
     <Container>
       <Header>
         <Title>Insurance</Title>
-        <AddButton onClick={handleAdd}>+ Add Insurance</AddButton>
+        <AddButton onClick={handleAdd}>
+          <Plus size={14} strokeWidth={2} /> Add Insurance
+        </AddButton>
       </Header>
 
       {insurance.length === 0 ? (
@@ -440,11 +468,11 @@ export function InsuranceTab({ employeeId }: InsuranceTabProps) {
                 <TypeBadge $color={getInsuranceTypeColor(ins.type, theme)}>{ins.type}</TypeBadge>
               </CardHeader>
               <CardDetails>
-                <div>Policy: {ins.policyNumber}</div>
-                <div>Start: {formatDate(ins.startDate)}</div>
-                {ins.endDate && <div>End: {formatDate(ins.endDate)}</div>}
-                {ins.coverage && <div>Coverage: {formatCurrency(ins.coverage)}</div>}
-                {ins.monthlyCost && <div>Monthly Cost: {formatCurrency(ins.monthlyCost)}</div>}
+                <div>Policy: <span className="figure">{ins.policyNumber}</span></div>
+                <div>Start: <span className="figure">{formatDate(ins.startDate)}</span></div>
+                {ins.endDate && <div>End: <span className="figure">{formatDate(ins.endDate)}</span></div>}
+                {ins.coverage && <div>Coverage: <span className="figure">{formatCurrency(ins.coverage)}</span></div>}
+                {ins.monthlyCost && <div>Monthly Cost: <span className="figure">{formatCurrency(ins.monthlyCost)}</span></div>}
               </CardDetails>
               <Actions>
                 <ActionButton onClick={() => handleEdit(ins)}>Edit</ActionButton>
@@ -461,7 +489,9 @@ export function InsuranceTab({ employeeId }: InsuranceTabProps) {
         <ModalContent>
           <ModalHeader>
             <ModalTitle>{editingInsurance ? 'Edit Insurance' : 'Add Insurance'}</ModalTitle>
-            <CloseButton onClick={() => setModalOpen(false)}>×</CloseButton>
+            <CloseButton onClick={() => setModalOpen(false)} aria-label="Close">
+              <X size={20} strokeWidth={1.8} />
+            </CloseButton>
           </ModalHeader>
 
           <Form onSubmit={handleSubmit}>

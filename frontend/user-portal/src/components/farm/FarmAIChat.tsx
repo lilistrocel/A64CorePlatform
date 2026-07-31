@@ -20,6 +20,7 @@ import {
   Loader,
   Trash2,
 } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useFarmAIChat } from '../../hooks/farm/useFarmAIChat';
 import type { PendingAction } from '../../types/farmAI';
 
@@ -83,21 +84,25 @@ export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
     sendMessage(action);
   };
 
+  // Risk level is a distinct vocabulary from the room-phase map (spec §5.2
+  // covers document/workflow status, not action risk) — extrapolated onto
+  // bright.* hues rather than reusing `phase.harvesting` gold for medium risk
+  // (spec §3: gold is never a status colour except Harvesting).
   const getRiskIcon = (level: string) => {
     switch (level) {
-      case 'low': return <ShieldCheck size={16} color={theme.colors.success} />;
-      case 'medium': return <Shield size={16} color={theme.colors.warning} />;
-      case 'high': return <ShieldAlert size={16} color={theme.colors.error} />;
-      default: return <Shield size={16} />;
+      case 'low': return <ShieldCheck size={16} color={theme.colors.bright.emerald} />;
+      case 'medium': return <Shield size={16} color={theme.colors.bright.terra} />;
+      case 'high': return <ShieldAlert size={16} color={theme.colors.bright.coral} />;
+      default: return <Shield size={16} color={theme.colors.muted} />;
     }
   };
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'low': return theme.colors.success;
-      case 'medium': return theme.colors.warning;
-      case 'high': return theme.colors.error;
-      default: return theme.colors.textSecondary;
+      case 'low': return theme.colors.bright.emerald;
+      case 'medium': return theme.colors.bright.terra;
+      case 'high': return theme.colors.bright.coral;
+      default: return theme.colors.muted;
     }
   };
 
@@ -290,32 +295,37 @@ const FloatingButton = styled.button`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.emerald};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: ${({ theme }) => `0 4px 12px ${theme.colors.success}66`};
+  box-shadow: 0 4px 12px rgba(84, 211, 155, 0.4);
   transition: all 150ms ease-in-out;
   z-index: 1000;
 
   &:hover {
     transform: scale(1.1);
-    box-shadow: ${({ theme }) => `0 6px 16px ${theme.colors.success}80`};
+    box-shadow: 0 6px 16px rgba(84, 211, 155, 0.5);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
 const ChatPanel = styled.div`
+  ${glassPanel}
   position: fixed;
   bottom: 24px;
   right: 24px;
   width: 420px;
   max-height: 600px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -334,8 +344,8 @@ const ChatHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.successBg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: rgba(84, 211, 155, 0.1);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -347,7 +357,7 @@ const HeaderLeft = styled.div`
 
 const HeaderTitle = styled.div`
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -358,13 +368,12 @@ const HeaderRight = styled.div`
 `;
 
 const GrowthBadge = styled.span`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.success};
-  background: ${({ theme }) => `${theme.colors.success}15`};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.bright.emerald};
+  background: rgba(84, 211, 155, 0.14);
   padding: 2px 8px;
   border-radius: 10px;
-  text-transform: capitalize;
 `;
 
 const IconButton = styled.button`
@@ -375,13 +384,18 @@ const IconButton = styled.button`
   height: 28px;
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 1px;
   }
 `;
 
@@ -407,13 +421,13 @@ const WelcomeMessage = styled.div`
 
 const WelcomeTitle = styled.div`
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const WelcomeText = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   line-height: 1.5;
 `;
 
@@ -427,18 +441,18 @@ const QuickActions = styled.div`
 
 const QuickActionChip = styled.button`
   padding: 6px 14px;
-  background: ${({ theme }) => theme.colors.successBg};
-  color: ${({ theme }) => theme.colors.success};
-  border: 1px solid ${({ theme }) => theme.colors.success}40;
+  background: rgba(84, 211, 155, 0.14);
+  color: ${({ theme }) => theme.colors.bright.emerald};
+  border: 1px solid rgba(84, 211, 155, 0.35);
   border-radius: 16px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-    border-color: ${({ theme }) => theme.colors.success}80;
+    background: rgba(84, 211, 155, 0.24);
+    border-color: rgba(84, 211, 155, 0.5);
   }
 `;
 
@@ -452,8 +466,8 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser, theme }) => ($isUser ? theme.colors.success : theme.colors.surface)};
-  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onAccent : theme.colors.textPrimary)};
+  background: ${({ $isUser, theme }) => ($isUser ? theme.colors.bright.emerald : 'rgba(180, 200, 220, 0.08)')};
+  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onDark : theme.colors.textPrimary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -473,17 +487,16 @@ const ToolBadges = styled.div`
 `;
 
 const ToolBadge = styled.span`
-  font-size: 10px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  ${monoLabel}
+  font-size: 0.56rem;
+  color: ${({ theme }) => theme.colors.muted};
+  background: rgba(180, 200, 220, 0.1);
   padding: 1px 6px;
   border-radius: 4px;
-  text-transform: capitalize;
 `;
 
 const ActionCard = styled.div<{ $riskColor: string }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: rgba(23, 29, 64, 0.5);
   border: 1px solid ${({ $riskColor }) => $riskColor}40;
   border-left: 3px solid ${({ $riskColor }) => $riskColor};
   border-radius: 8px;
@@ -501,21 +514,21 @@ const ActionHeader = styled.div`
 
 const ActionTitle = styled.span`
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   flex: 1;
 `;
 
 const ExpiryBadge = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-family: monospace;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ActionDescription = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   line-height: 1.4;
 `;
 
@@ -527,28 +540,28 @@ const ActionButtons = styled.div`
 const ApproveButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.emerald};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: 6px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.emerald[600]}; }
+  &:hover:not(:disabled) { filter: brightness(1.08); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const DenyButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
   border-radius: 6px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -571,14 +584,14 @@ const Dot = styled.div<{ $delay: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.textDisabled};
+  background: ${({ theme }) => theme.colors.muted};
   animation: ${bounce} 1.2s infinite ease-in-out;
   animation-delay: ${({ $delay }) => $delay};
 `;
 
 const ErrorMessage = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   background: ${({ theme }) => theme.colors.errorBg};
   padding: 8px 12px;
   border-radius: 8px;
@@ -590,7 +603,7 @@ const QuickActionsBar = styled.div`
   gap: 4px;
   padding: 6px 16px;
   overflow-x: auto;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 
   &::-webkit-scrollbar { display: none; }
@@ -598,19 +611,19 @@ const QuickActionsBar = styled.div`
 
 const QuickActionSmall = styled.button`
   padding: 3px 10px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: rgba(180, 200, 220, 0.06);
+  color: ${({ theme }) => theme.colors.muted};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 12px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: rgba(180, 200, 220, 0.12);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
@@ -622,29 +635,26 @@ const InputContainer = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
 const ChatInput = styled.input`
+  ${glassControl}
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[400]};
   border-radius: 20px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.success};
-    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.success}30`};
-    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:disabled { opacity: 0.6; }
 `;
 
@@ -652,8 +662,8 @@ const SendButton = styled.button`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.emerald};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   cursor: pointer;
   display: flex;
@@ -662,6 +672,11 @@ const SendButton = styled.button`
   flex-shrink: 0;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.emerald[600]}; }
+  &:hover:not(:disabled) { filter: brightness(1.08); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
+  }
 `;

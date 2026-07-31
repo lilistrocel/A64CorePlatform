@@ -26,6 +26,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
+import { glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import { crmApi } from '../../services/crmService';
 import type { Customer } from '../../types/crm';
 
@@ -65,32 +66,31 @@ const Wrapper = styled.div`
 `;
 
 const ComboInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
   box-sizing: border-box;
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
     box-shadow: 0 0 0 3px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
+    opacity: 0.7;
   }
 `;
 
@@ -98,15 +98,14 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
    when a customer is locked in. Visually matches an input but is not editable;
    the X button on the right clears the selection. */
 const SelectedChip = styled.div<{ $hasError?: boolean }>`
+  ${glassControl}
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 12px 12px 16px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
@@ -140,11 +139,11 @@ const ClearButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.error};
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.error};
+    outline: 2px solid ${({ theme }) => theme.colors.bright.coral};
     outline-offset: 2px;
   }
 
@@ -166,7 +165,11 @@ interface CustomerDropdownStyle {
   bottom?: number;
 }
 
+/* Dropdown/menu popup — glassOpaque (cosmos-hi, no blur), the "opaque menu
+   popping out of a glass panel" pattern that stays under the spec §2
+   two-glass-layer limit. */
 const Dropdown = styled.ul<{ $style: CustomerDropdownStyle }>`
+  ${glassOpaque}
   position: fixed;
   top: ${({ $style }) =>
     $style.bottom !== undefined ? 'auto' : `${$style.top}px`};
@@ -174,10 +177,7 @@ const Dropdown = styled.ul<{ $style: CustomerDropdownStyle }>`
     $style.bottom !== undefined ? `${$style.bottom}px` : 'auto'};
   left: ${({ $style }) => `${$style.left}px`};
   width: ${({ $style }) => `${$style.width}px`};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   max-height: 280px;
   overflow-y: auto;
   z-index: 9999;
@@ -186,18 +186,19 @@ const Dropdown = styled.ul<{ $style: CustomerDropdownStyle }>`
   padding: 4px 0;
 `;
 
+/* Selected/highlighted item — subtle neutral tint, never gold (spec §3). */
 const DropdownItem = styled.li<{ $highlighted?: boolean }>`
   padding: 10px 16px;
   cursor: pointer;
-  background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+  background: ${({ $highlighted }) =>
+    $highlighted ? 'rgba(180, 200, 220, 0.07)' : 'transparent'};
   display: flex;
   flex-direction: column;
   gap: 2px;
   transition: background 80ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
@@ -209,19 +210,19 @@ const CustomerName = styled.strong`
 
 const CustomerMeta = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const DropdownState = styled.li`
   padding: 14px 16px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const BrokenLinkWarning = styled.div`
@@ -229,9 +230,9 @@ const BrokenLinkWarning = styled.div`
   align-items: flex-start;
   gap: 6px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.bright.gold};
   background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.gold[300]};
+  border: 1px solid rgba(232, 200, 106, 0.45);
   border-radius: 6px;
   padding: 6px 10px;
   margin-top: 2px;
@@ -241,8 +242,8 @@ const Spinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   vertical-align: middle;

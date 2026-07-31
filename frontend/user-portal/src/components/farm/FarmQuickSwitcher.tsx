@@ -7,11 +7,18 @@
  * Accessibility: button trigger, Escape closes, click-outside closes.
  * Renders a "Loading farms…" fallback while data is in flight.
  * Does NOT block the page render if the farm list is unavailable.
+ *
+ * Night Observatory (T-901 GAP-FILL, spec §4): glassControl trigger,
+ * glassOpaque popover menu (menus never stack a second glass layer over the
+ * page's glass panels — spec §2's two-layer rule), emoji replaced with
+ * lucide-react icons.
  */
 
 import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { ChevronDown, MapPin, Wheat } from 'lucide-react';
+import { glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import { useFarms } from '../../hooks/queries/useFarms';
 import type { Farm } from '../../types/farm';
 
@@ -112,13 +119,11 @@ export function FarmQuickSwitcher({ currentFarmId, currentFarmName }: FarmQuickS
         onClick={() => setIsOpen((prev) => !prev)}
         onKeyDown={handleTriggerKeyDown}
       >
-        <TriggerIcon>🌾</TriggerIcon>
+        <TriggerIcon aria-hidden="true"><Wheat size={15} strokeWidth={1.8} /></TriggerIcon>
         <TriggerLabel>{currentFarmName}</TriggerLabel>
-        {isLoading ? (
-          <TriggerChevron aria-hidden="true">…</TriggerChevron>
-        ) : (
-          <TriggerChevron $open={isOpen} aria-hidden="true">▼</TriggerChevron>
-        )}
+        <TriggerChevron $open={isOpen} aria-hidden="true">
+          <ChevronDown size={13} strokeWidth={1.8} />
+        </TriggerChevron>
       </Trigger>
 
       {isOpen && (
@@ -153,7 +158,7 @@ export function FarmQuickSwitcher({ currentFarmId, currentFarmName }: FarmQuickS
                   }
                 }}
               >
-                <OptionIcon>🌾</OptionIcon>
+                <OptionIcon aria-hidden="true"><Wheat size={14} strokeWidth={1.8} /></OptionIcon>
                 <OptionInfo>
                   <OptionName>{currentFarmName}</OptionName>
                   <OptionBadge>Current</OptionBadge>
@@ -177,12 +182,13 @@ export function FarmQuickSwitcher({ currentFarmId, currentFarmName }: FarmQuickS
                     }
                   }}
                 >
-                  <OptionIcon>🌾</OptionIcon>
+                  <OptionIcon aria-hidden="true"><Wheat size={14} strokeWidth={1.8} /></OptionIcon>
                   <OptionInfo>
                     <OptionName>{farm.name}</OptionName>
                     {farm.location?.city && (
                       <OptionLocation>
-                        📍 {farm.location.city}
+                        <MapPin size={11} strokeWidth={1.8} aria-hidden="true" />
+                        {farm.location.city}
                         {farm.location.country ? `, ${farm.location.country}` : ''}
                       </OptionLocation>
                     )}
@@ -209,32 +215,30 @@ const Container = styled.div`
 `;
 
 const Trigger = styled.button`
+  ${glassControl}
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const TriggerIcon = styled.span`
-  font-size: 16px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const TriggerLabel = styled.span`
@@ -245,24 +249,21 @@ const TriggerLabel = styled.span`
 `;
 
 const TriggerChevron = styled.span<{ $open?: boolean }>`
-  font-size: 10px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   transition: transform 150ms ease-in-out;
   transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'rotate(0deg)')};
-  display: inline-block;
 `;
 
 const Popover = styled.div`
+  ${glassOpaque}
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
   min-width: 280px;
   max-width: 360px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 10px;
-  box-shadow: ${({ theme }) => theme.shadows.lg};
-  z-index: 500;
+  border-radius: 12px;
+  z-index: ${({ theme }) => theme.zIndex.dropdown};
   overflow: hidden;
 `;
 
@@ -286,29 +287,30 @@ const Option = styled.li<{ $isSelected: boolean }>`
   cursor: pointer;
   border-left: 3px solid
     ${({ $isSelected, theme }) =>
-      $isSelected ? theme.colors.primary[500] : 'transparent'};
+      $isSelected ? theme.colors.secondary[500] : 'transparent'};
   background: ${({ $isSelected, theme }) =>
-    $isSelected ? theme.colors.primary[50] : 'transparent'};
+    $isSelected ? 'rgba(220, 185, 79, 0.1)' : 'transparent'};
   transition: background 100ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 
   &:focus {
     outline: none;
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: -2px;
   }
 `;
 
 const OptionIcon = styled.span`
-  font-size: 16px;
+  display: flex;
   flex-shrink: 0;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const OptionInfo = styled.div`
@@ -318,7 +320,7 @@ const OptionInfo = styled.div`
 
 const OptionName = styled.div`
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
   overflow: hidden;
   text-overflow: ellipsis;
@@ -326,34 +328,35 @@ const OptionName = styled.div`
 `;
 
 const OptionLocation = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 2px;
 `;
 
+// The gold left-border + tint on the selected row already carries the
+// "current" signal (matches MainLayout's FyItem precedent) — this label
+// stays celeste so it isn't a second gold element for the same fact
+// (spec §3: secondary emphasis is celeste, never gold).
 const OptionBadge = styled.span`
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  letter-spacing: 0.4px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const InactiveBadge = styled.span`
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(126, 134, 166, 0.16);
+  color: ${({ theme }) => theme.colors.muted};
   flex-shrink: 0;
 `;
 
 const Divider = styled.li`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.line};
   margin: 4px 0;
   list-style: none;
 `;
@@ -361,11 +364,11 @@ const Divider = styled.li`
 const LoadingRow = styled.div`
   padding: 16px 14px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const EmptyRow = styled.div`
   padding: 16px 14px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;

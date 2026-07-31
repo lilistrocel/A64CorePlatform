@@ -8,6 +8,8 @@
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 import styled from 'styled-components';
+import { Plus } from 'lucide-react';
+import { glassControl, monoLabel } from '@a64core/shared';
 import { PhysicalBlockCard } from './PhysicalBlockCard';
 import type { Block, DashboardBlock } from '../../types/farm';
 
@@ -31,6 +33,9 @@ export interface PhysicalBlockGridProps {
 // STYLED COMPONENTS
 // ============================================================================
 
+// Layout container only — kept transparent so the sky shows through and each
+// child PhysicalBlockCard carries its own glass (spec §2: layout containers
+// don't glass themselves, cards do).
 const Container = styled.div`
   width: 100%;
 `;
@@ -56,9 +61,11 @@ const Title = styled.h2`
 `;
 
 const BlockCount = styled.span`
-  font-size: 14px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 500;
   margin-top: 4px;
   display: block;
 `;
@@ -92,53 +99,54 @@ const SortControl = styled.div`
 `;
 
 const SortLabel = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const SortSelect = styled.select`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   outline: none;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const SortDirectionButton = styled.button`
+  ${glassControl}
   padding: 8px 10px;
-  background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   color: ${({ theme }) => theme.colors.textSecondary};
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
+// Active state uses celeste (emphasis), not gold — gold is reserved for the
+// nav/CTA/harvesting whitelist in spec §3; a filter pill's selected state is
+// not on that list.
 const FilterButton = styled.button<{ $active: boolean }>`
+  ${glassControl}
   padding: 8px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 8px;
+  background: ${({ $active, theme }) => ($active ? 'rgba(180, 200, 220, 0.12)' : theme.colors.glass.base)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.textSecondary)};
+  border-color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.glass.border)};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? 'rgba(180, 200, 220, 0.16)' : theme.colors.glass.hi)};
   }
 `;
 
@@ -151,24 +159,20 @@ const GridContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-`;
-
-const EmptyIcon = styled.div`
-  font-size: 64px;
-  margin-bottom: 16px;
 `;
 
 const EmptyTitle = styled.h3`
-  font-size: 20px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 22px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
@@ -177,17 +181,18 @@ const CreateButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.success};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.emerald[600]};
+    transform: translateY(-1px);
+    filter: brightness(1.05);
   }
 `;
 
@@ -303,7 +308,7 @@ export function PhysicalBlockGrid({
     <Container>
       <Header>
         <div>
-          <Title>Physical Blocks & Plantings</Title>
+          <Title>Physical Blocks &amp; Plantings</Title>
           <BlockCount>
             {totalPhysicalBlocks} physical blocks · {virtualBlocks.length} total plantings
           </BlockCount>
@@ -315,7 +320,7 @@ export function PhysicalBlockGrid({
         <HeaderRight>
           {onCreateBlock && (
             <CreateButton onClick={onCreateBlock}>
-              <span>+</span>
+              <Plus size={15} strokeWidth={2} />
               <span>Create Block</span>
             </CreateButton>
           )}
@@ -349,8 +354,7 @@ export function PhysicalBlockGrid({
 
       {filteredPhysicalBlocks.length === 0 ? (
         <EmptyState>
-          <EmptyIcon>🏗️</EmptyIcon>
-          <EmptyTitle>No Physical Blocks Found</EmptyTitle>
+          <EmptyTitle>No physical blocks found</EmptyTitle>
           <EmptyDescription>
             {filter === 'all'
               ? 'Create your first physical block to start organizing your farm'

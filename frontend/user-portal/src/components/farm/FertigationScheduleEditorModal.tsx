@@ -14,6 +14,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { X } from 'lucide-react';
+import { glassPanel, glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import { updatePlantDataEnhanced } from '../../services/plantDataEnhancedApi';
 import { showSuccessToast } from '../../stores/toast.store';
 import { useChemicals, useCreateChemical } from '../../hooks/queries/useTools';
@@ -224,8 +226,7 @@ function validateIngredient(ing: FertigationIngredient, path: string, errors: Va
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,10 +234,14 @@ const Overlay = styled.div`
   padding: 16px;
 `;
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers"): glassPanel at
+// blur 24px, 20px radius. Modal still closes only via the X button, never on
+// backdrop click — unchanged behaviour.
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 860px;
   max-height: 92vh;
@@ -245,15 +250,17 @@ const ModalBox = styled.div`
   overflow: hidden;
 `;
 
+// Sticky-feeling header sits inside the glass shell — glass.opaque so it
+// reads cleanly against the modal body's own translucency without stacking a
+// second blurred glass layer.
 const ModalHeader = styled.div`
   padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
   flex-shrink: 0;
-  background: ${({ theme }) => theme.colors.background};
 `;
 
 const ModalHeaderContent = styled.div`
@@ -264,37 +271,40 @@ const ModalHeaderContent = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const ModalSubtitle = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
+// Numeric readout (spec §4 "Space Mono... numeric readouts") — the
+// auto-derived cycle length.
 const CycleLengthDisplay = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-style: italic;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 22px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px 8px;
-  border-radius: 4px;
-  line-height: 1;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
   transition: all 150ms ease-in-out;
   flex-shrink: 0;
 
   &:hover {
     color: ${({ theme }) => theme.colors.textPrimary};
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 
   &:disabled {
@@ -311,13 +321,12 @@ const ModalBody = styled.div`
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  background: ${({ theme }) => theme.colors.background};
 `;
 
 const FooterActions = styled.div`
@@ -337,37 +346,32 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const FieldInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
+  transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1F` : `${theme.colors.primary[500]}1F`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:read-only {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textSecondary};
+    opacity: 0.75;
     cursor: default;
   }
 
@@ -378,46 +382,49 @@ const FieldInput = styled.input<{ $hasError?: boolean }>`
 `;
 
 const FieldSelect = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   width: 100%;
   box-sizing: border-box;
   cursor: pointer;
-  transition: border-color 150ms ease-in-out;
+  transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}1F`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
+  }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const FieldTextArea = styled.textarea<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   resize: vertical;
   min-height: 60px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 150ms ease-in-out;
+  transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}1F`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 `;
 
@@ -436,19 +443,23 @@ const FieldRow = styled.div`
 
 // Buttons ─────────────────────────────────────────────────────────────────────
 
+// Buttons (spec §4): Primary = gold gradient + onAccent (cosmos) text, 700
+// weight — this is the modal's ONE primary CTA (Save Schedule). The inline
+// "Add Chemical" action uses a separate emerald-tinted InlineConfirmButton
+// (see below) so it doesn't compete with Save Schedule for the gold budget.
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
   color: ${({ theme }) => theme.colors.onAccent};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    filter: brightness(1.05);
   }
 
   &:disabled {
@@ -459,17 +470,17 @@ const PrimaryButton = styled.button`
 
 const SecondaryButton = styled.button`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -478,22 +489,26 @@ const SecondaryButton = styled.button`
   }
 `;
 
+// Ghost variant (ubiquitous "+ Add X" repeat actions) — never gold, celeste
+// emphasis per spec §3.
 const AddButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  border: 1px dashed ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px dashed ${({ theme }) => theme.colors.glass.border};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border-color: ${({ theme }) => theme.colors.celeste};
   }
 
   &:disabled {
@@ -502,23 +517,26 @@ const AddButton = styled.button`
   }
 `;
 
+// Destructive variant — coral-tinted glass, never solid red (spec §4).
 const DeleteButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  background: transparent;
+  background: rgba(240, 138, 112, 0.1);
   color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.35);
   white-space: nowrap;
   flex-shrink: 0;
 
   &:hover:not(:disabled) {
     background: ${({ theme }) => theme.colors.errorBg};
+    border-color: ${({ theme }) => theme.colors.error};
   }
 
   &:disabled {
@@ -532,17 +550,18 @@ const MoveButton = styled.button`
   align-items: center;
   justify-content: center;
   padding: 4px 7px;
-  border-radius: 5px;
+  border-radius: 6px;
   font-size: 11px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.muted};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   flex-shrink: 0;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:disabled {
@@ -562,7 +581,30 @@ const TextLinkButton = styled.button`
   text-align: left;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[700]};
+    color: ${({ theme }) => theme.colors.primary[300]};
+  }
+`;
+
+// Emerald-tinted confirm action for the inline "add to catalog" flow —
+// deliberately not gold (see PrimaryButton note above).
+const InlineConfirmButton = styled.button`
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  background: rgba(84, 211, 155, 0.14);
+  color: ${({ theme }) => theme.colors.bright.emerald};
+  border: 1px solid rgba(84, 211, 155, 0.4);
+
+  &:hover:not(:disabled) {
+    background: rgba(84, 211, 155, 0.22);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
 
@@ -576,24 +618,25 @@ const Section = styled.div`
 `;
 
 const SectionLabel = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
+// Nested card/rule/application/ingredient blocks stay one glass layer deep
+// (the modal shell is layer 1) — per spec §2's two-layer limit, they use a
+// plain line border with no blurred fill rather than another glassPanel.
 const CardBlock = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 12px;
 `;
 
 const CardBlockHeader = styled.div`
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -616,20 +659,19 @@ const CardBlockBody = styled.div`
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: ${({ theme }) => theme.colors.background};
 `;
 
 const RuleBlock = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   overflow: hidden;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.03);
 `;
 
 const RuleBlockHeader = styled.div`
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(180, 200, 220, 0.05);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -665,23 +707,27 @@ const IngredientRow = styled.div`
   align-items: flex-start;
   gap: 8px;
   padding: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 6px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(180, 200, 220, 0.03);
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  transition: background 150ms ease-in-out;
+
+  &:hover {
+    background: rgba(180, 200, 220, 0.05);
+  }
 `;
 
 const ApplicationBlock = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 6px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 8px;
   overflow: hidden;
-  background: ${({ theme }) => theme.colors.background};
   margin-bottom: 8px;
 `;
 
 const ApplicationHeader = styled.div`
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(180, 200, 220, 0.05);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -701,11 +747,11 @@ const ApplicationBody = styled.div`
 
 const TypeSwitchWarning = styled.div`
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.gold[50]};
+  background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid ${({ theme }) => theme.colors.warning};
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -732,8 +778,8 @@ const WarnConfirmButton = styled.button`
 const InlineChemForm = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.emerald[300]};
-  border-radius: 8px;
+  border: 1px solid rgba(84, 211, 155, 0.4);
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -742,8 +788,8 @@ const InlineChemForm = styled.div`
 
 const InlineChemFormTitle = styled.div`
   font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.emerald[800]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 // Source field ────────────────────────────────────────────────────────────────
@@ -763,16 +809,15 @@ const TypeaheadWrapper = styled.div`
   min-width: 0;
 `;
 
+// Combobox popup (spec §4/§9): glassOpaque, not another glassPanel.
 const TypeaheadDropdown = styled.ul`
+  ${glassOpaque}
   position: absolute;
   top: calc(100% + 2px);
   left: 0;
   right: 0;
   z-index: 100;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
+  border-radius: 10px;
   max-height: 180px;
   overflow-y: auto;
   margin: 0;
@@ -787,28 +832,26 @@ const TypeaheadItem = styled.li`
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
 const LockedNameRow = styled.div`
+  ${glassControl}
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 32px 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px dashed ${({ theme }) => theme.colors.glass.border};
   border-radius: 10px;
   margin-bottom: 12px;
 `;
@@ -1055,14 +1098,13 @@ function IngredientEditor({ ingredient, path, errors, onChange, onDelete }: Ingr
               </FormGroup>
             </FieldRow>
             <FieldRow>
-              <PrimaryButton
+              <InlineConfirmButton
                 type="button"
                 disabled={createChemical.isPending || !newChemForm.name.trim()}
-                style={{ fontSize: 12, padding: '6px 14px' }}
                 onClick={handleCreateChemical}
               >
                 {createChemical.isPending ? 'Adding...' : 'Add Chemical'}
-              </PrimaryButton>
+              </InlineConfirmButton>
               <SecondaryButton
                 type="button"
                 style={{ fontSize: 12, padding: '6px 14px' }}
@@ -1115,7 +1157,7 @@ function IngredientEditor({ ingredient, path, errors, onChange, onDelete }: Ingr
       {/* Delete */}
       <div style={{ paddingTop: 20 }}>
         <DeleteButton type="button" onClick={onDelete} title="Remove ingredient">
-          ✕
+          <X size={13} strokeWidth={1.8} />
         </DeleteButton>
       </div>
     </IngredientRow>
@@ -1293,7 +1335,7 @@ function RuleEditor({ rule, ruleIndex, cardIndex, errors, onChange, onDelete }: 
             <WarnConfirmButton type="button" onClick={() => applyTypeSwitch(pendingTypeSwitch)}>
               Yes, switch
             </WarnConfirmButton>
-            <TextLinkButton type="button" style={{ color: theme.colors.gold[800], fontSize: 12, textDecoration: 'none' }} onClick={() => setPendingTypeSwitch(null)}>
+            <TextLinkButton type="button" style={{ color: theme.colors.warning, fontSize: 12, textDecoration: 'none' }} onClick={() => setPendingTypeSwitch(null)}>
               Cancel
             </TextLinkButton>
           </TypeSwitchWarning>
@@ -1505,7 +1547,7 @@ function CardEditor({
               style={{
                 fontSize: 11,
                 background: theme.colors.errorBg,
-                color: theme.colors.terracotta[600],
+                color: theme.colors.error,
                 borderRadius: 4,
                 padding: '2px 6px',
                 marginLeft: 8,
@@ -1597,7 +1639,7 @@ function CardEditor({
                 type="checkbox"
                 checked={card.isActive}
                 onChange={(e) => onChange({ ...card, isActive: e.target.checked })}
-                style={{ width: 16, height: 16 }}
+                style={{ width: 16, height: 16, accentColor: theme.colors.secondary[500] }}
               />
               <span style={{ fontSize: 13 }}>{card.isActive ? 'Yes' : 'No'}</span>
             </label>
@@ -1739,7 +1781,7 @@ export function FertigationScheduleEditorModal({
             disabled={saving}
             aria-label="Close editor"
           >
-            ✕
+            <X size={18} strokeWidth={1.8} />
           </CloseButton>
         </ModalHeader>
 

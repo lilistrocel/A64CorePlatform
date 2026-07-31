@@ -6,7 +6,7 @@
  */
 
 import { apiClient } from './api';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
 import type {
   PlantDataEnhanced,
   PlantDataEnhancedCreate,
@@ -259,17 +259,22 @@ export function formatFarmType(farmType: FarmTypeCompatibility): string {
 
 /**
  * Get farm type color
+ *
+ * Night Observatory (T-901): farm type is a CATEGORICAL vocabulary, not a
+ * status — routed onto colors.bright.*, not colors.phase.* and not gold
+ * (spec §3's categorical-map rule; `vertical_farm` and `indoor_farm`
+ * previously (mis)used the raw/semantic gold slots).
  */
 export function getFarmTypeColor(farmType: FarmTypeCompatibility): string {
-  const c = lightTheme.colors;
+  const c = theme.colors;
   const colors: Record<FarmTypeCompatibility, string> = {
-    open_field: c.emerald[500],
-    greenhouse: c.primary[500],
-    hydroponic: c.primary[400],     // was cyan — art-only hue, spec §3
-    vertical_farm: c.secondary[700], // was purple — categorical judgement call, deep gold to stay distinct from indoor_farm's warning gold
-    aquaponic: c.emerald[400],       // was teal — art-only hue, reads as a growth/farm-type metric, spec §3
-    indoor_farm: c.warning,          // gold
-    polytunnel: c.emerald[300],      // was lime — success family, lighter step than open_field
+    open_field: c.bright.emerald,
+    greenhouse: c.bright.lapis,
+    hydroponic: c.bright.verdi,
+    vertical_farm: c.bright.lavender,
+    aquaponic: c.bright.rose,
+    indoor_farm: c.bright.terra,
+    polytunnel: c.bright.laurel,
   };
   return colors[farmType] || c.textSecondary;
 }

@@ -15,7 +15,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { Mountain, MapPin, User, BarChart3, ArrowUp } from 'lucide-react';
+import { glassPanelHover, monoLabel, phaseBadge } from '@a64core/shared';
+import type { Theme, PhaseKey } from '@a64core/shared';
 import type { Farm, FarmSummary } from '../../types/farm';
 import { formatNumber } from '../../utils';
 
@@ -39,10 +41,14 @@ export interface FarmCardProps {
 type YieldColor = string;
 
 function getYieldColor(ratio: number, hasData: boolean, theme: Theme): YieldColor {
-  if (!hasData) return theme.colors.textDisabled;   // grey   — no data
-  if (ratio >= 0.9) return theme.colors.success;     // emerald — >= 90%
-  if (ratio >= 0.7) return theme.colors.warning;     // gold    — 70–89%
-  return theme.colors.error;                          // terracotta — < 70%
+  if (!hasData) return theme.colors.muted;           // grey   — no data
+  if (ratio >= 0.9) return theme.colors.success;      // emerald — >= 90%
+  // Night Observatory (T-901): gold is budget-limited to ~4 elements per
+  // view (spec §3) and reserved for the literal Harvesting phase — this is a
+  // continuous yield metric, not a status, so the mid band uses bright.terra
+  // instead of the old `warning` (gold-b) token to stay off the gold budget.
+  if (ratio >= 0.7) return theme.colors.bright.terra; // terra   — 70–89%
+  return theme.colors.error;                          // coral   — < 70%
 }
 
 // ============================================================================
@@ -60,15 +66,28 @@ interface StatePillDef {
  * Maps the FarmSummary.blocksByState keys to display info.
  * Note: FarmSummary uses "growing" for what the UI calls "Planted".
  * A function (not a module-level constant) because it needs the runtime theme.
+ *
+ * Night Observatory (T-901, spec §5.2): block lifecycle states route through
+ * the single `colors.phase.*` vocabulary rather than the old ad-hoc
+ * success/warning/error/primary tokens. `harvesting` is the one legitimate
+ * use of gold here — this literally IS the harvest phase (spec §5.1's own
+ * reservation for that colour), not a repurposed "pending"/"warning" state.
  */
 function getStatePillDefs(theme: Theme): StatePillDef[] {
   return [
-    { key: 'empty',      label: 'Empty',      color: theme.colors.textSecondary },
-    { key: 'planned',    label: 'Planned',    color: theme.colors.primary[500] },
-    { key: 'growing',    label: 'Planted',    color: theme.colors.success },
-    { key: 'harvesting', label: 'Harvesting', color: theme.colors.warning },
-    { key: 'alert',      label: 'Alert',      color: theme.colors.error },
+    { key: 'empty',      label: 'Empty',      color: theme.colors.phase.empty },
+    { key: 'planned',    label: 'Planned',    color: theme.colors.phase.preparing },
+    { key: 'growing',    label: 'Planted',    color: theme.colors.phase.colonizing },
+    { key: 'harvesting', label: 'Harvesting', color: theme.colors.phase.harvesting },
+    { key: 'alert',      label: 'Alert',      color: theme.colors.phase.quarantined },
   ];
+}
+
+/** Farm-level active/inactive → the same phase vocabulary (spec §5.2:
+ * "open / active / in progress" → inoculated; anything else that isn't a
+ * real workflow status falls to `decommissioned`, the dim/neutral phase). */
+function getFarmStatusPhase(isActive: boolean): PhaseKey {
+  return isActive ? 'inoculated' : 'decommissioned';
 }
 
 // ============================================================================
@@ -76,22 +95,12 @@ function getStatePillDefs(theme: Theme): StatePillDef[] {
 // ============================================================================
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanelHover}
   padding: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-  cursor: pointer;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 16px;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.lg};
-    transform: translateY(-2px);
-  }
 
   @media (max-width: 480px) {
     padding: 16px;
@@ -123,19 +132,17 @@ const IconBadge = styled.div`
   height: 56px;
   min-width: 56px;
   border-radius: 12px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: rgba(107, 138, 224, 0.12);
+  border: 1px solid rgba(107, 138, 224, 0.35);
+  color: ${({ theme }) => theme.colors.bright.lapis};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  line-height: 1;
 
   @media (max-width: 480px) {
     width: 48px;
     height: 48px;
     min-width: 48px;
-    font-size: 24px;
     border-radius: 10px;
   }
 `;
@@ -170,17 +177,15 @@ const FarmTitle = styled.h3`
 `;
 
 const FarmCodeChip = styled.span`
+  ${monoLabel}
   display: inline-flex;
   align-items: center;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 4px;
   padding: 2px 6px;
-  letter-spacing: 0.3px;
   white-space: nowrap;
 `;
 
@@ -195,14 +200,8 @@ const MetaLine = styled.div`
   min-width: 0;
 `;
 
-const StatusBadge = styled.span<{ $isActive: boolean }>`
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $isActive, theme }) => ($isActive ? theme.colors.success : theme.colors.textSecondary)};
-  color: ${({ theme }) => theme.colors.onAccent};
+const StatusBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
   flex-shrink: 0;
   white-space: nowrap;
   align-self: flex-start;
@@ -216,20 +215,22 @@ const MetricGrid = styled.div`
   gap: 12px;
 `;
 
+/* Second glass layer inside the (already glass) Card would turn to mud per
+   spec §2's two-layer nesting rule — a plain \`line\` border with no fill
+   instead of a nested glassPanel/glassControl. */
 const MetricCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   padding: 12px;
   min-width: 0;
 `;
 
 const MetricLabel = styled.span`
+  ${monoLabel}
   display: block;
-  font-size: 11px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.58rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
@@ -303,7 +304,8 @@ const OverflowChip = styled.span<{ $color: string }>`
 const BarTrack = styled.div`
   height: 8px;
   border-radius: 9999px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   overflow: hidden;
 `;
 
@@ -327,7 +329,7 @@ const YieldBottomRow = styled.div`
 
 const NoYieldText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
@@ -338,7 +340,7 @@ const StatePillRow = styled.div`
   flex-wrap: wrap;
   gap: 6px;
   padding-top: 4px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const StatePill = styled.span<{ $color: string; $active: boolean }>`
@@ -351,7 +353,7 @@ const StatePill = styled.span<{ $color: string; $active: boolean }>`
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   background: ${({ $color, $active }) => ($active ? `${$color}18` : 'transparent')};
   color: ${({ $color, $active, theme }) =>
-    $active ? $color : theme.colors.textDisabled};
+    $active ? $color : theme.colors.muted};
   border: 1px solid ${({ $color, $active, theme }) =>
     $active ? `${$color}44` : theme.colors.neutral[200]};
   transition: all 150ms ease-in-out;
@@ -389,26 +391,32 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   justify-content: center;
 
   ${({ $variant, theme }) => {
+    // Night Observatory (T-901, spec §3/§4): a card repeated many times per
+    // grid can't each carry the gold "primary CTA" treatment — that budget
+    // belongs to the page's single Create action (FarmList). "View" instead
+    // gets glass + celeste (emphasis without gold); Edit/Statistics are
+    // plain glass secondary; Delete is coral-tinted glass, never solid red.
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
-        &:hover { background: ${theme.colors.primary[700]}; }
+        background: ${theme.colors.glass.base};
+        color: ${theme.colors.celeste};
+        border: 1px solid rgba(180, 200, 220, 0.35);
+        &:hover { background: ${theme.colors.glass.hi}; }
       `;
     }
     if ($variant === 'danger') {
       return `
-        background: transparent;
+        background: rgba(240, 138, 112, 0.12);
         color: ${theme.colors.error};
         border: 1px solid ${theme.colors.error};
-        &:hover { background: ${theme.colors.errorBg}; }
+        &:hover { background: rgba(240, 138, 112, 0.2); }
       `;
     }
     return `
-      background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
-      &:hover { background: ${theme.colors.infoBg}; }
+      background: ${theme.colors.glass.base};
+      color: ${theme.colors.onDark};
+      border: 1px solid ${theme.colors.glass.border};
+      &:hover { background: ${theme.colors.glass.hi}; }
     `;
   }}
 
@@ -507,7 +515,9 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
       {/* 1. Header row */}
       <CardHeader>
         <HeaderLeft>
-          <IconBadge aria-hidden="true">🏞️</IconBadge>
+          <IconBadge aria-hidden="true">
+            <Mountain size={24} strokeWidth={1.6} />
+          </IconBadge>
           <TitleBlock>
             <TitleRow>
               <FarmTitle>{farm.name}</FarmTitle>
@@ -515,19 +525,19 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
             </TitleRow>
             {locationText && (
               <MetaLine>
-                <span aria-hidden="true">📍</span>
+                <MapPin size={13} strokeWidth={1.6} aria-hidden="true" />
                 <span>{locationText}</span>
               </MetaLine>
             )}
             {managerLine && (
               <MetaLine>
-                <span aria-hidden="true">👤</span>
+                <User size={13} strokeWidth={1.6} aria-hidden="true" />
                 <span>{managerLine}</span>
               </MetaLine>
             )}
           </TitleBlock>
         </HeaderLeft>
-        <StatusBadge $isActive={farm.isActive}>
+        <StatusBadge $phase={getFarmStatusPhase(farm.isActive)}>
           {farm.isActive ? 'Active' : 'Inactive'}
         </StatusBadge>
       </CardHeader>
@@ -569,7 +579,7 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
             )}
             {overflowPercent > 0 && (
               <OverflowChip $color={yieldColor}>
-                ▴ +{overflowPercent}% over
+                <ArrowUp size={10} strokeWidth={2} /> +{overflowPercent}% over
               </OverflowChip>
             )}
           </YieldPercentGroup>
@@ -618,7 +628,7 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
         </ActionButton>
         {onViewStatistics && (
           <ActionButton $variant="secondary" onClick={handleStatistics}>
-            📊 Statistics
+            <BarChart3 size={13} strokeWidth={1.6} /> Statistics
           </ActionButton>
         )}
         {onEdit && (

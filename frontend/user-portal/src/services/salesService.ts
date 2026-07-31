@@ -12,7 +12,8 @@
  */
 
 import { apiClient } from './api';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type {
   SalesDashboardStats,
   FarmingYearItem,
@@ -59,39 +60,54 @@ export async function getAvailableFarmingYears(): Promise<{ years: FarmingYearIt
 
 /**
  * Get order status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2.
+ * `shipped` previously (mis)used the raw gold ramp (`secondary[700]`) — gold
+ * is reserved for the literal Harvesting phase (spec §3); moved to
+ * phase.colonizing ("partially done" — in transit, not yet complete).
+ * `cancelled` moved from a generic error/coral read to phase.decommissioned
+ * — the table separates "cancelled/void/archived" from
+ * "rejected/failed/overdue/expired" (quarantined).
  */
-export function getOrderStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getOrderStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'draft':
-      return c.textSecondary;
+      return 'empty';
     case 'confirmed':
-      return c.primary[500]; // lapis
+      return 'fruitingInit'; // pending / awaiting processing
     case 'processing':
-      return c.warning; // gold
+      return 'inoculated'; // open / active / in progress
     case 'shipped':
-      return c.secondary[700]; // gold, deep step — was purple (spec §3 judgement call)
+      return 'colonizing'; // partially done — in transit
     case 'delivered':
-      return c.success; // emerald
+      return 'fruiting';
     case 'cancelled':
-      return c.error; // terracotta
+      return 'decommissioned';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getOrderStatusColor(status: string): string {
+  const key = getOrderStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
  * Get payment status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* — exact §5.2 table
+ * matches (pending→fruitingInit, partial→colonizing, paid→fruiting).
  */
 export function getPaymentStatusColor(status: string): string {
-  const c = lightTheme.colors;
+  const c = theme.colors;
   switch (status) {
     case 'pending':
-      return c.warning; // gold
+      return c.phase.fruitingInit;
     case 'partial':
-      return c.primary[500]; // lapis
+      return c.phase.colonizing;
     case 'paid':
-      return c.success; // emerald
+      return c.phase.fruiting;
     default:
       return c.textSecondary;
   }
@@ -99,18 +115,22 @@ export function getPaymentStatusColor(status: string): string {
 
 /**
  * Get inventory status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2
+ * (reserved≈"partially done"→colonizing, sold≈"closed/completed"→resting,
+ * expired→quarantined, the exact table entry).
  */
 export function getInventoryStatusColor(status: string): string {
-  const c = lightTheme.colors;
+  const c = theme.colors;
   switch (status) {
     case 'available':
-      return c.success; // emerald
+      return c.phase.inoculated;
     case 'reserved':
-      return c.primary[500]; // lapis
+      return c.phase.colonizing;
     case 'sold':
-      return c.textSecondary;
+      return c.phase.resting;
     case 'expired':
-      return c.error; // terracotta
+      return c.phase.quarantined;
     default:
       return c.textSecondary;
   }
@@ -172,6 +192,7 @@ export const salesApi = {
 
   // Utilities
   getOrderStatusColor,
+  getOrderStatusPhaseKey,
   getPaymentStatusColor,
   getInventoryStatusColor,
   formatCurrency,

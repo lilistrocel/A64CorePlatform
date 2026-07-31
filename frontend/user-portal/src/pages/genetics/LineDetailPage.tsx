@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { GrowingProfilePanel } from '../../components/genetics/GrowingProfilePanel';
+import { KIND_ICON_COMPONENTS } from '../../components/genetics/kindIcons';
 import { LineYieldPanel } from '../../components/genetics/LineYieldPanel';
 import { LineageTree } from '../../components/genetics/LineageTree';
 import { LineFormModal } from '../../components/genetics/LineFormModal';
@@ -46,7 +47,6 @@ import {
 } from '../../hooks/genetics/useGenetics';
 import {
   DERIVATION_LABELS,
-  KIND_ICONS,
   KIND_LABELS,
   METHOD_LABELS,
   PROVENANCE_LABELS,
@@ -61,7 +61,7 @@ const BackLink = styled.button`
   padding: 0;
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   margin-bottom: 8px;
 
@@ -95,7 +95,7 @@ const Columns = styled.div`
 
 const Sci = styled.span`
   font-style: italic;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -111,14 +111,14 @@ const EventRow = styled.div`
   gap: 10px;
   flex-wrap: wrap;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Muted = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 12.5px;
 `;
 
@@ -171,7 +171,11 @@ export function LineDetailPage() {
           {line.description && <PageSubtitle>{line.description}</PageSubtitle>}
           <Meta>
             <KindBadge $kind={line.kind}>
-              {KIND_ICONS[line.kind]} {KIND_LABELS[line.kind]}
+              {(() => {
+                const KindIcon = KIND_ICON_COMPONENTS[line.kind];
+                return <KindIcon size={12} strokeWidth={1.8} />;
+              })()}
+              {KIND_LABELS[line.kind]}
             </KindBadge>
             {line.derivation !== 'original' && (
               <Tag>{DERIVATION_LABELS[line.derivation]}</Tag>

@@ -3,15 +3,18 @@
  *
  * Strain info card displaying common name, scientific name,
  * difficulty badge, yield info, and max flushes.
+ *
+ * Night Observatory (T-901 Phase 3): glass entity card, spec §4. Difficulty
+ * is a categorical (not phase) encoding — built from `colors.bright.*`
+ * rather than the phase map or gold, same rule as the genetics G/F
+ * generation badges in this shard.
  */
 
-import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import styled from 'styled-components';
+import { Sprout, Dna } from 'lucide-react';
+import { glassPanel, glassPanelHover, monoLabel, sheen } from '@a64core/shared';
 import type { MushroomStrain, MushroomDifficulty } from '../../types/mushroom';
-import {
-  DIFFICULTY_LABELS,
-  DIFFICULTY_COLORS,
-} from '../../types/mushroom';
+import { DIFFICULTY_LABELS } from '../../types/mushroom';
 
 interface StrainCardProps {
   strain: MushroomStrain;
@@ -27,16 +30,15 @@ interface StrainCardProps {
   onOpenGeneticLines?: (strain: MushroomStrain) => void;
 }
 
-// Difficulty runs easy → hard, mirrored onto the semantic success → warning →
-// error progression (safe green through to risk red).
-function getDifficultyBg(theme: Theme): Record<MushroomDifficulty, string> {
-  return {
-    beginner: theme.colors.emerald[100],
-    intermediate: theme.colors.primary[100],
-    advanced: theme.colors.warningBg,
-    expert: theme.colors.terracotta[100],
-  };
-}
+// Difficulty is categorical, not a phase — walked easy -> hard across
+// distinct bright.* hues (never gold, spec §3) rather than the out-of-scope
+// types/mushroom.ts DIFFICULTY_COLORS (still keyed off the dead lightTheme).
+const DIFFICULTY_HUE: Record<MushroomDifficulty, string> = {
+  beginner: 'emerald',
+  intermediate: 'lapis',
+  advanced: 'terra',
+  expert: 'coral',
+};
 
 export function StrainCard({
   strain,
@@ -45,8 +47,6 @@ export function StrainCard({
   geneticLineCount,
   onOpenGeneticLines,
 }: StrainCardProps) {
-  const theme = useTheme();
-  const difficultyBg = getDifficultyBg(theme);
   return (
     <CardWrapper
       $selected={selected}
@@ -62,26 +62,22 @@ export function StrainCard({
       }}
       aria-label={`Strain: ${strain.commonName}`}
     >
-      <CardHeader>
-        <MushroomEmoji aria-hidden="true">🍄</MushroomEmoji>
+      <Top>
         <TitleBlock>
           <CommonName>{strain.commonName}</CommonName>
           {strain.scientificName && (
             <ScientificName>{strain.scientificName}</ScientificName>
           )}
         </TitleBlock>
-        <DifficultyBadge
-          $color={DIFFICULTY_COLORS[strain.difficulty]}
-          $bg={difficultyBg[strain.difficulty]}
-        >
+        <DifficultyBadge $hue={DIFFICULTY_HUE[strain.difficulty]}>
           {DIFFICULTY_LABELS[strain.difficulty]}
         </DifficultyBadge>
-      </CardHeader>
+      </Top>
 
-      <SpeciesRow>
-        <SpeciesLabel>Species</SpeciesLabel>
-        <SpeciesValue>{strain.species}</SpeciesValue>
-      </SpeciesRow>
+      <UseLine>
+        <Sprout size={13} strokeWidth={1.6} />
+        {strain.species}
+      </UseLine>
 
       <StatsGrid>
         <StatBox>
@@ -90,7 +86,7 @@ export function StrainCard({
               ? `${(strain.expectedYieldKgPerKgSubstrate * 100).toFixed(0)}%`
               : '—'}
           </StatBoxValue>
-          <StatBoxLabel>Expected Yield (BE%)</StatBoxLabel>
+          <StatBoxLabel>Exp. Yield (BE%)</StatBoxLabel>
         </StatBox>
 
         <StatBox>
@@ -128,7 +124,8 @@ export function StrainCard({
           }}
           title="This strain holds the growing conditions; open the lineages cultivated under it"
         >
-          🧬 {geneticLineCount} genetic line{geneticLineCount !== 1 ? 's' : ''} →
+          <Dna size={13} strokeWidth={1.6} />
+          {geneticLineCount} genetic line{geneticLineCount !== 1 ? 's' : ''} &rarr;
         </GeneticsLink>
       )}
 
@@ -140,25 +137,30 @@ export function StrainCard({
 }
 
 // ============================================================================
-// STYLED COMPONENTS
+// STYLED COMPONENTS — glass entity card, spec §4 / mockup `.card` pattern
 // ============================================================================
 
 const GeneticsLink = styled.button`
   margin-top: 12px;
   width: 100%;
-  padding: 7px 10px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[400]};
-    color: ${({ theme }) => theme.colors.primary[700]};
+    border-color: rgba(180, 200, 220, 0.4);
+    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -168,47 +170,27 @@ interface CardWrapperProps {
 }
 
 const CardWrapper = styled.div<CardWrapperProps>`
-  position: relative;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  border: 2px solid ${({ $selected, theme }) => ($selected ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  padding: 16px;
-  box-shadow: ${({ $selected, theme }) =>
-    $selected ? `0 0 0 3px ${theme.colors.primary[500]}2e` : theme.shadows.sm};
-  transition: all 150ms ease-in-out;
+  ${({ $clickable }) => ($clickable ? glassPanelHover : glassPanel)}
+  ${sheen}
   overflow: hidden;
+  border-radius: 18px;
+  padding: 20px 20px 18px;
+  position: relative;
 
-  ${({ $clickable }) =>
-    $clickable &&
+  ${({ $selected, theme }) =>
+    $selected &&
     `
-    cursor: pointer;
-    &:hover {
-      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-      transform: translateY(-1px);
-    }
-  `}
-
-  ${({ $clickable, theme }) =>
-    $clickable &&
-    `
-    &:focus-visible {
-      outline: 2px solid ${theme.colors.primary[500]};
-      outline-offset: 2px;
-    }
+    border-color: ${theme.colors.celeste};
+    box-shadow: 0 0 0 3px rgba(180, 200, 220, 0.18);
   `}
 `;
 
-const CardHeader = styled.div`
+const Top = styled.div`
   display: flex;
+  justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 10px;
-`;
-
-const MushroomEmoji = styled.span`
-  font-size: 22px;
-  line-height: 1;
-  margin-top: 2px;
+  margin-bottom: 4px;
 `;
 
 const TitleBlock = styled.div`
@@ -217,9 +199,10 @@ const TitleBlock = styled.div`
 `;
 
 const CommonName = styled.h3`
-  font-size: 15px;
-  font-weight: 600;
+  font-weight: 800;
+  font-size: 1.05rem;
   color: ${({ theme }) => theme.colors.textPrimary};
+  letter-spacing: 0.01em;
   margin: 0 0 2px 0;
   white-space: nowrap;
   overflow: hidden;
@@ -227,8 +210,8 @@ const CommonName = styled.h3`
 `;
 
 const ScientificName = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.76rem;
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
   white-space: nowrap;
   overflow: hidden;
@@ -236,39 +219,30 @@ const ScientificName = styled.span`
   display: block;
 `;
 
-interface DifficultyBadgeProps {
-  $color: string;
-  $bg: string;
-}
-
-const DifficultyBadge = styled.span<DifficultyBadgeProps>`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ $color }) => $color};
-  background: ${({ $bg }) => $bg};
-  border-radius: 20px;
-  padding: 3px 9px;
-  white-space: nowrap;
+const DifficultyBadge = styled.span<{ $hue: string }>`
+  ${monoLabel}
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  color: ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]};
+  background: ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]}29;
+  border: 1px solid ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]}73;
 `;
 
-const SpeciesRow = styled.div`
+const UseLine = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 12px;
-`;
+  gap: 7px;
+  font-size: 0.76rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 14px;
 
-const SpeciesLabel = styled.span`
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-`;
-
-const SpeciesValue = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-weight: 500;
+  svg {
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
 `;
 
 const StatsGrid = styled.div`
@@ -278,23 +252,24 @@ const StatsGrid = styled.div`
 `;
 
 const StatBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
   padding: 8px 10px;
 `;
 
 const StatBoxValue = styled.div`
-  font-size: 14px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.86rem;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 2px;
 `;
 
 const StatBoxLabel = styled.div`
-  font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  ${monoLabel}
+  font-size: 0.56rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const InactiveBanner = styled.div`
@@ -302,12 +277,10 @@ const InactiveBanner = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.06);
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 11px;
-  font-weight: 600;
+  background: rgba(10, 14, 36, 0.55);
+  color: ${({ theme }) => theme.colors.muted};
+  ${monoLabel}
+  font-size: 0.62rem;
   text-align: center;
-  padding: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  padding: 5px;
 `;

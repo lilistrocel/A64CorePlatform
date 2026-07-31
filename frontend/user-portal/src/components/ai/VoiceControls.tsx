@@ -107,9 +107,11 @@ const PillButton = styled.button<PillButtonProps>`
   }};
   background: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
     if ($hasError) return theme.colors.errorBg;
-    if ($isDisabled) return theme.colors.surface;
-    return $isActive ? `${$activeColor}15` : theme.colors.neutral[50];
+    if ($isDisabled) return theme.colors.glass.base;
+    return $isActive ? `${$activeColor}15` : theme.colors.glass.base;
   }};
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
     if ($hasError) return theme.colors.error;
     if ($isDisabled) return theme.colors.textDisabled;
@@ -253,12 +255,14 @@ export function VoiceControls({
     }
   };
 
-  // TTS needs to read as visually distinct from the adjacent Mic pill, so it
-  // takes the gold ramp (secondary) per spec §3's purple judgment call —
-  // this is exactly the "distinguishes a category from an adjacent blue
-  // element" case, not decorative purple.
-  const PTT_COLOR = theme.colors.primary[500];
-  const TTS_COLOR = theme.colors.secondary[500];
+  // Night Observatory (T-901): both pills retargeted to `colors.bright.*`
+  // (spec §1.2) rather than the primary/secondary ramps — the pulse-glow
+  // keyframe below is driven by whichever pill is active, so it must never
+  // resolve to gold (secondary === gold-hi is reserved, spec §3). Mic keeps
+  // its lapis identity; TTS takes verdi (teal) so it stays visually distinct
+  // from the adjacent Mic pill without spending any of the gold budget.
+  const PTT_COLOR = theme.colors.bright.lapis;
+  const TTS_COLOR = theme.colors.bright.verdi;
 
   const micLabel = !sttSupported
     ? 'Unavailable'

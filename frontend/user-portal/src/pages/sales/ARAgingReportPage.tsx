@@ -9,7 +9,7 @@
  *   - Filter bar: as-of date, customer name search, currency dropdown
  *   - Grand totals card with 5 bucket stats (current + overdue bands)
  *   - Sortable customer table with drill-down to AR Invoices list
- *   - Overdue buckets (61-90 and 90+) highlighted in amber/red
+ *   - Overdue buckets (61-90 and 90+) highlighted in terra/coral
  *   - CSV export (client-side)
  *   - Empty state
  *
@@ -19,12 +19,19 @@
  *           response_model_by_alias=True on the route
  *   Rule 3: Status literals are lowercase — N/A for this report page
  *   Rule 4: NO Audit History button
+ *
+ * Night Observatory (T-901): the 61-90/90+ severity bands are NOT document
+ * statuses, so they don't route through statusPhase.ts — they extrapolate
+ * the same escalation ladder locally: terra (bright.terra) for "seriously
+ * overdue", coral (bright.coral) for "critical". Gold is intentionally never
+ * used here — aging severity is not on the spec §3 gold allow-list.
  */
 
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
-import { BarChart3, RefreshCw, Download, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Download, AlertTriangle, Inbox } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, PageHeader } from '@a64core/shared';
 import { useArAging } from '../../hooks/queries/useArAging';
 import { useAuthStore } from '../../stores/auth.store';
 import type { ARAgingCustomerRow } from '../../services/salesApi';
@@ -54,36 +61,11 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
+const HeaderActionsRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const TitleRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
-const SubTitle = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 400;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
+  justify-content: flex-end;
   gap: 10px;
-  align-items: center;
+  margin-bottom: 20px;
 `;
 
 const FilterRow = styled.div`
@@ -91,83 +73,84 @@ const FilterRow = styled.div`
   gap: 12px;
   margin-bottom: 24px;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
 `;
 
 const FilterGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 `;
 
 const FilterLabel = styled.label`
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const DateInput = styled.input`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   padding: 9px 12px;
   min-width: 220px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const CurrencySelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
+
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Primary CTA — the one gold budget item on this page (spec §3): gold
+// gradient fill, cosmos (onAccent) text.
 const PrimaryButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.6;
@@ -181,16 +164,16 @@ const GhostButton = styled.button`
   gap: 6px;
   padding: 9px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:disabled {
     opacity: 0.5;
@@ -201,9 +184,7 @@ const GhostButton = styled.button`
 // ─── Grand totals card ────────────────────────────────────────────────────────
 
 const TotalsCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface || theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 20px 24px;
   margin-bottom: 24px;
 `;
@@ -228,10 +209,10 @@ const TotalsMeta = styled.div`
 `;
 
 const MetaBadge = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
+  background: rgba(180, 200, 220, 0.07);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 99px;
   padding: 3px 10px;
 `;
@@ -250,52 +231,56 @@ const TotalsGrid = styled.div`
 `;
 
 // Aging-bucket escalation (current/1-30/31-60 are neutral; the report only
-// flags the two most severe buckets): 61-90 → gold (warning), 90+ → terracotta
-// (danger). Chromatic voices per a20core-rebrand-spec.md — severity beats hue.
+// flags the two most severe buckets): 61-90 -> terra (bright.terra),
+// 90+ -> coral (bright.coral, "critical"). This mirrors the phase-map
+// severity ladder (fruitingInit -> quarantined) without routing through
+// statusPhase.ts, since aging bands are not a document-status vocabulary.
+// Gold is never used for severity — see the spec §3 gold budget.
 const BucketCard = styled.div<{ $warning?: boolean; $danger?: boolean }>`
-  background: ${({ $warning, $danger, theme }) =>
-    $danger
-      ? theme.colors.errorBg
-      : $warning
-      ? theme.colors.gold[50]
-      : theme.colors.neutral[50]};
-  border: 1px solid
-    ${({ $warning, $danger, theme }) =>
-      $danger ? theme.colors.terracotta[200] : $warning ? theme.colors.gold[200] : theme.colors.neutral[200]};
-  border-radius: 10px;
+  ${glassPanel}
   padding: 14px 16px;
+  border-radius: 12px;
+  ${({ $warning, $danger }) =>
+    $danger
+      ? `
+        background: rgba(240, 138, 112, 0.14);
+        border-color: rgba(240, 138, 112, 0.4);
+      `
+      : $warning
+      ? `
+        background: rgba(232, 147, 95, 0.12);
+        border-color: rgba(232, 147, 95, 0.38);
+      `
+      : ''}
 `;
 
 const BucketLabel = styled.div<{ $warning?: boolean; $danger?: boolean }>`
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  ${monoLabel}
   color: ${({ $warning, $danger, theme }) =>
-    $danger ? theme.colors.error : $warning ? theme.colors.gold[600] : theme.colors.textSecondary};
+    $danger ? theme.colors.bright.coral : $warning ? theme.colors.bright.terra : theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
 const BucketAmount = styled.div<{ $warning?: boolean; $danger?: boolean }>`
   font-size: 22px;
   font-weight: 700;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ $warning, $danger, theme }) =>
-    $danger ? theme.colors.error : $warning ? theme.colors.gold[600] : theme.colors.textPrimary};
+    $danger ? theme.colors.bright.coral : $warning ? theme.colors.bright.terra : theme.colors.textPrimary};
   font-variant-numeric: tabular-nums;
 `;
 
 const BucketSubtext = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 2px;
 `;
 
 // ─── Customer table ───────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
-  background: ${({ theme }) => theme.colors.surface || theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
+  padding: 0;
   overflow: hidden;
 `;
 
@@ -304,7 +289,7 @@ const TableHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TableTitle = styled.h3`
@@ -320,22 +305,18 @@ const Table = styled.table`
 `;
 
 const Th = styled.th<{ $sortable?: boolean; $right?: boolean }>`
+  ${monoLabel}
   padding: 10px 14px;
   text-align: ${({ $right }) => ($right ? 'right' : 'left')};
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
   user-select: none;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
 
   &:hover {
     ${({ $sortable, theme }) =>
-      $sortable ? `color: ${theme.colors.primary[600]};` : ''}
+      $sortable ? `color: ${theme.colors.textPrimary};` : ''}
   }
 `;
 
@@ -343,18 +324,27 @@ const Td = styled.td<{ $right?: boolean; $warn?: boolean; $danger?: boolean }>`
   padding: 11px 14px;
   font-size: 13px;
   text-align: ${({ $right }) => ($right ? 'right' : 'left')};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   font-variant-numeric: tabular-nums;
+  font-family: ${({ $right, theme }) => ($right ? theme.typography.fontFamily.mono : 'inherit')};
   color: ${({ $warn, $danger, theme }) =>
-    $danger ? theme.colors.error : $warn ? theme.colors.gold[600] : theme.colors.textPrimary};
+    $danger ? theme.colors.bright.coral : $warn ? theme.colors.bright.terra : theme.colors.textPrimary};
   font-weight: ${({ $warn, $danger }) => ($warn || $danger ? '600' : '400')};
+`;
+
+const CurrencyTag = styled.span`
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 4px;
+  padding: 2px 7px;
 `;
 
 const TrClickable = styled.tr`
   cursor: pointer;
   transition: background 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
   &:last-child td {
     border-bottom: none;
@@ -362,7 +352,7 @@ const TrClickable = styled.tr`
 `;
 
 const TrFooter = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   font-weight: 700;
 `;
 
@@ -376,11 +366,13 @@ const SortIcon = styled.span`
 const StateBox = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const StateIcon = styled.div`
-  font-size: 40px;
+const StateIconWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 16px;
 `;
 
@@ -391,11 +383,11 @@ const StateText = styled.p`
 
 const ErrorBox = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 10px;
   padding: 16px 20px;
   margin-bottom: 20px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   display: flex;
   align-items: center;
   gap: 10px;
@@ -551,25 +543,31 @@ export function ARAgingReportPage() {
   return (
     <Container>
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <Header>
-        <TitleRow>
-          <BarChart3 size={28} strokeWidth={1.8} />
-          <div>
-            <Title>AR Aging Report</Title>
-            <SubTitle>Outstanding receivables by customer and ageing band</SubTitle>
-          </div>
-        </TitleRow>
-        <HeaderActions>
-          <GhostButton onClick={handleExportCsv} disabled={!report || displayedRows.length === 0}>
-            <Download size={15} />
-            Export CSV
-          </GhostButton>
-          <PrimaryButton onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw size={15} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
-            {isFetching ? 'Refreshing…' : 'Refresh'}
-          </PrimaryButton>
-        </HeaderActions>
-      </Header>
+      <PageHeader
+        breadcrumb="SALES · REPORTS"
+        title="AR Aging Report"
+        description="Outstanding receivables by customer and ageing band"
+        stats={
+          gt
+            ? [
+                { value: gt.customerCount, label: 'Customers' },
+                { value: gt.invoiceCount, label: 'Invoices' },
+                { value: fmtAmt(gt.total), label: 'Total Outstanding' },
+              ]
+            : undefined
+        }
+      />
+
+      <HeaderActionsRow>
+        <GhostButton onClick={handleExportCsv} disabled={!report || displayedRows.length === 0}>
+          <Download size={15} />
+          Export CSV
+        </GhostButton>
+        <PrimaryButton onClick={() => refetch()} disabled={isFetching}>
+          <RefreshCw size={15} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
+          {isFetching ? 'Refreshing…' : 'Refresh'}
+        </PrimaryButton>
+      </HeaderActionsRow>
 
       {/* ── Filter bar ────────────────────────────────────────────────────── */}
       <FilterRow>
@@ -635,7 +633,7 @@ export function ARAgingReportPage() {
           </TotalsCardHeader>
 
           {isLoading ? (
-            <div style={{ color: theme.colors.textSecondary, fontSize: 14, padding: '8px 0' }}>Loading…</div>
+            <div style={{ color: theme.colors.muted, fontSize: 14, padding: '8px 0' }}>Loading…</div>
           ) : (
             <TotalsGrid>
               <BucketCard>
@@ -682,7 +680,9 @@ export function ARAgingReportPage() {
           </StateBox>
         ) : displayedRows.length === 0 ? (
           <StateBox>
-            <StateIcon>📭</StateIcon>
+            <StateIconWrap>
+              <Inbox size={40} strokeWidth={1.6} />
+            </StateIconWrap>
             <StateText>No outstanding AR invoices for the selected filters.</StateText>
           </StateBox>
         ) : (
@@ -730,15 +730,7 @@ export function ARAgingReportPage() {
                       <span style={{ fontWeight: 600 }}>{row.customerName}</span>
                     </Td>
                     <Td>
-                      <span style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: theme.colors.neutral[100],
-                        borderRadius: 4,
-                        padding: '2px 7px',
-                      }}>
-                        {row.currency}
-                      </span>
+                      <CurrencyTag>{row.currency}</CurrencyTag>
                     </Td>
                     <Td $right>{fmtAmt(row.current)}</Td>
                     <Td $right>{fmtAmt(row.days1To30)}</Td>

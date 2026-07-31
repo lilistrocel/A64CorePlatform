@@ -38,6 +38,7 @@ import {
   ChevronRight,
   Database,
 } from 'lucide-react';
+import { glassPanel, glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import {
   connectSenseHub,
   disconnectSenseHub,
@@ -558,29 +559,25 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                   onChange={(e) => setConnectionForm({ ...connectionForm, password: e.target.value })}
                 />
               </FormGroup>
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
-                  MCP API Key (optional — for AI chat integration)
-                </label>
-                <input
-                  type="password"
-                  placeholder="Leave blank if not using MCP"
-                  value={connectionForm.mcpApiKey}
-                  onChange={e => setConnectionForm(prev => ({ ...prev, mcpApiKey: e.target.value }))}
-                  style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'white', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ marginTop: '8px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
-                  MCP Port (default: 3001)
-                </label>
-                <input
+              <McpFieldsDivider>
+                <FormGroup>
+                  <McpLabel>MCP API Key (optional — for AI chat integration)</McpLabel>
+                  <Input
+                    type="password"
+                    placeholder="Leave blank if not using MCP"
+                    value={connectionForm.mcpApiKey}
+                    onChange={e => setConnectionForm(prev => ({ ...prev, mcpApiKey: e.target.value }))}
+                  />
+                </FormGroup>
+              </McpFieldsDivider>
+              <FormGroup>
+                <McpLabel>MCP Port (default: 3001)</McpLabel>
+                <Input
                   type="number"
                   value={connectionForm.mcpPort}
                   onChange={e => setConnectionForm(prev => ({ ...prev, mcpPort: parseInt(e.target.value) || 3001 }))}
-                  style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'white', fontSize: '14px', boxSizing: 'border-box' }}
                 />
-              </div>
+              </FormGroup>
               <ButtonRow>
                 <ConnectButton onClick={handleConnect} disabled={connecting || !connectionForm.address || !connectionForm.email}>
                   {connecting ? 'Connecting...' : 'Connect'}
@@ -1316,26 +1313,28 @@ const EmptyText = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
+// This view's one gold-gradient CTA when shown (spec §3) — mutually
+// exclusive with the connected ConfigCard state.
 const ConfigButton = styled.button`
   padding: 8px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;
 
 const ConnectionForm = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanel}
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -1345,7 +1344,7 @@ const ConnectionForm = styled.div`
 
 const FormTitle = styled.h4`
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -1357,28 +1356,44 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
+`;
+
+// MCP fields are a sub-form nested inside the already-glass ConnectionForm —
+// per the two-glass-layer rule (spec §2) they use a plain line divider, not
+// another glass surface, and this folds the previous ad-hoc
+// rgba(255,255,255,*) dark-glass hack into the shared glassControl recipe.
+const McpFieldsDivider = styled.div`
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const McpLabel = styled.label`
+  ${monoLabel}
+  display: block;
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
+  margin-bottom: 4px;
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 8px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 16px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -1387,19 +1402,24 @@ const ButtonRow = styled.div`
   gap: 8px;
 `;
 
+// Connecting IS the primary action of this form — this view's one gold
+// budget item (spec §3), matching ConfigButton above (mutually exclusive
+// render paths, never shown together).
 const ConnectButton = styled.button`
   padding: 8px 24px;
-  background: ${({ theme }) => theme.colors.success};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover:not(:disabled) {
-    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 
   &:disabled {
@@ -1409,10 +1429,8 @@ const ConnectButton = styled.button`
 `;
 
 const ConfigCard = styled.div`
+  ${glassPanel}
   padding: 16px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1517,7 +1535,7 @@ const ErrorBanner = styled.div`
   gap: 16px;
   padding: 16px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4);
   border-radius: 8px;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
@@ -1527,26 +1545,27 @@ const ErrorText = styled.div`
   font-size: 14px;
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const RetryButton = styled.button`
   padding: 4px 8px;
-  background: ${({ theme }) => theme.colors.terracotta[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
   border-radius: 4px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[700]};
+    background: rgba(240, 138, 112, 0.28);
   }
 `;
 
 const SubTabBar = styled.div`
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   padding-bottom: 4px;
 `;
 
@@ -1555,24 +1574,24 @@ const SubTab = styled.button<{ $active: boolean }>`
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[50] : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  background: transparent;
+  color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.muted)};
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : 'transparent')};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : theme.colors.textPrimary)};
   }
 `;
 
 const AlertBadge = styled.span`
-  background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.coral};
+  color: ${({ theme }) => theme.colors.onDark};
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 11px;
@@ -1629,16 +1648,17 @@ const AlertsList = styled.div`
   gap: 8px;
 `;
 
+// "warning" extrapolates to terra, not gold-b — gold stays reserved for the
+// literal Harvesting phase (spec §3).
 const AlertCard = styled.div<{ $severity: 'critical' | 'warning' | 'info' }>`
-  background: ${({ theme }) => theme.colors.background};
+  ${glassPanel}
   border-left: 4px solid ${({ $severity, theme }) => {
     switch ($severity) {
-      case 'critical': return theme.colors.error;
-      case 'warning': return theme.colors.warning;
-      case 'info': return theme.colors.info;
+      case 'critical': return theme.colors.bright.coral;
+      case 'warning': return theme.colors.bright.terra;
+      case 'info': return theme.colors.bright.lapis;
     }
   }};
-  border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1669,18 +1689,18 @@ const AcknowledgeButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: rgba(107, 138, 224, 0.18);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.4);
   border-radius: 4px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   align-self: flex-start;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: rgba(107, 138, 224, 0.3);
   }
 
   &:disabled {
@@ -1828,8 +1848,8 @@ const RelayLabel = styled.div`
 
 const ToggleRelayButton = styled.button<{ $isOn: boolean }>`
   padding: 4px 12px;
-  background: ${({ $isOn, theme }) => ($isOn ? theme.colors.success : theme.colors.neutral[300])};
-  color: ${({ $isOn, theme }) => ($isOn ? theme.colors.onAccent : theme.colors.textPrimary)};
+  background: ${({ $isOn, theme }) => ($isOn ? theme.colors.bright.emerald : 'rgba(180, 200, 220, 0.1)')};
+  color: ${({ $isOn, theme }) => ($isOn ? theme.colors.onDark : theme.colors.textPrimary)};
   border: none;
   border-radius: 4px;
   font-size: 12px;
@@ -1855,9 +1875,7 @@ const AutomationsList = styled.div`
 `;
 
 const AutomationCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassPanel}
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1948,18 +1966,16 @@ const LabFilterGroup = styled.div`
 `;
 
 const LabSelect = styled.select`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   min-width: 140px;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -1968,17 +1984,17 @@ const LabApplyButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: rgba(107, 138, 224, 0.18);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.4);
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: rgba(107, 138, 224, 0.3);
   }
 `;
 

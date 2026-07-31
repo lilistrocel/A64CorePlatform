@@ -17,7 +17,7 @@ import {
   CartesianGrid,
   Cell,
 } from 'recharts';
-import type { Theme } from '@a64core/shared';
+import { glassPanel, type Theme } from '@a64core/shared';
 import type { ArAgingResponse } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -28,12 +28,19 @@ function formatAed(value: number): string {
   return `${value.toLocaleString()}`;
 }
 
-// Green → Gold → Orange → Red severity ramp for aging buckets
+// Aging severity ramp (same convention as the APAgingPage bucket cards in
+// the sibling shard): healthy emerald -> warning gold -> escalating terra ->
+// severe coral (`quarantined`, the only red). Uses the generic `warning`
+// semantic token for the early-overdue step, NOT `phase.harvesting` — same
+// hex, different meaning; harvesting stays reserved for the literal harvest
+// phase per spec §5.2. Four distinct steps, not a categorical series, so
+// this intentionally sits outside the celeste/gold/emerald/lapis/terra/
+// lavender chart-series order.
 const bucketColors = (theme: Theme) => [
-  theme.colors.success,
-  theme.colors.warning,
-  theme.colors.terracotta[400],
-  theme.colors.error,
+  theme.colors.phase.fruiting,    // Current — healthy
+  theme.colors.warning,           // 30-60d — early overdue
+  theme.colors.bright.terra,      // 60-90d — escalating
+  theme.colors.phase.quarantined, // 90+d — severe
 ];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
@@ -44,11 +51,8 @@ const shimmer = keyframes`
 `;
 
 const Section = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
 `;
 
@@ -69,9 +73,9 @@ const SkeletonBar = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.md};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.glass.base} 25%,
+    ${({ theme }) => theme.colors.glass.hi} 50%,
+    ${({ theme }) => theme.colors.glass.base} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -82,6 +86,9 @@ const TableWrapper = styled.div`
   overflow-x: auto;
 `;
 
+// Dense table, spec §4: transparent rows/header, Space Mono uppercase
+// celeste column headers, `line` row dividers, hover rgba(180,200,220,.05).
+// Already sits inside the Section glass panel — no per-row glass.
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -92,13 +99,14 @@ const Table = styled.table`
 const Th = styled.th`
   text-align: left;
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: transparent;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 
   &[data-right] {
@@ -113,22 +121,23 @@ interface TdProps {
 
 const Td = styled.td<TdProps>`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   text-align: ${({ $right }) => ($right ? 'right' : 'left')};
   color: ${({ theme, $danger }) => ($danger ? theme.colors.error : theme.colors.textPrimary)};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 `;
 
 const TotalsRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
 `;
 
 const EmptyState = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
@@ -143,10 +152,11 @@ const ErrorState = styled.div`
   text-align: center;
 `;
 
+// `primary[500]` is a lapis-b fill — needs `onDark` (cream), not `onAccent`.
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -191,16 +201,16 @@ export function PnlArAging({ data, isLoading, isError, onRetry }: PnlArAgingProp
                 data={data.buckets}
                 margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.colors.border} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.colors.line} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 12, fill: theme.colors.textSecondary }}
+                  tick={{ fontSize: 12, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.muted }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
                   tickFormatter={formatAed}
-                  tick={{ fontSize: 11, fill: theme.colors.textSecondary }}
+                  tick={{ fontSize: 11, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.muted }}
                   tickLine={false}
                   axisLine={false}
                   width={60}
@@ -210,9 +220,9 @@ export function PnlArAging({ data, isLoading, isError, onRetry }: PnlArAgingProp
                   labelStyle={{ fontWeight: 600, fontSize: '13px', color: theme.colors.textPrimary }}
                   contentStyle={{
                     borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
+                    border: `1px solid ${theme.colors.glass.border}`,
                     fontSize: '13px',
-                    background: theme.colors.background,
+                    background: theme.colors.cosmosHi,
                   }}
                 />
                 <Bar dataKey="amount" radius={[4, 4, 0, 0]}>

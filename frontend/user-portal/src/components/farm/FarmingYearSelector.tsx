@@ -16,7 +16,22 @@
  */
 
 import styled, { keyframes } from 'styled-components';
+import { Calendar, ChevronDown, Check, ArrowRight } from 'lucide-react';
+import { glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type { FarmingYearItem } from '../../services/farmApi';
+
+// Night Observatory (T-901, spec §5.2): the "current farming year" indicator
+// is a status vocabulary like any other — route it through the single
+// colors.phase.* map instead of ad-hoc lapis/gold. Current == the active
+// cycle ("open/active/in progress" -> inoculated); Next == not yet started
+// ("pending/awaiting" -> fruitingInit); anything else selected is a past,
+// completed year ("closed/settled" -> resting).
+function getFarmingYearPhase(isCurrent?: boolean, isNext?: boolean): PhaseKey {
+  if (isCurrent) return 'inoculated';
+  if (isNext) return 'fruitingInit';
+  return 'resting';
+}
 
 interface FarmingYearSelectorProps {
   /** Currently selected year (null means "All Years" if showAllOption is true) */
@@ -78,7 +93,7 @@ export function FarmingYearSelector({
       <Container className={className} $compact={compact}>
         {!compact && label && <Label>{label}</Label>}
         <SelectWrapper>
-          <CalendarIcon>📅</CalendarIcon>
+          <CalendarIcon aria-hidden="true"><Calendar size={13} strokeWidth={1.6} /></CalendarIcon>
           <LoadingSelect disabled $compact={compact}>
             <option>Loading...</option>
           </LoadingSelect>
@@ -93,7 +108,7 @@ export function FarmingYearSelector({
       <Container className={className} $compact={compact}>
         {!compact && label && <Label>{label}</Label>}
         <SelectWrapper>
-          <CalendarIcon $disabled>📅</CalendarIcon>
+          <CalendarIcon $disabled aria-hidden="true"><Calendar size={13} strokeWidth={1.6} /></CalendarIcon>
           <EmptySelect disabled $compact={compact}>
             <option>No years available</option>
           </EmptySelect>
@@ -106,7 +121,7 @@ export function FarmingYearSelector({
     <Container className={className} $compact={compact}>
       {!compact && label && <Label htmlFor="farming-year-select">{label}</Label>}
       <SelectWrapper>
-        <CalendarIcon $disabled={disabled}>📅</CalendarIcon>
+        <CalendarIcon $disabled={disabled} aria-hidden="true"><Calendar size={13} strokeWidth={1.6} /></CalendarIcon>
         <Select
           id="farming-year-select"
           value={selectedYear === null ? 'all' : selectedYear.toString()}
@@ -115,26 +130,26 @@ export function FarmingYearSelector({
           aria-label={label}
           $compact={compact}
         >
-          {showAllOption && <option value="all">📆 All Years</option>}
+          {/* Native <option> text can't host an SVG icon — the emoji/glyph
+              decorations are dropped here rather than swapped 1:1 (spec §6). */}
+          {showAllOption && <option value="all">All Years</option>}
           {availableYears.map((yearItem) => (
             <option key={yearItem.year} value={yearItem.year.toString()}>
               {yearItem.display}
-              {yearItem.isCurrent ? ' ✓ Current' : ''}
-              {yearItem.isNext ? ' → Next' : ''}
+              {yearItem.isCurrent ? ' (Current)' : ''}
+              {yearItem.isNext ? ' (Next)' : ''}
             </option>
           ))}
         </Select>
-        <DropdownArrow $disabled={disabled}>▼</DropdownArrow>
+        <DropdownArrow $disabled={disabled} aria-hidden="true">
+          <ChevronDown size={13} strokeWidth={1.8} />
+        </DropdownArrow>
       </SelectWrapper>
       {!compact && selectedYear !== null && (
         <SelectedInfo>
-          <YearBadge
-            $isCurrent={currentYearItem?.isCurrent}
-            $isNext={currentYearItem?.isNext}
-            $hasData={currentYearItem?.hasHarvests || currentYearItem?.hasBlocks}
-          >
-            {currentYearItem?.isCurrent && <BadgeIcon>✓</BadgeIcon>}
-            {currentYearItem?.isNext && <BadgeIcon>→</BadgeIcon>}
+          <YearBadge $phase={getFarmingYearPhase(currentYearItem?.isCurrent, currentYearItem?.isNext)}>
+            {currentYearItem?.isCurrent && <BadgeIcon><Check size={11} strokeWidth={2} /></BadgeIcon>}
+            {currentYearItem?.isNext && <BadgeIcon><ArrowRight size={11} strokeWidth={2} /></BadgeIcon>}
             {getSelectedDisplay()}
             {(currentYearItem?.hasHarvests || currentYearItem?.hasBlocks) && (
               <DataIndicator title="Has farm data" />
@@ -170,12 +185,10 @@ const Container = styled.div<{ $compact?: boolean }>`
 `;
 
 const Label = styled.label`
+  ${monoLabel}
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const SelectWrapper = styled.div`
@@ -187,7 +200,8 @@ const SelectWrapper = styled.div`
 const CalendarIcon = styled.span<{ $disabled?: boolean }>`
   position: absolute;
   left: 12px;
-  font-size: 16px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
   pointer-events: none;
   z-index: 1;
   opacity: ${(props) => (props.$disabled ? '0.5' : '1')};
@@ -197,39 +211,36 @@ const CalendarIcon = styled.span<{ $disabled?: boolean }>`
 const DropdownArrow = styled.span<{ $disabled?: boolean }>`
   position: absolute;
   right: 12px;
-  font-size: 10px;
-  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : theme.colors.textSecondary)};
+  display: flex;
+  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.muted : theme.colors.celeste)};
   pointer-events: none;
   transition: color 150ms ease-in-out, transform 150ms ease-in-out;
 `;
 
 const Select = styled.select<{ $compact?: boolean }>`
+  ${glassControl}
   width: 100%;
   font-size: 14px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   cursor: pointer;
   appearance: none;
   transition: all 150ms ease-in-out;
   padding: ${(props) => (props.$compact ? '8px 32px 8px 36px' : '12px 32px 12px 40px')};
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background-color: ${({ theme }) => theme.colors.infoBg};
+    border-color: rgba(180, 200, 220, 0.35);
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}26`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background-color: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
     cursor: not-allowed;
   }
 
@@ -241,13 +252,11 @@ const Select = styled.select<{ $compact?: boolean }>`
 `;
 
 const LoadingSelect = styled.select<{ $compact?: boolean }>`
+  ${glassControl}
   width: 100%;
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   appearance: none;
   transition: all 150ms ease-in-out;
@@ -257,8 +266,8 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}26`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   @media (max-width: 768px) {
@@ -268,8 +277,8 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 
 const EmptySelect = styled(Select)`
   color: ${({ theme }) => theme.colors.error};
-  border-color: ${({ theme }) => theme.colors.terracotta[200]};
-  background-color: ${({ theme }) => theme.colors.errorBg};
+  border-color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.errorBg};
 `;
 
 const LoadingSpinner = styled.div`
@@ -277,8 +286,8 @@ const LoadingSpinner = styled.div`
   right: 12px;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.celeste};
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
 `;
@@ -295,58 +304,21 @@ const SelectedInfo = styled.div`
   }
 `;
 
-const YearBadge = styled.span<{
-  $isCurrent?: boolean;
-  $isNext?: boolean;
-  $hasData?: boolean;
-}>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 6px;
-  transition: all 150ms ease-in-out;
-
-  /* Current year styling - primary lapis; next year - secondary gold */
-  background: ${({ $isCurrent, $isNext, theme }) =>
-    $isCurrent
-      ? theme.colors.primary[50]
-      : $isNext
-        ? theme.colors.gold[100]
-        : theme.colors.surface};
-  color: ${({ $isCurrent, $isNext, theme }) =>
-    $isCurrent
-      ? theme.colors.primary[600]
-      : $isNext
-        ? theme.colors.gold[600]
-        : theme.colors.textSecondary};
-  border: 1px solid ${({ $isCurrent, $isNext, theme }) =>
-    $isCurrent
-      ? theme.colors.primary[100]
-      : $isNext
-        ? theme.colors.gold[200]
-        : theme.colors.neutral[300]};
-
-  &:hover {
-    background: ${({ $isCurrent, $isNext, theme }) =>
-      $isCurrent
-        ? theme.colors.primary[100]
-        : $isNext
-          ? theme.colors.gold[200]
-          : theme.colors.neutral[200]};
-  }
+// Night Observatory (T-901, spec §5.2): current/next/past year all route
+// through the single colors.phase.* vocabulary via phaseBadge() instead of
+// hand-picked lapis/gold ramps — see getFarmingYearPhase() above.
+const YearBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
+  gap: 5px;
 
   @media (max-width: 768px) {
     padding: 3px 8px;
-    font-size: 10px;
+    font-size: 0.58rem;
   }
 `;
 
 const BadgeIcon = styled.span`
-  font-size: 10px;
-  font-weight: 700;
+  display: inline-flex;
 `;
 
 const DataIndicator = styled.span`

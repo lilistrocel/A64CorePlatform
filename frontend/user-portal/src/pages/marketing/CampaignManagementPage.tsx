@@ -6,10 +6,12 @@
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { Plus } from 'lucide-react';
 import { marketingApi } from '../../services/marketingService';
 import { CampaignTable } from '../../components/marketing/CampaignTable';
 import { CampaignForm } from '../../components/marketing/CampaignForm';
 import type { MarketingCampaign, CampaignStatus } from '../../types/marketing';
+import { PageHeader, glassControl } from '@a64core/shared';
 
 const Container = styled.div`
   padding: 32px;
@@ -17,18 +19,10 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
+const HeaderActions = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
   margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
 `;
 
 const FilterRow = styled.div`
@@ -39,53 +33,59 @@ const FilterRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const Button = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    filter: brightness(1.05);
   }
 `;
 
@@ -95,15 +95,15 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
@@ -180,10 +180,14 @@ export function CampaignManagementPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Campaign Management</Title>
-        <Button onClick={handleCreate}>Create Campaign</Button>
-      </Header>
+      <PageHeader breadcrumb="Marketing · LIVE" title="Campaign Management" emphasizeLastWord />
+
+      <HeaderActions>
+        <Button onClick={handleCreate}>
+          <Plus size={15} strokeWidth={2} />
+          Create Campaign
+        </Button>
+      </HeaderActions>
 
       {error && <ErrorContainer>{error}</ErrorContainer>}
 

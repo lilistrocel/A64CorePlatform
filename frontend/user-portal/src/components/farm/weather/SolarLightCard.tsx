@@ -6,6 +6,9 @@
  */
 
 import styled from 'styled-components';
+import type { DefaultTheme } from 'styled-components';
+import { Sun, Sunrise, Sunset, Sprout } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import type { SolarData } from '../../../types/farm';
 import { formatNumber } from '../../../utils';
 
@@ -26,10 +29,8 @@ const PAR_FRACTION = 0.45; // Fraction of solar radiation in PAR range
 const PHOTON_CONVERSION = 4.57; // µmol photons per Joule
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Title = styled.h3`
@@ -40,6 +41,11 @@ const Title = styled.h3`
   display: flex;
   align-items: center;
   gap: 8px;
+
+  svg {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.celeste};
+  }
 `;
 
 const SectionsGrid = styled.div`
@@ -54,21 +60,23 @@ const SectionsGrid = styled.div`
 
 const Section = styled.div`
   h4 {
-    font-size: 13px;
-    font-weight: 600;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    ${monoLabel}
+    font-size: 0.68rem;
+    color: ${({ theme }) => theme.colors.muted};
     margin: 0 0 12px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
   }
 `;
 
+// Inner row cells — Card is already a glassPanel (layer 1); per the T-901
+// two-glass-layer rule these drop to a plain `line` border with no fill
+// rather than a second translucent glass surface (was theme.colors.surface).
 const MetricItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -77,13 +85,14 @@ const MetricItem = styled.div`
   }
 
   .label {
-    font-size: 13px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    ${monoLabel}
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   .value {
-    font-size: 14px;
-    font-weight: 600;
+    ${monoLabel}
+    font-size: 0.78rem;
+    font-weight: 700;
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
@@ -94,75 +103,95 @@ const SunTimesRow = styled.div`
   margin-bottom: 16px;
 `;
 
+// Sunrise/sunset chips — glassControl per spec §1 ("small pills"). Warm
+// terracotta icon tint instead of the old gold gradient: gold is reserved
+// for the harvest phase / primary CTA / focus ring, not decorative chrome.
 const SunTimeBox = styled.div`
+  ${glassControl}
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 12px;
-  background: ${({ theme }) => `linear-gradient(135deg, ${theme.colors.gold[50]} 0%, ${theme.colors.gold[100]} 100%)`};
-  border-radius: 8px;
 
   .icon {
-    font-size: 24px;
+    display: flex;
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.bright.terra};
   }
 
   .text {
     .label {
-      font-size: 11px;
-      color: ${({ theme }) => theme.colors.gold[800]};
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      ${monoLabel}
+      color: ${({ theme }) => theme.colors.muted};
     }
 
     .time {
-      font-size: 16px;
-      font-weight: 600;
-      color: ${({ theme }) => theme.colors.terracotta[600]};
+      ${monoLabel}
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: ${({ theme }) => theme.colors.textPrimary};
     }
   }
 `;
 
-const UVIndicator = styled.div<{ $level: 'low' | 'moderate' | 'high' | 'very_high' | 'extreme' }>`
+type UVLevel = 'low' | 'moderate' | 'high' | 'very_high' | 'extreme';
+
+// UV severity ramp — DATA ENCODING, not decoration. Ordering preserved
+// low -> extreme as a monotonic warm progression: emerald (safe) -> laurel
+// (caution) -> terra (elevated) -> coral (alert). Gold is deliberately
+// excluded (§3 gold-discipline: not a data-viz default). The palette only
+// offers 4 order-appropriate warm hues for 5 severity bands, so the extra
+// step (very_high -> extreme) is produced by walking bright.coral's own
+// tint/border opacity deeper rather than inventing a 5th hue.
+function getUVHue(level: UVLevel, theme: DefaultTheme): string {
+  switch (level) {
+    case 'low': return theme.colors.bright.emerald;
+    case 'moderate': return theme.colors.bright.laurel;
+    case 'high': return theme.colors.bright.terra;
+    case 'very_high': return theme.colors.bright.coral;
+    case 'extreme': return theme.colors.bright.coral;
+    default: return theme.colors.muted;
+  }
+}
+
+const UV_LEVEL_TINT: Record<UVLevel, { bg: string; border: string }> = {
+  low: { bg: '29', border: '73' },        // 16% / 45% — the standard badge tint
+  moderate: { bg: '29', border: '73' },
+  high: { bg: '29', border: '73' },
+  very_high: { bg: '29', border: '73' },
+  extreme: { bg: '4D', border: 'A6' },    // walked deeper (~30% / 65%) for the 5th step
+};
+
+const UVIndicator = styled.div<{ $level: UVLevel }>`
+  ${monoLabel}
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: ${({ $level, theme }) => getUVHue($level, theme)};
+  background: ${({ $level, theme }) => `${getUVHue($level, theme)}${UV_LEVEL_TINT[$level].bg}`};
+  border: 1px solid ${({ $level, theme }) => `${getUVHue($level, theme)}${UV_LEVEL_TINT[$level].border}`};
 
-  background: ${({ $level, theme }) => {
-    // EPA-style UV severity scale, ordering preserved as increasing saturation/
-    // depth: emerald (low) -> gold (moderate) -> terracotta, deepening through
-    // high/very_high/extreme. Brand has no purple for "extreme" so it takes the
-    // deepest terracotta step instead, one notch past very_high.
-    switch ($level) {
-      case 'low': return theme.colors.emerald[100];
-      case 'moderate': return theme.colors.gold[100];
-      case 'high': return theme.colors.terracotta[100];
-      case 'very_high': return theme.colors.terracotta[200];
-      case 'extreme': return theme.colors.terracotta[300];
-      default: return theme.colors.neutral[100];
-    }
-  }};
-
-  color: ${({ $level, theme }) => {
-    switch ($level) {
-      case 'low': return theme.colors.emerald[700];
-      case 'moderate': return theme.colors.gold[800];
-      case 'high': return theme.colors.terracotta[600];
-      case 'very_high': return theme.colors.terracotta[700];
-      case 'extreme': return theme.colors.terracotta[900];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  &::before {
+    content: '';
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
 `;
 
 const NoDataMessage = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -170,7 +199,8 @@ const DualValueItem = styled.div`
   display: flex;
   flex-direction: column;
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -179,8 +209,8 @@ const DualValueItem = styled.div`
   }
 
   .label {
-    font-size: 13px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    ${monoLabel}
+    color: ${({ theme }) => theme.colors.muted};
     margin-bottom: 6px;
   }
 
@@ -195,31 +225,33 @@ const DualValueItem = styled.div`
     flex-direction: column;
 
     .value {
-      font-size: 14px;
-      font-weight: 600;
+      ${monoLabel}
+      font-size: 0.78rem;
+      font-weight: 700;
       color: ${({ theme }) => theme.colors.textPrimary};
     }
 
     .unit-label {
-      font-size: 10px;
-      color: ${({ theme }) => theme.colors.textDisabled};
-      text-transform: uppercase;
+      ${monoLabel}
+      font-size: 0.56rem;
+      color: ${({ theme }) => theme.colors.muted};
     }
   }
 
   .par-value {
     .value {
-      color: ${({ theme }) => theme.colors.emerald[600]};
+      color: ${({ theme }) => theme.colors.bright.emerald};
     }
   }
 `;
 
 const EstimatedBadge = styled.span`
+  ${monoLabel}
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: 0.56rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-left: 4px;
 
   &::before {
@@ -227,9 +259,12 @@ const EstimatedBadge = styled.span`
   }
 `;
 
+// DLI is a growth/photosynthesis stat — an "alive/growing" reading, which
+// spec §4 (page-header pattern) explicitly authorises bright.emerald for.
+// Background is the emerald successBg tint (translucent), not a solid fill.
 const DLIHighlight = styled.div`
-  background: ${({ theme }) => `linear-gradient(135deg, ${theme.colors.emerald[50]} 0%, ${theme.colors.emerald[100]} 100%)`};
-  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => `${theme.colors.bright.emerald}4D`};
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 16px;
@@ -241,15 +276,14 @@ const DLIHighlight = styled.div`
     margin-bottom: 8px;
 
     .icon {
-      font-size: 18px;
+      display: flex;
+      color: ${({ theme }) => theme.colors.bright.emerald};
     }
 
     .title {
-      font-size: 13px;
-      font-weight: 600;
-      color: ${({ theme }) => theme.colors.emerald[700]};
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      ${monoLabel}
+      font-size: 0.68rem;
+      color: ${({ theme }) => theme.colors.bright.emerald};
     }
   }
 
@@ -261,18 +295,18 @@ const DLIHighlight = styled.div`
     .value {
       font-size: 24px;
       font-weight: 700;
-      color: ${({ theme }) => theme.colors.emerald[600]};
+      color: ${({ theme }) => theme.colors.bright.emerald};
     }
 
     .unit {
-      font-size: 12px;
-      color: ${({ theme }) => theme.colors.emerald[600]};
+      ${monoLabel}
+      color: ${({ theme }) => theme.colors.bright.emerald};
     }
   }
 
   .note {
     font-size: 11px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.muted};
     margin-top: 6px;
   }
 `;
@@ -281,7 +315,7 @@ interface SolarLightCardProps {
   solar: SolarData;
 }
 
-function getUVLevel(uv: number): 'low' | 'moderate' | 'high' | 'very_high' | 'extreme' {
+function getUVLevel(uv: number): UVLevel {
   if (uv <= 2) return 'low';
   if (uv <= 5) return 'moderate';
   if (uv <= 7) return 'high';
@@ -364,7 +398,7 @@ export function SolarLightCard({ solar }: SolarLightCardProps) {
   if (!hasAnyData) {
     return (
       <Card>
-        <Title>☀️ Solar & Light</Title>
+        <Title><Sun size={16} strokeWidth={1.6} /> Solar & Light</Title>
         <NoDataMessage>
           Solar and light data is not available for this location
         </NoDataMessage>
@@ -374,14 +408,14 @@ export function SolarLightCard({ solar }: SolarLightCardProps) {
 
   return (
     <Card>
-      <Title>☀️ Solar & Light</Title>
+      <Title><Sun size={16} strokeWidth={1.6} /> Solar & Light</Title>
 
       {/* Sunrise/Sunset times at the top if available */}
       {hasSunTimes && (
         <SunTimesRow>
           {solar.sunrise && (
             <SunTimeBox>
-              <span className="icon">🌅</span>
+              <span className="icon"><Sunrise size={20} strokeWidth={1.6} /></span>
               <div className="text">
                 <div className="label">Sunrise</div>
                 <div className="time">{solar.sunrise}</div>
@@ -390,7 +424,7 @@ export function SolarLightCard({ solar }: SolarLightCardProps) {
           )}
           {solar.sunset && (
             <SunTimeBox>
-              <span className="icon">🌇</span>
+              <span className="icon"><Sunset size={20} strokeWidth={1.6} /></span>
               <div className="text">
                 <div className="label">Sunset</div>
                 <div className="time">{solar.sunset}</div>
@@ -404,7 +438,7 @@ export function SolarLightCard({ solar }: SolarLightCardProps) {
       {dli !== undefined && dli > 0 && (
         <DLIHighlight>
           <div className="header">
-            <span className="icon">🌱</span>
+            <span className="icon"><Sprout size={16} strokeWidth={1.6} /></span>
             <span className="title">Daily Light Integral (DLI)</span>
           </div>
           <div className="value-row">

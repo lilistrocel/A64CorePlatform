@@ -11,11 +11,18 @@
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 
+// Night Observatory (T-901 Phase 3, spec §4 "Modals/drawers"): glassPanel at
+// blur 24px over an rgba(10,14,36,.6) scrim, 20px radius. Every genetics
+// data-entry modal composes this shell, so retinting it here covers them all.
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -25,9 +32,10 @@ const Overlay = styled.div`
 `;
 
 const Panel = styled.div<{ $width?: string }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: ${({ $width }) => $width ?? '620px'};
   display: flex;
@@ -41,7 +49,7 @@ const Header = styled.div`
   justify-content: space-between;
   gap: 16px;
   padding: 20px 24px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TitleWrap = styled.div`
@@ -52,32 +60,38 @@ const TitleWrap = styled.div`
 
 const Title = styled.h2`
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   line-height: 1.5;
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 22px;
-  line-height: 1;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 2px 6px;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
   flex-shrink: 0;
+  transition: background 150ms, color 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
@@ -91,7 +105,7 @@ const Body = styled.div`
 
 const Footer = styled.div`
   padding: 16px 24px 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -178,7 +192,7 @@ export function Modal({ title, subtitle, width, onClose, children, footer }: Mod
             {subtitle && <Subtitle>{subtitle}</Subtitle>}
           </TitleWrap>
           <CloseButton type="button" onClick={onClose} aria-label="Close">
-            ×
+            <X size={18} strokeWidth={2} />
           </CloseButton>
         </Header>
         <Body>{children}</Body>

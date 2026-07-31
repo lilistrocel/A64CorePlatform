@@ -28,16 +28,26 @@ import {
 
 const TYPES = Object.keys(OBSERVATION_LABELS) as ObservationTypeValue[];
 
+/** Blank is always valid — a value must parse to an integer in `1..ceiling`. */
+function isValidVesselNo(value: string, ceiling: number): boolean {
+  if (value === '') return true;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= ceiling;
+}
+
+// "Novel trait" is a promotion-candidate flag, not the Harvesting phase —
+// bright.lavender (a decorative, non-gold accent) marks the toggled state
+// instead of gold (spec §3).
 const NovelBox = styled.label<{ $on: boolean }>`
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   cursor: pointer;
   border: 1px solid
-    ${({ $on, theme }) => ($on ? theme.colors.warning : theme.colors.neutral[300])};
-  background: ${({ $on, theme }) => ($on ? theme.colors.warningBg : 'transparent')};
+    ${({ $on, theme }) => ($on ? theme.colors.bright.lavender : theme.colors.glass.border)};
+  background: ${({ $on, theme }) => ($on ? `${theme.colors.bright.lavender}22` : 'transparent')};
 `;
 
 const NovelText = styled.div`
@@ -68,8 +78,16 @@ export function ObservationModal({ accession, onClose, onDone }: ObservationModa
   const [vigor, setVigor] = useState('');
   const [isNovelTrait, setIsNovelTrait] = useState(false);
   const [traitName, setTraitName] = useState('');
+  const [vesselNo, setVesselNo] = useState('');
 
-  const canSubmit = !createObservation.isPending && (text.trim() || growthRate || colonization);
+  // Mirrors the server's max(labelledVesselCount, quantity) ceiling exactly.
+  const ceiling = Math.max(accession.labelledVesselCount, accession.quantity);
+  const vesselNoValid = isValidVesselNo(vesselNo, ceiling);
+
+  const canSubmit =
+    !createObservation.isPending &&
+    (text.trim() || growthRate || colonization) &&
+    vesselNoValid;
 
   const handleSubmit = async () => {
     await createObservation.mutateAsync({
@@ -78,6 +96,7 @@ export function ObservationModal({ accession, onClose, onDone }: ObservationModa
       text: text.trim() || undefined,
       isNovelTrait,
       traitName: isNovelTrait ? traitName.trim() || undefined : undefined,
+      vesselNo: vesselNo ? Number(vesselNo) : undefined,
       metrics: {
         growthRateMmPerDay: growthRate ? Number(growthRate) : undefined,
         colonizationPercent: colonization ? Number(colonization) : undefined,
@@ -131,7 +150,7 @@ export function ObservationModal({ accession, onClose, onDone }: ObservationModa
         />
       </Field>
 
-      <FormRow $cols={3}>
+      <FormRow $cols={4}>
         <Field>
           <Label>Growth mm/day</Label>
           <Input
@@ -163,7 +182,29 @@ export function ObservationModal({ accession, onClose, onDone }: ObservationModa
             onChange={(e) => setVigor(e.target.value)}
           />
         </Field>
+        <Field>
+          <Label>Vessel #</Label>
+          <Input
+            type="number"
+            min={1}
+            value={vesselNo}
+            onChange={(e) => setVesselNo(e.target.value)}
+            placeholder="optional"
+          />
+        </Field>
       </FormRow>
+      <Hint>
+        Which vessel of this batch this observation is about, e.g. plate #13 — the
+        difference between “this batch is slow” and “plate 13 is slow”.
+      </Hint>
+
+      {!vesselNoValid && (
+        <Banner $tone="warning">
+          {ceiling > 0
+            ? `Vessel # must be between 1 and ${ceiling}.`
+            : 'This accession has no vessels recorded — leave the vessel # blank.'}
+        </Banner>
+      )}
 
       <NovelBox $on={isNovelTrait}>
         <input

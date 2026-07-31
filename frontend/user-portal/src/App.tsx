@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider, useTheme } from 'styled-components';
+import styled, { ThemeProvider, useTheme } from 'styled-components';
 import { Suspense, lazy } from 'react';
-import { lightTheme, darkTheme, GlobalStyles } from '@a64core/shared';
+import { lightTheme, darkTheme, GlobalStyles, Sky } from '@a64core/shared';
 import { queryClient } from './config/react-query.config';
 import { useThemeStore } from './stores/theme.store';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
@@ -12,6 +12,19 @@ import { MainLayout } from './components/layout/MainLayout';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { UnsavedChangesDialog } from './components/common/UnsavedChangesDialog';
 import { ToastContainer } from './components/common/ToastContainer';
+
+// Night Observatory app shell (spec §7): sits above the fixed Sky layer.
+// A `position: relative; z-index: 1` sibling is REQUIRED here — without it,
+// a position:fixed z-index:0 element (Sky) paints above plain static-flow
+// content regardless of DOM order (CSS2.1 stacking rules put positioned
+// z-index:0/auto descendants in a higher paint bucket than non-positioned
+// block content). This mirrors the mockup's `.shell{position:relative;
+// z-index:1}` wrapping `.sky`'s sibling.
+const AppShell = styled.div`
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+`;
 
 // Loading component for suspense fallback.
 // Rendered inside <ThemeProvider> (see below), so useTheme() resolves correctly.
@@ -323,6 +336,9 @@ const ClearCache = lazy(() => import('./pages/debug/ClearCache').then(m => ({ de
 // 404 page
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
+// Genetics label public info page (T-804 §7.1) — unauthenticated, no MainLayout.
+const LabelInfoPage = lazy(() => import('./pages/public/LabelInfoPage').then(m => ({ default: m.LabelInfoPage })));
+
 function App() {
   const mode = useThemeStore((state) => state.mode);
   const activeTheme = mode === 'dark' ? darkTheme : lightTheme;
@@ -331,6 +347,18 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={activeTheme}>
         <GlobalStyles />
+        {/* Night Observatory sky layer (spec §7) — mounted once here, the
+            single always-rendered ancestor for every route (public routes
+            like /login and MFA screens are outside MainLayout but still
+            render under this ThemeProvider). Fixed, z-index:0, behind
+            everything. The app shell itself must sit above it (z-index:1+)
+            and avoid an opaque full-viewport background — see MainLayout's
+            LayoutContainer and Dashboard's PageContainer, which currently
+            paint an opaque canvas-coloured background over this layer;
+            fixing those page grounds is out of scope for this foundation
+            phase (see Docs/2-Working-Progress/night-observatory-spec.md). */}
+        <Sky />
+        <AppShell>
         <BrowserRouter
           future={{
             v7_startTransition: true,
@@ -345,6 +373,18 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            {/* Genetics label public info page (T-804 §7.1) — scanned off a
+                printed vessel label's QR code. Registered both lower- and
+                upper-case: the 17mm label prints its URL uppercase to fit QR
+                alphanumeric mode (spec §6.2), and React Router v6 paths are
+                case-sensitive by default, so a real scan (/I/TOKEN/7) would
+                404 in the browser without the second pair here even though
+                the backend already normalises token case server-side. */}
+            <Route path="/i/:token" element={<LabelInfoPage />} />
+            <Route path="/i/:token/:vesselNo" element={<LabelInfoPage />} />
+            <Route path="/I/:token" element={<LabelInfoPage />} />
+            <Route path="/I/:token/:vesselNo" element={<LabelInfoPage />} />
 
             {/* MFA Verify - Semi-public route with guard (requires MFA token from login) */}
             <Route element={<MFAVerifyGuard />}>
@@ -578,6 +618,7 @@ function App() {
         </Suspense>
         </UnsavedChangesProvider>
       </BrowserRouter>
+        </AppShell>
     </ThemeProvider>
     </QueryClientProvider>
   );

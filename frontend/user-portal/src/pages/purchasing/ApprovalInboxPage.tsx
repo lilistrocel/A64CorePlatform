@@ -5,11 +5,21 @@
  * Approve/Reject actions inline. Click row to navigate to detail.
  *
  * Modals do NOT close on overlay click — X button only.
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls/modal, phase badges via
+ * ./statusPhase for genuine PR/PO/AP lifecycle states (the pending-tab
+ * "Urgency" column is NOT a lifecycle status — see the note above UrgencyText
+ * — so it keeps plain token-sourced chrome instead of a phase badge).
+ * Space Mono metadata, shared PageHeader/Button. Logic, routes, data-fetching
+ * and props are unchanged.
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
+import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { PageHeader, Button, glassPanel, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   usePendingApprovals,
   useApprovalHistory,
@@ -24,6 +34,7 @@ import {
 } from '../../hooks/queries/useAPInvoices';
 import { useAuthStore } from '../../stores/auth.store';
 import type { PendingApprovalItem } from '../../services/purchasingApi';
+import { purchasingStatusToPhase } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -33,17 +44,10 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 24px;
-`;
-
 const Tabs = styled.div`
   display: flex;
   gap: 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   margin-bottom: 24px;
 `;
 
@@ -51,111 +55,172 @@ const Tab = styled.button<{ $active: boolean }>`
   padding: 10px 24px;
   border: none;
   background: none;
-  font-size: 14px;
-  font-weight: ${({ $active }) => ($active ? '700' : '400')};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: ${({ $active }) => ($active ? '700' : '500')};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[600] : theme.colors.textSecondary};
+    $active ? theme.colors.celeste : theme.colors.muted};
   border-bottom: 2px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : 'transparent'};
-  margin-bottom: -2px;
+    $active ? theme.colors.celeste : 'transparent'};
+  margin-bottom: -1px;
   cursor: pointer;
   transition: all 120ms ease;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+`;
+
+const TableWrap = styled.div`
+  ${glassPanel}
+  overflow: hidden;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Tr = styled.tr`
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  transition: background 100ms ease;
+  &:hover td { background: rgba(180, 200, 220, 0.05); }
   &:last-child td { border-bottom: none; }
 `;
 
+/** Space Mono for document IDs, quantities, currency amounts, timestamps —
+ * spec §2/instruction 6. */
+const Mono = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
+const DocCode = styled(Mono)`
+  font-size: 13px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+/** Document-type tag (PR/PO/AP). This is a categorical label, not a
+ * lifecycle status, so it deliberately does NOT route through the phase map
+ * — it uses the chart/categorical "bright.*" palette instead (spec §4
+ * Charts). The previous version tinted AP gold ("gold for AP invoices");
+ * that violated the gold-discipline budget (spec §3: gold is not a badge
+ * default) on any inbox with several AP items, so AP now uses bright.terra. */
 const DocTypeBadge = styled.span<{ $type: string }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 99px;
-  font-size: 11px;
+  border-radius: 6px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 10px;
   font-weight: 700;
-  background: ${({ $type, theme }) => {
-    if ($type === 'PR') return theme.colors.primary[100];
-    if ($type === 'PO') return theme.colors.emerald[100];
-    if ($type === 'AP') return theme.colors.warningBg;  // gold for AP invoices
-    return theme.colors.neutral[100];
-  }};
+  letter-spacing: 0.04em;
+  margin-right: 8px;
   color: ${({ $type, theme }) => {
-    if ($type === 'PR') return theme.colors.primary[700];
-    if ($type === 'PO') return theme.colors.emerald[700];
-    if ($type === 'AP') return theme.colors.gold[800];  // gold-dark for AP invoices
-    return theme.colors.textSecondary;
+    if ($type === 'PR') return theme.colors.bright.lapis;
+    if ($type === 'PO') return theme.colors.bright.emerald;
+    if ($type === 'AP') return theme.colors.bright.terra;
+    return theme.colors.muted;
   }};
-  margin-right: 6px;
+  background: ${({ $type, theme }) => {
+    if ($type === 'PR') return 'rgba(107, 138, 224, 0.14)';
+    if ($type === 'PO') return 'rgba(84, 211, 155, 0.14)';
+    if ($type === 'AP') return 'rgba(232, 147, 95, 0.14)';
+    return 'rgba(180, 200, 220, 0.1)';
+  }};
+`;
+
+const FinalStateBadge = styled.span<{ $status: string }>`
+  ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
+`;
+
+/** Urgency is not a document-lifecycle status (the phase map only covers
+ * draft/pending/open/.../cancelled — spec §5.2), so it is intentionally
+ * plain text rather than a phase badge. Kept token-sourced (muted) only. */
+const UrgencyText = styled.span`
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 13px;
+  text-transform: capitalize;
 `;
 
 const ActionCell = styled.td`
   padding: 10px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
+/** No shared Button variant covers "success" (approve). Kept custom, fixed
+ * to pair success (emerald) fill with onDark text — see report for the
+ * onAccent -> onDark correction this required. */
 const SuccessButton = styled.button`
   padding: 6px 14px;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   margin-right: 8px;
-  transition: background 120ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.emerald[600]}; }
+  transition: all 120ms ease;
+  &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(84, 211, 155, 0.3); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+/** Destructive — coral-tinted glass, never solid red (spec §4 Buttons). */
 const DangerButton = styled.button`
   padding: 6px 14px;
-  background: transparent;
+  background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition: all 120ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  &:hover:not(:disabled) { background: rgba(240, 138, 112, 0.24); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const StatusMessage = styled.p`
+  text-align: center;
+  padding: 48px 32px;
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 15px;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 15px;
+`;
+
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 1.4rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 8px;
+`;
+
+const EmptyText = styled.p`
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 0.9rem;
+  margin: 0;
 `;
 
 // ─── Reject Modal ─────────────────────────────────────────────────────────────
@@ -163,7 +228,7 @@ const EmptyState = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -172,9 +237,10 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 480px;
 `;
@@ -184,25 +250,27 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 18px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   padding: 4px;
   border-radius: 6px;
-  line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.1); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ModalBody = styled.div`
@@ -214,32 +282,27 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-`;
-
-const GhostButton = styled.button`
-  padding: 8px 16px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Textarea = styled.textarea`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 11px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 90px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const ErrorText = styled.p`
@@ -271,7 +334,6 @@ function RejectModal({ item, onClose, onConfirm }: RejectModalProps) {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
 
   return (
     <Overlay>
@@ -279,12 +341,14 @@ function RejectModal({ item, onClose, onConfirm }: RejectModalProps) {
       <Modal onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Reject {item.docType}: {item.docNumber}</ModalTitle>
-          <CloseButton onClick={onClose}>✕</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={1.8} />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
-          <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 0 }}>
+          <EmptyText style={{ marginBottom: 12 }}>
             Please provide a reason for rejection.
-          </p>
+          </EmptyText>
           <Textarea
             placeholder="Rejection reason (required)..."
             value={comment}
@@ -293,7 +357,7 @@ function RejectModal({ item, onClose, onConfirm }: RejectModalProps) {
           {error && <ErrorText>{error}</ErrorText>}
         </ModalBody>
         <ModalFooter>
-          <GhostButton onClick={onClose}>Cancel</GhostButton>
+          <Button variant="outline" size="small" onClick={onClose}>Cancel</Button>
           <DangerButton
             disabled={!comment.trim() || loading}
             onClick={async () => {
@@ -323,7 +387,6 @@ export function ApprovalInboxPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const orgId = user?.organizationId ?? '';
-  const theme = useTheme();
 
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
   const [rejectingItem, setRejectingItem] = useState<PendingApprovalItem | null>(null);
@@ -373,7 +436,16 @@ export function ApprovalInboxPage() {
 
   return (
     <Container>
-      <Title>Approval Inbox</Title>
+      <PageHeader
+        breadcrumb="— PURCHASING · APPROVALS"
+        title="Approval Inbox"
+        emphasizeLastWord
+        description="Purchase requests, orders and vendor invoices awaiting your decision."
+        stats={[
+          { value: pendingItems.length, label: 'Pending', alive: pendingItems.length > 0 },
+          { value: historyData?.meta?.total ?? historyItems.length, label: 'Decided' },
+        ]}
+      />
 
       <Tabs>
         <Tab $active={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
@@ -387,57 +459,62 @@ export function ApprovalInboxPage() {
       {/* Pending Tab */}
       {activeTab === 'pending' && (
         <>
-          {pendingLoading && <EmptyState>Loading pending approvals...</EmptyState>}
+          {pendingLoading && <StatusMessage>Loading pending approvals...</StatusMessage>}
           {!pendingLoading && pendingItems.length === 0 && (
-            <EmptyState>No pending approvals for your role.</EmptyState>
+            <EmptyState>
+              <EmptyHeadline>Nothing waiting on you</EmptyHeadline>
+              <EmptyText>There are no pending approvals for your role right now.</EmptyText>
+            </EmptyState>
           )}
           {!pendingLoading && pendingItems.length > 0 && (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Document</Th>
-                  <Th>Department / Vendor</Th>
-                  <Th>Total (AED)</Th>
-                  <Th>Submitted</Th>
-                  <Th>Urgency</Th>
-                  <Th>Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingItems.map((item) => (
-                  <Tr key={item.docId}>
-                    <Td
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => {
-                        if (item.docType === 'PR') navigate(`/purchasing/pr/${item.docId}`);
-                        else if (item.docType === 'AP') navigate(`/purchasing/ap/${item.docId}`);
-                        else navigate(`/purchasing/po/${item.docId}`);
-                      }}
-                    >
-                      <DocTypeBadge $type={item.docType}>{item.docType}</DocTypeBadge>
-                      <code style={{ fontSize: 13, fontWeight: 600 }}>{item.docNumber}</code>
-                    </Td>
-                    <Td>
-                      {item.docType === 'PR' ? (item.department ?? '—') : (item.vendorName ?? '—')}
-                    </Td>
-                    <Td>{formatAmount(item.totalGross, item.currencyCode)}</Td>
-                    <Td>{formatDate(item.approvalRequestedAt)}</Td>
-                    <Td>{item.urgency ?? '—'}</Td>
-                    <ActionCell>
-                      <SuccessButton
-                        disabled={approveLoadingId === item.docId}
-                        onClick={() => handleApprove(item)}
+            <TableWrap>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Document</Th>
+                    <Th>Department / Vendor</Th>
+                    <Th>Total (AED)</Th>
+                    <Th>Submitted</Th>
+                    <Th>Urgency</Th>
+                    <Th>Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingItems.map((item) => (
+                    <Tr key={item.docId}>
+                      <Td
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          if (item.docType === 'PR') navigate(`/purchasing/pr/${item.docId}`);
+                          else if (item.docType === 'AP') navigate(`/purchasing/ap/${item.docId}`);
+                          else navigate(`/purchasing/po/${item.docId}`);
+                        }}
                       >
-                        {approveLoadingId === item.docId ? '...' : 'Approve'}
-                      </SuccessButton>
-                      <DangerButton onClick={() => setRejectingItem(item)}>
-                        Reject
-                      </DangerButton>
-                    </ActionCell>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
+                        <DocTypeBadge $type={item.docType}>{item.docType}</DocTypeBadge>
+                        <DocCode>{item.docNumber}</DocCode>
+                      </Td>
+                      <Td>
+                        {item.docType === 'PR' ? (item.department ?? '—') : (item.vendorName ?? '—')}
+                      </Td>
+                      <Td><Mono>{formatAmount(item.totalGross, item.currencyCode)}</Mono></Td>
+                      <Td><Mono>{formatDate(item.approvalRequestedAt)}</Mono></Td>
+                      <Td><UrgencyText>{item.urgency ?? '—'}</UrgencyText></Td>
+                      <ActionCell>
+                        <SuccessButton
+                          disabled={approveLoadingId === item.docId}
+                          onClick={() => handleApprove(item)}
+                        >
+                          {approveLoadingId === item.docId ? '...' : 'Approve'}
+                        </SuccessButton>
+                        <DangerButton onClick={() => setRejectingItem(item)}>
+                          Reject
+                        </DangerButton>
+                      </ActionCell>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
           )}
         </>
       )}
@@ -445,51 +522,51 @@ export function ApprovalInboxPage() {
       {/* History Tab */}
       {activeTab === 'history' && (
         <>
-          {historyLoading && <EmptyState>Loading history...</EmptyState>}
+          {historyLoading && <StatusMessage>Loading history...</StatusMessage>}
           {!historyLoading && historyItems.length === 0 && (
-            <EmptyState>No approval decisions found.</EmptyState>
+            <EmptyState>
+              <EmptyHeadline>No decisions yet</EmptyHeadline>
+              <EmptyText>Approved and rejected documents will appear here.</EmptyText>
+            </EmptyState>
           )}
           {!historyLoading && historyItems.length > 0 && (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Document</Th>
-                  <Th>Final State</Th>
-                  <Th>Total (AED)</Th>
-                  <Th>Decided At</Th>
-                  <Th>Comment</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {historyItems.map((item) => (
-                  <Tr
-                    key={item.docId}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      if (item.docType === 'PR') navigate(`/purchasing/pr/${item.docId}`);
-                      else if (item.docType === 'AP') navigate(`/purchasing/ap/${item.docId}`);
-                      else navigate(`/purchasing/po/${item.docId}`);
-                    }}
-                  >
-                    <Td>
-                      <DocTypeBadge $type={item.docType}>{item.docType}</DocTypeBadge>
-                      <code style={{ fontSize: 13, fontWeight: 600 }}>{item.docNumber}</code>
-                    </Td>
-                    <Td>
-                      <span style={{
-                        color: item.finalState === 'Approved' ? theme.colors.emerald[600] : theme.colors.terracotta[600],
-                        fontWeight: 600,
-                      }}>
-                        {item.finalState}
-                      </span>
-                    </Td>
-                    <Td>{formatAmount(item.totalGross, item.currencyCode)}</Td>
-                    <Td>{formatDate(item.approvalDecidedAt)}</Td>
-                    <Td>{item.approvalComment ?? '—'}</Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
+            <TableWrap>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Document</Th>
+                    <Th>Final State</Th>
+                    <Th>Total (AED)</Th>
+                    <Th>Decided At</Th>
+                    <Th>Comment</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyItems.map((item) => (
+                    <Tr
+                      key={item.docId}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        if (item.docType === 'PR') navigate(`/purchasing/pr/${item.docId}`);
+                        else if (item.docType === 'AP') navigate(`/purchasing/ap/${item.docId}`);
+                        else navigate(`/purchasing/po/${item.docId}`);
+                      }}
+                    >
+                      <Td>
+                        <DocTypeBadge $type={item.docType}>{item.docType}</DocTypeBadge>
+                        <DocCode>{item.docNumber}</DocCode>
+                      </Td>
+                      <Td>
+                        <FinalStateBadge $status={item.finalState}>{item.finalState}</FinalStateBadge>
+                      </Td>
+                      <Td><Mono>{formatAmount(item.totalGross, item.currencyCode)}</Mono></Td>
+                      <Td><Mono>{formatDate(item.approvalDecidedAt)}</Mono></Td>
+                      <Td>{item.approvalComment ?? '—'}</Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
           )}
         </>
       )}

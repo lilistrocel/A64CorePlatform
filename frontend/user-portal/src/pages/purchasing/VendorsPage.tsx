@@ -5,10 +5,21 @@
  * Paginated list with search, create/edit modals, and soft-delete.
  *
  * Modals do NOT close on overlay click — X button only.
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls/modal, Space Mono metadata,
+ * shared PageHeader/Button. Vendors have no PR/PO/GR/AP lifecycle status —
+ * the active/inactive toggle is extrapolated onto the phase map per spec
+ * §5.2 as 'fruiting' (active — a currently-healthy, in-good-standing vendor)
+ * / 'decommissioned' (inactive); the "Blocked" flag maps to 'quarantined'
+ * (a red-flag hold state, same bucket as rejected/failed documents). Logic,
+ * routes, data-fetching and props are unchanged.
  */
 
 import { useState, useCallback } from 'react';
-import styled, { useTheme } from 'styled-components';
+import styled, { css } from 'styled-components';
+import { X } from 'lucide-react';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   useVendors,
   useCreateVendor,
@@ -29,20 +40,6 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
 const FilterRow = styled.div`
   display: flex;
   gap: 12px;
@@ -52,130 +49,114 @@ const FilterRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 220px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-`;
-
-const PrimaryButton = styled.button`
-  padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.secondary[500]}; }
 `;
 
 const DangerButton = styled.button`
   padding: 6px 14px;
-  background: transparent;
+  background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  &:hover { background: rgba(240, 138, 112, 0.24); }
 `;
 
-const GhostButton = styled.button`
-  padding: 6px 14px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+const TableWrap = styled.div`
+  ${glassPanel}
+  overflow: hidden;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Tr = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover td { background: rgba(180, 200, 220, 0.05); }
   &:last-child td { border-bottom: none; }
 `;
 
-const Badge = styled.span<{ $active: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 99px;
+const Mono = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 12px;
-  font-weight: 600;
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.success : theme.colors.textDisabled};
 `;
 
+/** Active/inactive extrapolated onto the phase map — see file header note. */
+const StatusBadge = styled.span<{ $active: boolean }>`
+  ${({ $active }) => phaseBadge($active ? 'fruiting' : 'decommissioned')}
+`;
+
+/** "Blocked" hold — extrapolated onto 'quarantined' (spec §5.2's red-flag
+ * bucket, same as rejected/failed documents). */
 const BlockedBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.error};
+  ${phaseBadge('quarantined')}
+`;
+
+const StatusMessage = styled.p`
+  text-align: center;
+  padding: 48px 32px;
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 15px;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 15px;
+`;
+
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 1.4rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 8px;
+`;
+
+const EmptyText = styled.p`
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 0.9rem;
+  margin: 0 0 20px;
 `;
 
 const Pagination = styled.div`
@@ -184,12 +165,19 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PageButtons = styled.div`
   display: flex;
+  align-items: center;
   gap: 8px;
+`;
+
+const PageIndicator = styled.span`
+  ${monoLabel}
+  padding: 6px 12px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
@@ -197,7 +185,7 @@ const PageButtons = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -206,9 +194,10 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 620px;
   max-height: 90vh;
@@ -222,7 +211,7 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -234,15 +223,16 @@ const ModalTitle = styled.h2`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   padding: 4px;
   border-radius: 6px;
-  line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.1); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ModalBody = styled.div`
@@ -258,7 +248,7 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -276,25 +266,37 @@ const Field = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
+`;
+
+const inputChrome = css`
+  ${glassControl}
+  padding: 10px 14px;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &[disabled] { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const Input = styled.input`
-  padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &[disabled] { opacity: 0.6; cursor: not-allowed; }
+  ${inputChrome}
+`;
+
+const SelectField = styled.select`
+  ${inputChrome}
+  cursor: pointer;
 `;
 
 const Hint = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorText = styled.p`
@@ -310,14 +312,21 @@ const FieldError = styled.span`
   margin-top: 2px;
 `;
 
-/** Input variant that shows a red border when the field has an error. */
+/** Input variant that shows a coral border when the field has an error. */
 const InputWithError = styled(Input)<{ $hasError?: boolean }>`
   border-color: ${({ $hasError, theme }) =>
     $hasError ? theme.colors.error : undefined};
   &:focus {
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.error : theme.colors.secondary[500]};
   }
+`;
+
+const DetailsSummary = styled.summary`
+  cursor: pointer;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 8px;
 `;
 
 // ─── Vendor Form Modal ───────────────────────────────────────────────────────
@@ -393,7 +402,6 @@ function VendorFormModal({
   const createMutation = useCreateVendor();
   const updateMutation = useUpdateVendor();
   const isEdit = !!vendor;
-  const theme = useTheme();
 
   const [form, setForm] = useState({
     vendorCode: vendor?.vendorCode ?? '',
@@ -521,7 +529,9 @@ function VendorFormModal({
       <Modal onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>{isEdit ? 'Edit Vendor' : 'New Vendor'}</ModalTitle>
-          <CloseButton onClick={onClose} aria-label="Close modal">✕</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close modal">
+            <X size={18} strokeWidth={1.8} />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           {/* Top-level banner: only non-field errors (500s, network, unmapped 422s) */}
@@ -578,17 +588,16 @@ function VendorFormModal({
             </Field>
             <Field>
               <Label htmlFor="vf-paymentTerms">Payment Terms</Label>
-              <select
+              <SelectField
                 id="vf-paymentTerms"
                 value={form.paymentTermsCode}
                 onChange={set('paymentTermsCode')}
-                style={{ padding: '10px 14px', borderRadius: 8, border: `1px solid ${theme.colors.border}`, fontSize: 14 }}
               >
                 <option value="">— Select —</option>
                 {paymentTermsList.map((t) => (
                   <option key={t.termsCode} value={t.termsCode}>{t.termsCode} — {t.description}</option>
                 ))}
-              </select>
+              </SelectField>
             </Field>
           </FormRow>
 
@@ -683,9 +692,7 @@ function VendorFormModal({
           </FormRow>
 
           <details>
-            <summary style={{ cursor: 'pointer', fontSize: 13, color: theme.colors.textSecondary, marginBottom: 8 }}>
-              Bank Details (optional)
-            </summary>
+            <DetailsSummary>Bank Details (optional)</DetailsSummary>
             <FormRow>
               <Field>
                 <Label htmlFor="vf-bankName">Bank Name</Label>
@@ -754,12 +761,12 @@ function VendorFormModal({
           </Field>
         </ModalBody>
         <ModalFooter>
-          <GhostButton onClick={onClose}>Cancel</GhostButton>
+          <Button variant="outline" size="small" onClick={onClose}>Cancel</Button>
           {/* Reason: always enabled — validation runs on click to give the user
               field-level feedback rather than silently disabling the button. */}
-          <PrimaryButton onClick={handleSubmit} disabled={isLoading}>
+          <Button variant="primary" size="small" onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Vendor'}
-          </PrimaryButton>
+          </Button>
         </ModalFooter>
       </Modal>
     </Overlay>
@@ -833,10 +840,15 @@ export function VendorsPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Vendors</Title>
-        <PrimaryButton onClick={openCreate}>+ New Vendor</PrimaryButton>
-      </Header>
+      <PageHeader
+        breadcrumb="— PURCHASING · VENDORS"
+        title="Vendors"
+        description="Supplier master data — contacts, terms, credit limits and bank details."
+        stats={[
+          { value: meta.total, label: 'Total Vendors' },
+          { value: vendors.length, label: 'This Page' },
+        ]}
+      />
 
       <FilterRow>
         <SearchInput
@@ -849,55 +861,64 @@ export function VendorsPage() {
           <option value="active">Active Only</option>
           <option value="inactive">Inactive Only</option>
         </Select>
+        <Button variant="primary" onClick={openCreate}>New Vendor</Button>
       </FilterRow>
 
-      {isLoading && <EmptyState>Loading vendors...</EmptyState>}
-      {isError && <EmptyState>Failed to load vendors. Please try again.</EmptyState>}
+      {isLoading && <StatusMessage>Loading vendors...</StatusMessage>}
+      {isError && <StatusMessage>Failed to load vendors. Please try again.</StatusMessage>}
       {!isLoading && !isError && vendors.length === 0 && (
-        <EmptyState>No vendors found. Create your first vendor to get started.</EmptyState>
+        <EmptyState>
+          <EmptyHeadline>No vendors yet</EmptyHeadline>
+          {/* Reason: no separate CTA — "New Vendor" above in FilterRow
+              already covers this action; a second gold primary button here
+              would breach the spec §3 ≤4-gold-per-view budget. */}
+          <EmptyText style={{ marginBottom: 0 }}>Create your first vendor above to get started.</EmptyText>
+        </EmptyState>
       )}
 
       {!isLoading && !isError && vendors.length > 0 && (
         <>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Code</Th>
-                <Th>Name</Th>
-                <Th>TRN</Th>
-                <Th>Payment Terms</Th>
-                <Th>Status</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {vendors.map((v) => (
-                <Tr key={v.vendorId} onClick={() => openEdit(v)}>
-                  <Td><code style={{ fontSize: 12 }}>{v.vendorCode}</code></Td>
-                  <Td>{v.name}</Td>
-                  <Td>{v.trn ?? '—'}</Td>
-                  <Td>{v.paymentTermsCode ?? '—'}</Td>
-                  <Td>
-                    <Badge $active={v.isActive}>{v.isActive ? 'Active' : 'Inactive'}</Badge>
-                    {v.isBlocked && <BlockedBadge style={{ marginLeft: 6 }}>Blocked</BlockedBadge>}
-                  </Td>
-                  <Td onClick={(e) => e.stopPropagation()}>
-                    <DangerButton onClick={(e) => handleDelete(v, e)}>Delete</DangerButton>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <TableWrap>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Code</Th>
+                  <Th>Name</Th>
+                  <Th>TRN</Th>
+                  <Th>Payment Terms</Th>
+                  <Th>Status</Th>
+                  <Th></Th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendors.map((v) => (
+                  <Tr key={v.vendorId} onClick={() => openEdit(v)}>
+                    <Td><Mono>{v.vendorCode}</Mono></Td>
+                    <Td>{v.name}</Td>
+                    <Td>{v.trn ?? '—'}</Td>
+                    <Td>{v.paymentTermsCode ?? '—'}</Td>
+                    <Td>
+                      <StatusBadge $active={v.isActive}>{v.isActive ? 'Active' : 'Inactive'}</StatusBadge>
+                      {v.isBlocked && <BlockedBadge style={{ marginLeft: 6 }}>Blocked</BlockedBadge>}
+                    </Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
+                      <DangerButton onClick={(e) => handleDelete(v, e)}>Delete</DangerButton>
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrap>
           <Pagination>
             <span>Showing {vendors.length} of {meta.total} vendors</span>
             <PageButtons>
-              <GhostButton onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              <Button variant="outline" size="small" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
                 Previous
-              </GhostButton>
-              <span style={{ padding: '6px 12px', fontSize: 13 }}>Page {meta.page} / {meta.totalPages}</span>
-              <GhostButton onClick={() => setPage((p) => p + 1)} disabled={page >= meta.totalPages}>
+              </Button>
+              <PageIndicator>Page {meta.page} / {meta.totalPages}</PageIndicator>
+              <Button variant="outline" size="small" onClick={() => setPage((p) => p + 1)} disabled={page >= meta.totalPages}>
                 Next
-              </GhostButton>
+              </Button>
             </PageButtons>
           </Pagination>
         </>
@@ -915,4 +936,3 @@ export function VendorsPage() {
     </Container>
   );
 }
-

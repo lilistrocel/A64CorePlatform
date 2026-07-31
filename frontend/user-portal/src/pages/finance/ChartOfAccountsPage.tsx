@@ -11,8 +11,11 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import styled, { css, keyframes, useTheme } from 'styled-components';
+import { X, AlertTriangle, ChevronDown } from 'lucide-react';
+import { PageHeader as SharedPageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
+import { StatusBadge } from '../../components/finance/StatusBadge';
 import {
   useFinanceAccounts,
   useCreateFinanceAccount,
@@ -108,24 +111,11 @@ function buildTree(
 
 // ─── Styled components ─────────────────────────────────────────────────────────
 
+// Page floor stays transparent — the sky shows through; only cards/panels below get glass.
 const PageContainer = styled.div`
   padding: 24px 32px;
   max-width: 1600px;
   margin: 0 auto;
-`;
-
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-`;
-
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
 `;
 
 const ToolbarRow = styled.div`
@@ -137,64 +127,77 @@ const ToolbarRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
+// The page's one primary CTA ("+ New Account") — spec §4 Buttons: gold
+// gradient + onAccent (cosmos) text. Was `primary[500]` (lapis) + `onAccent`,
+// the exact onAccent-on-non-gold bug the redesign flags. Also reused as the
+// AccountFormModal's submit button (that modal's own single primary action),
+// which is a legitimate second "primary CTA" scope (spec §3 budgets gold per
+// *visible* view — the modal and the page behind it are not both visible
+// gold surfaces at once).
 const PrimaryButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  &:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 `;
 
 const SecondaryButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; color: ${({ theme }) => theme.colors.textPrimary}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; color: ${({ theme }) => theme.colors.textPrimary}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Destructive action — spec §4 Buttons: coral-tinted glass, never solid red.
+// `error` already resolves to coral-b under the dark theme token layer.
 const DangerButton = styled.button`
   padding: 8px 16px;
   background: transparent;
   color: ${({ theme }) => theme.colors.error};
   border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -208,7 +211,7 @@ const SuccessButton = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.colors.success};
   border: 1px solid ${({ theme }) => theme.colors.success};
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -231,9 +234,7 @@ const TwoPaneLayout = styled.div`
 // ─── Left pane — account tree ──────────────────────────────────────────────────
 
 const TreePanel = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   overflow: hidden;
   /* Allow the tree to scroll independently on tall viewports */
   max-height: calc(100vh - 220px);
@@ -248,33 +249,32 @@ const DrawerHeader = styled.button`
   justify-content: space-between;
   width: 100%;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.05);
   border: none;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const DrawerLabel = styled.span`
-  font-size: 11px;
+  ${monoLabel}
+  font-size: 0.66rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const DrawerCaret = styled.span<{ $open: boolean }>`
-  font-size: 11px;
+  display: inline-flex;
   transition: transform 0.15s ease;
   transform: ${({ $open }) => ($open ? 'rotate(0deg)' : 'rotate(-90deg)')};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const DrawerCount = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   margin-left: 6px;
 `;
 
@@ -285,6 +285,10 @@ interface AccountRowProps {
   $isSelected: boolean;
 }
 
+// Selected-row tint: bright.lapis at low alpha. Was `${primary[500]}15/20`
+// (an 8-digit hex alpha suffix) — still technically valid CSS, but rewritten
+// as explicit rgba() to match the rest of the file's tint convention and
+// keep the "selected" state legible against the glass panel ground.
 const AccountRow = styled.button<AccountRowProps>`
   display: flex;
   align-items: center;
@@ -292,10 +296,10 @@ const AccountRow = styled.button<AccountRowProps>`
   width: 100%;
   padding: 7px 16px;
   padding-left: ${({ $depth }) => 16 + $depth * 20}px;
-  background: ${({ $isSelected, theme }) =>
-    $isSelected ? `${theme.colors.primary[500]}15` : 'transparent'};
+  background: ${({ $isSelected }) =>
+    $isSelected ? 'rgba(107, 138, 224, 0.14)' : 'transparent'};
   border: none;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -303,8 +307,8 @@ const AccountRow = styled.button<AccountRowProps>`
   transition: background 100ms ease;
 
   &:hover {
-    background: ${({ $isSelected, theme }) =>
-      $isSelected ? `${theme.colors.primary[500]}20` : theme.colors.neutral[50]};
+    background: ${({ $isSelected }) =>
+      $isSelected ? 'rgba(107, 138, 224, 0.22)' : 'rgba(180, 200, 220, 0.05)'};
   }
 
   &:last-child {
@@ -315,7 +319,7 @@ const AccountRow = styled.button<AccountRowProps>`
 const AccountNumber = styled.span<{ $isHeader: boolean }>`
   font-size: 12px;
   font-weight: ${({ $isHeader }) => ($isHeader ? 700 : 400)};
-  color: ${({ $isHeader, theme }) => ($isHeader ? theme.colors.textPrimary : theme.colors.textSecondary)};
+  color: ${({ $isHeader, theme }) => ($isHeader ? theme.colors.textPrimary : theme.colors.muted)};
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   min-width: 110px;
   flex-shrink: 0;
@@ -331,6 +335,13 @@ const AccountName = styled.span<{ $isHeader: boolean }>`
   white-space: nowrap;
 `;
 
+// Structural account flags (Control / Inactive / Locked), not workflow
+// status — kept as plain retinted pills rather than the phaseBadge() dot
+// pattern, same convention as PaymentsPage's MethodPill for non-status
+// categorical chips. "Locked" uses the generic `warning` semantic token
+// (gold-b), distinct from `secondary` chrome gold — not part of the
+// gold-discipline budget (spec §3), same precedent as VoidedIncludedPill
+// elsewhere in this shard.
 const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
   display: inline-flex;
   align-items: center;
@@ -342,14 +353,14 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'control') {
       return `
-        background: ${theme.colors.infoBg};
-        color: ${theme.colors.info};
+        background: rgba(107, 138, 224, 0.16);
+        color: ${theme.colors.bright.lapis};
       `;
     }
     if ($variant === 'inactive') {
       return `
-        background: ${theme.colors.neutral[100]};
-        color: ${theme.colors.textDisabled};
+        background: rgba(139, 144, 172, 0.16);
+        color: ${theme.colors.muted};
       `;
     }
     // locked
@@ -363,17 +374,25 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
 // ─── Right pane — detail ───────────────────────────────────────────────────────
 
 const DetailPanel = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 28px;
 `;
 
 const EmptyDetail = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
+`;
+
+// Empty-state headline, spec §4/§9: Fraunces italic celeste.
+const EmptyDetailTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 17px;
+  font-weight: 400;
+  margin-bottom: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const DetailHeader = styled.div`
@@ -398,7 +417,7 @@ const DetailAccountNumber = styled.div`
 
 const DetailAccountName = styled.div`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 4px;
 `;
 
@@ -421,11 +440,9 @@ const FieldGrid = styled.div`
 const FieldItem = styled.div``;
 
 const FieldLabel = styled.div`
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 4px;
 `;
 
@@ -436,26 +453,13 @@ const FieldValue = styled.div`
 
 const ParentLink = styled.button`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   text-decoration: underline;
-  &:hover { color: ${({ theme }) => theme.colors.primary[700]}; }
-`;
-
-const StatusBadge = styled.span<{ $active: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.success : theme.colors.textDisabled};
+  &:hover { opacity: 0.75; }
 `;
 
 const FlagRow = styled.div`
@@ -515,8 +519,8 @@ const RoleBadge = styled.span`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: rgba(180, 200, 220, 0.08);
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 /** Small inline label for IFRS tag. */
@@ -527,29 +531,34 @@ const IfrsTagLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   padding: 2px 8px;
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: rgba(180, 200, 220, 0.08);
+  color: ${({ theme }) => theme.colors.celeste};
   letter-spacing: 0.5px;
 `;
 
 // ─── Modal styled components ───────────────────────────────────────────────────
 // Mirrors VendorsPage modal pattern exactly.
 
+// Scrim: rgba(10,14,36,.6) per spec §4 Modals. This modal must NOT close on
+// backdrop click — no onClick on the overlay, existing behaviour preserved.
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 200;
+  background: rgba(10, 14, 36, 0.6);
+  z-index: ${({ theme }) => theme.zIndex.modal};
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
 `;
 
+// glassPanel at blur 24px, 20px radius — spec §4 Modals/drawers (overrides
+// the mixin's default 18px blur).
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 640px;
   max-height: 90vh;
@@ -563,7 +572,7 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -575,15 +584,22 @@ const ModalTitle = styled.h2`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px;
-  border-radius: 6px;
+  color: ${({ theme }) => theme.colors.celeste};
+  padding: 6px;
+  border-radius: 8px;
   line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
+  }
 `;
 
 const ModalBody = styled.div`
@@ -599,7 +615,7 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-shrink: 0;
 `;
 
@@ -619,61 +635,58 @@ const Field = styled.div`
 const FormLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const FormInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : undefined)};
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.error : theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
-  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   resize: vertical;
   min-height: 72px;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : undefined)};
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.error : theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
-  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const FormSelect = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   font-family: inherit;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : undefined)};
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.error : theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
-  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const FieldError = styled.span`
@@ -688,6 +701,7 @@ const BannerError = styled.p`
   margin: 0;
   padding: 10px 14px;
   background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
 `;
 
@@ -702,7 +716,7 @@ const CheckboxRow = styled.label`
 
 const HintText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ─── Cash-flow category review banner ─────────────────────────────────────────
@@ -714,14 +728,15 @@ const BannerContainer = styled.div`
   padding: 14px 18px;
   border-radius: 10px;
   background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
+  border: 1px solid rgba(232, 200, 106, 0.45);
   margin-bottom: 20px;
 `;
 
 const BannerIcon = styled.span`
-  font-size: 18px;
+  display: inline-flex;
   flex-shrink: 0;
-  line-height: 1.3;
+  color: ${({ theme }) => theme.colors.warning};
+  margin-top: 1px;
 `;
 
 const BannerText = styled.div`
@@ -739,19 +754,21 @@ const BannerTitle = styled.strong`
 `;
 
 const BannerDismiss = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   background: none;
   border: none;
-  font-size: 18px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 2px 4px;
-  border-radius: 4px;
+  color: ${({ theme }) => theme.colors.celeste};
+  padding: 4px;
+  border-radius: 6px;
   line-height: 1;
   align-self: flex-start;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.warning};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -774,7 +791,7 @@ const CfCellWrapper = styled.div`
 const CfValueText = styled.span<{ $muted: boolean; $clickable: boolean }>`
   font-size: 14px;
   color: ${({ $muted, theme }) =>
-    $muted ? theme.colors.textDisabled : theme.colors.textPrimary};
+    $muted ? theme.colors.muted : theme.colors.textPrimary};
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
   border-radius: 4px;
   padding: 2px 4px;
@@ -783,28 +800,27 @@ const CfValueText = styled.span<{ $muted: boolean; $clickable: boolean }>`
     $clickable &&
     `
     &:hover {
-      background: ${theme.colors.neutral[100]};
+      background: ${theme.colors.glass.hi};
       text-decoration: underline;
     }
     &:focus-visible {
-      outline: 2px solid ${theme.colors.primary[500]};
+      outline: 2px solid ${theme.colors.secondary[500]};
       outline-offset: 2px;
     }
   `}
 `;
 
 const CfSelect = styled.select`
+  ${glassControl}
   padding: 5px 9px;
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-family: inherit;
   cursor: pointer;
   &:focus {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 1px;
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &:disabled {
     opacity: 0.6;
@@ -812,12 +828,15 @@ const CfSelect = styled.select`
   }
 `;
 
+// Loading spinner — a transient, low-weight affordance, not a CTA/nav/status
+// element, so `bright.lapis` (not gold) keeps it out of the gold-discipline
+// budget (spec §3).
 const CfSpinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.primary[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.glass.border};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -827,8 +846,12 @@ const CfSpinner = styled.span`
   }
 `;
 
+// Was a raw `emerald[100]` ramp step — a very light/bright tint tuned for
+// flashing over the old cream ground; on Cosmos Ink it reads as a harsh
+// flare. Swapped for a low-alpha `bright.emerald` tint, same idea as the
+// debit/credit polarity fix elsewhere in this shard.
 const CfSuccessFlash = styled.span`
-  animation: ${({ theme }) => css`${flashGreen(theme.colors.emerald[100])} 800ms ease forwards`};
+  animation: ${() => css`${flashGreen('rgba(84, 211, 155, 0.28)')} 800ms ease forwards`};
   border-radius: 4px;
   padding: 2px 4px;
   font-size: 14px;
@@ -993,7 +1016,9 @@ function ConfirmDialog({ message, onConfirm, onCancel, isPending }: ConfirmDialo
       <Modal onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
         <ModalHeader>
           <ModalTitle>Confirm</ModalTitle>
-          <CloseButton onClick={onCancel} aria-label="Cancel">✕</CloseButton>
+          <CloseButton onClick={onCancel} aria-label="Cancel">
+            <X size={17} strokeWidth={1.6} aria-hidden="true" />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{message}</p>
@@ -1210,7 +1235,9 @@ function AccountFormModal({
       <Modal onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>{isEdit ? 'Edit Account' : 'New Account'}</ModalTitle>
-          <CloseButton onClick={onClose} aria-label="Close modal">✕</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close modal">
+            <X size={17} strokeWidth={1.6} aria-hidden="true" />
+          </CloseButton>
         </ModalHeader>
         <ModalBody>
           {bannerError && <BannerError role="alert">{bannerError}</BannerError>}
@@ -1657,16 +1684,16 @@ export function ChartOfAccountsPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Chart of Accounts</PageTitle>
-        {canWrite && (
-          <PrimaryButton onClick={openCreate}>+ New Account</PrimaryButton>
-        )}
-      </PageHeader>
+      <SharedPageHeader
+        breadcrumb="FINANCE · GENERAL LEDGER"
+        title="Chart of Accounts"
+      />
 
       {showBanner && (
         <BannerContainer role="region" aria-label="Cash Flow Category Review">
-          <BannerIcon aria-hidden="true">&#9888;</BannerIcon>
+          <BannerIcon aria-hidden="true">
+            <AlertTriangle size={18} strokeWidth={1.6} />
+          </BannerIcon>
           <BannerText>
             <BannerTitle>Cash Flow Category Review</BannerTitle>
             The new Cash Flow Statement uses each account&apos;s &quot;Cash Flow
@@ -1681,7 +1708,7 @@ export function ChartOfAccountsPage() {
             aria-label="Dismiss Cash Flow Category Review banner"
             title="Dismiss this banner"
           >
-            &#x2715;
+            <X size={16} strokeWidth={1.6} aria-hidden="true" />
           </BannerDismiss>
         </BannerContainer>
       )}
@@ -1714,13 +1741,18 @@ export function ChartOfAccountsPage() {
           <option value="active">Active Only</option>
           <option value="inactive">Inactive Only</option>
         </FilterSelect>
+        {canWrite && (
+          <PrimaryButton onClick={openCreate} style={{ marginLeft: 'auto' }}>
+            + New Account
+          </PrimaryButton>
+        )}
       </ToolbarRow>
 
       {isLoading && (
         <EmptyDetail style={{ marginTop: 40 }}>Loading chart of accounts...</EmptyDetail>
       )}
       {isError && (
-        <EmptyDetail style={{ marginTop: 40, color: 'var(--color-error)' }}>
+        <EmptyDetail style={{ marginTop: 40, color: theme.colors.error }}>
           Failed to load accounts. Please refresh the page.
         </EmptyDetail>
       )}
@@ -1767,7 +1799,9 @@ export function ChartOfAccountsPage() {
                       {DRAWER_LABELS[drawer]}
                       <DrawerCount>({drawerAccounts.length})</DrawerCount>
                     </DrawerLabel>
-                    <DrawerCaret $open={!isCollapsed}>▾</DrawerCaret>
+                    <DrawerCaret $open={!isCollapsed}>
+                      <ChevronDown size={13} strokeWidth={1.6} aria-hidden="true" />
+                    </DrawerCaret>
                   </DrawerHeader>
 
                   {!isCollapsed &&
@@ -1801,14 +1835,20 @@ export function ChartOfAccountsPage() {
             })}
 
             {filteredAccounts.length === 0 && (
-              <EmptyDetail>No accounts match the current filters.</EmptyDetail>
+              <EmptyDetail>
+                <EmptyDetailTitle>No matching accounts</EmptyDetailTitle>
+                No accounts match the current filters.
+              </EmptyDetail>
             )}
           </TreePanel>
 
           {/* ── Right pane: detail ── */}
           <DetailPanel aria-label="Account detail">
             {!selectedAccount ? (
-              <EmptyDetail>Select an account on the left to view details.</EmptyDetail>
+              <EmptyDetail>
+                <EmptyDetailTitle>No account selected</EmptyDetailTitle>
+                Select an account on the left to view details.
+              </EmptyDetail>
             ) : (
               <>
                 <DetailHeader>
@@ -1864,8 +1904,8 @@ export function ChartOfAccountsPage() {
                     style={{
                       marginBottom: 20,
                       background: theme.colors.warningBg,
-                      color: theme.colors.gold[800],
-                      borderColor: theme.colors.gold[200],
+                      color: theme.colors.warning,
+                      borderColor: 'rgba(232, 200, 106, 0.45)',
                     }}
                   >
                     This is a header account. It is a section title and cannot be posted to directly.
@@ -1881,7 +1921,7 @@ export function ChartOfAccountsPage() {
                 ) : (
                   <FieldItem style={{ marginBottom: 16 }}>
                     <FieldLabel>Description</FieldLabel>
-                    <FieldValue style={{ color: 'var(--color-text-disabled)' }}>—</FieldValue>
+                    <FieldValue style={{ color: theme.colors.muted }}>—</FieldValue>
                   </FieldItem>
                 )}
 
@@ -1935,13 +1975,13 @@ export function ChartOfAccountsPage() {
                               {parent.accountNumber} — {parent.accountName}
                             </ParentLink>
                           ) : (
-                            <span style={{ color: 'var(--color-text-disabled)' }}>
+                            <span style={{ color: theme.colors.muted }}>
                               {selectedAccount.parentAccountId}
                             </span>
                           );
                         })()
                       ) : (
-                        <span style={{ color: 'var(--color-text-disabled)' }}>None</span>
+                        <span style={{ color: theme.colors.muted }}>None</span>
                       )}
                     </FieldValue>
                   </FieldItem>
@@ -1956,13 +1996,16 @@ export function ChartOfAccountsPage() {
                     </FieldItem>
                   )}
 
-                  {/* Status */}
+                  {/* Status — shared finance StatusBadge (phaseBadge pattern), not a
+                      hand-rolled pill, per the redesign's "one place to change"
+                      status-colour rule. */}
                   <FieldItem>
                     <FieldLabel>Status</FieldLabel>
                     <FieldValue>
-                      <StatusBadge $active={selectedAccount.isActive}>
-                        {selectedAccount.isActive ? 'Active' : 'Inactive'}
-                      </StatusBadge>
+                      <StatusBadge
+                        status={selectedAccount.isActive ? 'active' : 'inactive'}
+                        label={selectedAccount.isActive ? 'Active' : 'Inactive'}
+                      />
                     </FieldValue>
                   </FieldItem>
 

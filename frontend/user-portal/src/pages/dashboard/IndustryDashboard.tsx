@@ -26,11 +26,14 @@ const MushroomDashboard = lazy(() =>
   }))
 );
 
+// Night Observatory (T-901): no background here — this fallback mounts
+// directly over the app shell's fixed Sky layer while the industry dashboard
+// chunk loads, so it must stay transparent rather than paint over it.
 const Loading = styled.div`
   padding: 48px 24px;
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 export function IndustryDashboard() {

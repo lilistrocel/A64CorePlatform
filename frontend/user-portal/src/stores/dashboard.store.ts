@@ -1,11 +1,23 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CCMWidget, StatWidgetData } from '@a64core/shared';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
 import { queryClient } from '../config/react-query.config';
 import { queryKeys } from '../config/react-query.config';
 import type { Layout } from 'react-grid-layout';
 import { formatNumber } from '../utils';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Mountain,
+  Blocks,
+  Wheat,
+  Package,
+  Users,
+  HeartHandshake,
+  Truck,
+  Megaphone,
+  BarChart3,
+} from 'lucide-react';
 
 interface WidgetState {
   data: StatWidgetData | any;
@@ -169,6 +181,26 @@ export const WIDGET_CATALOG: CCMWidget[] = [
     size: 'large',
   },
 ];
+
+// Night Observatory (T-901) lucide-react replacements for WIDGET_CATALOG's
+// `icon` emoji field above (spec §6 removes every icon emoji). `CCMWidget`
+// (frontend/shared, out of this shard's scope) types `icon` as a plain
+// string, so this is an additive parallel map keyed by widget id rather
+// than a change to the widget shape — repoint components/dashboard/
+// AddWidgetModal.tsx's `widget.icon || '📊'` (out of this shard's scope) to
+// read `WIDGET_ICON_COMPONENTS[widget.id]` instead.
+export const WIDGET_ICON_COMPONENTS: Record<string, LucideIcon> = {
+  'total-farms': Mountain,
+  'total-blocks': Blocks,
+  'total-harvests': Wheat,
+  'total-orders': Package,
+  'total-employees': Users,
+  'total-customers': HeartHandshake,
+  'total-vehicles': Truck,
+  'total-campaigns': Megaphone,
+  'orders-by-status-chart': BarChart3,
+  'blocks-by-farm-chart': Wheat,
+};
 
 // Default widgets shown on first load
 const DEFAULT_WIDGET_IDS = [
@@ -349,7 +381,9 @@ export const useDashboardStore = create<DashboardState>()(
             xKey: 'farm',
             yKey: 'blocks',
             series: [
-              { name: 'Blocks', dataKey: 'blocks', color: lightTheme.colors.primary[500] },
+              // Categorical single-series chart colour — spec §4 chart rule:
+              // series order starts with celeste, not the primary/lapis ramp.
+              { name: 'Blocks', dataKey: 'blocks', color: theme.colors.celeste },
             ],
           };
           break;

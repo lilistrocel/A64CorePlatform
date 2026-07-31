@@ -5,6 +5,7 @@
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
 import type { MarketingCampaign } from '../../types/marketing';
+import { glassPanelHover, monoLabel } from '@a64core/shared';
 
 interface CampaignCardProps {
   campaign: MarketingCampaign;
@@ -16,17 +17,9 @@ interface BadgeProps {
 }
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanelHover}
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-    transform: translateY(-2px);
-  }
+  border-radius: 16px;
 `;
 
 const Header = styled.div`
@@ -43,19 +36,36 @@ const Title = styled.h3`
   margin: 0;
 `;
 
+/* Status colours already flow through marketingApi.get*StatusColor(), which
+   is routed onto colors.phase.* (spec §5.2) — this badge just applies the
+   §4 badge visual (16%/45% tinted hex, mono uppercase, glowing dot). */
 const Badge = styled.span<BadgeProps>`
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.64rem;
+  font-weight: 700;
+  background: ${({ $color }) => `${$color}29`};
   color: ${({ $color }) => $color};
+  border: 1px solid ${({ $color }) => `${$color}73`};
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
 `;
 
 const Code = styled.div`
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  ${monoLabel}
+  font-size: 0.7rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
@@ -73,14 +83,16 @@ const MetricsGrid = styled.div`
 `;
 
 const Metric = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   padding: 12px;
 `;
 
 const MetricLabel = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
@@ -99,8 +111,9 @@ const TagsContainer = styled.div`
 
 const Tag = styled.span`
   padding: 4px 10px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.35);
   border-radius: 12px;
   font-size: 12px;
 `;

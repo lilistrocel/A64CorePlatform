@@ -6,6 +6,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
+import { Download, Tractor } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import {
   listAssetInventory,
   createAssetInventory,
@@ -14,7 +17,7 @@ import {
   exportAssetInventoryCSV,
 } from '../../services/inventoryApi';
 import { getFarms } from '../../services/farmApi';
-import { formatCurrency as formatCurrencyUtil } from '../../utils';
+import { formatCurrency as formatCurrencyUtil, formatNumber } from '../../utils';
 import type {
   AssetInventory,
   AssetInventoryCreate,
@@ -25,11 +28,32 @@ import type {
 import { ASSET_CATEGORY_LABELS, ASSET_STATUS_LABELS } from '../../types/inventory';
 import type { Farm } from '../../types/farm';
 
+// Night Observatory (T-901): asset-status -> phase colour map (spec §5.2
+// extrapolation, using the equipment-specific "maintenance" row directly
+// where it applies). Internally consistent — same AssetStatus value always
+// resolves to the same phase colour wherever it's rendered in this file.
+const ASSET_STATUS_PHASE: Record<AssetStatus, PhaseKey> = {
+  operational: 'fruiting',       // approved/posted/delivered — healthy, in service
+  maintenance: 'maintenance',    // direct match: "maintenance / on hold / suspended"
+  repair: 'quarantined',         // out of service, needs attention — rejected/failed analogue
+  decommissioned: 'decommissioned', // direct match: "cancelled / void / archived"
+  stored: 'resting',             // idle, not active — "closed / settled" analogue
+};
+
 interface AssetInventoryListProps {
   onUpdate?: () => void;
+  /**
+   * T-901 gold audit: InventoryDashboard renders its own PageHeader and
+   * mounts this list inside its content area at `/inventory/assets`. Without
+   * this flag both PageHeaders render at once — two full sets of gold stat
+   * tiles/thread on one screen, well over the spec §3 gold budget. Standalone
+   * callers (if any are added later) keep the header; the embedded case
+   * suppresses it and relies on the parent's.
+   */
+  embedded?: boolean;
 }
 
-export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
+export function AssetInventoryList({ onUpdate, embedded = false }: AssetInventoryListProps) {
   const [assets, setAssets] = useState<AssetInventory[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +63,10 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
   const [maintenanceOverdue, setMaintenanceOverdue] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  // Night Observatory (T-901): total asset count for the PageHeader stat
+  // tile — already returned by listAssetInventory(), just not previously
+  // stored. No new fetch.
+  const [totalAssets, setTotalAssets] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AssetInventory | null>(null);
@@ -56,6 +84,7 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
       });
       setAssets(response.items);
       setTotalPages(response.totalPages);
+      setTotalAssets(response.total);
     } catch (error) {
       console.error('Failed to load asset inventory:', error);
     } finally {
@@ -119,22 +148,10 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
     }
   };
 
-  const getStatusColor = (status: AssetStatus) => {
-    switch (status) {
-      case 'operational':
-        return 'success';
-      case 'maintenance':
-        return 'warning';
-      case 'repair':
-        return 'error';
-      case 'decommissioned':
-        return 'neutral';
-      case 'stored':
-        return 'info';
-      default:
-        return 'neutral';
-    }
-  };
+  // Night Observatory (T-901): looks up the phase colour for a status via
+  // ASSET_STATUS_PHASE above instead of the old success/warning/error/neutral
+  // vocabulary.
+  const getStatusColor = (status: AssetStatus): PhaseKey => ASSET_STATUS_PHASE[status] ?? 'empty';
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-';
@@ -165,8 +182,22 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
     }
   };
 
+  const operationalOnPage = assets.filter((a) => a.status === 'operational').length;
+
   return (
     <Container>
+      {!embedded && (
+        <PageHeader
+          title="Farm Assets"
+          emphasizeLastWord
+          description="Tractors, machinery, and infrastructure inventory"
+          stats={[
+            { value: loading ? '...' : formatNumber(totalAssets), label: 'Total Assets' },
+            { value: loading ? '...' : formatNumber(operationalOnPage), label: 'Operational', alive: true },
+          ]}
+        />
+      )}
+
       {/* Filters */}
       <FiltersRow>
         <SearchInput
@@ -219,7 +250,8 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
         </CheckboxLabel>
         <ToolbarButtons>
           <ExportButton onClick={handleExport} disabled={exporting}>
-            {exporting ? 'Exporting...' : '📥 Export CSV'}
+            <Download size={14} strokeWidth={1.8} />
+            {exporting ? 'Exporting...' : 'Export CSV'}
           </ExportButton>
           <AddButton onClick={() => setShowAddModal(true)}>+ Add Asset</AddButton>
         </ToolbarButtons>
@@ -230,9 +262,10 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
         <LoadingState>Loading...</LoadingState>
       ) : assets.length === 0 ? (
         <EmptyState>
-          <EmptyIcon>🚜</EmptyIcon>
+          <EmptyIcon><Tractor size={48} strokeWidth={1.3} /></EmptyIcon>
           <EmptyTitle>No assets found</EmptyTitle>
           <EmptyText>Add your first farm asset to start tracking.</EmptyText>
+          <EmptyAction onClick={() => setShowAddModal(true)}>+ Add Asset</EmptyAction>
         </EmptyState>
       ) : (
         <>
@@ -272,12 +305,12 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
                     </StatusBadge>
                   </Td>
                   <Td>{asset.location || '-'}</Td>
-                  <Td>{formatCurrency(asset.currentValue, asset.currency)}</Td>
+                  <Td><MonoValue>{formatCurrency(asset.currentValue, asset.currency)}</MonoValue></Td>
                   <Td>
                     {asset.maintenanceOverdue ? (
                       <OverdueDate>{formatDate(asset.nextMaintenanceDate)}</OverdueDate>
                     ) : (
-                      formatDate(asset.nextMaintenanceDate)
+                      <MonoValue>{formatDate(asset.nextMaintenanceDate)}</MonoValue>
                     )}
                   </Td>
                   <Td>
@@ -863,6 +896,8 @@ function EditAssetModal({ asset, onClose, onSubmit }: EditAssetModalProps) {
 // STYLED COMPONENTS
 // ============================================================================
 
+// Night Observatory (T-901): page-level container is transparent — no
+// opaque background — so the fixed sky shows through (spec §2).
 const Container = styled.div``;
 
 const FiltersRow = styled.div`
@@ -874,36 +909,39 @@ const FiltersRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   min-width: 200px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
+  option {
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -912,7 +950,7 @@ const CheckboxLabel = styled.label`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xs};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
 
   input {
@@ -927,19 +965,22 @@ const ToolbarButtons = styled.div`
   margin-left: auto;
 `;
 
+// Secondary button (spec §4 Buttons): glass + glass.border + cream text —
+// never gold; gold is reserved for the primary CTA (AddButton below).
 const ExportButton = styled.button`
+  ${glassControl}
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -948,25 +989,36 @@ const ExportButton = styled.button`
   }
 `;
 
+// Primary CTA (spec §4 Buttons / §3 gold-discipline budget: "the primary
+// FAB/CTA" is an authorised gold element). Was background:primary[500] +
+// color:white — corrected to the spec-mandated gold-gradient + onAccent
+// (cosmos, dark-on-gold) treatment rather than just swapping to onDark.
 const AddButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(220, 185, 79, 0.25);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover { transform: none; }
   }
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: ${({ theme }) => theme.spacing['2xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const EmptyState = styled.div`
@@ -975,45 +1027,68 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 4rem;
+  display: flex;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
 const EmptyTitle = styled.h3`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
   font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
 `;
 
 const EmptyText = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
+  color: ${({ theme }) => theme.colors.muted};
+  margin: 0 0 ${({ theme }) => theme.spacing.lg} 0;
 `;
 
+// T-901 gold audit: this used to duplicate AddButton's gold-gradient
+// treatment, but both render on screen together whenever the list is empty
+// (toolbar AddButton + this centred empty-state action) — two gold CTAs in
+// one view, over spec §3's one-primary-CTA-per-view budget. AddButton
+// already carries the sole "primary FAB/CTA" gold slot for this screen, so
+// this is demoted to the secondary/glass treatment (spec §4 Buttons).
+const EmptyAction = styled.button`
+  ${glassControl}
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
+  color: ${({ theme }) => theme.colors.onDark};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  cursor: pointer;
+  margin: 0 auto;
+  transition: background 0.2s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.glass.hi};
+  }
+`;
+
+// A dense table sits inside ONE glass panel (spec §4 Tables / two-layer
+// rule); rows inside stay transparent.
 const Table = styled.table`
+  ${glassPanel}
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
   overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   text-align: left;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Tr = styled.tr`
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -1021,7 +1096,7 @@ const Td = styled.td`
   padding: ${({ theme }) => theme.spacing.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const AssetInfo = styled.div`
@@ -1032,74 +1107,57 @@ const AssetInfo = styled.div`
 
 const AssetName = styled.div`
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const AssetMeta = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const AssetTag = styled.span`
+  ${monoLabel}
   display: inline-block;
   padding: 2px ${({ theme }) => theme.spacing.xs};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const CategoryBadge = styled.span`
+  ${monoLabel}
   display: inline-block;
   padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 99px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 interface StatusBadgeProps {
-  $status: 'success' | 'warning' | 'error' | 'neutral' | 'info';
+  $status: PhaseKey;
 }
 
+// §4 badge pattern via the shared phaseBadge() mixin — text = phase colour,
+// bg = phase 16%, border = phase 45%, glowing dot. See ASSET_STATUS_PHASE
+// above for the AssetStatus -> phase mapping.
 const StatusBadge = styled.span<StatusBadgeProps>`
-  display: inline-block;
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme, $status }) => {
-    switch ($status) {
-      case 'success':
-        return theme.colors.success + '20';
-      case 'warning':
-        return theme.colors.warning + '20';
-      case 'error':
-        return theme.colors.error + '20';
-      case 'info':
-        return theme.colors.primary[100];
-      default:
-        return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ theme, $status }) => {
-    switch ($status) {
-      case 'success':
-        return theme.colors.success;
-      case 'warning':
-        return theme.colors.warning;
-      case 'error':
-        return theme.colors.error;
-      case 'info':
-        return theme.colors.primary[600];
-      default:
-        return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge($status)}
 `;
 
+// Overdue maintenance reads as "needs attention" — quarantined (coral),
+// matching the same extrapolated vocabulary used for the repair status
+// above, instead of the raw `error` token.
 const OverdueDate = styled.span`
-  color: ${({ theme }) => theme.colors.error};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme }) => theme.colors.phase.quarantined};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+`;
+
+// Space Mono for currency values and timestamps (spec §6/item 6).
+const MonoValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const Actions = styled.div`
@@ -1111,18 +1169,20 @@ interface ActionButtonProps {
   $danger?: boolean;
 }
 
+// Ghost buttons (spec §4 Buttons): transparent, celeste text/border.
+// Destructive variant: coral-tinted glass, never solid red.
 const ActionButton = styled.button<ActionButtonProps>`
   padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  background: transparent;
+  background: ${({ $danger }) => ($danger ? 'rgba(240, 138, 112, 0.1)' : 'transparent')};
   border: 1px solid
-    ${({ theme, $danger }) => ($danger ? theme.colors.error : theme.colors.neutral[300])};
+    ${({ theme, $danger }) => ($danger ? 'rgba(240, 138, 112, 0.35)' : theme.colors.glass.border)};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme, $danger }) => ($danger ? theme.colors.error : theme.colors.textSecondary)};
+  color: ${({ theme, $danger }) => ($danger ? theme.colors.bright.coral : theme.colors.celeste)};
   cursor: pointer;
 
   &:hover {
-    background: ${({ theme, $danger }) => ($danger ? theme.colors.error + '10' : theme.colors.neutral[100])};
+    background: ${({ $danger }) => ($danger ? 'rgba(240, 138, 112, 0.18)' : 'rgba(180, 200, 220, 0.07)')};
   }
 `;
 
@@ -1135,16 +1195,14 @@ const Pagination = styled.div`
 `;
 
 const PageButton = styled.button`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -1154,8 +1212,8 @@ const PageButton = styled.button`
 `;
 
 const PageInfo = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // Modal Styles
@@ -1165,7 +1223,10 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Night Observatory (T-901): scrim retinted to cosmos rgba(10,14,36,.6)
+     (spec §4 Modals/drawers); still closes only via CloseButton — no
+     onClick on the overlay itself, behaviour unchanged. */
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1173,8 +1234,8 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
+  border-radius: 20px;
   width: 90%;
   max-width: 700px;
   max-height: 90vh;
@@ -1186,7 +1247,7 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ModalTitle = styled.h2`
@@ -1200,7 +1261,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   line-height: 1;
@@ -1219,12 +1280,10 @@ const FormSection = styled.div`
 `;
 
 const SectionTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 `;
 
 const FormRow = styled.div`
@@ -1242,75 +1301,71 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
+  ${monoLabel}
   display: block;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const Required = styled.span`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   width: 100%;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background-color: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[600]};
+    color: ${({ theme }) => theme.colors.muted};
     opacity: 1;
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   width: 100%;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background-color: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   option {
-    background-color: ${({ theme }) => theme.colors.background};
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const TextArea = styled.textarea`
+  ${glassControl}
   width: 100%;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background-color: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[600]};
+    color: ${({ theme }) => theme.colors.muted};
     opacity: 1;
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -1319,35 +1374,40 @@ const ModalFooter = styled.div`
   justify-content: flex-end;
   gap: ${({ theme }) => theme.spacing.md};
   padding-top: ${({ theme }) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
+// Ghost cancel (spec §4 Buttons): transparent, celeste text/border.
 const CancelButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
+// Primary CTA — same gold-gradient treatment as AddButton (spec §4 Buttons).
+// Was background:primary[500] + color:white — corrected to gold-gradient +
+// onAccent, matching the primary-button pattern rather than a plain onDark swap.
 const SubmitButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(220, 185, 79, 0.25);
   }
 
   &:disabled {

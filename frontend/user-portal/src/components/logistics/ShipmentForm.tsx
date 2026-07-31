@@ -2,13 +2,20 @@
  * ShipmentForm Component
  *
  * Form for creating and editing shipments with dynamic cargo items.
+ *
+ * Night Observatory (T-901 Phase 3): glassControl inputs/selects/textarea,
+ * mono uppercase micro-labels, gold-hi focus ring, Primary gold submit
+ * button. The "+ Add Item" cargo-row action is a repeated in-form action
+ * (not the modal's single primary CTA), so it is restyled Secondary
+ * (glass) rather than gold — see spec §3 gold discipline.
  */
 
-import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
+import { Plus, X } from 'lucide-react';
+import { Button, glassControl, monoLabel } from '@a64core/shared';
 import type { ShipmentCreate, ShipmentUpdate, Shipment } from '../../types/logistics';
 
 // ============================================================================
@@ -60,89 +67,86 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1a` : `${theme.colors.primary[500]}1a`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1a` : `${theme.colors.primary[500]}1a`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   min-height: 80px;
   resize: vertical;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1a` : `${theme.colors.primary[500]}1a`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-top: 4px;
 `;
 
@@ -153,16 +157,16 @@ const FormRow = styled.div`
 `;
 
 const FormSection = styled.div`
+  ${glassControl}
+  border-radius: 14px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
   margin-top: 8px;
 `;
 
 const SectionTitle = styled.h4`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px 0;
   display: flex;
   justify-content: space-between;
@@ -177,28 +181,15 @@ const CargoItem = styled.div`
   margin-bottom: 12px;
 `;
 
-const AddButton = styled.button`
-  padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
-  }
-`;
-
 const RemoveButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 6px;
+  background: rgba(240, 138, 112, 0.12);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.35);
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -206,7 +197,7 @@ const RemoveButton = styled.button`
   align-self: center;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[100]};
+    background: rgba(240, 138, 112, 0.2);
   }
 `;
 
@@ -215,40 +206,6 @@ const Actions = styled.div`
   gap: 12px;
   justify-content: flex-end;
   margin-top: 24px;
-`;
-
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-  border: none;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'secondary') {
-      return `
-        background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
-        &:hover {
-          background: ${theme.colors.surface};
-        }
-      `;
-    }
-    return `
-      background: ${theme.colors.primary[500]};
-      color: ${theme.colors.onAccent};
-      &:hover {
-        background: ${theme.colors.primary[600]};
-      }
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    `;
-  }}
 `;
 
 // ============================================================================
@@ -352,13 +309,15 @@ export function ShipmentForm({ shipment, onSubmit, onCancel, isSubmitting = fals
       <FormSection>
         <SectionTitle>
           <span>Cargo Items *</span>
-          <AddButton
+          <Button
             type="button"
+            variant="secondary"
+            size="small"
             onClick={() => append({ description: '', quantity: '', weight: '' })}
             disabled={isSubmitting}
           >
-            + Add Item
-          </AddButton>
+            <Plus size={13} strokeWidth={1.8} /> Add Item
+          </Button>
         </SectionTitle>
 
         {fields.map((field, index) => (
@@ -398,8 +357,8 @@ export function ShipmentForm({ shipment, onSubmit, onCancel, isSubmitting = fals
             </FormGroup>
 
             {fields.length > 1 && (
-              <RemoveButton type="button" onClick={() => remove(index)} disabled={isSubmitting}>
-                Remove
+              <RemoveButton type="button" onClick={() => remove(index)} disabled={isSubmitting} aria-label="Remove cargo item">
+                <X size={13} strokeWidth={1.8} />
               </RemoveButton>
             )}
           </CargoItem>
@@ -415,11 +374,11 @@ export function ShipmentForm({ shipment, onSubmit, onCancel, isSubmitting = fals
 
       <Actions>
         {onCancel && (
-          <Button type="button" $variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         )}
-        <Button type="submit" $variant="primary" disabled={isSubmitting}>
+        <Button type="submit" variant="primary" disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : shipment ? 'Update Shipment' : 'Create Shipment'}
         </Button>
       </Actions>

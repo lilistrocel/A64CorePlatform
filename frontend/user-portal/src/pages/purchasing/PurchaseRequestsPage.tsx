@@ -5,14 +5,22 @@
  * to detail/new form pages.
  *
  * Modals do NOT close on overlay click — X button only.
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls, phase badges via ./statusPhase,
+ * Space Mono metadata, shared PageHeader/Button. Logic, routes, data-fetching
+ * and props are unchanged.
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { usePurchaseRequests } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import type { PRStatus, UrgencyLevel } from '../../services/purchasingApi';
+import { purchasingStatusToPhase } from './statusPhase';
 
 // ─── Styled components ──────────────────────────────────────────────────────
 
@@ -20,20 +28,6 @@ const Container = styled.div`
   padding: 32px;
   max-width: 1440px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
 `;
 
 const FilterRow = styled.div`
@@ -45,16 +39,19 @@ const FilterRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 220px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const FilterChips = styled.div`
@@ -63,115 +60,84 @@ const FilterChips = styled.div`
   flex-wrap: wrap;
 `;
 
-const Chip = styled.button<{ $active: boolean }>`
+/** Filter pill — spec §5 preamble: "same status = same colour in every
+ * context (badge, card edge, filter pill, ...)". Active state without a
+ * phase (the "All" chip) falls back to celeste, never gold. */
+const Chip = styled.button<{ $active: boolean; $phase?: PhaseKey }>`
+  ${glassControl}
+  display: inline-flex;
+  align-items: center;
   padding: 6px 14px;
   border-radius: 99px;
-  border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
-  font-size: 13px;
-  font-weight: ${({ $active }) => ($active ? '600' : '400')};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   transition: all 150ms ease;
+
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
+    border-color: rgba(180, 200, 220, 0.4);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
+
+  ${({ $active, $phase, theme }) =>
+    $active &&
+    ($phase
+      ? phaseBadge($phase)
+      : css`
+          color: ${theme.colors.celeste};
+          border-color: ${theme.colors.celeste};
+          background: rgba(180, 200, 220, 0.14);
+        `)}
 `;
 
-const PrimaryButton = styled.button`
-  padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-`;
-
-const GhostButton = styled.button`
-  padding: 6px 14px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+const TableWrap = styled.div`
+  ${glassPanel}
+  overflow: hidden;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Tr = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover td { background: rgba(180, 200, 220, 0.05); }
   &:last-child td { border-bottom: none; }
 `;
 
+/** Space Mono for document IDs, quantities, currency amounts, timestamps —
+ * spec §2/instruction 6. */
+const Mono = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
+const DocCode = styled(Mono)`
+  font-size: 13px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
 const StatusBadge = styled.span<{ $status: PRStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'Draft': return theme.colors.neutral[100];
-      case 'Pending Approval': return theme.colors.warningBg;
-      case 'Approved': return theme.colors.emerald[100];
-      case 'Rejected': return theme.colors.terracotta[100];
-      case 'Cancelled': return theme.colors.neutral[100];
-      case 'Closed': return theme.colors.secondary[50];
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'Draft': return theme.colors.textSecondary;
-      case 'Pending Approval': return theme.colors.gold[800];
-      case 'Approved': return theme.colors.emerald[700];
-      case 'Rejected': return theme.colors.terracotta[800];
-      case 'Cancelled': return theme.colors.textDisabled;
-      case 'Closed': return theme.colors.secondary[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
 `;
 
 const UrgencyDot = styled.span<{ $urgency: UrgencyLevel }>`
@@ -183,18 +149,43 @@ const UrgencyDot = styled.span<{ $urgency: UrgencyLevel }>`
   background: ${({ $urgency, theme }) => {
     switch ($urgency) {
       case 'high': return theme.colors.error;
-      case 'normal': return theme.colors.warning;
-      case 'low': return theme.colors.textSecondary;
-      default: return theme.colors.textSecondary;
+      // Reason: 'normal' previously rendered in theme.colors.warning (gold-b).
+      // A per-row 8px dot in gold would have blown the <=4-gold-elements-per-
+      // view budget (spec §3) on any list with several "normal" PRs. Urgency
+      // is not a lifecycle status (the phase map's extrapolation table only
+      // covers document states — spec §5.2), so celeste (secondary emphasis)
+      // is the correct non-gold substitute, not a phase colour.
+      case 'normal': return theme.colors.celeste;
+      case 'low': return theme.colors.muted;
+      default: return theme.colors.muted;
     }
   }};
+`;
+
+const StatusMessage = styled.p`
+  text-align: center;
+  padding: 48px 32px;
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 15px;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 15px;
+`;
+
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 1.4rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 8px;
+`;
+
+const EmptyText = styled.p`
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 0.9rem;
+  margin: 0 0 20px;
 `;
 
 const Pagination = styled.div`
@@ -203,12 +194,19 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PageButtons = styled.div`
   display: flex;
+  align-items: center;
   gap: 8px;
+`;
+
+const PageIndicator = styled.span`
+  ${monoLabel}
+  padding: 6px 12px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // ─── Status filter options ────────────────────────────────────────────────────
@@ -262,12 +260,16 @@ export function PurchaseRequestsPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Purchase Requests</Title>
-        <PrimaryButton onClick={() => navigate('/purchasing/pr/new')}>
-          + New PR
-        </PrimaryButton>
-      </Header>
+      <PageHeader
+        breadcrumb="— PURCHASING · REQUESTS"
+        title="Purchase Requests"
+        emphasizeLastWord
+        description="Departmental requests awaiting review before they become purchase orders."
+        stats={[
+          { value: meta.total, label: 'Total PRs' },
+          { value: prs.length, label: 'This Page' },
+        ]}
+      />
 
       <FilterRow>
         <SearchInput
@@ -280,71 +282,87 @@ export function PurchaseRequestsPage() {
             <Chip
               key={f.value}
               $active={statusFilter === f.value}
+              $phase={f.value === 'all' ? undefined : purchasingStatusToPhase(f.value)}
               onClick={() => { setStatusFilter(f.value as any); setPage(1); }}
             >
               {f.label}
             </Chip>
           ))}
         </FilterChips>
+        <Button variant="primary" onClick={() => navigate('/purchasing/pr/new')}>
+          New Purchase Request
+        </Button>
       </FilterRow>
 
-      {isLoading && <EmptyState>Loading purchase requests...</EmptyState>}
-      {isError && <EmptyState>Failed to load purchase requests. Please try again.</EmptyState>}
+      {isLoading && <StatusMessage>Loading purchase requests...</StatusMessage>}
+      {isError && <StatusMessage>Failed to load purchase requests. Please try again.</StatusMessage>}
       {!isLoading && !isError && prs.length === 0 && (
-        <EmptyState>No purchase requests found. Create your first PR to get started.</EmptyState>
+        <EmptyState>
+          <EmptyHeadline>No purchase requests yet</EmptyHeadline>
+          {/* Reason: no separate CTA here — the "New Purchase Request" button
+              already sits in FilterRow above and stays visible in this empty
+              state. A second simultaneous gold primary button would duplicate
+              that action and push this view over the spec §3 ≤4-gold-
+              elements-per-view budget. */}
+          <EmptyText style={{ marginBottom: 0 }}>Create your first PR above to get the approval chain moving.</EmptyText>
+        </EmptyState>
       )}
 
       {!isLoading && !isError && prs.length > 0 && (
         <>
-          <Table>
-            <thead>
-              <tr>
-                <Th>PR Number</Th>
-                <Th>Department</Th>
-                <Th>Urgency</Th>
-                <Th>Total (AED)</Th>
-                <Th>Status</Th>
-                <Th>Date</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {prs.map((pr) => (
-                <Tr key={pr.docId} onClick={() => navigate(`/purchasing/pr/${pr.docId}`)}>
-                  <Td>
-                    <code style={{ fontSize: 13, fontWeight: 600 }}>{pr.docNumber}</code>
-                  </Td>
-                  <Td>{pr.department ?? '—'}</Td>
-                  <Td>
-                    <UrgencyDot $urgency={pr.urgency} />
-                    {pr.urgency}
-                  </Td>
-                  <Td>{formatAmount(pr.totalGross, pr.currencyCode)}</Td>
-                  <Td>
-                    <StatusBadge $status={pr.status}>{pr.status}</StatusBadge>
-                  </Td>
-                  <Td>{formatDate(pr.requestedDate)}</Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <TableWrap>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>PR Number</Th>
+                  <Th>Department</Th>
+                  <Th>Urgency</Th>
+                  <Th>Total (AED)</Th>
+                  <Th>Status</Th>
+                  <Th>Date</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {prs.map((pr) => (
+                  <Tr key={pr.docId} onClick={() => navigate(`/purchasing/pr/${pr.docId}`)}>
+                    <Td>
+                      <DocCode>{pr.docNumber}</DocCode>
+                    </Td>
+                    <Td>{pr.department ?? '—'}</Td>
+                    <Td>
+                      <UrgencyDot $urgency={pr.urgency} />
+                      {pr.urgency}
+                    </Td>
+                    <Td><Mono>{formatAmount(pr.totalGross, pr.currencyCode)}</Mono></Td>
+                    <Td>
+                      <StatusBadge $status={pr.status}>{pr.status}</StatusBadge>
+                    </Td>
+                    <Td><Mono>{formatDate(pr.requestedDate)}</Mono></Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrap>
           <Pagination>
             <span>Showing {prs.length} of {meta.total} purchase requests</span>
             <PageButtons>
-              <GhostButton
+              <Button
+                variant="outline"
+                size="small"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
               >
                 Previous
-              </GhostButton>
-              <span style={{ padding: '6px 12px', fontSize: 13 }}>
-                Page {meta.page} / {meta.totalPages}
-              </span>
-              <GhostButton
+              </Button>
+              <PageIndicator>Page {meta.page} / {meta.totalPages}</PageIndicator>
+              <Button
+                variant="outline"
+                size="small"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page >= meta.totalPages}
               >
                 Next
-              </GhostButton>
+              </Button>
             </PageButtons>
           </Pagination>
         </>

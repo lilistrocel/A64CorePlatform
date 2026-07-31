@@ -162,7 +162,9 @@ const Avatar = styled.div`
   height: 28px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* primary/lapis is a bright fill, not gold — onDark, not onAccent
+     (spec §1.1 onAccent audit). */
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: 9px;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   display: flex;
@@ -180,11 +182,15 @@ const Bubble = styled.div<{ $isUser: boolean; $isError: boolean }>`
   background: ${({ $isUser, $isError, theme }) => {
     if ($isError) return theme.colors.errorBg;
     if ($isUser) return theme.colors.primary[500];
-    return theme.colors.neutral[200];
+    return theme.colors.cosmosHi;
   }};
+  /* Night Observatory (T-901): 'white' was a hardcoded literal (brand
+     contract forbids pure white/black outside the two MapLibre exceptions,
+     spec §8) — onDark (cream) is the correct token for text on the lapis
+     user-bubble fill; onAccent means "text on gold" now, never applies here. */
   color: ${({ $isUser, $isError, theme }) => {
     if ($isError) return theme.colors.error;
-    if ($isUser) return 'white';
+    if ($isUser) return theme.colors.onDark;
     return theme.colors.textPrimary;
   }};
   display: flex;

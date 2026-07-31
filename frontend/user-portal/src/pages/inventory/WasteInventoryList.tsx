@@ -2,78 +2,100 @@
  * Waste Inventory List Page
  *
  * Lists and manages waste inventory records.
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls, Space Mono metadata, shared
+ * PageHeader/Button, lucide icons in place of emoji. Logic, routes,
+ * data-fetching, props and state are unchanged.
+ *
+ * SourceBadge / DisposalBadge deliberately do NOT go through `colors.phase.*`.
+ * Both encode categorical reason/method codes (several of which can be
+ * simultaneously true about the same waste record), not a single lifecycle a
+ * record transitions through — collapsing them onto the shared phase map
+ * would destroy the perceptual separation a warehouse worker relies on to
+ * scan this table quickly. They use the `colors.bright.*` categorical
+ * palette instead (the app's general-purpose chart/categorical palette, not
+ * tied to one reserved meaning per hue the way `phase.*` is), built with the
+ * shared `colorBadge()` mixin since `phaseBadge()` only accepts a `PhaseKey`.
+ * See `sourceTypeColor` / `disposalMethodColor` below for the exact mapping
+ * and rationale. Neither badge uses `bright.gold` or `phase.harvesting` —
+ * gold is reserved for the literal crop-harvest phase elsewhere in the app;
+ * this page never spends that budget.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import styled, { keyframes, useTheme } from 'styled-components';
-import type { WasteInventory, WasteSummary, WasteSourceType, DisposalMethod, PaginatedWaste } from '../../types/sales';
+import styled, { css, keyframes, useTheme, type DefaultTheme } from 'styled-components';
+import { Inbox, Pencil, Trash2 } from 'lucide-react';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, colorBadge } from '@a64core/shared';
+import type { WasteInventory, WasteSummary, WasteSourceType, DisposalMethod } from '../../types/sales';
 import api from '../../services/api';
 import { formatNumber, formatCurrency } from '../../utils';
 
-// Simple toast replacement
+// Simple toast replacement — console-only, nothing user-facing renders these
+// lines, but they represent toast severity icons conceptually. Emoji removed
+// since they read as icon decoration, not free-form log prose.
 const toast = {
-  success: (msg: string) => console.log('✅ Success:', msg),
-  error: (msg: string) => console.error('❌ Error:', msg),
-  warning: (msg: string) => console.warn('⚠️ Warning:', msg),
-  info: (msg: string) => console.info('ℹ️ Info:', msg),
+  success: (msg: string) => console.log('Success:', msg),
+  error: (msg: string) => console.error('Error:', msg),
+  warning: (msg: string) => console.warn('Warning:', msg),
+  info: (msg: string) => console.info('Info:', msg),
 };
 
-// Basic Card component
-const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 16px;
-`;
+// ============================================================================
+// LOCAL COLOUR HELPERS — categorical badges (see file header)
+// ============================================================================
 
-// Basic Button component
-interface ButtonProps {
-  $variant?: 'primary' | 'secondary' | 'danger' | 'success';
+// return -> info (lapis) · expired -> terra · damaged -> coral ·
+// harvest -> emerald (byproduct of a good harvest, not itself bad) ·
+// quality_reject -> rose (deliberately distinct from damaged's coral so two
+// different "bad" reasons never collapse onto the same hue) · other -> muted.
+function sourceTypeColor(type: WasteSourceType, theme: DefaultTheme): string {
+  switch (type) {
+    case 'return':
+      return theme.colors.bright.lapis;
+    case 'expired':
+      return theme.colors.bright.terra;
+    case 'damaged':
+      return theme.colors.bright.coral;
+    case 'harvest':
+      return theme.colors.bright.emerald;
+    case 'quality_reject':
+      return theme.colors.bright.rose;
+    case 'other':
+    default:
+      return theme.colors.muted;
+  }
 }
 
-const Button = styled.button<ButtonProps>`
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-
-  ${({ $variant, theme }) => {
-    switch ($variant) {
-      case 'primary':
-        return `
-          background: ${theme.colors.primary[500]};
-          color: ${theme.colors.onAccent};
-          &:hover { background: ${theme.colors.primary[600]}; }
-        `;
-      case 'danger':
-        return `
-          background: ${theme.colors.terracotta[600]};
-          color: ${theme.colors.onAccent};
-          &:hover { background: ${theme.colors.terracotta[700]}; }
-        `;
-      case 'success':
-        return `
-          background: ${theme.colors.success};
-          color: ${theme.colors.onAccent};
-          &:hover { background: ${theme.colors.emerald[600]}; }
-        `;
-      default:
-        return `
-          background: ${theme.colors.surface};
-          color: ${theme.colors.textPrimary};
-          border: 1px solid ${theme.colors.neutral[300]};
-          &:hover { background: ${theme.colors.neutral[300]}; }
-        `;
-    }
-  }}
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+// compost -> emerald · animal_feed -> lapis · donated -> lavender ·
+// sold_discount -> terra (not gold — gold is reserved, a disposal method
+// never spends it) · discard -> muted/dim · pending -> coral (still
+// unhandled, needs attention).
+function disposalMethodColor(method: DisposalMethod, theme: DefaultTheme): string {
+  switch (method) {
+    case 'compost':
+      return theme.colors.bright.emerald;
+    case 'animal_feed':
+      return theme.colors.bright.lapis;
+    case 'donated':
+      return theme.colors.bright.lavender;
+    case 'sold_discount':
+      return theme.colors.bright.terra;
+    case 'discard':
+      return theme.colors.muted;
+    case 'pending':
+    default:
+      return theme.colors.bright.coral;
   }
+}
+
+// ============================================================================
+// GENERIC STYLED PRIMITIVES
+// ============================================================================
+
+const Card = styled.div`
+  ${glassPanel}
+  padding: 16px;
 `;
 
 // Loading spinner
@@ -91,8 +113,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top: 3px solid ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top: 3px solid ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: ${spin} 1s linear infinite;
 `;
@@ -114,22 +136,6 @@ const PageContainer = styled.div<PageContainerProps>`
   margin: 0 auto;
 `;
 
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-`;
-
-const PageTitle = styled.h1`
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
 const SummaryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -142,21 +148,21 @@ interface SummaryCardProps {
 }
 
 const SummaryCard = styled(Card)<SummaryCardProps>`
-  padding: 20px;
   text-align: center;
-  border-left: 4px solid ${({ $color, theme }) => $color || theme.colors.border};
+  border-top: 2px solid ${({ $color, theme }) => $color || theme.colors.line};
 `;
 
 const SummaryValue = styled.div`
-  font-size: 1.75rem;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 1.5rem;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SummaryLabel = styled.div`
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: 4px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
+  margin-top: 6px;
 `;
 
 const FiltersRow = styled.div`
@@ -167,59 +173,39 @@ const FiltersRow = styled.div`
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 0.875rem;
   min-width: 180px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+
+  option {
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}26;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 0.875rem;
   min-width: 200px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}26;
-  }
-`;
-
-const ExportButton = styled.button`
-  padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[300]};
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -233,37 +219,31 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.th`
+  ${monoLabel}
   padding: 14px 16px;
   text-align: left;
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TableRow = styled.tr`
-  /* Striped rows for readability - alternating row colors */
-  &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-  }
-
-  &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
-  }
+  transition: background 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const TableCell = styled.td`
   padding: 14px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.neutral[800]};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const MonoText = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.82rem;
 `;
 
 interface SourceBadgeProps {
@@ -271,30 +251,7 @@ interface SourceBadgeProps {
 }
 
 const SourceBadge = styled.span<SourceBadgeProps>`
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-
-  ${({ $type, theme }) => {
-    switch ($type) {
-      case 'return':
-        return `background: ${theme.colors.infoBg}; color: ${theme.colors.primary[700]};`;
-      case 'expired':
-        return `background: ${theme.colors.warningBg}; color: ${theme.colors.gold[600]};`;
-      case 'damaged':
-        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[600]};`;
-      case 'harvest':
-        return `background: ${theme.colors.successBg}; color: ${theme.colors.emerald[600]};`;
-      case 'quality_reject':
-        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[800]};`;
-      default:
-        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
-    }
-  }}
+  ${({ $type, theme }) => colorBadge(sourceTypeColor($type, theme))}
 `;
 
 interface DisposalBadgeProps {
@@ -302,32 +259,7 @@ interface DisposalBadgeProps {
 }
 
 const DisposalBadge = styled.span<DisposalBadgeProps>`
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-
-  ${({ $method, theme }) => {
-    switch ($method) {
-      case 'compost':
-        return `background: ${theme.colors.successBg}; color: ${theme.colors.emerald[600]};`;
-      case 'animal_feed':
-        return `background: ${theme.colors.infoBg}; color: ${theme.colors.primary[600]};`;
-      case 'donated':
-        return `background: ${theme.colors.infoBg}; color: ${theme.colors.primary[800]};`;
-      case 'sold_discount':
-        return `background: ${theme.colors.warningBg}; color: ${theme.colors.gold[600]};`;
-      case 'discard':
-        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
-      case 'pending':
-        return `background: ${theme.colors.errorBg}; color: ${theme.colors.terracotta[600]};`;
-      default:
-        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
-    }
-  }}
+  ${({ $method, theme }) => colorBadge(disposalMethodColor($method, theme))}
 `;
 
 const ActionsCell = styled.div`
@@ -336,36 +268,58 @@ const ActionsCell = styled.div`
 `;
 
 interface ActionButtonProps {
-  $variant?: 'primary' | 'success' | 'danger';
+  $variant?: 'primary' | 'danger';
 }
 
-const ActionButton = styled.button<ActionButtonProps>`
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+const dangerAction = css`
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border-color: rgba(240, 138, 112, 0.4);
 
-  ${({ $variant, theme }) => {
-    switch ($variant) {
-      case 'primary':
-        return `background: ${theme.colors.primary[500]}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.primary[600]}; }`;
-      case 'success':
-        return `background: ${theme.colors.success}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.emerald[600]}; }`;
-      case 'danger':
-        return `background: ${theme.colors.terracotta[600]}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.terracotta[700]}; }`;
-      default:
-        return `background: ${theme.colors.neutral[600]}; color: ${theme.colors.onAccent}; &:hover { background: ${theme.colors.neutral[700]}; }`;
-    }
-  }}
+  &:hover {
+    background: rgba(240, 138, 112, 0.22);
+    color: ${({ theme }) => theme.colors.bright.coral};
+  }
+`;
+
+const ActionButton = styled.button<ActionButtonProps>`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  ${({ $variant }) => $variant === 'danger' && dangerAction}
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 64px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+`;
+
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.2rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0;
 `;
 
 const PaginationContainer = styled.div`
@@ -373,12 +327,12 @@ const PaginationContainer = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const PaginationInfo = styled.span`
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PaginationButtons = styled.div`
@@ -390,24 +344,29 @@ interface PageButtonProps {
   $active?: boolean;
 }
 
+const pageButtonActive = css`
+  border-color: ${({ theme }) => theme.colors.secondary[500]};
+  color: ${({ theme }) => theme.colors.secondary[500]};
+`;
+
 const PageButton = styled.button<PageButtonProps>`
+  ${glassControl}
   padding: 8px 14px;
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 6px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textPrimary)};
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
+
+  ${({ $active }) => $active && pageButtonActive}
 `;
 
 const ModalOverlay = styled.div`
@@ -416,7 +375,7 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -424,8 +383,10 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   padding: 24px;
   width: 100%;
   max-width: 500px;
@@ -445,36 +406,48 @@ const FormGroup = styled.div`
 `;
 
 const FormLabel = styled.label`
+  ${monoLabel}
   display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.neutral[800]};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 6px;
 `;
 
 const FormSelect = styled.select`
+  ${glassControl}
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+
+  option {
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const FormTextarea = styled.textarea`
+  ${glassControl}
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 0.875rem;
   min-height: 80px;
   resize: vertical;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -646,26 +619,33 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
   return (
     <PageContainer $embedded={embedded}>
       {!embedded && (
-        <PageHeader>
-          <PageTitle>Waste Inventory</PageTitle>
-        </PageHeader>
+        <PageHeader
+          breadcrumb="Inventory · Live"
+          title="Waste Inventory"
+          emphasizeLastWord
+          description="Track waste records from source through disposal."
+          stats={[
+            { value: total, label: 'Records' },
+            ...(summary ? [{ value: summary.pendingDisposal, label: 'Pending Disposal' }] : []),
+          ]}
+        />
       )}
 
       {summary && (
         <SummaryGrid>
-          <SummaryCard $color={theme.colors.terracotta[600]}>
+          <SummaryCard $color={theme.colors.bright.lapis}>
             <SummaryValue>{formatNumber(summary.totalWasteRecords)}</SummaryValue>
             <SummaryLabel>Total Waste Records</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color={theme.colors.gold[600]}>
+          <SummaryCard $color={theme.colors.bright.laurel}>
             <SummaryValue>{formatNumber(summary.totalQuantity, { decimals: 2 })}</SummaryValue>
             <SummaryLabel>Total Quantity</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color={theme.colors.primary[700]}>
+          <SummaryCard $color={theme.colors.bright.coral}>
             <SummaryValue>{formatCurrency(summary.totalEstimatedValue, 'AED')}</SummaryValue>
             <SummaryLabel>Estimated Value Lost</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color={theme.colors.error}>
+          <SummaryCard $color={theme.colors.bright.terra}>
             <SummaryValue>{formatNumber(summary.pendingDisposal)}</SummaryValue>
             <SummaryLabel>Pending Disposal</SummaryLabel>
           </SummaryCard>
@@ -712,15 +692,16 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
           <option value="sold_discount">Sold at Discount</option>
           <option value="donated">Donated</option>
         </FilterSelect>
-        <ExportButton onClick={handleExport} disabled={exporting}>
-          {exporting ? 'Exporting...' : '📥 Export CSV'}
-        </ExportButton>
+        <Button variant="secondary" size="small" onClick={handleExport} disabled={exporting}>
+          <Inbox size={16} strokeWidth={1.8} />
+          {exporting ? 'Exporting...' : 'Export CSV'}
+        </Button>
       </FiltersRow>
 
       <Card>
         {wasteItems.length === 0 ? (
           <EmptyState>
-            <p>No waste records found.</p>
+            <EmptyHeadline>No waste records found</EmptyHeadline>
           </EmptyState>
         ) : (
           <>
@@ -743,10 +724,10 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
                     <TableRow key={item.wasteId}>
                       <TableCell>
                         <strong>{item.plantName}</strong>
-                        {item.variety && <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>{item.variety}</div>}
+                        {item.variety && <div style={{ fontSize: '0.75rem', color: theme.colors.muted }}>{item.variety}</div>}
                       </TableCell>
                       <TableCell>
-                        {formatNumber(item.quantity, { decimals: 2 })} {item.unit}
+                        <MonoText>{formatNumber(item.quantity, { decimals: 2 })} {item.unit}</MonoText>
                       </TableCell>
                       <TableCell>
                         <SourceBadge $type={item.sourceType}>
@@ -756,22 +737,24 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
                       <TableCell style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.wasteReason}
                       </TableCell>
-                      <TableCell>{formatDate(item.wasteDate)}</TableCell>
+                      <TableCell>
+                        <MonoText>{formatDate(item.wasteDate)}</MonoText>
+                      </TableCell>
                       <TableCell>
                         <DisposalBadge $method={item.disposalMethod}>
                           {formatDisposalMethod(item.disposalMethod)}
                         </DisposalBadge>
                       </TableCell>
                       <TableCell>
-                        {item.estimatedValue ? formatCurrency(item.estimatedValue, 'AED') : '-'}
+                        <MonoText>{item.estimatedValue ? formatCurrency(item.estimatedValue, 'AED') : '-'}</MonoText>
                       </TableCell>
                       <TableCell>
                         <ActionsCell>
                           <ActionButton $variant="primary" onClick={() => openDisposalModal(item)}>
-                            Update
+                            <Pencil size={13} strokeWidth={1.8} /> Update
                           </ActionButton>
                           <ActionButton $variant="danger" onClick={() => handleDelete(item.wasteId)}>
-                            Delete
+                            <Trash2 size={13} strokeWidth={1.8} /> Delete
                           </ActionButton>
                         </ActionsCell>
                       </TableCell>
@@ -859,10 +842,10 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
             </FormGroup>
 
             <ModalActions>
-              <Button $variant="secondary" onClick={() => setShowDisposalModal(false)}>
+              <Button variant="secondary" size="small" onClick={() => setShowDisposalModal(false)}>
                 Cancel
               </Button>
-              <Button $variant="primary" onClick={handleUpdateDisposal}>
+              <Button variant="primary" size="small" onClick={handleUpdateDisposal}>
                 Update Disposal
               </Button>
             </ModalActions>

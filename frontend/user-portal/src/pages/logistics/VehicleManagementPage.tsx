@@ -2,10 +2,18 @@
  * VehicleManagementPage Component
  *
  * Vehicle fleet management with filters and CRUD operations.
+ *
+ * Night Observatory (T-901 Phase 3): PageHeader for the title block, Chip
+ * filter pills (phaseBadge-coloured for status, celeste for type — vehicle
+ * type is not a lifecycle state so it never takes a phase colour), glass
+ * modal, gold Primary CTA for "New Vehicle".
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { Plus, X } from 'lucide-react';
+import type { PhaseKey } from '@a64core/shared';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import { VehicleTable } from '../../components/logistics/VehicleTable';
 import { VehicleCard } from '../../components/logistics/VehicleCard';
 import { VehicleForm } from '../../components/logistics/VehicleForm';
@@ -15,6 +23,15 @@ import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 
 // Mobile breakpoint for responsive view switching
 const MOBILE_BREAKPOINT = 768;
+
+// Vehicle status -> phase key (spec §5.2 extrapolation) — identical map to
+// VehicleCard.tsx / VehicleTable.tsx.
+const VEHICLE_STATUS_TO_PHASE: Record<VehicleStatus, PhaseKey> = {
+  available: 'fruiting',
+  in_use: 'inoculated',
+  maintenance: 'maintenance',
+  retired: 'decommissioned',
+};
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -26,75 +43,36 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
+const ActionRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
 
   @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-`;
-
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
-const Actions = styled.div`
-  display: flex;
-  gap: 16px;
-
-  @media (max-width: 768px) {
-    width: 100%;
     flex-direction: column;
   }
 `;
 
 const SearchInput = styled.input`
-  padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassControl}
+  padding: 10px 16px;
   font-size: 14px;
-  width: 300px;
-  background: ${({ theme }) => theme.colors.background};
+  width: 280px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1a;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   @media (max-width: 768px) {
     width: 100%;
-  }
-`;
-
-const CreateButton = styled.button`
-  padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-  white-space: nowrap;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
   }
 `;
 
@@ -103,6 +81,7 @@ const FilterBar = styled.div`
   gap: 16px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+  justify-content: space-between;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -113,52 +92,71 @@ const FilterGroup = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 `;
 
 const FilterLabel = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
-const FilterButton = styled.button<{ $active: boolean }>`
-  padding: 8px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+/** Filter pill — spec §5 preamble: "same status = same colour in every
+ * context (badge, card edge, filter pill, ...)". Type filters have no phase
+ * (vehicle type is not a lifecycle state) so their active state always
+ * falls back to celeste, never gold. */
+const Chip = styled.button<{ $active: boolean; $phase?: PhaseKey }>`
+  ${glassControl}
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 99px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
-  transition: all 150ms ease-in-out;
+  transition: all 150ms ease;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.primary[600] : theme.colors.surface)};
+    border-color: rgba(180, 200, 220, 0.4);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
+
+  ${({ $active, $phase, theme }) =>
+    $active &&
+    ($phase
+      ? phaseBadge($phase)
+      : css`
+          color: ${theme.colors.celeste};
+          border-color: ${theme.colors.celeste};
+          background: rgba(180, 200, 220, 0.14);
+        `)}
 `;
 
 const ViewToggle = styled.div`
   display: flex;
-  gap: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  gap: 4px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   padding: 4px;
-  border-radius: 8px;
+  border-radius: 10px;
 `;
 
 const ViewButton = styled.button<{ $active: boolean }>`
-  padding: 8px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 7px 16px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.glass.hi : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 7px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  box-shadow: ${({ $active }) => ($active ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none')};
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -178,16 +176,17 @@ const LoadingContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
-  background: ${({ theme }) => theme.colors.terracotta[100]};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
@@ -197,7 +196,7 @@ const Modal = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -206,8 +205,10 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   padding: 32px;
   max-width: 800px;
   width: 100%;
@@ -224,21 +225,25 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
-  font-size: 24px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 4px;
+  border-radius: 8px;
+  transition: color 150ms ease-in-out;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 `;
 
@@ -251,18 +256,16 @@ const Pagination = styled.div`
 `;
 
 const PageButton = styled.button`
+  ${glassControl}
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -272,8 +275,9 @@ const PageButton = styled.button`
 `;
 
 const PageInfo = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.7rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // ============================================================================
@@ -389,61 +393,51 @@ export function VehicleManagementPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Vehicle Management</Title>
-        <Actions>
-          <SearchInput
-            type="text"
-            placeholder="Search vehicles..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
-            }}
-          />
-          <CreateButton onClick={() => setShowCreateModal(true)}>
-            <span>+</span> New Vehicle
-          </CreateButton>
-        </Actions>
-      </Header>
+      <PageHeader
+        breadcrumb="Logistics · Live"
+        title="Vehicle Management"
+        emphasizeLastWord
+        description="The fleet used to run scheduled shipments."
+        stats={[{ value: total, label: 'Vehicles' }]}
+      />
+
+      <ActionRow>
+        <SearchInput
+          type="text"
+          placeholder="Search vehicles..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setPage(1);
+          }}
+        />
+        <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+          <Plus size={16} strokeWidth={2} /> New Vehicle
+        </Button>
+      </ActionRow>
 
       <FilterBar>
         <FilterGroup>
           <FilterLabel>Type:</FilterLabel>
-          <FilterButton $active={typeFilter === 'all'} onClick={() => { setTypeFilter('all'); setPage(1); }}>
-            All
-          </FilterButton>
-          <FilterButton $active={typeFilter === 'truck'} onClick={() => { setTypeFilter('truck'); setPage(1); }}>
-            Truck
-          </FilterButton>
-          <FilterButton $active={typeFilter === 'van'} onClick={() => { setTypeFilter('van'); setPage(1); }}>
-            Van
-          </FilterButton>
-          <FilterButton $active={typeFilter === 'pickup'} onClick={() => { setTypeFilter('pickup'); setPage(1); }}>
-            Pickup
-          </FilterButton>
-          <FilterButton $active={typeFilter === 'refrigerated'} onClick={() => { setTypeFilter('refrigerated'); setPage(1); }}>
-            Refrigerated
-          </FilterButton>
+          {(['all', 'truck', 'van', 'pickup', 'refrigerated'] as const).map((t) => (
+            <Chip key={t} $active={typeFilter === t} onClick={() => { setTypeFilter(t as VehicleType | 'all'); setPage(1); }}>
+              {t === 'all' ? 'All' : t}
+            </Chip>
+          ))}
         </FilterGroup>
 
         <FilterGroup>
           <FilterLabel>Status:</FilterLabel>
-          <FilterButton $active={statusFilter === 'all'} onClick={() => { setStatusFilter('all'); setPage(1); }}>
-            All
-          </FilterButton>
-          <FilterButton $active={statusFilter === 'available'} onClick={() => { setStatusFilter('available'); setPage(1); }}>
-            Available
-          </FilterButton>
-          <FilterButton $active={statusFilter === 'in_use'} onClick={() => { setStatusFilter('in_use'); setPage(1); }}>
-            In Use
-          </FilterButton>
-          <FilterButton $active={statusFilter === 'maintenance'} onClick={() => { setStatusFilter('maintenance'); setPage(1); }}>
-            Maintenance
-          </FilterButton>
-          <FilterButton $active={statusFilter === 'retired'} onClick={() => { setStatusFilter('retired'); setPage(1); }}>
-            Retired
-          </FilterButton>
+          {(['all', 'available', 'in_use', 'maintenance', 'retired'] as const).map((s) => (
+            <Chip
+              key={s}
+              $active={statusFilter === s}
+              $phase={s === 'all' ? undefined : VEHICLE_STATUS_TO_PHASE[s]}
+              onClick={() => { setStatusFilter(s as VehicleStatus | 'all'); setPage(1); }}
+            >
+              {s === 'all' ? 'All' : s.replace('_', ' ')}
+            </Chip>
+          ))}
         </FilterGroup>
 
         <ViewToggle>
@@ -503,7 +497,9 @@ export function VehicleManagementPage() {
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Create New Vehicle</ModalTitle>
-              <CloseButton onClick={() => setShowCreateModal(false)}>&times;</CloseButton>
+              <CloseButton onClick={() => setShowCreateModal(false)} aria-label="Close">
+                <X size={22} strokeWidth={1.8} />
+              </CloseButton>
             </ModalHeader>
             <VehicleForm
               onSubmit={handleCreateVehicle}
@@ -519,7 +515,9 @@ export function VehicleManagementPage() {
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Edit Vehicle</ModalTitle>
-              <CloseButton onClick={() => setEditingVehicle(null)}>&times;</CloseButton>
+              <CloseButton onClick={() => setEditingVehicle(null)} aria-label="Close">
+                <X size={22} strokeWidth={1.8} />
+              </CloseButton>
             </ModalHeader>
             <VehicleForm
               vehicle={editingVehicle}

@@ -7,6 +7,7 @@
  */
 
 import styled, { keyframes, useTheme } from 'styled-components';
+import { AlertTriangle } from 'lucide-react';
 import {
   ResponsiveContainer,
   PieChart,
@@ -15,7 +16,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import type { Theme } from '@a64core/shared';
+import { glassPanel, type Theme } from '@a64core/shared';
 import type { RevenueSourcesResponse } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ const sourceColors = (theme: Theme): Record<string, string> => ({
   excel_match: theme.colors.success,
   excel_alias_match: theme.colors.info,
   imputed: theme.colors.warning,
-  no_data: theme.colors.textDisabled,
+  no_data: theme.colors.muted,
 });
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -55,11 +56,8 @@ const shimmer = keyframes`
 `;
 
 const Section = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
 `;
 
@@ -91,9 +89,9 @@ const SkeletonCircle = styled.div`
   border-radius: 50%;
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.glass.base} 25%,
+    ${({ theme }) => theme.colors.glass.hi} 50%,
+    ${({ theme }) => theme.colors.glass.base} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -142,18 +140,22 @@ const LegendLabel = styled.span`
 
 const LegendDesc = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: 2px;
 `;
 
 const LegendPct = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-left: auto;
   padding-left: ${({ theme }) => theme.spacing.sm};
 `;
 
+// Text must be the warning colour itself (gold-b), not `gold[800]` — that
+// ramp step is a dark-cream-ground shade, nearly invisible on Cosmos Ink.
+// Same fix as FinanceUnreachableBanner.tsx.
 const WarningBanner = styled.div`
   display: flex;
   align-items: flex-start;
@@ -164,11 +166,11 @@ const WarningBanner = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.md};
   margin-top: ${({ theme }) => theme.spacing.lg};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 const WarningIcon = styled.span`
-  font-size: 18px;
+  display: inline-flex;
   flex-shrink: 0;
 `;
 
@@ -183,10 +185,11 @@ const ErrorState = styled.div`
   text-align: center;
 `;
 
+// `primary[500]` is a lapis-b fill — needs `onDark` (cream), not `onAccent`.
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -197,7 +200,7 @@ const RetryButton = styled.button`
 const EmptyState = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
@@ -268,9 +271,9 @@ export function PnlRevenueConfidence({
                     ]}
                     contentStyle={{
                       borderRadius: '8px',
-                      border: `1px solid ${theme.colors.border}`,
+                      border: `1px solid ${theme.colors.glass.border}`,
                       fontSize: '13px',
-                      background: theme.colors.background,
+                      background: theme.colors.cosmosHi,
                       color: theme.colors.textPrimary,
                     }}
                   />
@@ -303,7 +306,7 @@ export function PnlRevenueConfidence({
           {/* Warning banner when >30% of revenue is imputed */}
           {data.imputedPct > 30 && (
             <WarningBanner role="alert" aria-live="polite">
-              <WarningIcon aria-hidden="true">⚠️</WarningIcon>
+              <WarningIcon aria-hidden="true"><AlertTriangle size={18} strokeWidth={1.6} /></WarningIcon>
               <div>
                 <strong>{formatPct(data.imputedPct)} of revenue is imputed from averages.</strong>{' '}
                 Toggle &quot;Include imputed&quot; off in the filters above to see confirmed-only

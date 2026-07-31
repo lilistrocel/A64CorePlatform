@@ -6,7 +6,8 @@
  */
 
 import styled, { keyframes, useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { Banknote, TrendingUp, BarChart3, Package, Scale, Landmark } from 'lucide-react';
+import { glassPanel, monoLabel, type Theme } from '@a64core/shared';
 import type { PnlSummary } from '../../types/finance';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -41,9 +42,9 @@ const SkeletonBlock = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.glass.base} 25%,
+    ${({ theme }) => theme.colors.glass.hi} 50%,
+    ${({ theme }) => theme.colors.glass.base} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -66,16 +67,8 @@ const Grid = styled.div`
 `;
 
 const Card = styled.article`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  transition: box-shadow 150ms ease-in-out;
-
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-  }
 `;
 
 const CardHeader = styled.div`
@@ -86,33 +79,39 @@ const CardHeader = styled.div`
 `;
 
 const CardTitle = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const CardIcon = styled.span`
-  font-size: 20px;
-  line-height: 1;
+  display: inline-flex;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 interface ValueProps {
   $color?: 'positive' | 'negative' | 'neutral' | 'warning';
 }
 
-// Positive/negative is the debit-credit polarity signal for KPI figures —
-// deepened 600s (not the 500 semantic base) for legibility at small sizes
-// against Fresco Cream, per the brand's financial-figure contrast rule.
+// Positive/negative is the debit-credit polarity signal for KPI figures.
+// The pre-redesign ramp used emerald[600]/terracotta[600] — tuned for
+// contrast against Fresco Cream. On Cosmos Ink those deep 600-steps are
+// nearly illegible (dark-on-dark), so polarity moves to the `bright.*`
+// tokens (spec §1.2), which were brightened specifically for a dark ground:
+// bright.emerald for gains, bright.coral for losses (coral is also the
+// "only red" used elsewhere for overdue/error, keeping the vocabulary
+// consistent). `warning` (AR outstanding > 0) uses the semantic `warning`
+// token (gold-b) directly rather than a `gold[]` ramp step, for the same
+// dark-ground-legibility reason.
 const valueColors = (theme: Theme) => ({
-  positive: theme.colors.emerald[600],
-  negative: theme.colors.terracotta[600],
+  positive: theme.colors.bright.emerald,
+  negative: theme.colors.bright.coral,
   neutral: theme.colors.textPrimary,
-  warning: theme.colors.gold[600],
+  warning: theme.colors.warning,
 });
 
 const CardValue = styled.div<ValueProps>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ $color = 'neutral', theme }) => valueColors(theme)[$color]};
@@ -127,7 +126,7 @@ const CardValue = styled.div<ValueProps>`
 
 const CardSub = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
@@ -179,7 +178,9 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
             style={{
               padding: '8px 16px',
               background: theme.colors.primary[500],
-              color: theme.colors.onAccent,
+              // `primary[500]` is a lapis-b fill, not gold — needs `onDark`
+              // (cream), not `onAccent` (cosmos, reserved for gold fills).
+              color: theme.colors.onDark,
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -211,7 +212,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
       <Card role="listitem">
         <CardHeader>
           <CardTitle>Total Revenue</CardTitle>
-          <CardIcon aria-hidden="true">💰</CardIcon>
+          <CardIcon aria-hidden="true"><Banknote size={20} strokeWidth={1.6} /></CardIcon>
         </CardHeader>
         <CardValue $color="positive">{formatAed(revenue)}</CardValue>
         <CardSub>{period.label}</CardSub>
@@ -221,7 +222,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
       <Card role="listitem">
         <CardHeader>
           <CardTitle>Gross Profit</CardTitle>
-          <CardIcon aria-hidden="true">📈</CardIcon>
+          <CardIcon aria-hidden="true"><TrendingUp size={20} strokeWidth={1.6} /></CardIcon>
         </CardHeader>
         <CardValue $color={grossProfit >= 0 ? 'positive' : 'negative'}>
           {formatAed(grossProfit)}
@@ -233,7 +234,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
       <Card role="listitem">
         <CardHeader>
           <CardTitle>Operating Profit</CardTitle>
-          <CardIcon aria-hidden="true">📊</CardIcon>
+          <CardIcon aria-hidden="true"><BarChart3 size={20} strokeWidth={1.6} /></CardIcon>
         </CardHeader>
         <CardValue $color={operatingProfit >= 0 ? 'positive' : 'negative'}>
           {formatAed(operatingProfit)}
@@ -245,7 +246,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
       <Card role="listitem">
         <CardHeader>
           <CardTitle>Total Orders</CardTitle>
-          <CardIcon aria-hidden="true">📦</CardIcon>
+          <CardIcon aria-hidden="true"><Package size={20} strokeWidth={1.6} /></CardIcon>
         </CardHeader>
         <CardValue $color="neutral">{formatNumber(orderCounts.total)}</CardValue>
         <CardSub>
@@ -260,7 +261,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
       <Card role="listitem">
         <CardHeader>
           <CardTitle>Total Kg Sold</CardTitle>
-          <CardIcon aria-hidden="true">⚖️</CardIcon>
+          <CardIcon aria-hidden="true"><Scale size={20} strokeWidth={1.6} /></CardIcon>
         </CardHeader>
         <CardValue $color="neutral">{formatNumber(Math.round(totalKgSold))} kg</CardValue>
         <CardSub>
@@ -274,7 +275,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
       <Card role="listitem">
         <CardHeader>
           <CardTitle>Outstanding AR</CardTitle>
-          <CardIcon aria-hidden="true">🏦</CardIcon>
+          <CardIcon aria-hidden="true"><Landmark size={20} strokeWidth={1.6} /></CardIcon>
         </CardHeader>
         <CardValue $color={totalOutstandingAr > 0 ? 'warning' : 'positive'}>
           {formatAed(totalOutstandingAr)}

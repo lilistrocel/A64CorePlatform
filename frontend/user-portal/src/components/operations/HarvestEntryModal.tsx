@@ -7,10 +7,12 @@
 
 import { useState, useRef } from 'react';
 import styled from 'styled-components';
+import { MapPin, Sprout, X } from 'lucide-react';
+import { glassPanel, glassOpaque } from '@a64core/shared';
 import { addHarvestEntry } from '../../services/tasksApi';
 import { positiveNumberInputProps } from '../../utils';
 import type { TaskWithDetails, HarvestGrade } from '../../types/tasks';
-import { HARVEST_GRADE_COLORS, HARVEST_GRADE_LABELS } from '../../types/tasks';
+import { HARVEST_GRADE_LABELS } from '../../types/tasks';
 
 interface HarvestEntryModalProps {
   isOpen: boolean;
@@ -20,6 +22,17 @@ interface HarvestEntryModalProps {
 }
 
 const GRADE_OPTIONS: HarvestGrade[] = ['A', 'B', 'C', 'D', 'Waste'];
+
+// Ordinal quality band, one bright hue per step — never gold (spec §3);
+// replaces types/tasks.ts's HARVEST_GRADE_COLORS (out of scope, dead-theme
+// derived, and its grade C lands on gold-b).
+const GRADE_HUE: Record<HarvestGrade, string> = {
+  A: 'emerald',
+  B: 'lapis',
+  C: 'terra',
+  D: 'coral',
+  Waste: 'coral',
+};
 
 export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: HarvestEntryModalProps) {
   const [quantityKg, setQuantityKg] = useState('');
@@ -75,13 +88,15 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>
           <Title>Record Harvest</Title>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={2} />
+          </CloseButton>
         </Header>
 
         <Content>
           <TaskInfo>
             <BlockLine>
-              <LineIcon aria-hidden>📍</LineIcon>
+              <LineIcon aria-hidden><MapPin size={14} strokeWidth={1.8} /></LineIcon>
               <BlockIdentity>
                 {task.blockCode || `Block ${task.blockId.slice(0, 8)}`}
                 {task.blockName && <BlockName> — {task.blockName}</BlockName>}
@@ -92,7 +107,7 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
                 metadata, kept for older tasks that snapshot this into metadata). */}
             {(task.targetCropName || task.metadata?.targetCropName) && (
               <CropLine>
-                <LineIcon aria-hidden>🌱</LineIcon>
+                <LineIcon aria-hidden><Sprout size={14} strokeWidth={1.8} /></LineIcon>
                 <CropName>{task.targetCropName || task.metadata?.targetCropName}</CropName>
               </CropLine>
             )}
@@ -133,7 +148,7 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
                     key={gradeOption}
                     type="button"
                     $selected={grade === gradeOption}
-                    $color={HARVEST_GRADE_COLORS[gradeOption]}
+                    $hue={GRADE_HUE[gradeOption]}
                     onClick={() => setGrade(gradeOption)}
                   >
                     <GradeIcon>{gradeOption}</GradeIcon>
@@ -177,7 +192,9 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,15 +203,16 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const Header = styled.div`
@@ -202,12 +220,12 @@ const Header = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Title = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: 1.3rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -215,8 +233,7 @@ const Title = styled.h2`
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -224,12 +241,15 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 8px;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
   }
 `;
 
@@ -244,9 +264,9 @@ const TaskInfo = styled.div`
   gap: ${({ theme }) => theme.spacing.xs};
   margin-bottom: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border-left: 4px solid ${({ theme }) => theme.colors.success}; /* signals crop/harvest context */
+  background: ${({ theme }) => theme.colors.glass.base};
+  border-radius: 10px;
+  border-left: 3px solid ${({ theme }) => theme.colors.success}; /* signals crop/harvest context */
 `;
 
 const BlockLine = styled.div`
@@ -262,8 +282,10 @@ const CropLine = styled.div`
 `;
 
 const LineIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  color: ${({ theme }) => theme.colors.celeste};
+  flex-shrink: 0;
 `;
 
 const BlockIdentity = styled.span`
@@ -274,9 +296,9 @@ const BlockIdentity = styled.span`
 `;
 
 const BlockName = styled.span`
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  font-family: ${({ theme }) => theme.typography.fontFamily.primary};
   font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const CropName = styled.span`
@@ -296,15 +318,15 @@ const Chip = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 2px ${({ theme }) => theme.spacing.xs};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  border-radius: 6px;
 `;
 
 const TaskTitleLine = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 4px 0 0 0;
   font-style: italic;
 `;
@@ -328,22 +350,22 @@ const Label = styled.label`
 `;
 
 const Input = styled.input`
+  ${glassOpaque}
   padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   transition: border-color 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -353,62 +375,67 @@ const GradeGrid = styled.div`
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
-const GradeButton = styled.button<{ $selected: boolean; $color: string }>`
+// Ordinal quality band — bright.* hue per step, never gold (spec §3).
+const GradeButton = styled.button<{ $selected: boolean; $hue: string }>`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: ${({ theme }) => theme.spacing.md};
   border: 2px solid
-    ${({ $selected, $color, theme }) => ($selected ? $color : theme.colors.neutral[300])};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ $selected, $color }) => ($selected ? `${$color}15` : 'transparent')};
+    ${({ $selected, $hue, theme }) =>
+      $selected ? (theme.colors.bright as Record<string, string>)[$hue] : theme.colors.glass.border};
+  border-radius: 10px;
+  background: ${({ $selected, $hue, theme }) =>
+    $selected ? `${(theme.colors.bright as Record<string, string>)[$hue]}26` : 'transparent'};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: ${({ $color }) => $color};
-    background: ${({ $color }) => `${$color}10`};
+    border-color: ${({ $hue, theme }) => (theme.colors.bright as Record<string, string>)[$hue]};
+    background: ${({ $hue, theme }) => `${(theme.colors.bright as Record<string, string>)[$hue]}1a`};
   }
 `;
 
 const GradeIcon = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const GradeLabel = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Textarea = styled.textarea`
+  ${glassOpaque}
   padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   transition: border-color 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
 const ErrorMessage = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.error}15`};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.errorBg};
+  border-radius: 10px;
   color: ${({ theme }) => theme.colors.error};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   text-align: center;
@@ -422,17 +449,18 @@ const ButtonGroup = styled.div`
 const CancelButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   cursor: pointer;
   transition: background 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:disabled {
@@ -441,20 +469,22 @@ const CancelButton = styled.button`
   }
 `;
 
+// The modal's one primary CTA — gold gradient fill (spec §3/§4 "Buttons").
 const SubmitButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.warning};
-  color: white;
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
+  color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover:not(:disabled) {
-    filter: brightness(0.9);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 
   &:disabled {

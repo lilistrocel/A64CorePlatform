@@ -13,10 +13,21 @@
  *
  * Modal closes only via the X button, Cancel button, or Escape key — never on
  * overlay click (per project memory: feedback_modal_ux.md).
+ *
+ * Night Observatory (T-901 Phase 3, spec Docs/2-Working-Progress/night-observatory-spec.md):
+ * visual reskin only — glass table/controls, Space Mono metadata, shared
+ * PageHeader/Button, lucide icons in place of emoji-like glyphs. Logic,
+ * routes, data-fetching, props and state are unchanged. Always rendered
+ * `embedded` from StockPage today (see StockPage.tsx) — PageHeader is gated
+ * on `!embedded` so a future standalone route still gets one, without
+ * duplicating StockPage's own header in the current usage.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
+import { X, Trash2 } from 'lucide-react';
+import { PageHeader, Button, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { listReturnedInventory, markReturnedAsWaste } from '../../services/inventoryApi';
 import type { ReturnedInventory, QualityGrade } from '../../types/inventory';
 import { QUALITY_GRADE_LABELS } from '../../types/inventory';
@@ -49,6 +60,27 @@ type RowStatus = 'available' | 'depleted';
 function deriveRowStatus(item: ReturnedInventory): RowStatus {
   return item.availableQuantity > 0 ? 'available' : 'depleted';
 }
+
+// Quality-grade -> phase colour map (spec §5.2 extrapolation) — same
+// reasoning as HarvestInventoryList.tsx: grade is a QC rating, not a literal
+// "in harvest phase" event, so gold/harvesting is not used here.
+const QUALITY_GRADE_PHASE: Record<QualityGrade, PhaseKey> = {
+  premium: 'fruiting',
+  grade_a: 'resting',
+  grade_b: 'colonizing',
+  grade_c: 'empty',
+  processing: 'cleaning',
+  rejected: 'quarantined',
+};
+
+// Row availability -> phase colour. "Available" reads as the good outcome
+// (ready to re-allocate) -> fruiting (emerald); "depleted" reads as done/used
+// up -> decommissioned (dim, no glow), matching the muted treatment it had
+// before this pass.
+const ROW_STATUS_PHASE: Record<RowStatus, PhaseKey> = {
+  available: 'fruiting',
+  depleted: 'decommissioned',
+};
 
 // ============================================================================
 // HELPERS
@@ -92,8 +124,12 @@ interface ContainerProps {
   $embedded?: boolean;
 }
 
+const containerPadding = css`
+  padding: ${({ theme }) => theme.spacing.lg};
+`;
+
 const Container = styled.div<ContainerProps>`
-  ${({ $embedded, theme }) => !$embedded && `padding: ${theme.spacing.lg};`}
+  ${({ $embedded }) => !$embedded && containerPadding}
 `;
 
 const Toolbar = styled.div`
@@ -106,83 +142,83 @@ const Toolbar = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   max-width: 400px;
-  padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 10px 14px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}20;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 // ---- Table ----
 
 const TableWrapper = styled.div`
-  overflow-x: auto;
+  ${glassPanel}
+  overflow: hidden;
+  padding: 4px;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   text-align: left;
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: 14px 16px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
+`;
+
+const thActive = css`
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 700;
 `;
 
 const ThSortable = styled(Th)<{ $active?: boolean }>`
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
-  ${({ $active, theme }) =>
-    $active &&
-    `
-    background: ${theme.colors.neutral[200]};
-    color: ${theme.colors.primary[600]};
-  `}
+  ${({ $active }) => $active && thActive}
 `;
 
 const Tr = styled.tr`
+  transition: background 0.15s ease;
+
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const Td = styled.td`
-  padding: ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  padding: 14px 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const MonoText = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.82rem;
 `;
 
 // ---- Badges ----
@@ -192,31 +228,7 @@ interface GradeBadgeProps {
 }
 
 const GradeBadge = styled.span<GradeBadgeProps>`
-  display: inline-block;
-  padding: 2px ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme, $grade }) => {
-    switch ($grade) {
-      case 'premium': return theme.colors.primary[100];
-      case 'grade_a': return theme.colors.success + '20';
-      case 'grade_b': return theme.colors.warning + '20';
-      case 'grade_c': return theme.colors.neutral[200];
-      case 'processing': return theme.colors.neutral[300];
-      case 'rejected': return theme.colors.error + '20';
-      default: return theme.colors.neutral[200];
-    }
-  }};
-  color: ${({ theme, $grade }) => {
-    switch ($grade) {
-      case 'premium': return theme.colors.primary[700];
-      case 'grade_a': return theme.colors.success;
-      case 'grade_b': return theme.colors.warning;
-      case 'rejected': return theme.colors.error;
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $grade }) => phaseBadge(QUALITY_GRADE_PHASE[$grade])}
 `;
 
 interface StatusBadgeProps {
@@ -224,15 +236,7 @@ interface StatusBadgeProps {
 }
 
 const StatusBadge = styled.span<StatusBadgeProps>`
-  display: inline-block;
-  padding: 2px ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ $status, theme }) =>
-    $status === 'available' ? theme.colors.success + '20' : theme.colors.neutral[200]};
-  color: ${({ $status, theme }) =>
-    $status === 'available' ? theme.colors.success : theme.colors.textSecondary};
+  ${({ $status }) => phaseBadge(ROW_STATUS_PHASE[$status])}
 `;
 
 interface AvailableQtyProps {
@@ -240,9 +244,10 @@ interface AvailableQtyProps {
 }
 
 const AvailableQty = styled.span<AvailableQtyProps>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.85rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ $depleted, theme }) =>
-    $depleted ? theme.colors.textSecondary : theme.colors.textPrimary};
+  color: ${({ $depleted, theme }) => ($depleted ? theme.colors.muted : theme.colors.textPrimary)};
 `;
 
 // ---- Source order link ----
@@ -250,7 +255,7 @@ const AvailableQty = styled.span<AvailableQtyProps>`
 const OrderLink = styled.a`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   text-decoration: none;
   cursor: pointer;
 
@@ -262,11 +267,14 @@ const OrderLink = styled.a`
 // ---- Action button ----
 
 const MarkWasteButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.error + '10'};
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error + '40'};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 8px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   cursor: pointer;
@@ -274,7 +282,7 @@ const MarkWasteButton = styled.button`
   transition: background 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.error + '20'};
+    background: rgba(240, 138, 112, 0.22);
   }
 
   &:disabled {
@@ -283,7 +291,7 @@ const MarkWasteButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.error};
+    outline: 2px solid ${({ theme }) => theme.colors.bright.coral};
     outline-offset: 2px;
   }
 `;
@@ -293,8 +301,8 @@ const MarkWasteButton = styled.button`
 const SpinnerEl = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
 `;
@@ -310,37 +318,19 @@ const CenteredBox = styled.div`
 `;
 
 const EmptyText = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.2rem;
+  color: ${({ theme }) => theme.colors.celeste};
   max-width: 360px;
   margin: 0;
 `;
 
 const ErrorText = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin: 0;
-`;
-
-const RetryButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  cursor: pointer;
-  transition: background 0.15s ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
-  }
 `;
 
 // ---- Pagination ----
@@ -350,14 +340,14 @@ const Pagination = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
 const PaginationInfo = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PaginationButtons = styled.div`
@@ -369,21 +359,21 @@ interface PageButtonProps {
   $active?: boolean;
 }
 
+const pageButtonActive = css`
+  border-color: ${({ theme }) => theme.colors.secondary[500]};
+  color: ${({ theme }) => theme.colors.secondary[500]};
+`;
+
 const PageButton = styled.button<PageButtonProps>`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md};
-  border: 1px solid
-    ${({ theme, $active }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  background: ${({ theme, $active }) =>
-    $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ theme, $active }) => ($active ? theme.colors.onAccent : theme.colors.textPrimary)};
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme, $active }) =>
-      $active ? theme.colors.primary[600] : theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:disabled {
@@ -392,9 +382,11 @@ const PageButton = styled.button<PageButtonProps>`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
+
+  ${({ $active }) => $active && pageButtonActive}
 `;
 
 // ============================================================================
@@ -404,7 +396,7 @@ const PageButton = styled.button<PageButtonProps>`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -412,15 +404,15 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   padding: ${({ theme }) => theme.spacing.xl};
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
-  position: relative;
 `;
 
 const ModalHeader = styled.div`
@@ -440,21 +432,24 @@ const ModalTitle = styled.h2`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 1.4rem;
-  line-height: 1;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 0;
+  padding: 4px;
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.muted};
   flex-shrink: 0;
+  transition: color 0.15s ease;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -468,12 +463,13 @@ const ModalBody = styled.div`
 
 const ModalDescription = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   line-height: 1.5;
 `;
 
 const ModalDescriptionHighlight = styled.strong`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -484,45 +480,45 @@ const FormGroup = styled.div`
 `;
 
 const FormLabel = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const FormSelect = styled.select`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+
+  option {
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}20;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const FormTextarea = styled.textarea`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   min-height: 72px;
   resize: vertical;
   font-family: inherit;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}20;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -533,40 +529,22 @@ const ModalActions = styled.div`
   margin-top: ${({ theme }) => theme.spacing.sm};
 `;
 
-const CancelBtn = styled.button`
+const ConfirmBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   cursor: pointer;
   transition: background 0.15s ease;
 
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
-  }
-`;
-
-const ConfirmBtn = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-
   &:hover:not(:disabled) {
-    opacity: 0.88;
+    background: rgba(240, 138, 112, 0.22);
   }
 
   &:disabled {
@@ -575,7 +553,7 @@ const ConfirmBtn = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.error};
+    outline: 2px solid ${({ theme }) => theme.colors.bright.coral};
     outline-offset: 2px;
   }
 `;
@@ -645,7 +623,7 @@ function MarkWasteModal({
             onClick={onCancel}
             disabled={submitting}
           >
-            &times;
+            <X size={20} strokeWidth={1.8} />
           </CloseButton>
         </ModalHeader>
 
@@ -686,10 +664,11 @@ function MarkWasteModal({
         </ModalBody>
 
         <ModalActions>
-          <CancelBtn type="button" onClick={onCancel} disabled={submitting}>
+          <Button type="button" variant="secondary" size="small" onClick={onCancel} disabled={submitting}>
             Cancel
-          </CancelBtn>
+          </Button>
           <ConfirmBtn type="button" onClick={onConfirm} disabled={submitting}>
+            <Trash2 size={15} strokeWidth={1.8} />
             {submitting ? 'Moving to waste…' : 'Mark as Waste'}
           </ConfirmBtn>
         </ModalActions>
@@ -833,6 +812,9 @@ export function ReturnedInventoryList({
     </ThSortable>
   );
 
+  // ---- page-level stat for the PageHeader ----
+  const availableCount = items.filter((item) => deriveRowStatus(item) === 'available').length;
+
   // ---- states ----
 
   if (loading && items.length === 0) {
@@ -850,9 +832,9 @@ export function ReturnedInventoryList({
       <Container $embedded={embedded}>
         <CenteredBox>
           <ErrorText role="alert">{error}</ErrorText>
-          <RetryButton type="button" onClick={loadData}>
+          <Button variant="secondary" size="small" onClick={loadData}>
             Retry
-          </RetryButton>
+          </Button>
         </CenteredBox>
       </Container>
     );
@@ -860,6 +842,19 @@ export function ReturnedInventoryList({
 
   return (
     <Container $embedded={embedded}>
+      {!embedded && (
+        <PageHeader
+          breadcrumb="Inventory · Live"
+          title="Returned Inventory"
+          emphasizeLastWord
+          description="Goods returned by customers, available for re-allocation to new orders."
+          stats={[
+            { value: total, label: 'Total Returns' },
+            { value: availableCount, label: 'Available', alive: true },
+          ]}
+        />
+      )}
+
       <Toolbar>
         <SearchInput
           type="search"
@@ -907,7 +902,9 @@ export function ReturnedInventoryList({
                   return (
                     <Tr key={item.inventoryId}>
                       {/* Return Date */}
-                      <Td>{formatDate(item.returnDate)}</Td>
+                      <Td>
+                        <MonoText>{formatDate(item.returnDate)}</MonoText>
+                      </Td>
 
                       {/* Plant / Grade */}
                       <Td>
@@ -926,7 +923,9 @@ export function ReturnedInventoryList({
 
                       {/* Qty / Original */}
                       <Td>
-                        {item.quantity} / {item.originalQuantity} {item.unit}
+                        <MonoText>
+                          {item.quantity} / {item.originalQuantity} {item.unit}
+                        </MonoText>
                       </Td>
 
                       {/* Available */}
@@ -984,6 +983,7 @@ export function ReturnedInventoryList({
                           aria-label={`Mark ${item.plantName} as waste`}
                           onClick={() => openMarkWaste(item)}
                         >
+                          <Trash2 size={13} strokeWidth={1.8} />
                           Mark as Waste
                         </MarkWasteButton>
                       </Td>

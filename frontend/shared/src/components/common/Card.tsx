@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { glassPanel } from '../../theme/mixins';
 
 export interface CardProps {
   children: React.ReactNode;
@@ -26,19 +27,21 @@ export function Card({ children, title, subtitle, actions, padding = 'medium' }:
 }
 
 const StyledCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  ${glassPanel}
   overflow: hidden;
   height: 100%;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 
   &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.lg};
-    transform: translateY(-2px);
+    /* Cards are frequently static display panels (spec §2: glassPanelHover
+       is for INTERACTIVE panels only), so this stays a subtle lift with no
+       gold rim — callers that need the interactive treatment compose
+       glassPanelHover directly rather than relying on Card's own hover. */
+    box-shadow:
+      0 22px 46px rgba(4, 6, 18, 0.6),
+      0 4px 12px rgba(4, 6, 18, 0.4),
+      inset 0 1px 0 rgba(250, 243, 226, 0.1);
   }
 `;
 
@@ -47,7 +50,7 @@ const CardHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const CardHeaderContent = styled.div`
@@ -66,7 +69,7 @@ const CardTitle = styled.h3`
 
 const CardSubtitle = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: ${({ theme }) => theme.spacing.xs} 0 0 0;
   overflow: hidden;
   text-overflow: ellipsis;

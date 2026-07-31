@@ -5,11 +5,19 @@
  * Includes approval card, lines table, and navigation to base PR if applicable.
  *
  * Modals do NOT close on overlay click — X button only.
+ *
+ * Night Observatory (T-901 Phase 3): status badge colour is routed through
+ * the single canonical purchasingStatusToPhase() map in ./statusPhase.ts —
+ * see that file for the PR/PO/GR/AP status -> phase.* vocabulary. This page
+ * previously had no StatusBadge component at all (status rendered as plain
+ * text) — one has been added here for consistency with PR/GR/AP.
  */
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { X } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   usePurchaseOrder,
   useSubmitPurchaseOrder,
@@ -20,6 +28,7 @@ import {
 } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { purchasingStatusToPhase } from './statusPhase';
 
 // ─── Styled components (mirrors PurchaseRequestDetailPage) ────────────────────
 
@@ -40,20 +49,10 @@ const BackLink = styled.button`
   &:hover { text-decoration: underline; }
 `;
 
-const TitleRow = styled.div`
+const HeaderActionsRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 `;
 
 const ActionBar = styled.div`
@@ -62,53 +61,74 @@ const ActionBar = styled.div`
   flex-wrap: wrap;
 `;
 
+// Primary CTA — the ONE gold budget item in the action bar (spec §3/§4/§8).
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+const SecondaryButton = styled.button`
+  ${glassControl}
+  padding: 10px 20px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
-const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.success};
-  &:hover { background: ${({ theme }) => theme.colors.emerald[600]}; }
-`;
-
-const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.error};
-  &:hover { background: ${({ theme }) => theme.colors.terracotta[600]}; }
+// Destructive — coral-b tinted glass, never solid red (spec §4).
+const DangerButton = styled.button`
+  padding: 10px 20px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.26); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const GhostButton = styled.button`
-  padding: 10px 20px;
+  padding: 10px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
 
 const CardTitle = styled.h2`
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px;
 `;
@@ -122,17 +142,26 @@ const InfoGrid = styled.div`
 const InfoItem = styled.div``;
 
 const InfoLabel = styled.div`
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 4px;
 `;
 
 const InfoValue = styled.div`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+// Space Mono for quantities/currency amounts/timestamps (spec §6).
+const InfoValueMono = styled(InfoValue)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+`;
+
+const InfoLink = styled.span`
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
 `;
 
 const Table = styled.table`
@@ -142,32 +171,72 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const TdMono = styled(Td)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+`;
+
+// Night Observatory (T-901 Phase 3): new — this page had no StatusBadge
+// before. Routes the PO's own status field through the single canonical
+// purchasingStatusToPhase() map + the shared phaseBadge mixin.
+const StatusBadge = styled.span<{ $status: string }>`
+  ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
 `;
 
 const ApprovalCard = styled(Card)`
-  border-left: 4px solid ${({ theme }) => theme.colors.primary[500]};
+  border-left: 3px solid ${({ theme }) => theme.colors.bright.lapis};
 `;
+
+const ErrorText = styled.p`
+  color: ${({ theme }) => theme.colors.bright.coral};
+  font-size: 13px;
+  margin: 8px 0 0;
+`;
+
+// ─── Empty / loading / error states (spec §4 "Empty states") ──────────────────
+
+const StateWrap = styled.div`
+  text-align: center;
+  padding: 96px 32px;
+`;
+
+const StateHeadline = styled.h2`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 10px;
+`;
+
+const StateBody = styled.p`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.muted};
+  margin: 0 0 24px;
+`;
+
+// ─── Reject Modal ─────────────────────────────────────────────────────────────
+// glassPanel at blur 24px over a rgba(10,14,36,.6) scrim, 20px radius (spec §4
+// "Modals/drawers"). Retinted from the previous rgba(0,0,0,.45)-style scrim.
 
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -176,9 +245,10 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 480px;
 `;
@@ -188,25 +258,28 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 700;
   margin: 0;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const CloseButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 18px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px;
-  border-radius: 6px;
-  line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  color: ${({ theme }) => theme.colors.celeste};
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 150ms ease, color 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.1); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ModalBody = styled.div`
@@ -218,27 +291,27 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
+// Inputs/selects/textareas — glassControl, 11px radius, cream-hi text, muted
+// placeholder, gold-hi focus ring (spec §4 "Inputs/selects/textareas").
 const Textarea = styled.textarea`
+  ${glassControl}
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 100px;
-  background: ${({ theme }) => theme.colors.background};
+  box-sizing: border-box;
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-`;
-
-const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error};
-  font-size: 13px;
-  margin: 8px 0 0;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -293,32 +366,49 @@ export function PurchaseOrderDetailPage() {
     }
   };
 
-  if (isLoading) return <Container><p>Loading...</p></Container>;
-  if (isError || !po) return <Container><p>Purchase order not found.</p></Container>;
+  if (isLoading) {
+    return (
+      <Container>
+        <BackLink onClick={() => navigate('/purchasing/po')}>&larr; Back to Purchase Orders</BackLink>
+        <StateWrap>
+          <StateHeadline>Loading order…</StateHeadline>
+          <StateBody>Fetching the latest details.</StateBody>
+        </StateWrap>
+      </Container>
+    );
+  }
+
+  if (isError || !po) {
+    return (
+      <Container>
+        <BackLink onClick={() => navigate('/purchasing/po')}>&larr; Back to Purchase Orders</BackLink>
+        <StateWrap>
+          <StateHeadline>Purchase order not found</StateHeadline>
+          <StateBody>It may have been deleted, or the link is out of date.</StateBody>
+          <PrimaryButton onClick={() => navigate('/purchasing/po')}>Back to Purchase Orders</PrimaryButton>
+        </StateWrap>
+      </Container>
+    );
+  }
 
   return (
     <Container>
       <BackLink onClick={() => navigate('/purchasing/po')}>&larr; Back to Purchase Orders</BackLink>
 
-      <TitleRow>
-        <div>
-          <Title>{po.docNumber}</Title>
-          <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 }}>
-            Vendor: {po.vendorName ?? po.vendorCode ?? '—'} •{' '}
-            {po.baseDocId && (
-              <span
-                style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
-                onClick={() => navigate(`/purchasing/pr/${po.baseDocId}`)}
-              >
-                Based on PR
-              </span>
-            )}
-            {' '}Created {formatDate(po.docDate)}
-          </div>
-        </div>
+      <PageHeader
+        breadcrumb={`— PURCHASING · ${po.docNumber}`}
+        title="Purchase Order"
+        emphasizeLastWord
+        description={`Vendor: ${po.vendorName ?? po.vendorCode ?? '—'} · Created ${formatDate(po.docDate)}`}
+        stats={[
+          { value: formatAmount(po.totalGross, po.currencyCode), label: `Total Gross · ${po.lines.length} Lines` },
+        ]}
+      />
+
+      <HeaderActionsRow>
         <ActionBar>
           {canEdit && (
-            <GhostButton onClick={() => navigate(`/purchasing/po/${docId}/edit`)}>Edit</GhostButton>
+            <SecondaryButton onClick={() => navigate(`/purchasing/po/${docId}/edit`)}>Edit</SecondaryButton>
           )}
           {canSubmit && (
             <PrimaryButton
@@ -330,22 +420,22 @@ export function PurchaseOrderDetailPage() {
           )}
           {canApprove && (
             <>
-              <SuccessButton
+              <PrimaryButton
                 onClick={() => handleAction(() => approveMutation.mutateAsync({ docId: docId!, organizationId: orgId }))}
                 disabled={approveMutation.isPending}
               >
                 {approveMutation.isPending ? 'Approving...' : 'Approve'}
-              </SuccessButton>
+              </PrimaryButton>
               <DangerButton onClick={() => setShowRejectModal(true)}>Reject</DangerButton>
             </>
           )}
           {canSend && (
-            <SuccessButton
+            <PrimaryButton
               onClick={() => handleAction(() => sendMutation.mutateAsync({ docId: docId!, organizationId: orgId }))}
               disabled={sendMutation.isPending}
             >
               {sendMutation.isPending ? 'Sending...' : 'Mark as Sent'}
-            </SuccessButton>
+            </PrimaryButton>
           )}
           {canCancel && (
             <DangerButton
@@ -359,7 +449,7 @@ export function PurchaseOrderDetailPage() {
             </DangerButton>
           )}
         </ActionBar>
-      </TitleRow>
+      </HeaderActionsRow>
 
       {actionError && <ErrorText style={{ marginBottom: 16 }}>{actionError}</ErrorText>}
 
@@ -367,17 +457,30 @@ export function PurchaseOrderDetailPage() {
       <Card>
         <CardTitle>Header Details</CardTitle>
         <InfoGrid>
-          <InfoItem><InfoLabel>Status</InfoLabel><InfoValue>{po.status}</InfoValue></InfoItem>
+          <InfoItem>
+            <InfoLabel>Status</InfoLabel>
+            <InfoValue><StatusBadge $status={po.status}>{po.status}</StatusBadge></InfoValue>
+          </InfoItem>
           <InfoItem><InfoLabel>Vendor</InfoLabel><InfoValue>{po.vendorName ?? po.vendorCode ?? '—'}</InfoValue></InfoItem>
+          {po.baseDocId && (
+            <InfoItem>
+              <InfoLabel>Source PR</InfoLabel>
+              <InfoValue>
+                <InfoLink onClick={() => navigate(`/purchasing/pr/${po.baseDocId}`)}>
+                  Based on PR
+                </InfoLink>
+              </InfoValue>
+            </InfoItem>
+          )}
           <InfoItem><InfoLabel>Payment Terms</InfoLabel><InfoValue>{po.paymentTermsCode ?? '—'}</InfoValue></InfoItem>
-          <InfoItem><InfoLabel>PO Date</InfoLabel><InfoValue>{formatDate(po.docDate)}</InfoValue></InfoItem>
-          <InfoItem><InfoLabel>Issued Date</InfoLabel><InfoValue>{formatDate(po.issuedDate)}</InfoValue></InfoItem>
-          <InfoItem><InfoLabel>Expected Delivery</InfoLabel><InfoValue>{formatDate(po.expectedDeliveryDate)}</InfoValue></InfoItem>
-          <InfoItem><InfoLabel>Due Date</InfoLabel><InfoValue>{formatDate(po.dueDate)}</InfoValue></InfoItem>
+          <InfoItem><InfoLabel>PO Date</InfoLabel><InfoValueMono>{formatDate(po.docDate)}</InfoValueMono></InfoItem>
+          <InfoItem><InfoLabel>Issued Date</InfoLabel><InfoValueMono>{formatDate(po.issuedDate)}</InfoValueMono></InfoItem>
+          <InfoItem><InfoLabel>Expected Delivery</InfoLabel><InfoValueMono>{formatDate(po.expectedDeliveryDate)}</InfoValueMono></InfoItem>
+          <InfoItem><InfoLabel>Due Date</InfoLabel><InfoValueMono>{formatDate(po.dueDate)}</InfoValueMono></InfoItem>
           <InfoItem><InfoLabel>Currency</InfoLabel><InfoValue>{po.currencyCode}</InfoValue></InfoItem>
-          <InfoItem><InfoLabel>Net Amount</InfoLabel><InfoValue>{formatAmount(po.subtotalNet, po.currencyCode)}</InfoValue></InfoItem>
-          <InfoItem><InfoLabel>VAT</InfoLabel><InfoValue>{formatAmount(po.totalTax, po.currencyCode)}</InfoValue></InfoItem>
-          <InfoItem><InfoLabel>Total Gross</InfoLabel><InfoValue><strong>{formatAmount(po.totalGross, po.currencyCode)}</strong></InfoValue></InfoItem>
+          <InfoItem><InfoLabel>Net Amount</InfoLabel><InfoValueMono>{formatAmount(po.subtotalNet, po.currencyCode)}</InfoValueMono></InfoItem>
+          <InfoItem><InfoLabel>VAT</InfoLabel><InfoValueMono>{formatAmount(po.totalTax, po.currencyCode)}</InfoValueMono></InfoItem>
+          <InfoItem><InfoLabel>Total Gross</InfoLabel><InfoValueMono><strong>{formatAmount(po.totalGross, po.currencyCode)}</strong></InfoValueMono></InfoItem>
           {po.notes && <InfoItem style={{ gridColumn: '1/-1' }}><InfoLabel>Notes</InfoLabel><InfoValue>{po.notes}</InfoValue></InfoItem>}
         </InfoGrid>
       </Card>
@@ -389,8 +492,8 @@ export function PurchaseOrderDetailPage() {
           <InfoGrid>
             <InfoItem><InfoLabel>Approval State</InfoLabel><InfoValue>{po.approvalState}</InfoValue></InfoItem>
             {po.approvalRequestedFrom && <InfoItem><InfoLabel>Requested From</InfoLabel><InfoValue>{po.approvalRequestedFrom}</InfoValue></InfoItem>}
-            {po.approvalRequestedAt && <InfoItem><InfoLabel>Requested At</InfoLabel><InfoValue>{formatDate(po.approvalRequestedAt)}</InfoValue></InfoItem>}
-            {po.approvalDecidedAt && <InfoItem><InfoLabel>Decided At</InfoLabel><InfoValue>{formatDate(po.approvalDecidedAt)}</InfoValue></InfoItem>}
+            {po.approvalRequestedAt && <InfoItem><InfoLabel>Requested At</InfoLabel><InfoValueMono>{formatDate(po.approvalRequestedAt)}</InfoValueMono></InfoItem>}
+            {po.approvalDecidedAt && <InfoItem><InfoLabel>Decided At</InfoLabel><InfoValueMono>{formatDate(po.approvalDecidedAt)}</InfoValueMono></InfoItem>}
             {po.approvalComment && <InfoItem style={{ gridColumn: '1/-1' }}><InfoLabel>Comment</InfoLabel><InfoValue>{po.approvalComment}</InfoValue></InfoItem>}
           </InfoGrid>
         </ApprovalCard>
@@ -416,18 +519,18 @@ export function PurchaseOrderDetailPage() {
           <tbody>
             {po.lines.map((line) => (
               <tr key={line.lineId}>
-                <Td>{line.lineNumber}</Td>
+                <TdMono>{line.lineNumber}</TdMono>
                 <Td>
-                  <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
+                  <div style={{ fontWeight: 600, fontFamily: theme.typography.fontFamily.mono }}>{line.itemCode}</div>
                   <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>{line.itemName}</div>
                 </Td>
                 <Td>{line.uom}</Td>
-                <Td>{line.quantity}</Td>
-                <Td>{line.openQuantity}</Td>
-                <Td>{formatAmount(line.unitPrice, po.currencyCode)}</Td>
-                <Td>{formatAmount(line.lineNet, po.currencyCode)}</Td>
+                <TdMono>{line.quantity}</TdMono>
+                <TdMono>{line.openQuantity}</TdMono>
+                <TdMono>{formatAmount(line.unitPrice, po.currencyCode)}</TdMono>
+                <TdMono>{formatAmount(line.lineNet, po.currencyCode)}</TdMono>
                 <Td>{line.taxCode ? `${line.taxCode} (${line.taxRate}%)` : '—'}</Td>
-                <Td><strong>{formatAmount(line.lineGross, po.currencyCode)}</strong></Td>
+                <TdMono><strong>{formatAmount(line.lineGross, po.currencyCode)}</strong></TdMono>
               </tr>
             ))}
           </tbody>
@@ -451,7 +554,12 @@ export function PurchaseOrderDetailPage() {
           <Modal onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Reject Purchase Order</ModalTitle>
-              <CloseButton onClick={() => { setShowRejectModal(false); setRejectComment(''); }}>✕</CloseButton>
+              <CloseButton
+                onClick={() => { setShowRejectModal(false); setRejectComment(''); }}
+                aria-label="Close"
+              >
+                <X size={16} strokeWidth={1.8} />
+              </CloseButton>
             </ModalHeader>
             <ModalBody>
               <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 0 }}>

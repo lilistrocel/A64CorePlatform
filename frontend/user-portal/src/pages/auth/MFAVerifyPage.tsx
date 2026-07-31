@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Button } from '@a64core/shared';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  Clock,
+  KeyRound,
+  Lightbulb,
+  Lock,
+  RefreshCw,
+  ShieldCheck,
+  Smartphone,
+  Unlock,
+  User,
+} from 'lucide-react';
+import { Button, glassPanel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
-import { useThemeStore } from '../../stores/theme.store';
 import { authService } from '../../services/auth.service';
 import {
   getCachedVerifyState,
@@ -26,9 +39,9 @@ export function MFAVerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyMfa, mfaPendingToken, mfaPendingUserId, mfaRequired, clearMfaState, isLoading, error: storeError, loadUser } = useAuthStore();
-  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
-  const { mode } = useThemeStore();
-  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
+  // Night Observatory is dark-only (T-901) — the cosmos (cream-text) lockup
+  // variant is now correct unconditionally; no more per-theme branch.
+  const logoSrc = '/brand/lockup_cosmos.svg';
 
   // Get MFA token from location state (legacy) OR from auth store OR from sessionStorage cache
   const state = location.state as LocationState | null;
@@ -277,18 +290,18 @@ export function MFAVerifyPage() {
         <VerifyContainer>
           <VerifyCard>
             <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
-            <ExpiredIcon>⏱️</ExpiredIcon>
+            <ExpiredIcon><Clock size={28} strokeWidth={1.8} /></ExpiredIcon>
             <Title>Session Expired</Title>
             <Subtitle>
               Your verification session has expired for security reasons.
               Please log in again to continue.
             </Subtitle>
             <StartOverButton onClick={handleStartOver}>
-              <StartOverIcon>🔄</StartOverIcon>
+              <StartOverIcon><RefreshCw size={16} strokeWidth={1.8} /></StartOverIcon>
               Start Over
             </StartOverButton>
             <BackToLogin to="/login">
-              ← Back to login
+              <ArrowLeft size={14} strokeWidth={1.8} /> Back to login
             </BackToLogin>
           </VerifyCard>
         </VerifyContainer>
@@ -306,9 +319,9 @@ export function MFAVerifyPage() {
           <VerifyCard>
             <Logo><LogoImg src={logoSrc} alt="A20Core" /></Logo>
             {isNoCodesRemaining ? (
-              <WarningIcon>&#9888;</WarningIcon>
+              <WarningIcon><AlertTriangle size={28} strokeWidth={1.8} /></WarningIcon>
             ) : (
-              <SuccessIcon>&#10003;</SuccessIcon>
+              <SuccessIcon><Check size={28} strokeWidth={2.2} /></SuccessIcon>
             )}
             <Title>{isNoCodesRemaining ? 'No Backup Codes Remaining' : 'Backup Code Accepted'}</Title>
             {isNoCodesRemaining ? (
@@ -349,8 +362,8 @@ export function MFAVerifyPage() {
 
           {/* Authenticator App Illustration */}
           <AuthenticatorIllustration>
-            <PhoneIcon>📱</PhoneIcon>
-            <ShieldBadge>🔐</ShieldBadge>
+            <PhoneIcon><Smartphone size={40} strokeWidth={1.5} /></PhoneIcon>
+            <ShieldBadge><ShieldCheck size={20} strokeWidth={1.8} /></ShieldBadge>
           </AuthenticatorIllustration>
 
           <Title>Two-Factor Authentication</Title>
@@ -363,7 +376,7 @@ export function MFAVerifyPage() {
           {/* Feature #347: Mobile helper text - reassure users they can switch apps */}
           {isMobile && inputMode === 'totp' && (
             <MobileReassuranceText>
-              <MobileReassuranceIcon>💡</MobileReassuranceIcon>
+              <MobileReassuranceIcon><Lightbulb size={14} strokeWidth={1.8} /></MobileReassuranceIcon>
               Your session is saved — you can safely switch to your authenticator app and return here
             </MobileReassuranceText>
           )}
@@ -371,19 +384,23 @@ export function MFAVerifyPage() {
           {/* Feature #347: Enhanced read-only email confirmation box */}
           {email && (
             <EmailConfirmationBox>
-              <EmailConfirmIcon>👤</EmailConfirmIcon>
+              <EmailConfirmIcon><User size={16} strokeWidth={1.8} /></EmailConfirmIcon>
               <EmailConfirmDetails>
                 <EmailConfirmLabel>Signing in as</EmailConfirmLabel>
                 <EmailConfirmValue>{email}</EmailConfirmValue>
               </EmailConfirmDetails>
-              <EmailConfirmCheck>✓</EmailConfirmCheck>
+              <EmailConfirmCheck><Check size={12} strokeWidth={2.5} /></EmailConfirmCheck>
             </EmailConfirmationBox>
           )}
 
           {/* Session timer - show time remaining before expiry */}
           {timeRemaining !== null && timeRemaining > 0 && (
             <SessionTimer $warning={timeRemaining < 60000}>
-              <SessionTimerIcon>{timeRemaining < 60000 ? '⚠️' : '⏱️'}</SessionTimerIcon>
+              <SessionTimerIcon>
+                {timeRemaining < 60000
+                  ? <AlertTriangle size={14} strokeWidth={1.8} />
+                  : <Clock size={14} strokeWidth={1.8} />}
+              </SessionTimerIcon>
               <SessionTimerText>
                 Session expires in: <SessionTimerValue>{formatTimeRemaining(timeRemaining)}</SessionTimerValue>
               </SessionTimerText>
@@ -393,7 +410,7 @@ export function MFAVerifyPage() {
           {/* Lockout Timer Display */}
           {lockoutSeconds && (
             <LockoutBanner role="alert">
-              <LockoutIcon>⏱️</LockoutIcon>
+              <LockoutIcon><Clock size={16} strokeWidth={1.8} /></LockoutIcon>
               <LockoutText>
                 Too many attempts. Please wait <LockoutTimer>{lockoutSeconds}</LockoutTimer> seconds.
               </LockoutText>
@@ -458,12 +475,12 @@ export function MFAVerifyPage() {
                 </>
               ) : lockoutSeconds ? (
                 <>
-                  <ButtonIcon>🔒</ButtonIcon>
+                  <ButtonIcon><Lock size={15} strokeWidth={1.8} /></ButtonIcon>
                   Locked
                 </>
               ) : (
                 <>
-                  <ButtonIcon>🔓</ButtonIcon>
+                  <ButtonIcon><Unlock size={15} strokeWidth={1.8} /></ButtonIcon>
                   Verify
                 </>
               )}
@@ -473,12 +490,12 @@ export function MFAVerifyPage() {
           <StyledToggleModeLink onClick={handleToggleMode}>
             {inputMode === 'totp' ? (
               <>
-                <ToggleIcon>🔑</ToggleIcon>
+                <ToggleIcon><KeyRound size={14} strokeWidth={1.8} /></ToggleIcon>
                 Use a backup code instead
               </>
             ) : (
               <>
-                <ToggleIcon>📱</ToggleIcon>
+                <ToggleIcon><Smartphone size={14} strokeWidth={1.8} /></ToggleIcon>
                 Use authenticator app instead
               </>
             )}
@@ -487,7 +504,7 @@ export function MFAVerifyPage() {
           <Divider />
 
           <BackToLogin to="/login">
-            ← Back to login
+            <ArrowLeft size={14} strokeWidth={1.8} /> Back to login
           </BackToLogin>
         </VerifyCard>
       </VerifyContainer>
@@ -510,7 +527,8 @@ const VerifyContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  /* Night Observatory (spec §0/§7): auth screens carry no sidebar — the
+     fixed Sky layer at the app shell is the entire backdrop here. */
   padding: 0.5rem;
 
   @media (min-width: 360px) {
@@ -527,9 +545,8 @@ const VerifyContainer = styled.div`
 `;
 
 const VerifyCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 22px;
   padding: 1rem;
   width: 100%;
   max-width: 420px;
@@ -545,7 +562,6 @@ const VerifyCard = styled.div`
   @media (min-width: 640px) {
     padding: 2rem;
     max-width: 460px;
-    border-radius: ${({ theme }) => theme.borderRadius.xl};
   }
 `;
 
@@ -630,7 +646,7 @@ const EmailConfirmationBox = styled.div`
   padding: 0.75rem 1rem;
   margin: 0 0 1rem 0;
   background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  border: 1px solid ${({ theme }) => theme.colors.info};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   animation: fadeInSlide 0.3s ease-out;
 
@@ -652,9 +668,9 @@ const EmailConfirmIcon = styled.span`
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: ${({ theme }) => theme.colors.primary[100]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
-  font-size: 1rem;
   flex-shrink: 0;
 `;
 
@@ -689,15 +705,14 @@ const EmailConfirmCheck = styled.span`
   width: 20px;
   height: 20px;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* emerald fill — onDark (cream), not onAccent (gold-fill only, spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
   border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: bold;
   flex-shrink: 0;
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.error}10`};
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem;
@@ -713,7 +728,7 @@ const WarningBanner = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 1rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   font-size: 0.875rem;
   text-align: center;
   font-weight: 500;
@@ -724,12 +739,12 @@ const WarningIcon = styled.div`
   height: 60px;
   margin: 0 auto 1rem;
   background: ${({ theme }) => theme.colors.warning};
+  /* gold-b (warning) fill is light — cosmos (onAccent) text stays correct here. */
   color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
 `;
 
 const SuccessIcon = styled.div`
@@ -737,12 +752,12 @@ const SuccessIcon = styled.div`
   height: 60px;
   margin: 0 auto 1rem;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* emerald fill — onDark (cream), not onAccent (gold-fill only, spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
 `;
 
 const SuccessBanner = styled.div`
@@ -751,7 +766,7 @@ const SuccessBanner = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 1rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.emerald[700]};
+  color: ${({ theme }) => theme.colors.bright.emerald};
   font-size: 0.875rem;
   text-align: center;
   font-weight: 500;
@@ -904,7 +919,7 @@ const ToggleModeLink = styled.button`
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   margin: 1rem 0;
 
   @media (min-width: 480px) {
@@ -916,14 +931,15 @@ const BackToLogin = styled(Link)`
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.375rem;
   /* Touch-friendly: min 44px height */
   min-height: 44px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 0.875rem;
   text-decoration: none;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.textPrimary};
     text-decoration: underline;
   }
 `;
@@ -942,21 +958,18 @@ const AuthenticatorIllustration = styled.div`
 `;
 
 const PhoneIcon = styled.span`
-  font-size: 2.5rem;
-
-  @media (min-width: 360px) {
-    font-size: 3rem;
-  }
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const ShieldBadge = styled.span`
   position: absolute;
-  font-size: 1.25rem;
+  display: flex;
+  color: ${({ theme }) => theme.colors.bright.emerald};
   bottom: -0.25rem;
   right: calc(50% - 1.75rem);
 
   @media (min-width: 360px) {
-    font-size: 1.5rem;
     right: calc(50% - 2rem);
   }
 `;
@@ -974,17 +987,19 @@ const LockoutBanner = styled.div`
 `;
 
 const LockoutIcon = styled.span`
-  font-size: 1.25rem;
+  display: flex;
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 const LockoutText = styled.span`
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   font-size: 0.875rem;
 `;
 
 const LockoutTimer = styled.span`
   font-weight: bold;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $locked?: boolean }>`
@@ -992,15 +1007,15 @@ const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $lo
   width: 40px;
   height: 48px;
   font-size: 1.375rem;
-  font-family: 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: center;
   border: 2px solid ${({ $error, $filled, $locked, theme }) =>
-    $locked ? theme.colors.neutral[400] :
+    $locked ? theme.colors.glass.border :
     $error ? theme.colors.error :
-    $filled ? theme.colors.primary[500] : theme.colors.neutral[300]};
+    $filled ? theme.colors.bright.lapis : theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ $locked, theme }) =>
-    $locked ? theme.colors.neutral[100] : theme.colors.background};
+  background: ${({ $locked, $filled, theme }) =>
+    $locked ? theme.colors.cosmosDeep : $filled ? theme.colors.glass.hi : theme.colors.glass.base};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 0.2s ease;
   opacity: ${({ $locked }) => $locked ? 0.6 : 1};
@@ -1026,9 +1041,10 @@ const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $lo
   &:focus {
     outline: none;
     border-color: ${({ $error, $locked, theme }) =>
-      $locked ? theme.colors.neutral[400] :
-      $error ? theme.colors.error : theme.colors.primary[500]};
-    box-shadow: ${({ $locked, theme }) => $locked ? 'none' : `0 0 0 3px ${theme.colors.primary[500]}33`};
+      $locked ? theme.colors.glass.border :
+      $error ? theme.colors.error : theme.colors.secondary[500]};
+    box-shadow: ${({ $locked, $error }) =>
+      $locked ? 'none' : $error ? '0 0 0 3px rgba(240, 138, 112, 0.15)' : '0 0 0 3px rgba(220, 185, 79, 0.15)'};
   }
 
   &:disabled {
@@ -1040,11 +1056,13 @@ const StyledBackupInput = styled.input<{ $error?: boolean }>`
   width: 100%;
   padding: 1rem;
   font-size: 1.5rem;
-  font-family: 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: center;
   letter-spacing: 0.25rem;
+  background: ${({ theme }) => theme.colors.glass.base};
   border: 2px solid ${({ $error, theme }) =>
-    $error ? theme.colors.error : theme.colors.neutral[300]};
+    $error ? theme.colors.error : theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.textPrimary};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   transition: border-color 0.2s, box-shadow 0.2s;
   text-transform: uppercase;
@@ -1052,13 +1070,13 @@ const StyledBackupInput = styled.input<{ $error?: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? theme.colors.error : theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ $error, theme }) =>
-      $error ? `${theme.colors.error}33` : theme.colors.primary[100]};
+      $error ? theme.colors.error : theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px ${({ $error }) =>
+      $error ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.muted};
     letter-spacing: 0.25rem;
   }
 `;
@@ -1067,6 +1085,8 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `;
 
+// The primary-CTA gold treatment (spec §4 Buttons) — this is the one gold
+// budget item on the verify screen.
 const VerifyButton = styled.button<{ $loading?: boolean }>`
   display: flex;
   align-items: center;
@@ -1077,11 +1097,11 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   min-height: 48px;
   padding: 0.75rem 1rem;
   font-size: 0.9375rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.onAccent};
+  font-weight: 700;
+  color: ${({ disabled, theme }) => disabled ? theme.colors.muted : theme.colors.onAccent};
   background: ${({ disabled, theme }) =>
-    disabled ? theme.colors.neutral[300] : theme.colors.primary[500]};
-  border: none;
+    disabled ? theme.colors.glass.base : `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
+  border: 1px solid ${({ disabled, theme }) => disabled ? theme.colors.glass.border : 'transparent'};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   transition: all 0.2s ease;
@@ -1096,7 +1116,8 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   }
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
 `;
 
@@ -1110,9 +1131,10 @@ const ButtonSpinner = styled.span`
 `;
 
 const ButtonIcon = styled.span`
-  font-size: 1rem;
+  display: flex;
 `;
 
+// Secondary-emphasis control (spec §3: "Secondary emphasis is celeste, never gold").
 const StyledToggleModeLink = styled.button`
   display: flex;
   align-items: center;
@@ -1126,7 +1148,7 @@ const StyledToggleModeLink = styled.button`
   padding: 0.625rem 0.5rem;
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
@@ -1136,12 +1158,12 @@ const StyledToggleModeLink = styled.button`
   }
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const ToggleIcon = styled.span`
-  font-size: 1rem;
+  display: flex;
 `;
 
 // Feature #346: Session state restoration styled components
@@ -1149,14 +1171,15 @@ const ExpiredIcon = styled.div`
   width: 70px;
   height: 70px;
   margin: 0.5rem auto 1rem;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gold[500]} 0%, ${({ theme }) => theme.colors.gold[600]} 100%);
+  /* Status semantics ("expired") — the warning phase colour, not the rare
+     chrome gold ramp (spec §3 gold-discipline budget). */
+  background: ${({ theme }) => theme.colors.warning};
   color: ${({ theme }) => theme.colors.onAccent};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
-  box-shadow: 0 4px 12px ${({ theme }) => theme.colors.gold[500]}4D;
+  box-shadow: 0 4px 12px rgba(232, 200, 106, 0.3);
 `;
 
 const StartOverButton = styled.button`
@@ -1169,7 +1192,8 @@ const StartOverButton = styled.button`
   padding: 0.875rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* lapis fill — onDark (cream), not onAccent (gold-fill only, spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
   background: ${({ theme }) => theme.colors.primary[500]};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
@@ -1188,7 +1212,7 @@ const StartOverButton = styled.button`
 `;
 
 const StartOverIcon = styled.span`
-  font-size: 1.125rem;
+  display: flex;
 `;
 
 const SessionTimer = styled.div<{ $warning?: boolean }>`
@@ -1209,7 +1233,7 @@ const SessionTimer = styled.div<{ $warning?: boolean }>`
 `;
 
 const SessionTimerIcon = styled.span`
-  font-size: 1rem;
+  display: flex;
 `;
 
 const SessionTimerText = styled.span`
@@ -1222,7 +1246,9 @@ const SessionTimerValue = styled.span`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-// Feature #347: Mobile reassurance text for app switching
+// Feature #347: Mobile reassurance text for app switching. An informational
+// tip, not a success confirmation — infoBg/lapis-b, not the success/emerald
+// tint (that stays reserved for the actual "backup code accepted" state).
 const MobileReassuranceText = styled.p`
   display: flex;
   align-items: flex-start;
@@ -1231,8 +1257,8 @@ const MobileReassuranceText = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 1rem 0;
   padding: 0.625rem 0.75rem;
-  background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.success};
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.info};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   line-height: 1.4;
   animation: slideInFade 0.3s ease-out;
@@ -1255,6 +1281,7 @@ const MobileReassuranceText = styled.p`
 `;
 
 const MobileReassuranceIcon = styled.span`
-  font-size: 1rem;
+  display: flex;
   flex-shrink: 0;
+  color: ${({ theme }) => theme.colors.info};
 `;

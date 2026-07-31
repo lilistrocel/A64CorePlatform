@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { useState, useEffect } from 'react';
-import { Card, Button, Input } from '@a64core/shared';
+import { Card, Button, Input, PageHeader } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { authService } from '../../services/auth.service';
 import { useToastStore } from '../../stores/toast.store';
@@ -89,7 +89,7 @@ export function Profile() {
 
   return (
     <ProfileContainer>
-      <Title>Profile</Title>
+      <PageHeader breadcrumb="Account · Live" title="Profile" />
 
       <Card
         title="Personal Information"
@@ -203,18 +203,6 @@ const ProfileContainer = styled.div`
   }
 `;
 
-const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
-
-  @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-    margin-bottom: ${({ theme }) => theme.spacing.lg};
-  }
-`;
-
 const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
@@ -251,10 +239,10 @@ const RoleBadge = styled.div`
   display: inline-flex;
   align-items: center;
   padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.bright.lapis}66;
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   width: fit-content;
@@ -268,16 +256,17 @@ const PermissionsList = styled.div`
 
 const PermissionItem = styled.div`
   padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const NoPermissions = styled.div`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
@@ -317,15 +306,14 @@ const DisabledLabel = styled.label`
 
 const DisabledValue = styled.div`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  opacity: 0.6;
+  color: ${({ theme }) => theme.colors.muted};
+  background: ${({ theme }) => theme.colors.glass.base};
 `;
 
 const HelperText = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;

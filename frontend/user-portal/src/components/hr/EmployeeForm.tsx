@@ -5,9 +5,11 @@
  */
 
 import { useState, useRef, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+import { ChevronDown } from 'lucide-react';
 import type { Employee, EmployeeCreate, EmployeeUpdate, EmployeeStatus } from '../../types/hr';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { glassControl, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -49,7 +51,8 @@ const SectionTitle = styled.h3`
 `;
 
 const CollapseIcon = styled.span<{ $collapsed: boolean }>`
-  font-size: 12px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   transition: transform 150ms ease-in-out;
   transform: ${({ $collapsed }) => ($collapsed ? 'rotate(-90deg)' : 'rotate(0)')};
 `;
@@ -77,9 +80,9 @@ const FormField = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Required = styled.span`
@@ -87,49 +90,52 @@ const Required = styled.span`
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1a` : `${theme.colors.primary[500]}1a`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1a` : `${theme.colors.primary[500]}1a`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -143,46 +149,49 @@ const Actions = styled.div`
   gap: 12px;
   justify-content: flex-end;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+`;
+
+const primaryVariant = css`
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[300]}, ${({ theme }) => theme.colors.secondary[500]});
+  color: ${({ theme }) => theme.colors.onAccent};
+  font-weight: 700;
+  &:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+`;
+
+const resetVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.bright.terra};
+  border: 1px solid ${({ theme }) => theme.colors.bright.terra};
+  &:hover:not(:disabled) {
+    background: rgba(232, 147, 95, 0.12);
+  }
+`;
+
+const secondaryVariant = css`
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  &:hover:not(:disabled) {
+    background: rgba(180, 200, 220, 0.07);
+  }
 `;
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant, theme }) => {
-    if ($variant === 'primary') {
-      return `
-        background: ${theme.colors.primary[500]};
-        color: ${theme.colors.onAccent};
-        &:hover:not(:disabled) {
-          background: ${theme.colors.primary[600]};
-        }
-      `;
-    }
-    if ($variant === 'reset') {
-      return `
-        background: transparent;
-        color: ${theme.colors.warning};
-        border: 1px solid ${theme.colors.warning};
-        &:hover:not(:disabled) {
-          background: ${theme.colors.warningBg};
-        }
-      `;
-    }
-    return `
-      background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
-      &:hover:not(:disabled) {
-        background: ${theme.colors.surface};
-      }
-    `;
+  ${({ $variant }) => {
+    if ($variant === 'primary') return primaryVariant;
+    if ($variant === 'reset') return resetVariant;
+    return secondaryVariant;
   }}
 
   &:disabled {
@@ -472,7 +481,9 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
       <Section>
         <SectionTitle onClick={() => setEmergencyContactCollapsed(!emergencyContactCollapsed)}>
-          <CollapseIcon $collapsed={emergencyContactCollapsed}>▼</CollapseIcon>
+          <CollapseIcon $collapsed={emergencyContactCollapsed}>
+            <ChevronDown size={13} strokeWidth={1.8} />
+          </CollapseIcon>
           Emergency Contact (Optional)
         </SectionTitle>
         <CollapsibleContent $collapsed={emergencyContactCollapsed}>

@@ -10,6 +10,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
+import { X, ChevronDown } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { plantDataEnhancedApi } from '../../services/plantDataEnhancedApi';
 import { getSpacingCategories } from '../../services/farmApi';
 import { positiveIntegerInputProps } from '../../utils';
@@ -150,8 +152,7 @@ export interface PlantDataFormModalProps {
 const Overlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 14, 36, 0.6);
   display: ${({ $isOpen }) => ($isOpen ? 'flex' : 'none')};
   align-items: center;
   justify-content: center;
@@ -159,25 +160,31 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   padding: 16px;
 `;
 
+// Night Observatory modal recipe (spec §4 "Modals/drawers"): glassPanel at
+// blur 24px, 20px radius. Modal still closes only via the X button, never on
+// backdrop click — unchanged behaviour.
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   max-width: 900px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
 `;
 
+// Sticky header — glass.opaque (not the translucent glass tokens) so scrolled
+// form content doesn't show through underneath it while it stays pinned.
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   position: sticky;
   top: 0;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.opaque};
   z-index: 10;
 `;
 
@@ -189,7 +196,7 @@ const ModalHeaderContent = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -200,7 +207,7 @@ const VersionBadge = styled.div`
   gap: 6px;
   padding: 4px 12px;
   background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
@@ -208,16 +215,20 @@ const VersionBadge = styled.div`
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 24px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px 8px;
-  transition: color 150ms ease-in-out;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 150ms ease-in-out;
 
   &:hover {
     color: ${({ theme }) => theme.colors.textPrimary};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
@@ -242,34 +253,54 @@ const SectionHeader = styled.div`
   align-items: center;
   gap: 12px;
   padding-bottom: 8px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
+// Short gold underline on section headers — one of the spec's explicitly
+// authorised gold uses (§3). "Short" = a fixed-width accent under the text,
+// not a full-width fill.
 const SectionTitle = styled.h3`
+  position: relative;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
+  padding-bottom: 8px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 28px;
+    height: 2px;
+    border-radius: 2px;
+    background: ${({ theme }) => theme.colors.secondary[500]};
+  }
 `;
 
 const RequiredBadge = styled.span`
   font-size: 11px;
-  font-weight: 500;
-  padding: 4px 8px;
+  font-weight: 700;
+  padding: 4px 10px;
   border-radius: 9999px;
-  background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.35);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 `;
 
 const OptionalBadge = styled.span`
   font-size: 11px;
-  font-weight: 500;
-  padding: 4px 8px;
+  font-weight: 700;
+  padding: 4px 10px;
   border-radius: 9999px;
-  background: ${({ theme }) => theme.colors.textDisabled};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: rgba(180, 200, 220, 0.12);
+  color: ${({ theme }) => theme.colors.muted};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 `;
 
 const FormGroup = styled.div`
@@ -279,88 +310,88 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 
   &:read-only:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textSecondary};
-    cursor: not-allowed;
+    opacity: 0.75;
+    cursor: default;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
   resize: vertical;
   min-height: 80px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => $hasError && theme.colors.error};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
@@ -372,7 +403,7 @@ const ErrorText = styled.span`
 
 const HelpText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const GridRow = styled.div<{ $columns?: number }>`
@@ -386,12 +417,11 @@ const GridRow = styled.div<{ $columns?: number }>`
 `;
 
 const CheckboxGrid = styled.div`
+  ${glassControl}
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
 `;
 
 const CheckboxLabel = styled.label`
@@ -400,18 +430,24 @@ const CheckboxLabel = styled.label`
   gap: 8px;
   cursor: pointer;
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
+// Checkbox/radio pattern (spec §4): celeste border unchecked, gold-hi
+// checked. Native checkboxes cannot have their unchecked border restyled
+// without a full appearance:none rebuild, so unchecked state relies on the
+// browser default; accent-color drives the checked fill/tick colour —
+// the same technique already established in BackupCodesModal.tsx.
 const Checkbox = styled.input`
   width: 18px;
   height: 18px;
   cursor: pointer;
+  accent-color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const CheckboxText = styled.span`
@@ -425,29 +461,34 @@ const ExpandButton = styled.button<{ $expanded: boolean }>`
   justify-content: center;
   gap: 8px;
   padding: 12px 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   width: 100%;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
+const ExpandChevron = styled.span<{ $expanded: boolean }>`
+  display: flex;
+  transition: transform 150ms ease;
+  transform: rotate(${({ $expanded }) => ($expanded ? '180deg' : '0deg')});
+`;
+
 const StatusToggle = styled.div`
+  ${glassControl}
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const StatusLabel = styled.span`
@@ -456,6 +497,11 @@ const StatusLabel = styled.span`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+// Toggle/switch pattern (spec §4): glass track, active fill = bright.emerald
+// (already the "success" token — no change needed there). The knob sits on
+// top of both track states and must stay legible against a dark glass track
+// as well as the emerald fill, so it uses onDark (cream), not onAccent —
+// onAccent now means "dark text for a gold fill" and this knob is neither.
 const StatusSwitch = styled.label`
   position: relative;
   display: inline-block;
@@ -470,6 +516,7 @@ const StatusSwitch = styled.label`
 
     &:checked + span {
       background-color: ${({ theme }) => theme.colors.success};
+      border-color: ${({ theme }) => theme.colors.success};
     }
 
     &:checked + span:before {
@@ -479,12 +526,14 @@ const StatusSwitch = styled.label`
 
   span {
     position: absolute;
+    box-sizing: border-box;
     cursor: pointer;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: ${({ theme }) => theme.colors.neutral[300]};
+    background-color: ${({ theme }) => theme.colors.glass.base};
+    border: 1px solid ${({ theme }) => theme.colors.glass.border};
     transition: 0.3s;
     border-radius: 24px;
 
@@ -494,8 +543,8 @@ const StatusSwitch = styled.label`
       height: 18px;
       width: 18px;
       left: 3px;
-      bottom: 3px;
-      background-color: ${({ theme }) => theme.colors.onAccent};
+      bottom: 2px;
+      background-color: ${({ theme }) => theme.colors.onDark};
       transition: 0.3s;
       border-radius: 50%;
     }
@@ -504,20 +553,20 @@ const StatusSwitch = styled.label`
 
 const ModalFooter = styled.div`
   padding: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   position: sticky;
   bottom: 0;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.opaque};
 `;
 
 const SuccessMessage = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.successBg};
-  color: ${({ theme }) => theme.colors.emerald[600]};
+  color: ${({ theme }) => theme.colors.success};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -537,9 +586,12 @@ const FooterActions = styled.div`
   gap: 12px;
 `;
 
+// Buttons (spec §4): Primary = gold gradient + onAccent (cosmos) text, 700
+// weight — this is the modal's ONE primary CTA (Update/Create Plant Data).
+// Secondary = glass + glass.border + cream text.
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -549,19 +601,20 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.primary[500]};
+        background: linear-gradient(145deg, ${theme.colors.secondary[300]}, ${theme.colors.secondary[500]});
         color: ${theme.colors.onAccent};
+        font-weight: 700;
         &:hover:not(:disabled) {
-          background: ${theme.colors.primary[700]};
+          filter: brightness(1.05);
         }
       `;
     }
     return `
-      background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
+      background: ${theme.colors.glass.base};
+      color: ${theme.colors.textPrimary};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover:not(:disabled) {
-        background: ${theme.colors.surface};
+        background: ${theme.colors.glass.hi};
       }
     `;
   }}
@@ -594,10 +647,13 @@ const DensityCustomRow = styled.div`
   flex-wrap: wrap;
 `;
 
+// Tab pattern (spec §4/§5): this is a two-way segmented toggle, styled like
+// the app's tab bars — glass container, active tab marked with a short gold
+// underline rather than a filled gold background, inactive = muted text,
+// hover = cream text. Keeps gold off a filled control surface.
 const DensityUnitToggle = styled.div`
+  ${glassControl}
   display: flex;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
 `;
@@ -605,18 +661,19 @@ const DensityUnitToggle = styled.div`
 const DensityUnitButton = styled.button<{ $active: boolean }>`
   padding: 12px 14px;
   border: none;
+  border-bottom: 2px solid transparent;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   white-space: nowrap;
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : 'inherit')};
+  background: transparent;
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
+  border-bottom-color: ${({ $active, theme }) => ($active ? theme.colors.secondary[500] : 'transparent')};
 
   &:hover:not([disabled]) {
-    background: ${({ $active, theme }) =>
-      $active ? theme.colors.primary[700] : theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
@@ -1025,8 +1082,8 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
               </VersionBadge>
             )}
           </ModalHeaderContent>
-          <CloseButton onClick={handleClose} disabled={submitting}>
-            ✕
+          <CloseButton onClick={handleClose} disabled={submitting} aria-label="Close">
+            <X size={20} strokeWidth={1.8} />
           </CloseButton>
         </ModalHeader>
 
@@ -1431,7 +1488,10 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
               $expanded={showAdvanced}
               onClick={() => setShowAdvanced(!showAdvanced)}
             >
-              {showAdvanced ? '▼' : '▶'} {showAdvanced ? 'Hide' : 'Show'} Advanced Fields
+              {showAdvanced ? 'Hide' : 'Show'} Advanced Fields
+              <ExpandChevron $expanded={showAdvanced}>
+                <ChevronDown size={15} strokeWidth={1.8} />
+              </ExpandChevron>
             </ExpandButton>
 
             {/* ADVANCED FIELDS */}

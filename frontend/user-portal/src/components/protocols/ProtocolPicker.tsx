@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { HardHat } from 'lucide-react';
 import { useProtocolsForScope } from '../../hooks/protocols/useProtocols';
 import type { Protocol } from '../../types/protocols';
 import { Field, Hint, Label, Select } from '../genetics/styled';
@@ -19,9 +20,9 @@ import { Field, Hint, Label, Select } from '../genetics/styled';
 const StepsBox = styled.div`
   margin-top: 10px;
   padding: 12px 14px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const StepsHead = styled.div`
@@ -44,7 +45,7 @@ const Toggle = styled.button`
   padding: 0;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
 
   &:hover {
@@ -73,6 +74,8 @@ const StepItem = styled.li<{ $critical: boolean }>`
   `}
 `;
 
+// "Critical" is an alert cue — bright.coral (the app's one alert colour,
+// matching "quarantined"), not gold (spec §3).
 const CriticalTag = styled.span`
   display: inline-block;
   margin-left: 6px;
@@ -82,14 +85,17 @@ const CriticalTag = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  background: ${({ theme }) => theme.colors.warningBg};
-  color: ${({ theme }) => theme.colors.gold[800]};
+  background: ${({ theme }) => theme.colors.bright.coral}29;
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const Ppe = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 8px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.bright.terra};
 `;
 
 interface ProtocolPickerProps {
@@ -141,7 +147,11 @@ export function ProtocolPicker({
             </Toggle>
           </StepsHead>
 
-          {selected.ppe.length > 0 && <Ppe>🦺 PPE: {selected.ppe.join(', ')}</Ppe>}
+          {selected.ppe.length > 0 && (
+            <Ppe>
+              <HardHat size={13} strokeWidth={1.8} /> PPE: {selected.ppe.join(', ')}
+            </Ppe>
+          )}
 
           {expanded && (
             <StepList>

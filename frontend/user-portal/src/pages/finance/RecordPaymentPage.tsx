@@ -28,6 +28,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import styled, { useTheme } from 'styled-components';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useCreatePayment } from '../../hooks/queries/usePayments';
 import { getApDocTotalsPaid } from '../../services/financeReportsService';
 import { usePayments } from '../../hooks/queries/usePayments';
@@ -91,7 +92,7 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -99,25 +100,17 @@ const BackLink = styled.button`
   &:hover { text-decoration: underline; }
 `;
 
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 28px;
-`;
-
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
 
 const CardTitle = styled.h2`
-  font-size: 16px;
+  ${monoLabel}
+  font-size: 0.72rem;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 20px;
 `;
 
@@ -126,15 +119,6 @@ const FormRow = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
-  @media (max-width: 640px) { grid-template-columns: 1fr; }
-`;
-
-const FormRow3 = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-  @media (max-width: 900px) { grid-template-columns: 1fr 1fr; }
   @media (max-width: 640px) { grid-template-columns: 1fr; }
 `;
 
@@ -147,43 +131,49 @@ const Field = styled.div`
 const Label = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
-  &:disabled { opacity: 0.6; background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  &:disabled { opacity: 0.6; }
   &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error}; }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
   &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error}; }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 72px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const MethodRadioGroup = styled.div`
@@ -192,21 +182,24 @@ const MethodRadioGroup = styled.div`
   flex-wrap: wrap;
 `;
 
+// Selected fill is `primary[500]` (lapis-b) — text stays `celeste`/`primary`
+// tint rather than a solid onAccent/onDark swap, since this is a tinted glass
+// chip (bg at 10%), not a solid fill; kept as-is other than token retinting.
 const MethodRadioLabel = styled.label<{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
   border: 2px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
+    $active ? theme.colors.primary[500] : theme.colors.glass.border};
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[600] || theme.colors.primary[500] : theme.colors.textPrimary};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] : 'transparent'};
+    $active ? theme.colors.bright.lapis : theme.colors.textPrimary};
+  background: ${({ $active }) =>
+    $active ? 'rgba(107, 138, 224, 0.14)' : 'transparent'};
   transition: border-color 150ms ease, background 150ms ease;
   user-select: none;
 `;
@@ -216,28 +209,29 @@ const FieldError = styled.span`
   color: ${({ theme }) => theme.colors.error};
 `;
 
+// Dense table, spec §4: transparent rows/header, Space Mono uppercase
+// celeste column headers, `line` row dividers. Already sits inside a Card
+// glass panel — no per-row glass.
 const InvoiceTable = styled.table`
   width: 100%;
   border-collapse: collapse;
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.celeste};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
@@ -247,17 +241,19 @@ const TdRight = styled(Td)`
 `;
 
 const AmountInput = styled.input`
+  ${glassControl}
   width: 130px;
   padding: 8px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
   &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.error}; }
 `;
 
@@ -267,13 +263,13 @@ const TotalSummary = styled.div`
   gap: 20px;
   align-items: baseline;
   padding-top: 12px;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 2px solid ${({ theme }) => theme.colors.line};
   margin-top: 4px;
   font-size: 14px;
 `;
 
 const TotalLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-weight: 500;
 `;
 
@@ -286,25 +282,25 @@ const TotalValue = styled.span`
 
 const InvoiceLoadingHint = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   padding: 16px 0;
 `;
 
 const EmptyInvoiceHint = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   padding: 8px 0;
 `;
 
 const ErrorBanner = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  color: ${({ theme }) => theme.colors.error};
   margin-bottom: 16px;
 `;
 
@@ -315,29 +311,35 @@ const FooterRow = styled.div`
   padding-top: 16px;
 `;
 
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Previously this was `primary[500]` (lapis) background with
+// `onAccent` text, which is exactly the onAccent-on-non-gold bug the redesign
+// flags — but rather than just swap to onDark, this button IS the page's
+// single primary action, so it becomes the gold CTA per spec §3/§4, which
+// makes `onAccent` correct again (dark text on a genuinely gold fill).
 const PrimaryButton = styled.button`
   padding: 11px 28px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  &:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 `;
 
 const GhostButton = styled.button`
   padding: 11px 24px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 // ─── Application row state ────────────────────────────────────────────────────
@@ -623,7 +625,10 @@ export function RecordPaymentPage() {
   return (
     <Container>
       <BackLink onClick={() => navigate('/finance/payments')}>&larr; Back to Payments</BackLink>
-      <Title>Record Vendor Payment</Title>
+      <PageHeader
+        breadcrumb="FINANCE · ACCOUNTS PAYABLE"
+        title="Record Vendor Payment"
+      />
 
       {bannerError && (
         <ErrorBanner role="alert">{bannerError}</ErrorBanner>
@@ -748,7 +753,7 @@ export function RecordPaymentPage() {
         <CardTitle>
           Invoices to Pay
           {vendorId && approvedInvoices.length > 0 && (
-            <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8, color: theme.colors.textSecondary }}>
+            <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8, color: theme.colors.muted, textTransform: 'none', letterSpacing: 0 }}>
               — {rows.length} outstanding invoice{rows.length !== 1 ? 's' : ''}
             </span>
           )}
@@ -792,7 +797,10 @@ export function RecordPaymentPage() {
                   <Th>Due Date</Th>
                   <Th style={{ textAlign: 'right' }}>Total Gross</Th>
                   <Th style={{ textAlign: 'right' }}>Total Paid</Th>
-                  <Th style={{ textAlign: 'right', color: theme.colors.emerald[600] }}>Outstanding</Th>
+                  {/* Outstanding column — old emerald[600] was tuned for the
+                      cream ground and reads dark-on-dark here; swapped to
+                      bright.emerald (spec §5.1 debit/credit polarity fix). */}
+                  <Th style={{ textAlign: 'right', color: theme.colors.bright.emerald }}>Outstanding</Th>
                   <Th style={{ textAlign: 'right' }}>Amount to Apply *</Th>
                 </tr>
               </thead>
@@ -820,10 +828,11 @@ export function RecordPaymentPage() {
                       <TdRight style={{ fontSize: 13 }}>
                         {formatCurrency(row.totalGross, row.currency)}
                       </TdRight>
-                      <TdRight style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                      <TdRight style={{ fontSize: 13, color: theme.colors.muted }}>
                         {row.totalPaid > 0 ? formatCurrency(row.totalPaid, row.currency) : '—'}
                       </TdRight>
-                      <TdRight style={{ fontSize: 13, fontWeight: 600, color: theme.colors.emerald[600] }}>
+                      {/* Same debit/credit polarity fix as the header cell above. */}
+                      <TdRight style={{ fontSize: 13, fontWeight: 600, color: theme.colors.bright.emerald }}>
                         {formatCurrency(row.outstanding, row.currency)}
                       </TdRight>
                       <Td style={{ textAlign: 'right' }}>

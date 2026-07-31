@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { Card } from '@a64core/shared';
+import { Card, phaseBadge, type PhaseKey } from '@a64core/shared';
 import {
   getWatchdogConfig,
   updateWatchdogConfig,
@@ -348,7 +348,7 @@ export function TelegramBotSettings() {
               <HistoryList>
                 {history.map((entry, i) => (
                   <HistoryItem key={entry.logId || i}>
-                    <HistorySeverity severity={entry.severity}>{entry.severity?.toUpperCase()}</HistorySeverity>
+                    <HistorySeverity $phase={severityToPhase(entry.severity)}>{entry.severity?.toUpperCase()}</HistorySeverity>
                     <HistoryTitle>{entry.title}</HistoryTitle>
                     <HistoryTime>{entry.sentAt ? new Date(entry.sentAt).toLocaleString() : ''}</HistoryTime>
                   </HistoryItem>
@@ -389,7 +389,7 @@ const SectionTitle = styled.h4`
   color: ${({ theme }: any) => theme.colors.textPrimary};
   margin: 0;
   padding-bottom: ${({ theme }: any) => theme.spacing.xs};
-  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.line};
 `;
 
 const FieldGroup = styled.div`
@@ -416,13 +416,17 @@ const Label = styled.label`
 const Input = styled.input`
   padding: 8px 12px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
-  background: ${({ theme }: any) => theme.colors.background};
+  background: ${({ theme }: any) => theme.colors.glass.base};
   color: ${({ theme }: any) => theme.colors.textPrimary};
   max-width: 400px;
-  &::placeholder { color: ${({ theme }: any) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.primary[500]}; }
+  &::placeholder { color: ${({ theme }: any) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }: any) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const NumberInput = styled(Input)`
@@ -433,18 +437,23 @@ const NumberInput = styled(Input)`
 const Select = styled.select`
   padding: 8px 12px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
-  background: ${({ theme }: any) => theme.colors.background};
+  background: ${({ theme }: any) => theme.colors.glass.base};
   color: ${({ theme }: any) => theme.colors.textPrimary};
   max-width: 300px;
-  &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }: any) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const Checkbox = styled.input`
   width: 16px;
   height: 16px;
   cursor: pointer;
+  accent-color: ${({ theme }: any) => theme.colors.secondary[500]};
 `;
 
 const CheckList = styled.div`
@@ -473,16 +482,21 @@ const ButtonRow = styled.div`
   flex-wrap: wrap;
 `;
 
+// The primary-CTA gold treatment (spec §4 Buttons).
 const PrimaryButton = styled.button`
   padding: 8px 16px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  font-weight: 700;
   color: ${({ theme }: any) => theme.colors.onAccent};
-  background: ${({ theme }: any) => theme.colors.primary[500]};
-  border: none;
+  background: ${({ theme }: any) => `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
+  border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
-  &:hover:not(:disabled) { background: ${({ theme }: any) => theme.colors.primary[600]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -491,11 +505,11 @@ const SecondaryButton = styled.button`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
   color: ${({ theme }: any) => theme.colors.textPrimary};
-  background: ${({ theme }: any) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  background: ${({ theme }: any) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
   cursor: pointer;
-  &:hover:not(:disabled) { background: ${({ theme }: any) => theme.colors.neutral[200]}; }
+  &:hover:not(:disabled) { background: ${({ theme }: any) => theme.colors.glass.hi}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -504,12 +518,13 @@ const ResultBox = styled.div<{ success: boolean }>`
   border-radius: 6px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   background: ${({ success, theme }: any) => success ? theme.colors.successBg : theme.colors.errorBg};
-  color: ${({ success, theme }: any) => success ? theme.colors.emerald[700] : theme.colors.terracotta[700]};
+  color: ${({ success, theme }: any) => success ? theme.colors.bright.emerald : theme.colors.bright.coral};
 `;
 
 const StatusBar = styled.div`
   padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.neutral[50]};
+  background: ${({ theme }: any) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   color: ${({ theme }: any) => theme.colors.textSecondary};
@@ -547,35 +562,33 @@ const HistoryItem = styled.div`
   gap: ${({ theme }: any) => theme.spacing.sm};
   padding: 6px ${({ theme }: any) => theme.spacing.sm};
   border-radius: 4px;
-  background: ${({ theme }: any) => theme.colors.neutral[50]};
+  background: ${({ theme }: any) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }: any) => theme.colors.glass.border};
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
 `;
 
-// Heat scale across the brand's warm ramps — deepens with severity so
-// "critical" reads darkest without reaching for gold (reserved for nav/CTA).
-const getSeverityColor = (severity: string, theme: any): string => {
+// Maps watchdog severity onto the spec §5 phase vocabulary instead of a
+// bespoke warm ramp — same badge pattern (phaseBadge) used everywhere else
+// status is signalled. "high"/"critical" share `quarantined` (coral, the
+// "rejected/failed" extrapolation) — the label text still carries the
+// distinction, colour is never the only signal (spec §9).
+const severityToPhase = (severity: string): PhaseKey => {
   switch (severity) {
     case 'medium':
-      return theme.colors.gold[600];
+      return 'fruitingInit';
     case 'high':
-      return theme.colors.terracotta[600];
     case 'critical':
-      return theme.colors.terracotta[800];
+      return 'quarantined';
     case 'low':
     default:
-      return theme.colors.neutral[500];
+      return 'empty';
   }
 };
 
-const HistorySeverity = styled.span<{ severity: string }>`
-  font-weight: 600;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  color: ${({ theme }: any) => theme.colors.onAccent};
-  background: ${({ severity, theme }) => getSeverityColor(severity, theme)};
+const HistorySeverity = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
   min-width: 60px;
-  text-align: center;
+  justify-content: center;
 `;
 
 const HistoryTitle = styled.span`

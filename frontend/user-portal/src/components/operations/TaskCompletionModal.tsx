@@ -7,6 +7,8 @@
 
 import { useState, useRef } from 'react';
 import styled from 'styled-components';
+import { Camera, X, ArrowRight } from 'lucide-react';
+import { glassPanel, glassOpaque } from '@a64core/shared';
 import { completeTask } from '../../services/tasksApi';
 import type { TaskWithDetails } from '../../types/tasks';
 
@@ -60,7 +62,9 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>
           <Title>Complete Task</Title>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close">
+            <X size={20} strokeWidth={2} />
+          </CloseButton>
         </Header>
 
         <Content>
@@ -84,7 +88,7 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
             <FormGroup>
               <Label>Photos (Optional)</Label>
               <PhotoPlaceholder>
-                <PhotoIcon>📷</PhotoIcon>
+                <PhotoIcon><Camera size={28} strokeWidth={1.6} /></PhotoIcon>
                 <PhotoText>Photo upload coming soon</PhotoText>
               </PhotoPlaceholder>
             </FormGroup>
@@ -114,7 +118,13 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
                     onClick={(e) => handleSubmit(e, true)}
                     disabled={submitting}
                   >
-                    {submitting ? 'Completing...' : `Complete & Transition`}
+                    {submitting ? (
+                      'Completing...'
+                    ) : (
+                      <>
+                        <ArrowRight size={14} strokeWidth={2} /> Complete &amp; Transition
+                      </>
+                    )}
                   </TransitionButton>
                 </ButtonGroup>
               </>
@@ -143,7 +153,9 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,15 +164,16 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const Header = styled.div`
@@ -168,12 +181,12 @@ const Header = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Title = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: 1.3rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -181,8 +194,7 @@ const Title = styled.h2`
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -190,12 +202,15 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 8px;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
   }
 `;
 
@@ -207,7 +222,7 @@ const Content = styled.div`
 const TaskInfo = styled.div`
   margin-bottom: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.glass.base};
   border-radius: ${({ theme }) => theme.borderRadius.md};
 `;
 
@@ -220,7 +235,7 @@ const TaskTitle = styled.h3`
 
 const TaskDescription = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
   line-height: ${({ theme }) => theme.typography.lineHeight.normal};
 `;
@@ -244,23 +259,23 @@ const Label = styled.label`
 `;
 
 const Textarea = styled.textarea`
+  ${glassOpaque}
   padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   transition: border-color 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -270,25 +285,26 @@ const PhotoPlaceholder = styled.div`
   align-items: center;
   justify-content: center;
   padding: ${({ theme }) => theme.spacing.xl};
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  border: 2px dashed ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
 `;
 
 const PhotoIcon = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: ${({ theme }) => theme.spacing.sm};
 `;
 
 const PhotoText = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
 const ErrorMessage = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.error}15`};
+  background: ${({ theme }) => theme.colors.errorBg};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   color: ${({ theme }) => theme.colors.error};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -297,9 +313,9 @@ const ErrorMessage = styled.div`
 
 const InfoBox = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.bright.lapis}40;
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   text-align: center;
@@ -307,7 +323,7 @@ const InfoBox = styled.div`
 
   strong {
     font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-    color: ${({ theme }) => theme.colors.primary[600]};
+    color: ${({ theme }) => theme.colors.bright.lapis};
   }
 `;
 
@@ -320,17 +336,18 @@ const ButtonGroup = styled.div`
 const CancelButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   cursor: pointer;
   transition: background 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:disabled {
@@ -343,16 +360,15 @@ const SubmitButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
   background: ${({ theme }) => theme.colors.success};
-  color: white;
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.success};
     filter: brightness(0.9);
   }
 
@@ -363,12 +379,16 @@ const SubmitButton = styled.button`
 `;
 
 const TransitionButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   cursor: pointer;
@@ -382,10 +402,5 @@ const TransitionButton = styled.button`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-
-  &::before {
-    content: '→';
-    margin-right: ${({ theme }) => theme.spacing.xs};
   }
 `;

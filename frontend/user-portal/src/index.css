@@ -1,17 +1,20 @@
 /* A20Core — pre-React bootstrap layer only. This file paints the very
    first frame (before GlobalStyles.tsx mounts with the styled-components
-   theme), so it is deliberately minimal and uses literal brand hexes —
-   see Docs/2-Working-Progress/a20core-rebrand-spec.md §2 ground-token
-   table. Real component styling lives in GlobalStyles.tsx / theme.ts. */
+   theme), so it is deliberately minimal and uses literal Night Observatory
+   hexes — see Docs/2-Working-Progress/night-observatory-spec.md §1.
+   Real component styling lives in GlobalStyles.tsx / theme.ts.
+
+   If you ever see a flat page in one of these colours with no UI on it,
+   React failed to mount and you are looking at this file alone. */
 :root {
   font-family: 'Hanken Grotesk', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  /* Force light mode for consistent UI appearance */
-  color-scheme: light;
-  color: #1B1A14;           /* Ink */
-  background-color: #F1E6CC; /* Fresco Cream */
+  /* Dark is the only mode — see night-observatory-spec.md §0. */
+  color-scheme: dark;
+  color: #FAF3E2;            /* cream-hi */
+  background-color: #0A0E24; /* cosmos-deep — the page floor under the sky */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -19,23 +22,24 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure form inputs have proper light theme styling */
+/* First-frame form controls. GlobalStyles + the glassControl mixin take
+   over once React mounts; these only keep the pre-mount frame legible. */
 input, select, textarea {
-  color: #1B1A14;             /* Ink */
-  background-color: #FAF3E2;  /* Cream Hi */
+  color: #FAF3E2;            /* cream-hi */
+  background-color: #171D40; /* cosmos-hi */
 }
 
 input::placeholder, textarea::placeholder {
-  color: #8C8471; /* textDisabled */
+  color: #8B90AC; /* muted */
 }
 
 a {
   font-weight: 500;
-  color: #20419A; /* Lapis */
+  color: #6B8AE0; /* lapis-b — brightened for the dark ground */
   text-decoration: inherit;
 }
 a:hover {
-  color: #162C6B; /* Lapis 700 */
+  color: #B4C8DC; /* celeste */
 }
 
 body {
@@ -43,6 +47,7 @@ body {
   padding: 0;
   min-width: 100%;
   min-height: 100vh;
+  background-color: #0A0E24; /* cosmos-deep */
 }
 
 html {
@@ -59,21 +64,19 @@ h1 {
   line-height: 1.1;
 }
 
+/* This file is the pre-React bootstrap layer only (see file banner above) —
+   it must not impose geometry (padding/border-radius/size) on <button>.
+   Real buttons are self-sizing styled-components; box-sizing:border-box
+   plus a padding/border here does not "fit inside" a declared width/height,
+   it forces the used width to grow past it, silently deforming any
+   fixed-size button (e.g. a circular icon trigger) that inherits this rule
+   without overriding padding itself. Keep only true resets here. */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
   font-size: 1em;
-  font-weight: 500;
   font-family: inherit;
-  background-color: #EDE0C2; /* surface */
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #20419A; /* Lapis */
 }
 button:focus-visible {
-  outline: 2px solid #20419A; /* Lapis */
+  outline: 2px solid #DCB94F; /* gold-hi — the brand focus ring */
   outline-offset: 2px;
 }

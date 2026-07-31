@@ -7,7 +7,22 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import styled, { useTheme } from 'styled-components';
+import styled, { useTheme, type DefaultTheme } from 'styled-components';
+import {
+  Circle,
+  Sprout,
+  Leaf,
+  Wheat,
+  Sparkles,
+  Clock,
+  AlertTriangle,
+  Calendar,
+  BarChart3,
+  Check,
+  ClipboardList,
+  Inbox,
+} from 'lucide-react';
+import { glassPanelHover, monoLabel, colorBadge } from '@a64core/shared';
 import { useBlockActions } from '../../../hooks/farm/useBlockActions';
 import { QuickPlanModal } from './QuickPlanModal';
 import { ResolveAlertModal } from './ResolveAlertModal';
@@ -15,7 +30,25 @@ import { BlockHarvestEntryModal } from '../BlockHarvestEntryModal';
 import { BlockAnalyticsModal } from '../BlockAnalyticsModal';
 import type { DashboardBlock, DashboardBlockStatus } from '../../../types/farm';
 import type { DashboardConfig } from '../../../hooks/farm/useDashboardConfig';
+import { STATE_ICON_COMPONENTS } from '../../../hooks/farm/useDashboardConfig';
 import { formatNumber } from '../../../utils';
+
+// Alert severity is a distinct vocabulary from the room-phase map (spec
+// §5.2) — extrapolated onto bright.* hues rather than reusing warning/gold-b
+// for "high" (spec §3: gold is never a status colour except Harvesting).
+// Matches BlockAlertsTab.tsx's getSeverityColor.
+function getAlertSeverityColor(theme: DefaultTheme, severity: string): string {
+  switch (severity) {
+    case 'critical':
+      return theme.colors.bright.coral;
+    case 'high':
+      return theme.colors.bright.terra;
+    case 'medium':
+      return theme.colors.bright.lapis;
+    default:
+      return theme.colors.muted;
+  }
+}
 
 interface CompactBlockCardProps {
   block: DashboardBlock;
@@ -35,7 +68,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   const { transitionBlock, recordHarvest, transitioning, recordingHarvest } = useBlockActions();
 
   const stateColor = config.colorScheme.stateColors[block.state] || theme.colors.textSecondary;
-  const stateIcon = config.icons.states[block.state] || '⚫';
+  const StateIcon = STATE_ICON_COMPONENTS[block.state];
 
   /**
    * Get performance color
@@ -128,7 +161,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 
       {/* Status Badge */}
       <StateBadge $color={stateColor}>
-        <span>{stateIcon}</span>
+        {StateIcon && <StateIcon size={12} strokeWidth={1.8} />}
         <span>{block.state.charAt(0).toUpperCase() + block.state.slice(1)}</span>
       </StateBadge>
 
@@ -142,7 +175,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         {/* EMPTY STATE */}
         {block.state === 'empty' && (
           <EmptyContent>
-            <EmptyIcon>⚪</EmptyIcon>
+            <EmptyIcon><Circle size={28} strokeWidth={1.6} /></EmptyIcon>
             <EmptyText>Block is empty</EmptyText>
           </EmptyContent>
         )}
@@ -152,7 +185,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           <PlannedContent>
             {block.targetCropName && (
               <CropInfo>
-                <CropIcon>🌱</CropIcon>
+                <CropIcon><Sprout size={14} strokeWidth={1.8} /></CropIcon>
                 <CropName>{block.targetCropName}</CropName>
               </CropInfo>
             )}
@@ -161,7 +194,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             </Capacity>
             {block.calculated.daysUntilNextTransition !== null && block.calculated.daysUntilNextTransition !== undefined && (
               <Timeline>
-                <TimelineIcon>{block.calculated.isDelayed ? '⚠️' : '📅'}</TimelineIcon>
+                <TimelineIcon>{block.calculated.isDelayed ? <AlertTriangle size={12} strokeWidth={1.8} /> : <Calendar size={12} strokeWidth={1.8} />}</TimelineIcon>
                 <TimelineText>
                   {block.calculated.daysUntilNextTransition > 0
                     ? `Plant in ${formatNumber(block.calculated.daysUntilNextTransition)} days`
@@ -179,7 +212,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           <GrowingContent>
             {block.targetCropName && (
               <CropInfo>
-                <CropIcon>🌿</CropIcon>
+                <CropIcon><Leaf size={14} strokeWidth={1.8} /></CropIcon>
                 <CropName>{block.targetCropName}</CropName>
               </CropInfo>
             )}
@@ -190,7 +223,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 
             <StateInfo>
               <InfoItem>
-                <InfoIcon>⏱️</InfoIcon>
+                <InfoIcon><Clock size={12} strokeWidth={1.8} /></InfoIcon>
                 <InfoText>
                   {formatNumber(block.calculated.daysInCurrentState)} days in {block.state}
                 </InfoText>
@@ -198,7 +231,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 
               {block.calculated.daysUntilNextTransition !== null && block.calculated.daysUntilNextTransition !== undefined && (
                 <InfoItem>
-                  <InfoIcon>{block.calculated.isDelayed ? '⚠️' : '📅'}</InfoIcon>
+                  <InfoIcon>{block.calculated.isDelayed ? <AlertTriangle size={12} strokeWidth={1.8} /> : <Calendar size={12} strokeWidth={1.8} />}</InfoIcon>
                   <InfoText>
                     {block.calculated.daysUntilNextTransition > 0
                       ? `${formatNumber(block.calculated.daysUntilNextTransition)}d until next transition`
@@ -223,7 +256,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           <HarvestingContent>
             {block.targetCropName && (
               <CropInfo>
-                <CropIcon>🧺</CropIcon>
+                <CropIcon><Wheat size={14} strokeWidth={1.8} /></CropIcon>
                 <CropName>{block.targetCropName}</CropName>
               </CropInfo>
             )}
@@ -238,17 +271,21 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                   $color={getPerformanceColor()}
                 />
               </ProgressBar>
-              <PerformanceBadge $color={getPerformanceColor()}>
-                {formatNumber(block.calculated.yieldProgress, { decimals: 0 })}% •{' '}
-                {block.calculated?.performanceCategory
-                  ? config.icons?.metrics?.performance?.[block.calculated.performanceCategory]
-                  : '📊'}
+              <PerformanceBadge>
+                {/* T-901 final cleanup: this used to append
+                    `config.icons.metrics.performance[...]`, but
+                    DashboardConfig['icons']['metrics'] has no `performance`
+                    field — that lookup always evaluated to `undefined` and
+                    rendered a bare " • " separator with nothing after it.
+                    Dead code removed rather than replaced; there is no
+                    per-category icon/glyph to restore. */}
+                {formatNumber(block.calculated.yieldProgress, { decimals: 0 })}%
               </PerformanceBadge>
             </YieldProgress>
 
             <HarvestInfo>
               <InfoItem>
-                <InfoIcon>📊</InfoIcon>
+                <InfoIcon><BarChart3 size={12} strokeWidth={1.8} /></InfoIcon>
                 <InfoText>
                   {formatNumber(block.kpi.totalHarvests)} harvest{block.kpi.totalHarvests !== 1 ? 's' : ''}
                 </InfoText>
@@ -260,7 +297,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         {/* CLEANING STATE */}
         {block.state === 'cleaning' && (
           <CleaningContent>
-            <CleaningIcon>🧹</CleaningIcon>
+            <CleaningIcon><Sparkles size={28} strokeWidth={1.6} /></CleaningIcon>
             <CleaningText>Preparing for next cycle</CleaningText>
             {block.kpi.actualYieldKg > 0 && (
               <LastYield>
@@ -277,7 +314,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         <AlertsSection>
           {block.activeAlerts.slice(0, 2).map((alert) => (
             <AlertBadge key={alert.alertId} $severity={alert.severity}>
-              ⚠️ {alert.title}
+              <AlertTriangle size={11} strokeWidth={1.8} /> {alert.title}
             </AlertBadge>
           ))}
           {block.activeAlerts.length > 2 && (
@@ -297,7 +334,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             }}
             $variant="analytics"
           >
-            📊 Stats
+            <BarChart3 size={12} strokeWidth={1.8} /> Stats
           </ActionButton>
 
           {/* Resolve Alert Button - shows when block has active alerts */}
@@ -309,7 +346,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               }}
               $variant="warning"
             >
-              ✅ Resolve Alert
+              <Check size={12} strokeWidth={1.8} /> Resolve Alert
             </ActionButton>
           )}
 
@@ -323,7 +360,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               disabled={transitioning}
               $variant="plan"
             >
-              📋 Plan
+              <ClipboardList size={12} strokeWidth={1.8} /> Plan
             </ActionButton>
           )}
           {block.state === 'planned' && (
@@ -336,7 +373,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               disabled={transitioning}
               $variant="plant"
             >
-              🌱 Plant
+              <Sprout size={12} strokeWidth={1.8} /> Plant
             </ActionButton>
           )}
           {block.state === 'planted' && (
@@ -394,7 +431,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                 disabled={recordingHarvest}
                 $variant="success"
               >
-                📥 Harvest
+                <Inbox size={12} strokeWidth={1.8} /> Harvest
               </ActionButton>
               <ActionButton
                 onClick={(e) => {
@@ -485,24 +522,16 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 // STYLED COMPONENTS
 // ============================================================================
 
+// Interactive room-style card (spec §4 mockup ".card") — hover lift/gold-rim.
 const Card = styled.div<{ $stateColor: string }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 8px;
+  ${glassPanelHover}
   padding: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
   border-left: 4px solid ${(props) => props.$stateColor};
-  transition: all 200ms ease-in-out;
-  position: relative;
   aspect-ratio: 1 / 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-  }
 `;
 
 const Header = styled.div`
@@ -512,25 +541,14 @@ const Header = styled.div`
 `;
 
 const BlockCode = styled.div`
-  font-size: 11px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: 'Courier New', monospace;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const StateBadge = styled.div<{ $color: string }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: ${(props) => `${props.$color}15`};
-  font-size: 10px;
-  font-weight: 600;
-  color: ${(props) => props.$color};
-  text-transform: uppercase;
+  ${({ $color }) => colorBadge($color)}
   margin-bottom: 4px;
-  width: fit-content;
 `;
 
 const BlockName = styled.div`
@@ -562,13 +580,14 @@ const EmptyContent = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 32px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 8px;
 `;
 
 const EmptyText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
@@ -604,19 +623,20 @@ const CleaningContent = styled.div`
 `;
 
 const CleaningIcon = styled.div`
-  font-size: 32px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.bright.verdi};
   margin-bottom: 8px;
 `;
 
 const CleaningText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
 const LastYield = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // Common Elements
@@ -627,7 +647,8 @@ const CropInfo = styled.div`
 `;
 
 const CropIcon = styled.span`
-  font-size: 16px;
+  display: inline-flex;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const CropName = styled.div`
@@ -641,14 +662,15 @@ const CropName = styled.div`
 
 const Capacity = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ProgressBar = styled.div`
   width: 100%;
   height: 6px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 3px;
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 99px;
   overflow: hidden;
   margin-bottom: 4px;
 `;
@@ -675,21 +697,24 @@ const InfoItem = styled.div`
 `;
 
 const InfoIcon = styled.span`
-  font-size: 12px;
+  display: inline-flex;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const InfoText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+// Delay is "behind schedule" — coral (quarantined), not a raw prop colour
+// with literal white text (spec: no pure white; use onDark).
 const DelayBadge = styled.div<{ $color: string }>`
   padding: 2px 6px;
   border-radius: 4px;
   background: ${(props) => props.$color};
-  color: white;
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
 `;
@@ -701,12 +726,13 @@ const Timeline = styled.div`
 `;
 
 const TimelineIcon = styled.span`
-  font-size: 12px;
+  display: inline-flex;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TimelineText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const YieldProgress = styled.div``;
@@ -714,15 +740,18 @@ const YieldProgress = styled.div``;
 const YieldLabel = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 4px;
 `;
 
-const PerformanceBadge = styled.div<{ $color: string }>`
+const PerformanceBadge = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
   font-size: 10px;
-  font-weight: 600;
-  color: ${(props) => props.$color};
-  text-align: right;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const HarvestInfo = styled.div``;
@@ -730,41 +759,20 @@ const HarvestInfo = styled.div``;
 const AlertsSection = styled.div`
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   flex-direction: column;
   gap: 4px;
 `;
 
+// Severity is a distinct vocabulary from the room-phase map (spec §5.2) —
+// extrapolated onto bright.* hues rather than reusing warning/gold-b for
+// "high" (spec §3: gold is never a status colour except Harvesting). Colour
+// resolution lives in getAlertSeverityColor() above (matches
+// BlockAlertsTab.tsx's getSeverityColor); the §4 badge recipe comes from
+// colorBadge().
 const AlertBadge = styled.div<{ $severity: string }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  background: ${({ $severity, theme }) => {
-    switch ($severity) {
-      case 'critical':
-        return theme.colors.errorBg;
-      case 'high':
-        return theme.colors.warningBg;
-      case 'medium':
-        return theme.colors.infoBg;
-      default:
-        return theme.colors.surface;
-    }
-  }};
-  color: ${({ $severity, theme }) => {
-    switch ($severity) {
-      case 'critical':
-        return theme.colors.error;
-      case 'high':
-        return theme.colors.warning;
-      case 'medium':
-        return theme.colors.info;
-      default:
-        return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $severity, theme }) => colorBadge(getAlertSeverityColor(theme, $severity))}
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -772,7 +780,7 @@ const AlertBadge = styled.div<{ $severity: string }>`
 
 const MoreAlerts = styled.div`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
 `;
 
@@ -784,45 +792,47 @@ const QuickActions = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  /* "f2" hex alpha = ~95% opacity on the themed surface so the card state
-     color still shows faintly through the action bar while keeping contrast
-     against whatever's below in dark mode. */
-  background: ${({ theme }) => `${theme.colors.surface}f2`};
+  background: ${({ theme }) => theme.colors.glass.opaque};
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 6px;
   box-shadow: ${({ theme }) => theme.shadows.md};
   max-width: calc(100% - 16px);
 `;
 
+// Deliberately no gold anywhere here: brand spec reserves gold for the active
+// nav item / one CTA per view / Harvesting phase, not ordinary per-card
+// quick-action buttons that can appear on every hovered card (spec §3).
+// "warning" (Resolve Alert) uses terra, not gold-b, for the same reason.
 const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | 'warning' | 'analytics' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   flex: 1 1 auto;
   min-width: 65px;
   max-width: 100%;
   padding: 6px 8px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: ${(props) => {
     switch (props.$variant) {
       case 'success':
-        return props.theme.colors.success;
+        return props.theme.colors.bright.emerald;
       case 'plan':
-        return props.theme.colors.primary[500];
+        return props.theme.colors.bright.lapis;
       case 'plant':
-        return props.theme.colors.success;
+        return props.theme.colors.bright.emerald;
       case 'warning':
-        return props.theme.colors.warning;
+        return props.theme.colors.bright.terra;
       case 'analytics':
-        // Deliberately lapis, not gold/secondary: brand spec reserves gold
-        // for the active nav item / one CTA per view / highlight badges, not
-        // ordinary per-card action buttons.
         return props.theme.colors.primary[700];
       default:
-        return props.theme.colors.primary[500];
+        return props.theme.colors.bright.lapis;
     }
   }};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   white-space: nowrap;
@@ -830,22 +840,7 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
   text-overflow: ellipsis;
 
   &:hover {
-    background: ${(props) => {
-      switch (props.$variant) {
-        case 'success':
-          return props.theme.colors.emerald[600];
-        case 'plan':
-          return props.theme.colors.primary[600];
-        case 'plant':
-          return props.theme.colors.emerald[600];
-        case 'warning':
-          return props.theme.colors.gold[600];
-        case 'analytics':
-          return props.theme.colors.primary[800];
-        default:
-          return props.theme.colors.primary[600];
-      }
-    }};
+    filter: brightness(1.1);
   }
 
   &:disabled {

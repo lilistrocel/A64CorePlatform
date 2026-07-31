@@ -7,18 +7,49 @@
  * - Room status grid (color-coded by phase)
  * - Recent harvests table
  * - Active contamination alerts list
+ *
+ * Night Observatory (T-901 Phase 3): PageHeader on the page root (spec §4/§8),
+ * glass stat cards, phase-map-aligned severity encoding, emoji -> lucide.
  */
 
 import { useState } from 'react';
 import styled, { useTheme } from 'styled-components';
 import type { Theme } from '@a64core/shared';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
+import { Factory, Home, Sprout, AlertTriangle, Scale, RefreshCw, X, CheckCircle2 } from 'lucide-react';
 import { useMushroomDashboard } from '../../hooks/mushroom/useMushroomDashboard';
 import { useFacilities } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms } from '../../hooks/mushroom/useRoomData';
 import { GrowingRoomGrid } from '../../components/mushroom/GrowingRoomGrid';
 import { RoomDetailsModal } from '../../components/mushroom/RoomDetailsModal';
+import { QUALITY_GRADE_HUE } from '../../components/mushroom/phaseTheme';
 import type { GrowingRoom, RoomPhase } from '../../types/mushroom';
-import { PHASE_LABELS, QUALITY_GRADE_COLORS } from '../../types/mushroom';
+import { PHASE_LABELS } from '../../types/mushroom';
+
+// Alert severity is a data encoding — walked as one hue's (coral, the
+// "quarantined"/alert phase colour) opacity ramp rather than mixing hues
+// (matches RoomDetailsModal's severity treatment). Night Observatory (T-901):
+// `warning` now resolves to gold-b, reserved for the Harvesting phase, so it
+// no longer stands in for "medium" alert severity.
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const bigint = parseInt(clean, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getSeverityStyle(theme: Theme, severity: string): { bg: string; border: string; text: string } {
+  const coral = theme.colors.bright.coral;
+  const steps: Record<string, { bg: string; border: string; text: string }> = {
+    low: { bg: hexToRgba(coral, 0.12), border: hexToRgba(coral, 0.35), text: coral },
+    medium: { bg: hexToRgba(coral, 0.24), border: hexToRgba(coral, 0.5), text: coral },
+    high: { bg: hexToRgba(coral, 0.5), border: coral, text: theme.colors.onDark },
+    critical: { bg: coral, border: coral, text: theme.colors.onDark },
+  };
+  return steps[severity] ?? { bg: theme.colors.glass.base, border: theme.colors.glass.border, text: theme.colors.muted };
+}
 
 export function MushroomDashboardPage() {
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>('');
@@ -53,48 +84,47 @@ export function MushroomDashboardPage() {
 
   return (
     <Container>
-      {/* Top Bar */}
-      <TopBar>
-        <TitleSection>
-          <PageTitle>Mushroom Dashboard</PageTitle>
-          <PageSubtitle>Real-time grow room monitoring and operations</PageSubtitle>
-        </TitleSection>
-        <TopControls>
-          <RefreshBtn onClick={() => refetch()} disabled={dashLoading} title="Refresh dashboard">
-            <SpinIcon $spinning={dashLoading}>&#8635;</SpinIcon>
-            Refresh
-          </RefreshBtn>
-        </TopControls>
-      </TopBar>
+      <TopBarRow>
+        <HeaderFlex
+          breadcrumb="Operations · Live"
+          title="Mushroom Dashboard"
+          emphasizeLastWord
+          description="Real-time grow room monitoring and operations"
+        />
+        <RefreshBtn onClick={() => refetch()} disabled={dashLoading} title="Refresh dashboard">
+          <RefreshCw size={15} strokeWidth={2} className={dashLoading ? 'spinning' : undefined} />
+          Refresh
+        </RefreshBtn>
+      </TopBarRow>
 
       {/* Summary Stat Cards */}
       <StatCardsRow>
-        <StatCard $accent={theme.colors.info}>
-          <StatIcon>🏭</StatIcon>
+        <StatCard $accent={theme.colors.bright.lapis}>
+          <StatIcon><Factory size={20} strokeWidth={1.6} /></StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.totalFacilities ?? '—'}</StatNumber>
             <StatLabel>Facilities</StatLabel>
           </StatInfo>
         </StatCard>
-        {/* Purple was decorative variety, not a category vs. an adjacent blue
-            element — gold is reserved (brand §1.4), so this falls back to a
-            deeper lapis per the spec's purple judgement call. */}
-        <StatCard $accent={theme.colors.primary[700]}>
-          <StatIcon>🏠</StatIcon>
+        {/* Purple is legitimate decorative variety here (bright.lavender),
+            not a status — distinguishes this tile from the facilities tile
+            without touching gold (reserved, spec §3). */}
+        <StatCard $accent={theme.colors.bright.lavender}>
+          <StatIcon><Home size={20} strokeWidth={1.6} /></StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.totalRooms ?? '—'}</StatNumber>
             <StatLabel>Total Rooms</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent={theme.colors.success}>
-          <StatIcon>🍄</StatIcon>
+        <StatCard $accent={theme.colors.bright.emerald}>
+          <StatIcon><Sprout size={20} strokeWidth={1.6} /></StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.activeRooms ?? '—'}</StatNumber>
             <StatLabel>Active Rooms</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent={activeAlerts.length > 0 ? theme.colors.error : theme.colors.neutral[500]}>
-          <StatIcon>⚠️</StatIcon>
+        <StatCard $accent={activeAlerts.length > 0 ? theme.colors.bright.coral : theme.colors.muted}>
+          <StatIcon><AlertTriangle size={20} strokeWidth={1.6} /></StatIcon>
           <StatInfo>
             <StatNumber $alert={activeAlerts.length > 0}>
               {activeAlerts.length}
@@ -103,8 +133,8 @@ export function MushroomDashboardPage() {
           </StatInfo>
         </StatCard>
         {dashboardData?.totalHarvestThisMonth != null && (
-          <StatCard $accent={theme.colors.warning}>
-            <StatIcon>⚖️</StatIcon>
+          <StatCard $accent={theme.colors.bright.terra}>
+            <StatIcon><Scale size={20} strokeWidth={1.6} /></StatIcon>
             <StatInfo>
               <StatNumber>
                 {dashboardData.totalHarvestThisMonth.toFixed(1)} kg
@@ -164,7 +194,7 @@ export function MushroomDashboardPage() {
 
         {phaseFilter && (
           <ClearFilterBtn onClick={() => setPhaseFilter(null)}>
-            Clear Filter &#10005;
+            <X size={13} strokeWidth={2} /> Clear Filter
           </ClearFilterBtn>
         )}
       </ControlsRow>
@@ -191,6 +221,7 @@ export function MushroomDashboardPage() {
             rooms={displayRooms}
             onRoomClick={setSelectedRoom}
             filterPhase={phaseFilter}
+            compact
           />
         )}
       </GridSection>
@@ -216,16 +247,16 @@ export function MushroomDashboardPage() {
               <tbody>
                 {(dashboardData?.recentHarvests ?? []).slice(0, 10).map((h) => (
                   <tr key={h.id}>
-                    <HTd>{h.roomCode ?? '—'}</HTd>
-                    <HTd>
+                    <HTd $mono>{h.roomCode ?? '—'}</HTd>
+                    <HTd $mono>
                       <strong>{h.weightKg.toFixed(2)} kg</strong>
                     </HTd>
-                    <HTd>F{h.flushNumber}</HTd>
+                    <HTd $mono>F{h.flushNumber}</HTd>
                     <HTd>
-                      <GradeDot $color={QUALITY_GRADE_COLORS[h.qualityGrade]} />
+                      <GradeDot $hue={QUALITY_GRADE_HUE[h.qualityGrade]} />
                       {h.qualityGrade}
                     </HTd>
-                    <HTd>
+                    <HTd $mono>
                       {new Date(h.harvestDate).toLocaleDateString([], {
                         month: 'short',
                         day: 'numeric',
@@ -249,7 +280,7 @@ export function MushroomDashboardPage() {
 
           {activeAlerts.length === 0 ? (
             <EmptyState>
-              <GreenCheck>&#10003;</GreenCheck> No active contaminations
+              <GreenCheck><CheckCircle2 size={15} strokeWidth={1.8} /></GreenCheck> No active contaminations
             </EmptyState>
           ) : (
             <AlertList>
@@ -283,44 +314,26 @@ export function MushroomDashboardPage() {
 }
 
 // ============================================================================
-// STYLED COMPONENTS
+// STYLED COMPONENTS — Night Observatory (T-901 Phase 3)
 // ============================================================================
 
+// Transparent page container — the fixed sky shows through (spec §7).
 const Container = styled.div`
-  padding: 24px;
+  padding: 34px 40px 60px;
   max-width: 100%;
-  min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
-const TopBar = styled.div`
+const TopBarRow = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
 `;
 
-const TitleSection = styled.div``;
-
-const PageTitle = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
-const TopControls = styled.div`
-  display: flex;
-  gap: 10px;
-  align-items: center;
+const HeaderFlex = styled(PageHeader)`
+  flex: 1;
+  min-width: 280px;
 `;
 
 interface RefreshBtnProps {
@@ -328,52 +341,47 @@ interface RefreshBtnProps {
 }
 
 const RefreshBtn = styled.button<RefreshBtnProps>`
+  ${glassControl}
   padding: 9px 16px;
-  border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  border-radius: 11px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: background 150ms;
+  gap: 7px;
+  transition: all 150ms;
   white-space: nowrap;
+  margin-top: 2px;
+
+  svg.spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
-  }
-`;
-
-interface SpinIconProps {
-  $spinning: boolean;
-}
-
-const SpinIcon = styled.span<SpinIconProps>`
-  font-size: 16px;
-  display: inline-block;
-  animation: ${({ $spinning }) => ($spinning ? 'spin 1s linear infinite' : 'none')};
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
 `;
 
 const StatCardsRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 14px;
-  margin-bottom: 24px;
+  margin: 24px 0;
 `;
 
 interface StatCardProps {
@@ -381,20 +389,18 @@ interface StatCardProps {
 }
 
 const StatCard = styled.div<StatCardProps>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  border-left: 4px solid ${({ $accent }) => $accent};
+  ${glassPanel}
+  border-left: 3px solid ${({ $accent }) => $accent};
   padding: 16px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   display: flex;
   align-items: center;
   gap: 12px;
 `;
 
 const StatIcon = styled.span`
-  font-size: 24px;
-  line-height: 1;
+  display: flex;
   flex-shrink: 0;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const StatInfo = styled.div``;
@@ -404,17 +410,18 @@ interface StatNumberProps {
 }
 
 const StatNumber = styled.div<StatNumberProps>`
-  font-size: 24px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 1.4rem;
   font-weight: 700;
   color: ${({ $alert, theme }) => ($alert ? theme.colors.error : theme.colors.textPrimary)};
   line-height: 1;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 `;
 
 const StatLabel = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  font-weight: 500;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ControlsRow = styled.div`
@@ -428,62 +435,64 @@ const ControlsRow = styled.div`
 const ControlGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 `;
 
 const ControlLabel = styled.label`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  ${glassControl}
+  padding: 9px 12px;
+  border-radius: 11px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   min-width: 200px;
   transition: border-color 150ms;
 
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const ClearFilterBtn = styled.button`
-  padding: 8px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${glassControl}
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 11px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
-  margin-bottom: 0;
   align-self: flex-end;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const GridSection = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   margin-bottom: 24px;
 `;
 
@@ -496,8 +505,8 @@ const SectionHeader = styled.div`
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   display: flex;
@@ -509,7 +518,7 @@ const LoadingDot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.celeste};
   display: inline-block;
   animation: pulse 1s infinite;
 
@@ -520,8 +529,9 @@ const LoadingDot = styled.span`
 `;
 
 const RoomCount = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const LoadingContainer = styled.div`
@@ -535,8 +545,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -547,7 +557,7 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const BottomRow = styled.div`
@@ -561,10 +571,8 @@ const BottomRow = styled.div`
 `;
 
 const BottomCard = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
 `;
 
 const HarvestTable = styled.table`
@@ -577,23 +585,22 @@ const HarvestTable = styled.table`
 const HTh = styled.th`
   text-align: left;
   padding: 7px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  ${monoLabel}
+  font-size: 0.58rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
-const HTd = styled.td`
+const HTd = styled.td<{ $mono?: boolean }>`
   padding: 9px 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  color: ${({ theme }) => theme.colors.textPrimary};
   vertical-align: middle;
+  ${({ $mono, theme }) => $mono && `font-family: ${theme.typography.fontFamily.mono};`}
 `;
 
 interface GradeDotProps {
-  $color: string;
+  $hue: string;
 }
 
 const GradeDot = styled.span<GradeDotProps>`
@@ -601,22 +608,24 @@ const GradeDot = styled.span<GradeDotProps>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ $color }) => $color};
+  background: ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]};
+  box-shadow: 0 0 6px ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]};
   margin-right: 5px;
   vertical-align: middle;
 `;
 
 const EmptyState = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   padding: 24px;
   text-align: center;
 `;
 
 const GreenCheck = styled.span`
   color: ${({ theme }) => theme.colors.success};
-  font-size: 16px;
-  margin-right: 6px;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 4px;
 `;
 
 const AlertList = styled.div`
@@ -630,73 +639,50 @@ interface AlertItemProps {
   $severity: string;
 }
 
-// Alert severity is a data encoding — walk the emerald→gold→terracotta arc
-// (calm to urgent) rather than mixing unrelated hues, so low/medium/high/
-// critical read as an ordered scale, matching RoomDetailsModal's severity
-// treatment.
-function getAlertSeverityBg(theme: Theme): Record<string, string> {
-  return {
-    low: theme.colors.successBg,
-    medium: theme.colors.warningBg,
-    high: theme.colors.errorBg,
-    critical: theme.colors.errorBg,
-  };
-}
-
 const AlertItem = styled.div<AlertItemProps>`
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: ${({ $severity, theme }) => getAlertSeverityBg(theme)[$severity] ?? theme.colors.errorBg};
-  border-radius: 8px;
-  border: 1px solid ${({ $severity, theme }) =>
-    $severity === 'critical' ? theme.colors.terracotta[200] : theme.colors.neutral[200]};
+  border-radius: 10px;
+  background: ${({ $severity, theme }) => getSeverityStyle(theme, $severity).bg};
+  border: 1px solid ${({ $severity, theme }) => getSeverityStyle(theme, $severity).border};
 `;
 
 const AlertRoom = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 60px;
 `;
 
 const AlertType = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   flex: 1;
   text-transform: capitalize;
 `;
-
-function getSeverityBadgeColor(theme: Theme): Record<string, string> {
-  return {
-    low: theme.colors.success,
-    medium: theme.colors.warning,
-    high: theme.colors.error,
-    critical: theme.colors.terracotta[900],
-  };
-}
 
 interface AlertSeverityBadgeProps {
   $severity: string;
 }
 
 const AlertSeverityBadge = styled.span<AlertSeverityBadgeProps>`
-  font-size: 10px;
+  ${monoLabel}
+  font-size: 0.6rem;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.onAccent};
-  background: ${({ $severity, theme }) => getSeverityBadgeColor(theme)[$severity] ?? theme.colors.neutral[500]};
-  border-radius: 20px;
-  padding: 2px 7px;
+  color: ${({ theme, $severity }) => getSeverityStyle(theme, $severity).text};
+  background: transparent;
+  padding: 2px 0;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
 `;
 
 const AlertCount = styled.span`
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.error};
-  background: ${({ theme }) => theme.colors.terracotta[100]};
-  border-radius: 20px;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border-radius: 99px;
   padding: 2px 8px;
 `;

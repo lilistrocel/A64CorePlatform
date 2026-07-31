@@ -5,9 +5,10 @@
  * matching the backend API response structures.
  */
 
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 
-const c = lightTheme.colors;
+const c = theme.colors;
 
 // ============================================================================
 // ENUMS & CONSTANTS
@@ -1053,15 +1054,35 @@ export interface CSVImportResult {
 
 // Kept in sync with BLOCK_POLYGON_COLORS in src/config/mapConfig.ts — same
 // lifecycle states, same hex, across badges/legends and the map overlay.
+// Night Observatory (T-901): routed onto colors.phase.* (spec §5.2) — the
+// single semantic status vocabulary shared by every module. `harvesting` is
+// the ONE state allowed to be gold (it is the literal harvest phase);
+// `fruiting` previously (mis)used the raw gold ramp and has been moved to
+// phase.fruiting (emerald) to respect the gold discipline in spec §3.
 export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
-  empty: c.neutral[400],       // was gray
-  planned: c.primary[500],     // lapis (was blue)
-  growing: c.emerald[500],     // (was green)
-  fruiting: c.gold[400],       // was purple — categorical judgement call, spec §3
-  harvesting: c.gold[500],     // warning (was amber)
-  cleaning: c.terracotta[400], // (was orange)
-  alert: c.terracotta[600],    // deepened — danger carries weight, spec §1 (was red)
-  partial: c.primary[400],     // was cyan — art-only hue, spec §3
+  empty: c.phase.empty,
+  planned: c.phase.preparing,       // scheduled, not yet growing — "preparing"
+  growing: c.phase.colonizing,      // active vegetative growth
+  fruiting: c.phase.fruiting,
+  harvesting: c.phase.harvesting,   // the one sanctioned gold status
+  cleaning: c.phase.cleaning,
+  alert: c.phase.quarantined,       // problem state — the only red
+  partial: c.phase.fruitingInit,    // transitional / partway state
+};
+
+// Same state→phase decisions as BLOCK_STATE_COLORS above, expressed as
+// PhaseKey rather than resolved hex — for call sites that need to compose
+// with the `phaseBadge()` mixin (which takes a PhaseKey, not a colour
+// string). One definition; do not re-derive this per-component.
+export const BLOCK_STATE_PHASE_KEYS: Record<BlockState, PhaseKey> = {
+  empty: 'empty',
+  planned: 'preparing',
+  growing: 'colonizing',
+  fruiting: 'fruiting',
+  harvesting: 'harvesting',
+  cleaning: 'cleaning',
+  alert: 'quarantined',
+  partial: 'fruitingInit',
 };
 
 export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
@@ -1076,10 +1097,10 @@ export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
 };
 
 export const PLANTING_STATUS_COLORS: Record<PlantingStatus, string> = {
-  planned: c.primary[500], // lapis (was blue)
-  planted: c.success,      // emerald (was green)
-  harvesting: c.warning,   // gold (was amber)
-  completed: c.textSecondary, // (was gray)
+  planned: c.phase.preparing,
+  planted: c.phase.inoculated,    // actively growing — "open / in progress"
+  harvesting: c.phase.harvesting, // the one sanctioned gold status
+  completed: c.phase.resting,
 };
 
 export const PLANTING_STATUS_LABELS: Record<PlantingStatus, string> = {

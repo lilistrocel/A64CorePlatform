@@ -18,6 +18,8 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { AlertTriangle, Package, RefreshCw, Settings } from 'lucide-react';
+import { glassControl, monoLabel } from '@a64core/shared';
 import { DashboardFilters } from './dashboard/DashboardFilters';
 import { DashboardSettings } from './dashboard/DashboardSettings';
 import { BlockGrid } from './dashboard/BlockGrid';
@@ -107,7 +109,7 @@ export function VirtualBlocksView({ farmId, headerActions }: VirtualBlocksViewPr
   if (error) {
     return (
       <ErrorBox>
-        <ErrorIcon>⚠️</ErrorIcon>
+        <ErrorIconWrap aria-hidden="true"><AlertTriangle size={28} strokeWidth={1.6} /></ErrorIconWrap>
         <ErrorTitle>Error loading virtual blocks</ErrorTitle>
         <ErrorMessage>{error}</ErrorMessage>
         <RetryButton type="button" onClick={refetch}>
@@ -121,7 +123,7 @@ export function VirtualBlocksView({ farmId, headerActions }: VirtualBlocksViewPr
   if (!dashboardData) {
     return (
       <StateContainer>
-        <StateIcon>📦</StateIcon>
+        <StateIconWrap aria-hidden="true"><Package size={32} strokeWidth={1.5} /></StateIconWrap>
         <StateText>No data available for this farm.</StateText>
       </StateContainer>
     );
@@ -154,7 +156,7 @@ export function VirtualBlocksView({ farmId, headerActions }: VirtualBlocksViewPr
             disabled={loading}
             aria-label="Refresh virtual blocks"
           >
-            <RefreshIcon $spinning={loading} aria-hidden="true">🔄</RefreshIcon>
+            <RefreshIcon $spinning={loading} aria-hidden="true"><RefreshCw size={14} strokeWidth={1.8} /></RefreshIcon>
             Refresh
           </RefreshButton>
           <ToolButton
@@ -162,7 +164,7 @@ export function VirtualBlocksView({ farmId, headerActions }: VirtualBlocksViewPr
             onClick={() => setShowSettings(true)}
             aria-label="Open dashboard settings"
           >
-            ⚙️ Settings
+            <Settings size={14} strokeWidth={1.8} aria-hidden="true" /> Settings
           </ToolButton>
           {headerActions}
         </HeaderRight>
@@ -235,15 +237,14 @@ const Header = styled.div`
 
 const Title = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const BlockCount = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 500;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-top: 4px;
   display: block;
 `;
@@ -256,13 +257,11 @@ const HeaderRight = styled.div`
 `;
 
 const ToolButton = styled.button`
+  ${glassControl}
   padding: 8px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -271,12 +270,12 @@ const ToolButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -289,7 +288,7 @@ const RefreshButton = styled(ToolButton)`
 `;
 
 const RefreshIcon = styled.span<{ $spinning: boolean }>`
-  display: inline-block;
+  display: inline-flex;
   animation: ${({ $spinning }) => ($spinning ? 'spin 1s linear infinite' : 'none')};
 
   @keyframes spin {
@@ -310,8 +309,8 @@ const StateContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -320,58 +319,61 @@ const Spinner = styled.div`
   }
 `;
 
-const StateIcon = styled.div`
-  font-size: 40px;
-  opacity: 0.5;
+const StateIconWrap = styled.div`
+  color: ${({ theme }) => theme.colors.muted};
+  display: flex;
 `;
 
 const StateText = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0;
 `;
 
+// Destructive tone: coral-b tinted glass, never solid red (spec §4).
 const ErrorBox = styled.div`
   padding: 24px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error}66;
+  border-radius: 12px;
   text-align: center;
   max-width: 480px;
   margin: 0 auto;
 `;
 
-const ErrorIcon = styled.div`
-  font-size: 36px;
+const ErrorIconWrap = styled.div`
+  color: ${({ theme }) => theme.colors.error};
+  display: flex;
+  justify-content: center;
   margin-bottom: 12px;
 `;
 
 const ErrorTitle = styled.h3`
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.error};
   margin: 0 0 8px 0;
 `;
 
 const ErrorMessage = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 16px 0;
 `;
 
 const RetryButton = styled.button`
+  ${monoLabel}
   padding: 8px 20px;
-  border: none;
+  border: 1px solid ${({ theme }) => theme.colors.error}66;
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.error};
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.error};
+  font-size: 0.72rem;
   cursor: pointer;
-  transition: opacity 150ms ease-in-out;
+  transition: background 150ms ease-in-out;
 
   &:hover {
-    opacity: 0.85;
+    background: ${({ theme }) => theme.colors.error}22;
   }
 
   &:focus-visible {

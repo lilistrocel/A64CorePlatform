@@ -14,14 +14,16 @@ interface BiologicalEfficiencyGaugeProps {
   showLabel?: boolean;
 }
 
-// BE% is a data encoding, not decoration — walk a single semantic progression
-// (success → info → warning → error) so the band ordering stays perceptually
-// separated after the rebrand.
+// BE% is a data encoding, not decoration — walk a semantic progression across
+// distinct bright.* hues so the band ordering stays perceptually separated.
+// Night Observatory (T-901): `warning` now resolves to gold-b, which is
+// reserved for the literal Harvesting phase (spec §3/§5.1) — "Fair" is not
+// Harvesting, so the mid band takes `bright.terra` instead of gold.
 function getBEColor(value: number, theme: Theme): string {
-  if (value >= 80) return theme.colors.success; // Excellent
-  if (value >= 60) return theme.colors.info;    // Good
-  if (value >= 40) return theme.colors.warning; // Fair
-  return theme.colors.error;                    // Poor
+  if (value >= 80) return theme.colors.bright.emerald; // Excellent
+  if (value >= 60) return theme.colors.bright.lapis;    // Good
+  if (value >= 40) return theme.colors.bright.terra;    // Fair
+  return theme.colors.bright.coral;                     // Poor
 }
 
 function getBELabel(value: number): string {

@@ -5,9 +5,30 @@
  */
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { type DefaultTheme } from 'styled-components';
+import { Plus } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, colorBadge, hexToRgba } from '@a64core/shared';
 import { farmApi } from '../../services/farmApi';
 import type { Alert, AlertCreate, AlertResolve, AlertSeverity } from '../../types/farm';
+
+// Severity is a distinct vocabulary from the room-phase map (spec §5.2 covers
+// document/workflow status, not alert urgency) — extrapolated onto bright.*
+// hues rather than reusing `phase.harvesting` gold for non-harvest urgency
+// (spec §3: gold is never a status colour except Harvesting). Kept consistent
+// with dashboard/ResolveAlertModal.tsx's severity mapping.
+function getSeverityColor(theme: DefaultTheme, severity: AlertSeverity): string {
+  switch (severity) {
+    case 'critical':
+      return theme.colors.bright.coral;
+    case 'high':
+      return theme.colors.bright.terra;
+    case 'medium':
+      return theme.colors.bright.lapis;
+    case 'low':
+    default:
+      return theme.colors.muted;
+  }
+}
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -27,45 +48,54 @@ const Header = styled.div`
 
 const Title = styled.h2`
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
+// Primary is this tab's one gold CTA ("Create Alert" / submit); danger is
+// coral-tinted glass, never solid red (spec §4 "Buttons").
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border: none;
+  border: 1px solid transparent;
 
   ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
         return `
-          background: ${theme.colors.primary[500]};
+          background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
           color: ${theme.colors.onAccent};
+          box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
           &:hover:not(:disabled) {
-            background: ${theme.colors.primary[600]};
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
           }
         `;
       case 'danger':
         return `
-          background: ${theme.colors.error};
-          color: ${theme.colors.onAccent};
+          background: rgba(240, 138, 112, 0.16);
+          border-color: rgba(240, 138, 112, 0.45);
+          color: ${theme.colors.bright.coral};
           &:hover:not(:disabled) {
-            background: ${theme.colors.terracotta[600]};
+            background: rgba(240, 138, 112, 0.26);
           }
         `;
       default:
         return `
           background: transparent;
-          color: ${theme.colors.textSecondary};
-          border: 1px solid ${theme.colors.neutral[300]};
+          color: ${theme.colors.celeste};
+          border-color: ${theme.colors.glass.border};
           &:hover:not(:disabled) {
-            background: ${theme.colors.surface};
+            background: rgba(180, 200, 220, 0.07);
+            color: ${theme.colors.textPrimary};
           }
         `;
     }
@@ -74,6 +104,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -84,23 +115,9 @@ const AlertsList = styled.div`
 `;
 
 const AlertCard = styled.div<{ $severity: AlertSeverity; $status: string }>`
-  background: ${({ theme }) => theme.colors.background};
-  border: 2px solid
-    ${({ $severity, theme }) => {
-      switch ($severity) {
-        case 'critical':
-          return theme.colors.error;
-        case 'high':
-          return theme.colors.terracotta[400];
-        case 'medium':
-          return theme.colors.warning;
-        case 'low':
-          return theme.colors.primary[500];
-        default:
-          return theme.colors.border;
-      }
-    }};
-  border-radius: 8px;
+  ${glassPanel}
+  border-width: 2px;
+  border-color: ${({ $severity, theme }) => hexToRgba(getSeverityColor(theme, $severity), 0.45)};
   padding: 20px;
   opacity: ${({ $status }) => ($status === 'active' ? 1 : 0.6)};
 `;
@@ -114,47 +131,30 @@ const AlertHeader = styled.div`
 
 const AlertTitle = styled.h3`
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
+// Severity badge — the §4 badge pattern via colorBadge(): text = severity
+// colour, bg = severity 16%, border = severity 45%, glowing dot.
 const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  background: ${({ $severity, theme }) => {
-    switch ($severity) {
-      case 'critical':
-        return theme.colors.error;
-      case 'high':
-        return theme.colors.terracotta[400];
-      case 'medium':
-        return theme.colors.warning;
-      case 'low':
-        return theme.colors.primary[500];
-      default:
-        return theme.colors.textDisabled;
-    }
-  }};
-  color: ${({ theme }) => theme.colors.onAccent};
+  ${({ $severity, theme }) => colorBadge(getSeverityColor(theme, $severity))}
 `;
 
 const AlertDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 16px 0;
   line-height: 1.6;
 `;
 
 const AlertMeta = styled.div`
+  ${monoLabel}
   display: flex;
   gap: 16px;
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 12px;
 `;
 
@@ -166,32 +166,34 @@ const AlertActions = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-// Modal styles (simplified - reuse from other modals)
+// Modal styles — Night Observatory modal recipe (spec §4 "Modals/drawers").
 const Overlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: ${({ theme }) => theme.zIndex.modal};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 32px;
   max-width: 500px;
   width: 90%;
@@ -201,7 +203,7 @@ const Modal = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 24px 0;
 `;
@@ -219,64 +221,61 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Input = styled.input`
+  ${glassControl}
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   min-height: 100px;
   resize: vertical;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -290,9 +289,9 @@ const ButtonGroup = styled.div`
 const ErrorMessage = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.4);
+  border-radius: 10px;
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
 `;
 
@@ -374,7 +373,7 @@ export function BlockAlertsTab({ farmId, blockId, onRefresh }: BlockAlertsTabPro
       <Header>
         <Title>{activeAlerts.length} Active Alerts</Title>
         <Button $variant="primary" onClick={() => setShowCreateModal(true)}>
-          + Create Alert
+          <Plus size={14} strokeWidth={2} /> Create Alert
         </Button>
       </Header>
 

@@ -7,12 +7,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { ArrowLeft } from 'lucide-react';
 import { CustomerForm } from '../../components/crm/CustomerForm';
-import { crmApi, formatCustomerAddress, getCustomerStatusColor, getCustomerTypeLabel } from '../../services/crmService';
+import { crmApi, formatCustomerAddress, getCustomerTypeLabel, getCustomerStatusColor } from '../../services/crmService';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import { QuickServiceChargeModal } from '../../components/sales/QuickServiceChargeModal';
 import type { Customer, CustomerUpdate } from '../../types/crm';
+import { glassPanel, monoLabel } from '@a64core/shared';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -43,16 +45,17 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -63,7 +66,7 @@ const HeaderActions = styled.div`
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   border: none;
@@ -82,10 +85,12 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
       `;
     }
     return `
-      background: ${theme.colors.primary[500]};
-      color: ${theme.colors.onAccent};
+      background: transparent;
+      color: ${theme.colors.celeste};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.primary[600]};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
@@ -102,23 +107,22 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
 const DetailsCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 32px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 18px;
 `;
 
 const CustomerHeader = styled.div`
@@ -127,7 +131,7 @@ const CustomerHeader = styled.div`
   align-items: flex-start;
   margin-bottom: 32px;
   padding-bottom: 24px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const CustomerInfo = styled.div`
@@ -142,10 +146,9 @@ const CustomerName = styled.h1`
 `;
 
 const CustomerCode = styled.div`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  font-family: 'JetBrains Mono', monospace;
+  ${monoLabel}
+  font-size: 0.72rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const BadgeContainer = styled.div`
@@ -153,25 +156,42 @@ const BadgeContainer = styled.div`
   gap: 12px;
 `;
 
+/* Status colour comes from crmService.getCustomerStatusColor(), already
+   routed onto colors.phase.* (spec §5.2) — applies the §4 badge visual. */
 const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 8px 16px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: ${({ $color }) => `${$color}29`};
   color: ${({ $color }) => $color};
-  text-transform: capitalize;
+  border: 1px solid ${({ $color }) => `${$color}73`};
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
 `;
 
+/* Lapis, not gold or celeste — restored as the ordinary interactive/info
+   accent (gold-audit correction). */
 const TypeBadge = styled.span`
   display: inline-block;
   padding: 8px 16px;
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: rgba(107, 138, 224, 0.14);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.35);
 `;
 
 const Section = styled.div`
@@ -205,11 +225,9 @@ const DetailItem = styled.div`
 `;
 
 const DetailLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const DetailValue = styled.span`
@@ -226,18 +244,19 @@ const TagsContainer = styled.div`
 const Tag = styled.span`
   display: inline-block;
   padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[600]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.35);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
 `;
 
 const Notes = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.glass.base};
   padding: 16px;
-  border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textSecondary};
   line-height: 1.6;
@@ -245,17 +264,18 @@ const Notes = styled.div`
 `;
 
 const EmptyText = styled.span`
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
 const Metadata = styled.div`
+  ${monoLabel}
   display: flex;
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -379,7 +399,9 @@ export function CustomerDetailPage() {
   if (error) {
     return (
       <Container>
-        <BackButton onClick={handleBack}>← Back to Customers</BackButton>
+        <BackButton onClick={handleBack}>
+          <ArrowLeft size={15} strokeWidth={1.8} /> Back to Customers
+        </BackButton>
         <ErrorContainer>{error}</ErrorContainer>
       </Container>
     );
@@ -388,7 +410,9 @@ export function CustomerDetailPage() {
   return (
     <Container>
       <Header>
-        <BackButton onClick={handleBack}>← Back to Customers</BackButton>
+        <BackButton onClick={handleBack}>
+          <ArrowLeft size={15} strokeWidth={1.8} /> Back to Customers
+        </BackButton>
         {!isNew && !editMode && (
           <HeaderActions>
             {/* T-201.11: Quick Service Charge — collapses 6-click SO→ARI chain into 1 modal.

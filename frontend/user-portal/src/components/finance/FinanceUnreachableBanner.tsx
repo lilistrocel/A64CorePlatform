@@ -11,10 +11,15 @@
 import styled from 'styled-components';
 import { useFinanceUnreachable } from '../../hooks/useCapabilities';
 
+// Night Observatory: text must be the warning colour itself (gold-b) on the
+// warningBg tint, not `gold[800]` — that ramp step is a dark-cream-ground
+// shade (#6B5A24) that reads as nearly invisible on the Cosmos Ink ground.
+// Same "text = phase colour, background = phase tint" rule as the badge
+// pattern (spec §4).
 const Banner = styled.div`
   background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid ${({ theme }) => theme.colors.warning};
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   padding: 0.75rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
@@ -29,6 +34,7 @@ const Dot = styled.span`
   height: 8px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.warning};
+  box-shadow: 0 0 8px ${({ theme }) => theme.colors.warning};
   display: inline-block;
   flex-shrink: 0;
 `;

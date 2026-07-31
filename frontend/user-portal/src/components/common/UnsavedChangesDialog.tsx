@@ -7,16 +7,29 @@
 
 import { useContext } from 'react';
 import styled from 'styled-components';
+import { AlertTriangle } from 'lucide-react';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
+import { glassPanel } from '@a64core/shared';
 
 // ============================================================================
 // STYLED COMPONENTS
+// Night Observatory (T-901 Phase 2, deliverable E) — canonical modal
+// treatment: glassPanel at blur 24px over a rgba(10,14,36,.6) cosmos scrim,
+// 20px radius. This is one of the two reference modals the phase-3 fleet
+// copies (the other is BackupCodesModal.tsx). No shared modal shell existed
+// in the repo (grepped `frontend/shared/src/components` for "modal" — no
+// hits), so both stay bespoke per-component rather than being routed through
+// a new wrapper (adding one is a structural change out of scope for a
+// restyle pass).
 // ============================================================================
 
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: ${({ theme }) => theme.colors.neutral[900]}80;
+  /* Cosmos scrim, spec §4 "Modals/drawers" — retinted from the old
+     rgba(0,0,0,.45)-family scrim. This dialog has never closed on backdrop
+     click (no onClick here) — preserved as-is. */
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -25,12 +38,13 @@ const Overlay = styled.div`
 `;
 
 const Dialog = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 32px;
   max-width: 440px;
   width: 100%;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
 `;
 
 const IconContainer = styled.div`
@@ -38,23 +52,23 @@ const IconContainer = styled.div`
   height: 48px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.warningBg};
+  color: ${({ theme }) => theme.colors.bright.gold};
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  font-size: 24px;
 `;
 
 const Title = styled.h3`
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Message = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 24px 0;
   line-height: 1.5;
 `;
@@ -68,32 +82,34 @@ const Actions = styled.div`
 const CancelButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const LeaveButton = styled.button`
+  /* Destructive action — coral-b tinted glass, never solid red (spec §4). */
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.terracotta[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[700]};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
@@ -111,7 +127,7 @@ export function UnsavedChangesDialog() {
   return (
     <Overlay>
       <Dialog onClick={(e) => e.stopPropagation()}>
-        <IconContainer>&#9888;</IconContainer>
+        <IconContainer><AlertTriangle size={24} strokeWidth={1.8} /></IconContainer>
         <Title>You have unsaved changes</Title>
         <Message>
           Are you sure you want to leave this page? Your changes will be lost if you navigate away without saving.

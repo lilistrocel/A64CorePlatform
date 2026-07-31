@@ -11,19 +11,30 @@
  *
  * Modals do NOT close on overlay click — X button only (project rule).
  * NO Audit History button — sales audit endpoint pending T-200.x.
+ *
+ * Night Observatory reskin (T-901): status filter chips and the status
+ * column both route through the single canonical helper in
+ * components/sales/statusPhase.ts — see StatusBadge / StatusChip below.
  */
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
-import { Truck } from 'lucide-react';
+import styled, { css, useTheme } from 'styled-components';
+import { Check } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge, PageHeader } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { useDeliveries } from '../../hooks/queries/useDeliveries';
 import { useAuthStore } from '../../stores/auth.store';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { DeliveryStatus, DeliveryListItem } from '../../services/salesApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type StatusFilter = DeliveryStatus | 'ALL';
+
+function chipPhase(value: StatusFilter): PhaseKey | null {
+  return value === 'ALL' ? null : salesStatusToPhase(value);
+}
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -31,20 +42,6 @@ const Container = styled.div`
   padding: 32px;
   max-width: 1440px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
 `;
 
 const FilterRow = styled.div`
@@ -56,33 +53,32 @@ const FilterRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 220px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const DateInput = styled.input`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  color-scheme: dark;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -92,98 +88,61 @@ const StatusChips = styled.div`
   flex-wrap: wrap;
 `;
 
-const StatusChip = styled.button<{ $active: boolean; $status: StatusFilter }>`
+// Status chips coloured by phase at ~16% tint (several are visible at once,
+// so gold is never used here — spec §3).
+const StatusChip = styled.button<{ $active: boolean; $phase: PhaseKey | null }>`
+  ${({ $active, $phase }) => ($active && $phase ? phaseBadge($phase) : glassControl)}
   padding: 6px 16px;
   border-radius: 99px;
-  border: 1.5px solid transparent;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  background: ${({ $active, $status, theme }) => {
-    if (!$active) return theme.colors.neutral[100];
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.primary[50];
-    }
-  }};
-  color: ${({ $active, $status, theme }) => {
-    if (!$active) return theme.colors.textSecondary;
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.primary[700];
-    }
-  }};
-  border-color: ${({ $active, $status, theme }) => {
-    if (!$active) return 'transparent';
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[400];
-      case 'open': return theme.colors.emerald[300];
-      case 'cancelled': return theme.colors.terracotta[300];
-      default: return theme.colors.primary[300];
-    }
-  }};
-  &:hover {
-    opacity: 0.85;
-  }
-`;
-
-const PrimaryButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  transition: all 0.15s;
+
+  ${({ $active, $phase, theme }) =>
+    !($active && $phase) &&
+    css`
+      color: ${$active ? theme.colors.celeste : theme.colors.muted};
+    `}
+
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   text-align: left;
   padding: 12px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
+`;
+
+const TdMono = styled(Td)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const Tr = styled.tr`
   cursor: pointer;
   transition: background 0.1s;
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+  &:hover td {
+    background: rgba(180, 200, 220, 0.05);
   }
   &:last-child td {
     border-bottom: none;
@@ -191,60 +150,44 @@ const Tr = styled.tr`
 `;
 
 const StatusBadge = styled.span<{ $status: DeliveryStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 /**
- * F-3: Chip-style toggle for "Open to Invoice" filter.
+ * F-3: Chip-style toggle for "Open to Invoice" filter. This is a boolean
+ * toggle, not a status — celeste emphasis when active, never gold/phase.
  * Uses the same transient-prop pattern as StatusChip to avoid DOM leakage.
  */
 const FilterToggleChip = styled.button<{ $active: boolean }>`
+  ${glassControl}
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 16px;
   border-radius: 99px;
-  border: 1.5px solid ${({ $active, theme }) => ($active ? theme.colors.primary[300] : 'transparent')};
-  font-size: 13px;
-  font-weight: 500;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[50] : theme.colors.neutral[100])};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[700] : theme.colors.textSecondary)};
-  &:hover { opacity: 0.85; }
+  color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.muted)};
+  border-color: ${({ $active, theme }) => ($active ? 'rgba(180, 200, 220, 0.35)' : theme.colors.glass.border)};
+  &:hover { color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 /**
  * F-3: Badge for openInvoiceQty in the list row.
- * Zero → muted grey dash; positive → coloured (amber for partial).
+ * Zero → muted dash; positive → terra tint (action-needed semantic, per
+ * spec §3 gold is never used for a generic "needs attention" data value).
  */
 const OpenInvoiceListBadge = styled.span<{ $zero: boolean }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: ${({ $zero, theme }) => ($zero ? 'transparent' : theme.colors.warningBg)};
-  color: ${({ $zero, theme }) => ($zero ? theme.colors.border : theme.colors.gold[800])};
+  background: ${({ $zero }) => ($zero ? 'transparent' : 'rgba(232, 147, 95, 0.16)')};
+  color: ${({ $zero, theme }) => ($zero ? theme.colors.muted : theme.colors.bright.terra)};
   border-radius: 99px;
   font-size: 12px;
   font-weight: ${({ $zero }) => ($zero ? 400 : 600)};
@@ -254,7 +197,7 @@ const OpenInvoiceListBadge = styled.span<{ $zero: boolean }>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 15px;
 `;
 
@@ -264,15 +207,13 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PageButton = styled.button`
+  ${glassControl}
   padding: 6px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   font-size: 14px;
   &:disabled {
@@ -280,8 +221,15 @@ const PageButton = styled.button`
     cursor: not-allowed;
   }
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
+`;
+
+// A dense results table lives inside one glass panel — no nested glass.
+const TableWrapper = styled.div`
+  ${glassPanel}
+  padding: 8px;
+  overflow: hidden;
 `;
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -371,15 +319,17 @@ export function DeliveriesPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Delivery Notes</Title>
-        {/* No standalone "+ New Delivery" button by design.
-            Deliveries must originate from a Sales Order to preserve the
-            doc chain audit trail and credit-limit gate. Open a Sales Order
-            and click "Create Delivery" on its detail page.
-            The /sales/deliveries/new route remains live for admin /
-            data-correction use via direct URL. */}
-      </Header>
+      <PageHeader
+        breadcrumb="SALES · LIVE"
+        title="Delivery Notes"
+        stats={[{ value: meta?.total ?? 0, label: 'Total Deliveries' }]}
+      />
+      {/* No standalone "+ New Delivery" button by design.
+          Deliveries must originate from a Sales Order to preserve the
+          doc chain audit trail and credit-limit gate. Open a Sales Order
+          and click "Create Delivery" on its detail page.
+          The /sales/deliveries/new route remains live for admin /
+          data-correction use via direct URL. */}
 
       <FilterRow>
         <StatusChips>
@@ -387,7 +337,7 @@ export function DeliveriesPage() {
             <StatusChip
               key={value}
               $active={statusFilter === value}
-              $status={value}
+              $phase={chipPhase(value)}
               onClick={() => {
                 setStatusFilter(value);
                 setPage(1);
@@ -406,7 +356,8 @@ export function DeliveriesPage() {
           }}
           title="Show only deliveries with open quantity still to be invoiced (status=Open)"
         >
-          {openToInvoiceFilter ? '✓ ' : ''}Has Open Qty
+          {openToInvoiceFilter && <Check size={13} strokeWidth={2} />}
+          Has Open Qty
         </FilterToggleChip>
       </FilterRow>
 
@@ -438,88 +389,90 @@ export function DeliveriesPage() {
       </FilterRow>
 
       {isLoading && <EmptyState>Loading...</EmptyState>}
-      {error && <EmptyState style={{ color: theme.colors.error }}>Failed to load deliveries.</EmptyState>}
+      {error && <EmptyState style={{ color: theme.colors.bright.coral }}>Failed to load deliveries.</EmptyState>}
 
       {!isLoading && !error && (
         <>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Doc Number</Th>
-                <Th>Doc Date</Th>
-                <Th>Actual Delivery</Th>
-                <Th>Customer</Th>
-                <Th>Source SO</Th>
-                <Th>Status</Th>
-                {/* F-3: Open to Invoice qty column. Renamed 2026-06-02 to make it
-                    explicit this is a unit-quantity sum (not a money amount) —
-                    the adjacent "Total COGS" column made the prior "Open to Invoice"
-                    label easy to read as money. See DeliveryDetailPage for per-line breakdown. */}
-                <Th style={{ textAlign: 'right' }}>Open Qty</Th>
-                <Th style={{ textAlign: 'right' }}>Total COGS</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.length === 0 ? (
+          <TableWrapper>
+            <Table>
+              <thead>
                 <tr>
-                  <td colSpan={8}>
-                    <EmptyState>No delivery notes found.</EmptyState>
-                  </td>
+                  <Th>Doc Number</Th>
+                  <Th>Doc Date</Th>
+                  <Th>Actual Delivery</Th>
+                  <Th>Customer</Th>
+                  <Th>Source SO</Th>
+                  <Th>Status</Th>
+                  {/* F-3: Open to Invoice qty column. Renamed 2026-06-02 to make it
+                      explicit this is a unit-quantity sum (not a money amount) —
+                      the adjacent "Total COGS" column made the prior "Open to Invoice"
+                      label easy to read as money. See DeliveryDetailPage for per-line breakdown. */}
+                  <Th style={{ textAlign: 'right' }}>Open Qty</Th>
+                  <Th style={{ textAlign: 'right' }}>Total COGS</Th>
                 </tr>
-              ) : (
-                filteredItems.map((dn) => (
-                  <Tr
-                    key={dn.docEntry}
-                    onClick={() => navigate(`/sales/deliveries/${dn.docEntry}`)}
-                  >
-                    <Td>
-                      <strong>{dn.docNumber}</strong>
-                    </Td>
-                    <Td>{formatDate(dn.docDate)}</Td>
-                    <Td>{formatDate(dn.actualDeliveryDate)}</Td>
-                    <Td>{dn.customerName}</Td>
-                    <Td>
-                      {dn.baseDocRef ? (
-                        <span
-                          style={{ color: theme.colors.primary[500], cursor: 'pointer', fontWeight: 500 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/sales/orders-v2/${dn.baseDocRef!.docId}`);
-                          }}
-                        >
-                          {dn.baseDocRef.docNumber}
-                        </span>
-                      ) : (
-                        <span style={{ color: theme.colors.textDisabled }}>—</span>
-                      )}
-                    </Td>
-                    <Td>
-                      <StatusBadge $status={dn.status}>
-                        {statusLabel(dn.status)}
-                      </StatusBadge>
-                    </Td>
-                    {/* F-3: openInvoiceQty — provided by backend on DeliveryListItem */}
-                    <Td style={{ textAlign: 'right' }}>
-                      {(() => {
-                        const openQty = Number(dn.openInvoiceQty ?? 0);
-                        return (
-                          <OpenInvoiceListBadge $zero={openQty <= 0}>
-                            {openQty <= 0 ? '—' : openQty.toFixed(3)}
-                          </OpenInvoiceListBadge>
-                        );
-                      })()}
-                    </Td>
-                    <Td style={{ textAlign: 'right', fontWeight: 500 }}>
-                      {Number(dn.totalCogs).toLocaleString('en-AE', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </Td>
-                  </Tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={8}>
+                      <EmptyState>No delivery notes found.</EmptyState>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItems.map((dn) => (
+                    <Tr
+                      key={dn.docEntry}
+                      onClick={() => navigate(`/sales/deliveries/${dn.docEntry}`)}
+                    >
+                      <TdMono>
+                        <strong>{dn.docNumber}</strong>
+                      </TdMono>
+                      <TdMono>{formatDate(dn.docDate)}</TdMono>
+                      <TdMono>{formatDate(dn.actualDeliveryDate)}</TdMono>
+                      <Td>{dn.customerName}</Td>
+                      <TdMono>
+                        {dn.baseDocRef ? (
+                          <span
+                            style={{ color: theme.colors.bright.lapis, cursor: 'pointer', fontWeight: 500 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/sales/orders-v2/${dn.baseDocRef!.docId}`);
+                            }}
+                          >
+                            {dn.baseDocRef.docNumber}
+                          </span>
+                        ) : (
+                          <span style={{ color: theme.colors.muted }}>—</span>
+                        )}
+                      </TdMono>
+                      <Td>
+                        <StatusBadge $status={dn.status}>
+                          {statusLabel(dn.status)}
+                        </StatusBadge>
+                      </Td>
+                      {/* F-3: openInvoiceQty — provided by backend on DeliveryListItem */}
+                      <Td style={{ textAlign: 'right' }}>
+                        {(() => {
+                          const openQty = Number(dn.openInvoiceQty ?? 0);
+                          return (
+                            <OpenInvoiceListBadge $zero={openQty <= 0}>
+                              {openQty <= 0 ? '—' : openQty.toFixed(3)}
+                            </OpenInvoiceListBadge>
+                          );
+                        })()}
+                      </Td>
+                      <Td style={{ textAlign: 'right', fontWeight: 500, fontFamily: theme.typography.fontFamily.mono }}>
+                        {Number(dn.totalCogs).toLocaleString('en-AE', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </Td>
+                    </Tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </TableWrapper>
 
           {meta && meta.totalPages > 1 && (
             <Pagination>

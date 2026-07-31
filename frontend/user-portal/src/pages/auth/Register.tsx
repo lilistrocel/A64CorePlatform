@@ -3,9 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import { useNavigate, Link } from 'react-router-dom';
-import { Button, Input } from '@a64core/shared';
+import { Button, Input, glassPanel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
-import { useThemeStore } from '../../stores/theme.store';
 
 // Validation schema
 const registerSchema = z.object({
@@ -29,9 +28,9 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export function Register() {
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
-  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
-  const { mode } = useThemeStore();
-  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
+  // Night Observatory is dark-only (T-901) — the cosmos (cream-text) lockup
+  // variant is now correct unconditionally; no more per-theme branch.
+  const logoSrc = '/brand/lockup_cosmos.svg';
 
   const {
     register,
@@ -148,7 +147,8 @@ const RegisterContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  /* Night Observatory (spec §0/§7): auth screens carry no sidebar — the
+     fixed Sky layer at the app shell is the entire backdrop here. */
   padding: 1rem;
 
   @media (min-width: 640px) {
@@ -157,9 +157,8 @@ const RegisterContainer = styled.div`
 `;
 
 const RegisterCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 22px;
   padding: 1.5rem;
   width: 100%;
   max-width: 480px;
@@ -167,7 +166,6 @@ const RegisterCard = styled.div`
   @media (min-width: 640px) {
     padding: 2rem;
     max-width: 540px;
-    border-radius: ${({ theme }) => theme.borderRadius.xl};
   }
 `;
 
@@ -217,7 +215,7 @@ const Subtitle = styled.p`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.error}10`};
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem;
@@ -251,17 +249,18 @@ const LoginPrompt = styled.p`
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 0;
 `;
 
+// Secondary-emphasis link (spec §3: "Secondary emphasis is celeste, never gold").
 const LoginLink = styled(Link)`
-  /* WCAG AA: primary[700] (Lapis, deepened) provides sufficient contrast on the page ground */
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   text-decoration: none;
 
   &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
     text-decoration: underline;
   }
 `;

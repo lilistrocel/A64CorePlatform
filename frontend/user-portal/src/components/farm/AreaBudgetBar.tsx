@@ -51,8 +51,11 @@ export interface AreaBudgetBarProps {
 const AreaBudgetBarTrack = styled.div`
   width: 100%;
   height: 24px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 12px;
+  /* Night Observatory progress-bar track recipe (spec §4 "Progress/distribution
+     bars"): dark track over a hairline border, not a flat neutral fill. */
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 99px;
   overflow: hidden;
   margin-bottom: 8px;
   position: relative;

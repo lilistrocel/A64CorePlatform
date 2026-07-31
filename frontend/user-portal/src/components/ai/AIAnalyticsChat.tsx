@@ -20,6 +20,7 @@ import {
   Globe,
   Building2,
 } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 import { useMultiLevelAIChat } from '../../hooks/farm/useMultiLevelAIChat';
 import { ScopeSelector } from './ScopeSelector';
 import type { AIScope, PendingAction } from '../../types/farmAI';
@@ -354,13 +355,11 @@ const bounce = keyframes`
 `;
 
 const ChatContainer = styled.div`
+  ${glassPanel}
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.md};
   overflow: hidden;
 `;
 
@@ -546,8 +545,10 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser, theme }) => ($isUser ? theme.colors.success : theme.colors.neutral[200])};
-  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onAccent : theme.colors.textPrimary)};
+  background: ${({ $isUser, theme }) => ($isUser ? theme.colors.success : theme.colors.cosmosHi)};
+  /* success/emerald is a bright fill — onDark, not onAccent (spec §1.1
+     onAccent audit; onAccent means "text on gold", never applies here). */
+  color: ${({ $isUser, theme }) => ($isUser ? theme.colors.onDark : theme.colors.textPrimary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -624,7 +625,7 @@ const ApproveButton = styled.button`
   flex: 1;
   padding: 6px 12px;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -756,7 +757,7 @@ const SendButton = styled.button`
   height: 42px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.success};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   cursor: pointer;
   display: flex;

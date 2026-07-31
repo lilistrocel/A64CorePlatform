@@ -1,11 +1,16 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import type { LucideIcon } from 'lucide-react';
+import { Leaf, Sprout } from 'lucide-react';
 import { useDivisionStore, type Division } from '../../stores/division.store';
 
-const INDUSTRY_ICONS: Record<Division['industryType'], string> = {
-  vegetable_fruits: '🌿',
-  mushroom: '🍄',
+// Night Observatory (T-901, spec §6): emoji replaced with lucide-react line
+// icons — same mapping as pages/division/DivisionSelector.tsx (🌿→Leaf,
+// 🍄→Sprout per the spec's replacement table).
+const INDUSTRY_ICONS: Record<Division['industryType'], LucideIcon> = {
+  vegetable_fruits: Leaf,
+  mushroom: Sprout,
 };
 
 const INDUSTRY_LABELS: Record<Division['industryType'], string> = {
@@ -51,10 +56,11 @@ export function DivisionSwitcher() {
     if (!currentDivision) return null;
 
     // Single division — display without the dropdown affordance
+    const CurrentIcon = INDUSTRY_ICONS[currentDivision.industryType];
     return (
       <SingleDivisionDisplay aria-label={`Current division: ${currentDivision.name}`}>
         <DivisionIcon aria-hidden="true">
-          {INDUSTRY_ICONS[currentDivision.industryType]}
+          <CurrentIcon size={17} strokeWidth={1.6} />
         </DivisionIcon>
         <DivisionInfo>
           <DivisionName>{currentDivision.name}</DivisionName>
@@ -78,6 +84,8 @@ export function DivisionSwitcher() {
     }
   };
 
+  const CurrentIcon = INDUSTRY_ICONS[currentDivision.industryType];
+
   return (
     <Container ref={containerRef}>
       <TriggerButton
@@ -88,7 +96,7 @@ export function DivisionSwitcher() {
         aria-label={`Current division: ${currentDivision.name}. Click to switch.`}
       >
         <DivisionIcon aria-hidden="true">
-          {INDUSTRY_ICONS[currentDivision.industryType]}
+          <CurrentIcon size={17} strokeWidth={1.6} />
         </DivisionIcon>
         <DivisionInfo>
           <DivisionName>{currentDivision.name}</DivisionName>
@@ -100,27 +108,32 @@ export function DivisionSwitcher() {
       {isOpen && (
         <Dropdown role="listbox" aria-label="Switch division">
           <DropdownHeader>Switch Division</DropdownHeader>
-          {otherDivisions.map((division) => (
-            <DropdownOption
-              key={division.divisionId}
-              role="option"
-              aria-selected={false}
-              onClick={() => handleSwitchDivision(division)}
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleSwitchDivision(division);
-                }
-              }}
-            >
-              <OptionIcon aria-hidden="true">{INDUSTRY_ICONS[division.industryType]}</OptionIcon>
-              <OptionInfo>
-                <OptionName>{division.name}</OptionName>
-                <OptionIndustry>{INDUSTRY_LABELS[division.industryType]}</OptionIndustry>
-              </OptionInfo>
-            </DropdownOption>
-          ))}
+          {otherDivisions.map((division) => {
+            const OptionIconComponent = INDUSTRY_ICONS[division.industryType];
+            return (
+              <DropdownOption
+                key={division.divisionId}
+                role="option"
+                aria-selected={false}
+                onClick={() => handleSwitchDivision(division)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleSwitchDivision(division);
+                  }
+                }}
+              >
+                <OptionIcon aria-hidden="true">
+                  <OptionIconComponent size={13} strokeWidth={1.6} />
+                </OptionIcon>
+                <OptionInfo>
+                  <OptionName>{division.name}</OptionName>
+                  <OptionIndustry>{INDUSTRY_LABELS[division.industryType]}</OptionIndustry>
+                </OptionInfo>
+              </DropdownOption>
+            );
+          })}
         </Dropdown>
       )}
     </Container>
@@ -128,6 +141,10 @@ export function DivisionSwitcher() {
 }
 
 // ─── Styled Components ───────────────────────────────────────────────────────
+
+// Night Observatory (T-901 Phase 2) — the sidebar "org / workspace" glass
+// chip, spec §4 "Sidebar" / mockup `.org` (l.82-86,256-259). Restyled only;
+// all switching/dropdown behaviour above is unchanged.
 
 const Container = styled.div`
   position: relative;
@@ -137,10 +154,17 @@ const Container = styled.div`
 const SingleDivisionDisplay = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.glass.opaque};
+  }
 `;
 
 interface TriggerProps {
@@ -150,32 +174,39 @@ interface TriggerProps {
 const TriggerButton = styled.button<TriggerProps>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: 10px;
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme, $isOpen }) =>
-    $isOpen ? theme.colors.neutral[100] : 'transparent'};
+  padding: 10px 12px;
+  background: ${({ theme }) => theme.colors.glass.base};
   border: 1px solid ${({ theme, $isOpen }) =>
-    $isOpen ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+    $isOpen ? theme.colors.secondary[500] : theme.colors.glass.border};
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
 
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.glass.opaque};
   }
 
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
+  &:hover {
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const DivisionIcon = styled.span`
-  font-size: 1.25rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  background: rgba(84, 211, 155, 0.16);
+  border: 1px solid rgba(84, 211, 155, 0.35);
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 const DivisionInfo = styled.div`
@@ -186,17 +217,18 @@ const DivisionInfo = styled.div`
 `;
 
 const DivisionName = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: 0.84rem;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
 const DivisionIndustry = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.64rem;
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -208,7 +240,7 @@ interface ChevronIconProps {
 
 const ChevronIcon = styled.span<ChevronIconProps>`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   flex-shrink: 0;
   transition: transform 0.2s ease;
   transform: ${({ $isOpen }) => ($isOpen ? 'rotate(180deg)' : 'rotate(0deg)')};
@@ -220,21 +252,22 @@ const Dropdown = styled.div`
   left: 0;
   right: 0;
   z-index: 1000;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  background: ${({ theme }) => theme.colors.cosmosHi};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(4, 6, 18, 0.5);
   overflow: hidden;
 `;
 
 const DropdownHeader = styled.div`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.6rem;
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.celeste};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  letter-spacing: 0.14em;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const DropdownOption = styled.div`
@@ -246,22 +279,24 @@ const DropdownOption = styled.div`
   transition: background 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.07);
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: -2px;
   }
 
   & + & {
-    border-top: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+    border-top: 1px solid ${({ theme }) => theme.colors.line};
   }
 `;
 
 const OptionIcon = styled.span`
-  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
+  color: ${({ theme }) => theme.colors.bright.emerald};
 `;
 
 const OptionInfo = styled.div`
@@ -278,5 +313,5 @@ const OptionName = styled.span`
 
 const OptionIndustry = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;

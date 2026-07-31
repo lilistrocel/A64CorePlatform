@@ -12,10 +12,13 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { PenLine } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useJournalEntries, useJournalEntry, useReverseJournalEntry } from '../../hooks/queries/useJournalEntries';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { useAuthStore } from '../../stores/auth.store';
 import { showSuccessToast } from '../../stores/toast.store';
+import { StatusBadge } from '../../components/finance/StatusBadge';
 import type { JournalEntry } from '../../services/journalEntriesService';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -24,13 +27,6 @@ const Container = styled.div`
   padding: 32px;
   max-width: 1440px;
   margin: 0 auto;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 24px;
 `;
 
 const ToolbarRow = styled.div`
@@ -42,115 +38,117 @@ const ToolbarRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const DateInput = styled.input`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const DateLabel = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
   display: flex;
   align-items: center;
 `;
 
 const RefreshButton = styled.button`
+  ${glassControl}
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[200]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const GhostButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Dense table, spec §4: one glass panel, transparent rows/header, Space Mono
+// uppercase celeste column headers, `line` row dividers, hover
+// rgba(180,200,220,.05).
 const Table = styled.table`
+  ${glassPanel}
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.celeste};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: top;
 `;
 
 const JeRow = styled.tr<{ $expanded: boolean }>`
   cursor: pointer;
   transition: background 100ms ease;
-  background: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.neutral[50] : 'transparent'};
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  background: ${({ $expanded }) =>
+    $expanded ? 'rgba(180, 200, 220, 0.05)' : 'transparent'};
+  &:hover { background: rgba(180, 200, 220, 0.05); }
 `;
 
 /** The inline expanded detail row */
 const ExpandedRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: rgba(180, 200, 220, 0.04);
 `;
 
 const ExpandedCell = styled.td`
   padding: 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.primary[200]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.glass.border};
 `;
 
 const LinesContainer = styled.div`
@@ -158,11 +156,8 @@ const LinesContainer = styled.div`
 `;
 
 const LinesTitle = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 10px;
 `;
 
@@ -173,25 +168,22 @@ const LinesTable = styled.table`
 `;
 
 const LinesTh = styled.th`
+  ${monoLabel}
   padding: 8px 10px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  background: transparent;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const LinesTd = styled.td`
   padding: 8px 10px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const LinesTotalRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: rgba(180, 200, 220, 0.05);
   font-weight: 700;
 `;
 
@@ -200,25 +192,8 @@ const ExpandIcon = styled.span<{ $expanded: boolean }>`
   margin-right: 8px;
   transform: ${({ $expanded }) => ($expanded ? 'rotate(90deg)' : 'rotate(0)')};
   transition: transform 150ms ease;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 12px;
-`;
-
-const StatusBadge = styled.span<{ $status: string }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ $status, theme }) =>
-    $status === 'posted' ? theme.colors.successBg :
-    $status === 'void'   ? theme.colors.errorBg :
-    theme.colors.neutral[100]};
-  color: ${({ $status, theme }) =>
-    $status === 'posted' ? theme.colors.success :
-    $status === 'void'   ? theme.colors.error :
-    theme.colors.textSecondary};
 `;
 
 const DescriptionCell = styled.span`
@@ -229,7 +204,7 @@ const DescriptionCell = styled.span`
   text-overflow: ellipsis;
   max-width: 260px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Tooltip = styled.span`
@@ -244,8 +219,9 @@ const Tooltip = styled.span`
     top: calc(100% + 4px);
     left: 0;
     z-index: 1050;
-    background: ${({ theme }) => theme.colors.textPrimary};
-    color: ${({ theme }) => theme.colors.canvas};
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border: 1px solid ${({ theme }) => theme.colors.glass.border};
     border-radius: 6px;
     padding: 6px 10px;
     font-size: 12px;
@@ -259,14 +235,17 @@ const Tooltip = styled.span`
 const EmptyState = styled.div`
   text-align: center;
   padding: 80px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+// Empty-state headline, spec §4/§9: Fraunces italic celeste.
 const EmptyTitle = styled.div`
-  font-size: 16px;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 19px;
+  font-weight: 400;
   margin-bottom: 8px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const EmptyHint = styled.div`
@@ -282,7 +261,7 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PageButtons = styled.div`
@@ -293,7 +272,7 @@ const PageButtons = styled.div`
 const LoadingOverlay = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -303,19 +282,23 @@ const VoidedJeRow = styled.tr<{ $expanded: boolean }>`
   cursor: pointer;
   opacity: 0.55;
   transition: background 100ms ease, opacity 100ms ease;
-  background: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.neutral[50] : 'transparent'};
+  background: ${({ $expanded }) =>
+    $expanded ? 'rgba(180, 200, 220, 0.05)' : 'transparent'};
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
     opacity: 0.75;
   }
 `;
 
 const VoidedText = styled.span`
   text-decoration: line-through;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+// "Reversal" is categorical (this JE is itself a reversing entry), not a
+// phase status — styled as an informational lapis chip, same recipe as the
+// badge pattern but deliberately not routed through statusToPhaseKey since
+// it isn't a document-status word.
 const ReversalBadge = styled.span`
   display: inline-flex;
   align-items: center;
@@ -323,9 +306,9 @@ const ReversalBadge = styled.span`
   border-radius: 99px;
   font-size: 10px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[700]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   margin-left: 6px;
   vertical-align: middle;
 `;
@@ -334,7 +317,7 @@ const SourceDocLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
@@ -343,11 +326,15 @@ const SourceDocLink = styled.button`
 
 // ─── Reverse Entry button (row-level action) ──────────────────────────────────
 
+// Destructive row action — coral-b tinted glass, never solid red (spec §4
+// Buttons: Destructive). Previously used terracotta[800]/[300] text/border,
+// which are dark-ramp steps tuned for a light background and read as
+// dark-on-dark here.
 const ReverseButton = styled.button`
   padding: 4px 10px;
   background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -355,7 +342,7 @@ const ReverseButton = styled.button`
   white-space: nowrap;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.terracotta[100]};
+    background: rgba(240, 138, 112, 0.24);
   }
   &:disabled {
     opacity: 0.4;
@@ -364,11 +351,13 @@ const ReverseButton = styled.button`
 `;
 
 // ─── Reversal confirm modal ───────────────────────────────────────────────────
+// Scrim + glass panel per spec §4 Modals — does NOT close on backdrop click
+// (project-wide rule, unchanged).
 
 const ModalBackdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 1100;
   display: flex;
   align-items: center;
@@ -376,13 +365,13 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 14px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px 32px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 20px 40px rgba(59, 44, 24, 0.18);
-  position: relative;
 `;
 
 const ModalTitle = styled.h2`
@@ -394,7 +383,7 @@ const ModalTitle = styled.h2`
 
 const ModalSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 20px;
   line-height: 1.55;
 `;
@@ -403,25 +392,24 @@ const ModalLabel = styled.label`
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 6px;
 `;
 
 const ModalTextarea = styled.textarea`
+  ${glassControl}
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 100px;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -429,7 +417,7 @@ const ModalCharCount = styled.div<{ $warn: boolean }>`
   font-size: 11px;
   text-align: right;
   margin-top: 4px;
-  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.textDisabled)};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.muted)};
 `;
 
 const ModalErrorText = styled.div`
@@ -447,41 +435,52 @@ const ModalFooter = styled.div`
 
 const ModalCancelButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[200]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
+// Destructive confirm — coral-b tinted glass, never a solid fill (spec §4
+// Buttons: Destructive). Was a solid terracotta[600]/[700] fill with
+// onAccent text, illegible on the new dark ground and against the button-fill
+// rule.
 const ModalConfirmButton = styled.button`
   padding: 9px 20px;
-  background: ${({ theme }) => theme.colors.terracotta[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.terracotta[700]}; }
+  &:hover { background: rgba(240, 138, 112, 0.24); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Was a solid `primary[500]` (lapis) fill with `onAccent`
+// text — dark-on-lapis, near invisible. Moving the fill to gold also makes
+// this the page's single gold element, per spec §3 discipline.
 const NewJEButton = styled.button`
   padding: 10px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  &:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25); }
 `;
 
 // ─── Role gate for reverse action ─────────────────────────────────────────────
@@ -776,7 +775,11 @@ export function JournalEntriesPage() {
 
   return (
     <Container>
-      <Title>Journal Entries</Title>
+      <PageHeader
+        breadcrumb="FINANCE · GENERAL LEDGER"
+        title="Journal Entries"
+        stats={[{ value: totalItems, label: 'Total Entries' }]}
+      />
 
       <ToolbarRow>
         {canCreateManualJE && (
@@ -785,7 +788,8 @@ export function JournalEntriesPage() {
             onClick={() => navigate('/finance/journal-entries/new')}
             aria-label="Create a new manual journal entry"
           >
-            ✍ New Manual JE
+            <PenLine size={15} strokeWidth={1.6} aria-hidden="true" />
+            New Manual JE
           </NewJEButton>
         )}
         <SearchInput
@@ -948,18 +952,16 @@ export function JournalEntriesPage() {
                       </Td>
                       <Td>
                         {isVoided ? (
-                          <StatusBadge $status="void">Voided</StatusBadge>
+                          <StatusBadge status="void" label="Voided" />
                         ) : isReversed ? (
-                          <StatusBadge
-                            $status="void"
-                            title={`Reversed by ${je.reversedByJeNumber}`}
-                          >
-                            Reversed
-                          </StatusBadge>
+                          <span title={`Reversed by ${je.reversedByJeNumber}`}>
+                            <StatusBadge status="void" label="Reversed" />
+                          </span>
                         ) : (
-                          <StatusBadge $status={je.status}>
-                            {je.status.charAt(0).toUpperCase() + je.status.slice(1)}
-                          </StatusBadge>
+                          <StatusBadge
+                            status={je.status}
+                            label={je.status.charAt(0).toUpperCase() + je.status.slice(1)}
+                          />
                         )}
                       </Td>
                       <Td style={{ fontSize: 12, color: theme.colors.textSecondary }}>

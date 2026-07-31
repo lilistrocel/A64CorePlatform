@@ -30,6 +30,7 @@ import {
   X,
   Paperclip,
 } from 'lucide-react';
+import { glassPanel } from '@a64core/shared';
 import {
   useAttachments,
   useUploadAttachment,
@@ -101,25 +102,25 @@ const DropZone = styled.div<{ $active: boolean; $hasError: boolean }>`
     $hasError
       ? theme.colors.error
       : $active
-        ? theme.colors.primary[500]
-        : theme.colors.neutral[300]};
+        ? theme.colors.bright.lapis
+        : theme.colors.glass.border};
   border-radius: 10px;
   padding: 28px 24px;
   text-align: center;
   cursor: pointer;
   background: ${({ theme, $active }) =>
-    $active ? theme.colors.primary[50] : theme.colors.surface};
+    $active ? theme.colors.glass.hi : theme.colors.glass.base};
   transition: border-color 150ms ease, background 150ms ease;
   user-select: none;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
+    border-color: ${({ theme }) => theme.colors.bright.lapis};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
 const DropZoneIcon = styled.div`
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   margin-bottom: 10px;
   display: flex;
   justify-content: center;
@@ -145,10 +146,10 @@ const HiddenInput = styled.input`
 
 const PendingUploadBox = styled.div`
   margin-top: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   padding: 12px 14px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.glass.base};
   animation: ${fadeIn} 200ms ease;
 `;
 
@@ -163,17 +164,18 @@ const PendingFileName = styled.div`
 const DescriptionInput = styled.input`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.glass.base};
   box-sizing: border-box;
   margin-bottom: 10px;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &:disabled { opacity: 0.6; }
 `;
@@ -188,7 +190,8 @@ const PendingActions = styled.div`
 const UploadButton = styled.button`
   padding: 7px 16px;
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  /* lapis fill — onDark (cream), not onAccent (gold-fill only, spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -202,12 +205,12 @@ const UploadButton = styled.button`
 const CancelPendingButton = styled.button`
   padding: 7px 12px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -220,10 +223,13 @@ const WarnText = styled.div`
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
 
+// Progress track — spec §4 "Progress/distribution bars": rgba(10,14,36,.6)
+// with a line border.
 const ProgressBar = styled.div`
   height: 6px;
   border-radius: 3px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   overflow: hidden;
   margin-bottom: 8px;
 `;
@@ -248,7 +254,7 @@ const ProgressFill = styled.div<{ $percent: number }>`
 
 const AttachmentTable = styled.div`
   margin-top: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -258,10 +264,10 @@ const AttachmentRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   animation: ${fadeIn} 200ms ease;
   &:last-child { border-bottom: none; }
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover { background: rgba(180, 200, 220, 0.05); }
 `;
 
 const FileIconWrap = styled.div`
@@ -340,8 +346,8 @@ const InlineError = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  /* Cosmos Ink scrim (#0E1330), not pure black — brand contract §1. */
-  background: rgba(14, 19, 48, 0.5);
+  /* Cosmos scrim, spec §4 "Modals/drawers" (rgba(10,14,36,.6)). */
+  background: rgba(10, 14, 36, 0.6);
   z-index: 1100;
   display: flex;
   align-items: center;
@@ -350,9 +356,10 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 400px;
 `;
@@ -362,7 +369,7 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 18px 22px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ModalTitle = styled.h2`
@@ -383,7 +390,7 @@ const ModalCloseButton = styled.button`
   line-height: 1;
   display: flex;
   align-items: center;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ModalBody = styled.div`
@@ -398,32 +405,33 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const GhostButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+// Destructive action — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.terracotta[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.terracotta[700]}; }
+  &:hover { background: rgba(240, 138, 112, 0.26); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 

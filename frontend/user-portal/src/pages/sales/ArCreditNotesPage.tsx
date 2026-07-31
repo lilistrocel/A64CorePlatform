@@ -14,14 +14,25 @@
  *
  * NO Audit History button — sales audit endpoint pending T-200.x.
  * Route: /sales/ar-credit-notes
+ *
+ * Night Observatory reskin (T-901): status filter chips and the status
+ * column both route through the single canonical helper in
+ * components/sales/statusPhase.ts — see StatusBadge / StatusChip below.
  */
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
+import { glassPanel, glassControl, monoLabel, phaseBadge, PageHeader as SharedPageHeader } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { useArCreditNotes } from '../../hooks/queries/useArCreditNotes';
 import { useAuthStore } from '../../stores/auth.store';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { ARCreditNoteStatus, ARCreditNoteListItem } from '../../services/salesApi';
+
+function chipPhase(value: ARCreditNoteStatus | 'all'): PhaseKey | null {
+  return value === 'all' ? null : salesStatusToPhase(value);
+}
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -31,33 +42,27 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const PageHeader = styled.div`
+const ActionRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-`;
-
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 `;
 
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
 `;
 
 const FilterRow = styled.div`
@@ -68,56 +73,64 @@ const FilterRow = styled.div`
   align-items: center;
 `;
 
-const FilterChip = styled.button<{ $active: boolean }>`
+// Status chips coloured by phase at ~16% tint (several are visible at once,
+// so gold is never used here — spec §3). Source-type chips have no phase
+// (they are categorical, not status) and use celeste emphasis instead.
+const FilterChip = styled.button<{ $active: boolean; $phase?: PhaseKey | null }>`
+  ${({ $active, $phase }) => ($active && $phase ? phaseBadge($phase) : glassControl)}
   padding: 6px 14px;
   border-radius: 99px;
-  border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
-  font-size: 13px;
-  font-weight: 500;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
   white-space: nowrap;
+
+  ${({ $active, $phase, theme }) =>
+    !($active && $phase) &&
+    css`
+      color: ${$active ? theme.colors.celeste : theme.colors.muted};
+    `}
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
   min-width: 220px;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[400]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const DateInput = styled.input`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
+  color-scheme: dark;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[400]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
   }
 `;
 
+// A dense results table lives inside one glass panel — no nested glass.
 const TableCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
+  padding: 8px;
   overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Table = styled.table`
@@ -127,15 +140,11 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 12px 16px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -146,7 +155,7 @@ const ThRight = styled(Th)`
 const Tr = styled.tr`
   cursor: pointer;
   &:hover td {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -154,61 +163,32 @@ const Td = styled.td`
   padding: 14px 16px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
-  background: ${({ theme }) => theme.colors.surface};
   transition: background 100ms ease;
+`;
+
+const TdMono = styled(Td)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TdRight = styled(Td)`
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
-// Status badge colours — A20Core document-status canon, shared across all
-// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md):
-//   draft         → neutral   (neutral[100] / textSecondary)
-//   open          → emerald   (successBg / emerald[700])
-//   partly_closed → lapis     (infoBg / lapis[700])
-//   closed        → neutral (dark) (neutral[200] / neutral[800])
-//   cancelled     → terracotta (errorBg / terracotta[700])
 const StatusBadge = styled.span<{ $status: ARCreditNoteStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'partly_closed': return theme.colors.infoBg;
-      case 'closed': return theme.colors.neutral[200];
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'partly_closed': return theme.colors.lapis[700];
-      case 'closed': return theme.colors.neutral[800];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const Pagination = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: 16px 8px 4px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PaginationButtons = styled.div`
@@ -217,14 +197,9 @@ const PaginationButtons = styled.div`
 `;
 
 const PageButton = styled.button<{ $active?: boolean }>`
+  ${glassControl}
   padding: 6px 12px;
-  border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  border-radius: 6px;
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.onAccent : theme.colors.textPrimary};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.celeste)};
   font-size: 13px;
   cursor: pointer;
   &:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -233,25 +208,31 @@ const PageButton = styled.button<{ $active?: boolean }>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 60px 20px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 14px;
 `;
 
-const LoadingState = styled(EmptyState)``;
+const EmptyHeadline = styled.p`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 18px;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0;
+`;
+
+const LoadingState = styled(EmptyState)`
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 14px;
+`;
 
 const ErrorState = styled.div`
   text-align: center;
   padding: 40px 20px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
 `;
 
 const FilterLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
   margin-right: 4px;
 `;
 
@@ -365,15 +346,20 @@ export function ArCreditNotesPage() {
 
   return (
     <Container>
-      <PageHeader>
-        <Title>AR Credit Notes</Title>
+      <SharedPageHeader
+        breadcrumb="SALES · LIVE"
+        title="AR Credit Notes"
+        stats={[{ value: data?.meta.total ?? 0, label: 'Total Credit Notes' }]}
+      />
+
+      <ActionRow>
         <PrimaryButton
           onClick={() => navigate('/sales/ar-credit-notes/new')}
           aria-label="Create a new AR Credit Note"
         >
           + New Credit Note
         </PrimaryButton>
-      </PageHeader>
+      </ActionRow>
 
       {/* Status filter chips */}
       <FilterRow>
@@ -382,6 +368,7 @@ export function ArCreditNotesPage() {
           <FilterChip
             key={opt.value}
             $active={statusFilter === opt.value}
+            $phase={chipPhase(opt.value)}
             onClick={() => {
               setStatusFilter(opt.value as ARCreditNoteStatus | 'all');
               setPage(1);
@@ -432,20 +419,25 @@ export function ArCreditNotesPage() {
       </FilterRow>
 
       {/* Table */}
-      <TableCard>
-        {isLoading && (
-          <LoadingState role="status" aria-label="Loading AR Credit Notes">
-            Loading AR Credit Notes…
-          </LoadingState>
-        )}
-        {isError && (
-          <ErrorState role="alert">
-            Failed to load AR Credit Notes.{' '}
-            {error instanceof Error ? error.message : ''}
-          </ErrorState>
-        )}
-        {!isLoading && !isError && (
-          <>
+      {isLoading && (
+        <LoadingState role="status" aria-label="Loading AR Credit Notes">
+          Loading AR Credit Notes…
+        </LoadingState>
+      )}
+      {isError && (
+        <ErrorState role="alert">
+          Failed to load AR Credit Notes.{' '}
+          {error instanceof Error ? error.message : ''}
+        </ErrorState>
+      )}
+      {!isLoading && !isError && filtered.length === 0 && (
+        <EmptyState>
+          <EmptyHeadline>No AR Credit Notes found</EmptyHeadline>
+        </EmptyState>
+      )}
+      {!isLoading && !isError && filtered.length > 0 && (
+        <>
+          <TableCard>
             <Table>
               <thead>
                 <tr>
@@ -458,66 +450,58 @@ export function ArCreditNotesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6}>
-                      <EmptyState>No AR Credit Notes found.</EmptyState>
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map(item => (
-                    <Tr
-                      key={item.docEntry}
-                      onClick={() => navigate(`/sales/ar-credit-notes/${item.docEntry}`)}
-                      aria-label={`Open AR Credit Note ${item.docNumber}`}
-                    >
-                      <Td style={{ fontWeight: 600 }}>{item.docNumber}</Td>
-                      <Td>{formatDate(item.docDate)}</Td>
-                      <Td>{item.customerName}</Td>
-                      <Td style={{ color: item.baseReturnDocRef ? theme.colors.primary[600] : theme.colors.textSecondary }}>
-                        {getSourceLabel(item)}
-                      </Td>
-                      <TdRight>
-                        {formatAmount(item.totals.gross)}{' '}
-                        <span style={{ color: theme.colors.textDisabled, fontSize: 11 }}>AED</span>
-                      </TdRight>
-                      <Td>
-                        <StatusBadge $status={item.status}>
-                          {labelStatus(item.status)}
-                        </StatusBadge>
-                      </Td>
-                    </Tr>
-                  ))
-                )}
+                {filtered.map(item => (
+                  <Tr
+                    key={item.docEntry}
+                    onClick={() => navigate(`/sales/ar-credit-notes/${item.docEntry}`)}
+                    aria-label={`Open AR Credit Note ${item.docNumber}`}
+                  >
+                    <TdMono style={{ fontWeight: 600 }}>{item.docNumber}</TdMono>
+                    <TdMono>{formatDate(item.docDate)}</TdMono>
+                    <Td>{item.customerName}</Td>
+                    <Td style={{ color: item.baseReturnDocRef ? theme.colors.bright.lapis : theme.colors.muted }}>
+                      {getSourceLabel(item)}
+                    </Td>
+                    <TdRight>
+                      {formatAmount(item.totals.gross)}{' '}
+                      <span style={{ color: theme.colors.muted, fontSize: 11 }}>AED</span>
+                    </TdRight>
+                    <Td>
+                      <StatusBadge $status={item.status}>
+                        {labelStatus(item.status)}
+                      </StatusBadge>
+                    </Td>
+                  </Tr>
+                ))}
               </tbody>
             </Table>
+          </TableCard>
 
-            {totalPages > 1 && (
-              <Pagination>
-                <span>
-                  Page {page} of {totalPages} ({data?.meta.total ?? 0} total)
-                </span>
-                <PaginationButtons>
-                  <PageButton
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    aria-label="Previous page"
-                  >
-                    Previous
-                  </PageButton>
-                  <PageButton
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                    aria-label="Next page"
-                  >
-                    Next
-                  </PageButton>
-                </PaginationButtons>
-              </Pagination>
-            )}
-          </>
-        )}
-      </TableCard>
+          {totalPages > 1 && (
+            <Pagination>
+              <span>
+                Page {page} of {totalPages} ({data?.meta.total ?? 0} total)
+              </span>
+              <PaginationButtons>
+                <PageButton
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  aria-label="Previous page"
+                >
+                  Previous
+                </PageButton>
+                <PageButton
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  aria-label="Next page"
+                >
+                  Next
+                </PageButton>
+              </PaginationButtons>
+            </Pagination>
+          )}
+        </>
+      )}
     </Container>
   );
 }

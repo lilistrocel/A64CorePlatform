@@ -7,7 +7,8 @@
 
 import { apiClient } from './api';
 import { formatNumber, formatCurrency as formatCurrencyUtil } from '../utils/formatNumber';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import type {
   MarketingCampaign,
   MarketingCampaignCreate,
@@ -343,79 +344,109 @@ export async function getDashboardStats(): Promise<MarketingDashboardStats> {
 
 /**
  * Get campaign status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2
+ * (`paused`→maintenance — the exact "on hold" table entry, previously
+ * borrowed the generic `warning` gold slot; `completed`→resting).
  */
-export function getCampaignStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getCampaignStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'draft':
-      return c.textSecondary;
+      return 'empty';
     case 'active':
-      return c.success; // emerald
+      return 'inoculated';
     case 'paused':
-      return c.warning; // gold
+      return 'maintenance';
     case 'completed':
-      return c.primary[500]; // lapis
+      return 'resting';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getCampaignStatusColor(status: string): string {
+  const key = getCampaignStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
  * Get budget status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2.
+ * `closed` moved from error/coral to phase.resting ("closed/settled/
+ * completed" — a neutral wind-down, not a rejection).
  */
-export function getBudgetStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getBudgetStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'draft':
-      return c.textSecondary;
+      return 'empty';
     case 'approved':
-      return c.primary[500]; // lapis
+      return 'fruiting';
     case 'active':
-      return c.success; // emerald
+      return 'inoculated';
     case 'closed':
-      return c.error; // terracotta
+      return 'resting';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getBudgetStatusColor(status: string): string {
+  const key = getBudgetStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
  * Get event status color
+ *
+ * Night Observatory (T-901): routed onto colors.phase.* per spec §5.2.
+ * `ongoing` previously (mis)used the generic `warning` gold slot — moved to
+ * phase.inoculated (open/active/in progress); `cancelled` moved to
+ * decommissioned per the table (distinct from quarantined).
  */
-export function getEventStatusColor(status: string): string {
-  const c = lightTheme.colors;
+export function getEventStatusPhaseKey(status: string): PhaseKey | undefined {
   switch (status) {
     case 'planned':
-      return c.primary[500]; // lapis
+      return 'preparing';
     case 'ongoing':
-      return c.warning; // gold
+      return 'inoculated';
     case 'completed':
-      return c.success; // emerald
+      return 'resting';
     case 'cancelled':
-      return c.error; // terracotta
+      return 'decommissioned';
     default:
-      return c.textSecondary;
+      return undefined;
   }
+}
+
+export function getEventStatusColor(status: string): string {
+  const key = getEventStatusPhaseKey(status);
+  return key ? theme.colors.phase[key] : theme.colors.textSecondary;
 }
 
 /**
  * Get channel type color
+ *
+ * Night Observatory (T-901): channel type is a CATEGORICAL vocabulary, not a
+ * status — routed onto colors.bright.*, not colors.phase.* and not gold
+ * (spec §3's categorical-map rule; `social_media` and `event` previously
+ * (mis)used the raw/semantic gold slots).
  */
 export function getChannelTypeColor(type: string): string {
-  const c = lightTheme.colors;
+  const c = theme.colors;
   switch (type) {
     case 'social_media':
-      return c.secondary[700]; // gold, deep step — was purple; distinguishes from adjacent 'email' lapis and from 'event's warning gold[500] (spec §3 judgement call)
+      return c.bright.lavender;
     case 'email':
-      return c.primary[500]; // lapis
+      return c.bright.lapis;
     case 'print':
-      return c.textSecondary;
+      return c.muted;
     case 'digital':
-      return c.success; // emerald
+      return c.bright.verdi;
     case 'event':
-      return c.warning; // gold
+      return c.bright.terra;
     case 'other':
-      return c.error; // terracotta
+      return c.bright.rose;
     default:
       return c.textSecondary;
   }
@@ -533,8 +564,11 @@ export const marketingApi = {
 
   // Utilities
   getCampaignStatusColor,
+  getCampaignStatusPhaseKey,
   getBudgetStatusColor,
+  getBudgetStatusPhaseKey,
   getEventStatusColor,
+  getEventStatusPhaseKey,
   getChannelTypeColor,
   formatCurrency,
   formatDate,

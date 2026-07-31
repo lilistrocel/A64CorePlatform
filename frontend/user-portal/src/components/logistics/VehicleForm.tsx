@@ -2,12 +2,18 @@
  * VehicleForm Component
  *
  * Form for creating and editing vehicles.
+ *
+ * Night Observatory (T-901 Phase 3): glassControl inputs/selects, mono
+ * uppercase micro-labels, gold-hi focus ring, Primary gold submit button —
+ * this form's submit action is a single per-modal primary CTA, well within
+ * the ≤4 gold-elements budget.
  */
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
+import { Button, glassControl, monoLabel } from '@a64core/shared';
 import type { VehicleCreate, VehicleUpdate, Vehicle } from '../../types/logistics';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
@@ -65,61 +71,59 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-top: 4px;
 `;
 
@@ -130,16 +134,16 @@ const FormRow = styled.div`
 `;
 
 const FormSection = styled.div`
+  ${glassControl}
+  border-radius: 14px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
   margin-top: 8px;
 `;
 
 const SectionTitle = styled.h4`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px 0;
 `;
 
@@ -150,48 +154,30 @@ const Actions = styled.div`
   margin-top: 24px;
 `;
 
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
+// Reset is a destructive-adjacent action with no direct match in the shared
+// Button's primary/secondary/outline vocabulary (spec §4 has no dedicated
+// "warning" button style), so it stays a small local composition — glass
+// base with a warning-gold border/text, matching the shared Button's shape
+// (radius, padding, weight) for visual consistency alongside it.
+const ResetButton = styled.button`
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 11px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border: none;
+  border: 1px solid ${({ theme }) => theme.colors.warning};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.warning};
 
-  ${({ $variant, theme }) => {
-    if ($variant === 'secondary') {
-      return `
-        background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
-        &:hover {
-          background: ${theme.colors.surface};
-        }
-      `;
-    }
-    if ($variant === 'reset') {
-      return `
-        background: transparent;
-        color: ${theme.colors.warning};
-        border: 1px solid ${theme.colors.warning};
-        &:hover:not(:disabled) {
-          background: ${theme.colors.warningBg};
-        }
-      `;
-    }
-    return `
-      background: ${theme.colors.primary[500]};
-      color: white;
-      &:hover {
-        background: ${theme.colors.primary[700]};
-      }
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    `;
-  }}
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.warningBg};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 // ============================================================================
@@ -404,15 +390,15 @@ export function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting = false 
       </FormGroup>
 
       <Actions>
-        <Button type="button" $variant="reset" onClick={() => reset()} disabled={isSubmitting}>
+        <ResetButton type="button" onClick={() => reset()} disabled={isSubmitting}>
           Reset
-        </Button>
+        </ResetButton>
         {onCancel && (
-          <Button type="button" $variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         )}
-        <Button type="submit" $variant="primary" disabled={isSubmitting}>
+        <Button type="submit" variant="primary" disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : vehicle ? 'Update Vehicle' : 'Create Vehicle'}
         </Button>
       </Actions>

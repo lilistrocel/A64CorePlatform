@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { glassControl } from '@a64core/shared';
 import { useCreateRecipe, useUpdateRecipe } from '../../hooks/genetics/useGenetics';
 import type {
   Additive,
@@ -64,51 +65,65 @@ const AdditiveRow = styled.div`
 `;
 
 const UnitSelect = styled.select`
+  ${glassControl}
   width: 100%;
   padding: 9px 8px;
   font-size: 14px;
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
+// Destructive-leaning control — coral on hover, glass otherwise (spec §4
+// "Buttons": destructive is coral-tinted, never solid red).
 const RemoveBtn = styled.button`
   background: none;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
   padding: 6px 9px;
+  transition: background 150ms, color 150ms, border-color 150ms;
 
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.terracotta[700]};
+    border-color: ${({ theme }) => theme.colors.error}66;
+    color: ${({ theme }) => theme.colors.error};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
 const AddBtn = styled.button`
   background: none;
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[400]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px dashed ${({ theme }) => theme.colors.glass.border};
+  border-radius: 11px;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
   padding: 8px;
   width: 100%;
+  transition: border-color 150ms, color 150ms;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    color: ${({ theme }) => theme.colors.primary[700]};
+    border-color: rgba(220, 185, 79, 0.45);
+    color: ${({ theme }) => theme.colors.celeste};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 

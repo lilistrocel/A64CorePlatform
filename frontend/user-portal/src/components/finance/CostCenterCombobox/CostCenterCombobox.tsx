@@ -20,6 +20,7 @@
 
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
+import { glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import type { CostCenter } from '../../../services/costCentersService';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -30,40 +31,39 @@ const Wrapper = styled.div`
 `;
 
 const ComboInput = styled.input`
+  ${glassControl}
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease;
 
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.muted};
+  }
+
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => `${theme.colors.primary[500]}26`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
     opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const Dropdown = styled.ul`
+  ${glassOpaque}
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   right: 0;
   z-index: 1200;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(59, 44, 24, 0.12);
+  border-radius: 8px;
   max-height: 220px;
   overflow-y: auto;
   margin: 0;
@@ -74,31 +74,27 @@ const Dropdown = styled.ul`
 const DropdownItem = styled.li<{ $highlighted: boolean; $isNone?: boolean }>`
   padding: 8px 12px;
   cursor: pointer;
-  background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.primary[50] : 'transparent'};
-  color: ${({ $isNone, theme }) =>
-    $isNone ? theme.colors.textSecondary : theme.colors.textPrimary};
+  background: ${({ $highlighted }) => ($highlighted ? 'rgba(180, 200, 220, 0.08)' : 'transparent')};
+  color: ${({ $isNone, theme }) => ($isNone ? theme.colors.muted : theme.colors.textPrimary)};
   font-size: 13px;
   font-style: ${({ $isNone }) => ($isNone ? 'italic' : 'normal')};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: rgba(180, 200, 220, 0.08);
   }
 `;
 
 const TypeTag = styled.span`
+  ${monoLabel}
   margin-left: 8px;
   font-size: 10px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const EmptyMessage = styled.li`
   padding: 10px 12px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   list-style: none;
 `;
 

@@ -15,7 +15,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge, type Theme } from '@a64core/shared';
 import { usePayments } from '../../hooks/queries/usePayments';
 import { useVendors } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
@@ -52,11 +52,17 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
 };
 
-// Payment method is categorical, not a status — one brand voice per method.
-const methodColors = (theme: Theme): Record<PaymentMethod, { bg: string; text: string }> => ({
-  bank_transfer: { bg: theme.colors.primary[100], text: theme.colors.primary[800] },
-  cheque: { bg: theme.colors.gold[100], text: theme.colors.gold[800] },
-  cash: { bg: theme.colors.emerald[100], text: theme.colors.emerald[800] },
+// Payment method is categorical, not a status — one brand voice per method,
+// styled as a badge-pattern chip (text = colour, bg/border = colour tint).
+// Deliberately NOT gold for "cheque": this pill can repeat once per row in
+// an unbounded list, and gold discipline (spec §3, target <=4 per view)
+// cannot survive a column of gold chips. Uses `bright.*` tokens instead —
+// lavender for cheque keeps the three methods visually distinct without
+// spending the gold budget on a categorical (non-phase) distinction.
+const methodColors = (theme: Theme): Record<PaymentMethod, { bg: string; border: string; text: string }> => ({
+  bank_transfer: { bg: 'rgba(107, 138, 224, 0.16)', border: 'rgba(107, 138, 224, 0.45)', text: theme.colors.bright.lapis },
+  cheque: { bg: 'rgba(195, 160, 207, 0.16)', border: 'rgba(195, 160, 207, 0.45)', text: theme.colors.bright.lavender },
+  cash: { bg: 'rgba(84, 211, 155, 0.16)', border: 'rgba(84, 211, 155, 0.45)', text: theme.colors.bright.emerald },
 });
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -65,22 +71,6 @@ const Container = styled.div`
   padding: 32px;
   max-width: 1440px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  gap: 12px;
-  flex-wrap: wrap;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
 `;
 
 const ToolbarRow = styled.div`
@@ -92,136 +82,135 @@ const ToolbarRow = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const DateInput = styled.input`
+  ${glassControl}
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const DateLabel = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   white-space: nowrap;
   display: flex;
   align-items: center;
 `;
 
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text.
 const NewButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  &:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25); }
 `;
 
 const RefreshButton = styled.button`
+  ${glassControl}
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[200]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
+// Dense table, spec §4: one glass panel, transparent rows/header, Space Mono
+// uppercase celeste column headers, `line` row dividers, hover
+// rgba(180,200,220,.05).
 const Table = styled.table`
+  ${glassPanel}
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 14px 16px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.celeste};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
 const ClickableRow = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover { background: rgba(180, 200, 220, 0.05); }
 `;
 
-const MethodPill = styled.span<{ $bg: string; $text: string }>`
+const MethodPill = styled.span<{ $bg: string; $border: string; $text: string }>`
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
   border-radius: 99px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   background: ${({ $bg }) => $bg};
+  border: 1px solid ${({ $border }) => $border};
   color: ${({ $text }) => $text};
 `;
 
+// "Reversed" reads as the payment's accounting impact being voided — maps to
+// `decommissioned` (dim slate, spec §5.2 "cancelled / void / archived").
 const ReversedBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 99px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  background: ${({ theme }) => theme.colors.terracotta[100]};
-  color: ${({ theme }) => theme.colors.terracotta[800]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[300]};
+  ${phaseBadge('decommissioned')}
   margin-left: 8px;
 `;
 
 const ReversedRow = styled(ClickableRow)`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   /* Strike-through across the amount cell only — keep the rest readable */
 `;
 
@@ -229,7 +218,7 @@ const JeLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
@@ -241,14 +230,17 @@ const JeLink = styled.button`
 const EmptyState = styled.div`
   text-align: center;
   padding: 80px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
+// Empty-state headline, spec §4/§9: Fraunces italic celeste.
 const EmptyTitle = styled.div`
-  font-size: 16px;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 19px;
+  font-weight: 400;
   margin-bottom: 8px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const EmptyHint = styled.div`
@@ -261,7 +253,7 @@ const EmptyHint = styled.div`
 const LoadingOverlay = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -271,7 +263,7 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PageButtons = styled.div`
@@ -282,12 +274,12 @@ const PageButtons = styled.div`
 const GhostButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -303,8 +295,9 @@ const Tooltip = styled.span`
     top: calc(100% + 4px);
     left: 0;
     z-index: 1050;
-    background: ${({ theme }) => theme.colors.textPrimary};
-    color: ${({ theme }) => theme.colors.canvas};
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border: 1px solid ${({ theme }) => theme.colors.glass.border};
     border-radius: 6px;
     padding: 6px 10px;
     font-size: 12px;
@@ -371,9 +364,11 @@ export function PaymentsPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Vendor Payments</Title>
-      </Header>
+      <PageHeader
+        breadcrumb="FINANCE · ACCOUNTS PAYABLE"
+        title="Vendor Payments"
+        stats={[{ value: totalItems, label: 'Total Payments' }]}
+      />
 
       <ToolbarRow>
         <SearchInput
@@ -433,10 +428,12 @@ export function PaymentsPage() {
       {!isLoading && !isError && items.length === 0 && (
         <EmptyState>
           <EmptyTitle>No payments yet</EmptyTitle>
-          <EmptyHint>
-            Payments will appear here after they are recorded. Use "New Payment"
-            to record the first vendor payment.
-          </EmptyHint>
+          <EmptyHint>Payments will appear here once the first one is recorded.</EmptyHint>
+          {canCreate && (
+            <NewButton style={{ marginTop: 20 }} onClick={() => navigate('/finance/payments/new')}>
+              + New Payment
+            </NewButton>
+          )}
         </EmptyState>
       )}
 
@@ -459,8 +456,9 @@ export function PaymentsPage() {
               {items.map((payment) => {
                 const methodLabel = METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod;
                 const methodColor = methodColors(theme)[payment.paymentMethod] ?? {
-                  bg: theme.colors.neutral[100],
-                  text: theme.colors.neutral[800],
+                  bg: 'rgba(180, 200, 220, 0.1)',
+                  border: theme.colors.glass.border,
+                  text: theme.colors.muted,
                 };
                 const isReversed = Boolean(payment.je?.reversedByJeNumber);
                 const RowComponent = isReversed ? ReversedRow : ClickableRow;
@@ -501,13 +499,13 @@ export function PaymentsPage() {
                       )}
                     </Td>
                     <Td>
-                      <MethodPill $bg={methodColor.bg} $text={methodColor.text}>
+                      <MethodPill $bg={methodColor.bg} $border={methodColor.border} $text={methodColor.text}>
                         {methodLabel}
                       </MethodPill>
                     </Td>
                     <Td>
                       {payment.referenceNumber ?? (
-                        <span style={{ color: theme.colors.textDisabled }}>—</span>
+                        <span style={{ color: theme.colors.muted }}>—</span>
                       )}
                     </Td>
                     <Td
@@ -516,7 +514,7 @@ export function PaymentsPage() {
                         fontFamily: theme.typography.fontFamily.mono,
                         fontWeight: 600,
                         textDecoration: isReversed ? 'line-through' : 'none',
-                        color: isReversed ? theme.colors.textDisabled : undefined,
+                        color: isReversed ? theme.colors.muted : undefined,
                       }}
                     >
                       {formatCurrency(payment.totalAmount, payment.currencyCode)}
@@ -532,10 +530,10 @@ export function PaymentsPage() {
                           View JE
                         </JeLink>
                       ) : (
-                        <span style={{ color: theme.colors.textDisabled, fontSize: 13 }}>—</span>
+                        <span style={{ color: theme.colors.muted, fontSize: 13 }}>—</span>
                       )}
                     </Td>
-                    <Td style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                    <Td style={{ fontSize: 13, color: theme.colors.muted }}>
                       {payment.createdBy}
                     </Td>
                   </RowComponent>

@@ -4,6 +4,16 @@
  * Cross-sub-navigation tile bar shared across the Sales module pages.
  * Renders three navigation tiles (Orders, Inventory, Purchase Orders).
  * Pass `activeKey` to highlight the current page's tile.
+ *
+ * Night Observatory (T-901) accent note: "Stock" used to draw its accent
+ * from the gold ramp. Gold is budget-limited to the logo/active-nav/primary
+ * CTA/harvest-status (spec §3) — a persistent nav tile is not on that list.
+ * "Stock" now uses `theme.colors.bright.lavender`, a flat hex (not a
+ * [50..900] ramp like emerald/lapis/gold/terracotta). There is no ramp for
+ * `bright.*` tokens, so there's no theme-provided hover shade to reach for;
+ * per the spec author's own guidance this is a rarely-hovered tile, so the
+ * hover state simply reuses the same flat hex rather than hand-rolling a
+ * darken() helper for one call site (YAGNI).
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -20,26 +30,30 @@ export interface SalesActionTilesProps {
   activeKey?: SalesActionKey;
 }
 
-// Categorical ramp each tile draws its accent from — resolved against the
-// theme at render time (module-scope config can't call useTheme()).
-type AccentRamp = 'emerald' | 'gold';
+/** Ramp-based accent — resolves against a theme [50..900] ramp object. */
+type AccentRamp = 'emerald';
 
 interface TileConfig {
   key: SalesActionKey;
   label: string;
   subtitle: string;
   icon: React.ElementType;
-  accentRamp: AccentRamp;
+  /** Ramp-based accent (theme.colors[accentRamp][500/600]). */
+  accentRamp?: AccentRamp;
+  /**
+   * Flat bright.* hex accent for tiles that don't map to an existing ramp.
+   * No ramp exists for bright.* tokens, so hover reuses the same hex.
+   */
+  accentHex?: string;
   route: string;
 }
 
 // ============================================================================
 // TILE CONFIG
 // ============================================================================
-// "Sales Orders" keeps its original success-green accent (emerald — order
-// fulfilment reads as a positive/growth action). "Stock" keeps its original
-// amber accent (gold — inventory/harvest is a highlight, not a semantic
-// success/error state).
+// "Sales Orders" keeps its success-green accent (emerald — order fulfilment
+// reads as a positive/growth action). "Stock" moved off gold (spec §3 — gold
+// is not an ordinary accent for a persistent nav tile) onto bright.lavender.
 
 const TILES: TileConfig[] = [
   {
@@ -55,7 +69,7 @@ const TILES: TileConfig[] = [
     label: 'Stock',
     subtitle: 'Sellable harvest & waste',
     icon: Package,
-    accentRamp: 'gold',
+    accentHex: '', // resolved at render time from theme.colors.bright.lavender
     route: '/sales/stock',
   },
 ];
@@ -92,13 +106,13 @@ const ActionTile = styled.button<ActionTileStyledProps>`
   ${({ $active, $accent, $accentHover, theme }) =>
     !$active &&
     `
-    background: ${theme.colors.background};
-    border: 1px solid ${theme.colors.neutral[300]};
+    background: ${theme.colors.glass.base};
+    border: 1px solid ${theme.colors.glass.border};
     border-left: 4px solid ${$accent};
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 16px -4px rgba(4, 6, 18, 0.4);
       border-left-color: ${$accentHover};
     }
 
@@ -149,12 +163,14 @@ const TileIconBadge = styled.div<IconBadgeProps>`
     color: ${$accent};
   `}
 
-  /* Active: semi-transparent onAccent background + onAccent icon */
+  /* Active: semi-transparent onDark background + onDark icon. The fill
+     behind this badge is emerald/lavender, never gold, so onDark (not
+     onAccent — onAccent is cosmos-dark text, correct only on a gold fill). */
   ${({ $active, theme }) =>
     $active &&
     `
-    background: ${theme.colors.onAccent}33;
-    color: ${theme.colors.onAccent};
+    background: ${theme.colors.onDark}33;
+    color: ${theme.colors.onDark};
   `}
 `;
 
@@ -171,7 +187,7 @@ const TileLabel = styled.p<TileTextProps>`
   font-size: 16px;
   font-weight: 600;
   margin: 0;
-  color: ${({ $active, theme }) => ($active ? theme.colors.onAccent : theme.colors.textPrimary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.onDark : theme.colors.textPrimary)};
 `;
 
 const TileSubtitle = styled.p<TileTextProps>`
@@ -179,7 +195,7 @@ const TileSubtitle = styled.p<TileTextProps>`
   margin: 4px 0 0 0;
   line-height: 1.4;
   color: ${({ $active, theme }) =>
-    $active ? `${theme.colors.onAccent}D9` : theme.colors.textSecondary};
+    $active ? `${theme.colors.onDark}D9` : theme.colors.textSecondary};
 `;
 
 // ============================================================================
@@ -195,8 +211,12 @@ export function SalesActionTiles({ activeKey }: SalesActionTilesProps) {
       {TILES.map((tile) => {
         const isActive = tile.key === activeKey;
         const Icon = tile.icon;
-        const accent = theme.colors[tile.accentRamp][500];
-        const accentHover = theme.colors[tile.accentRamp][600];
+        const accent = tile.accentRamp
+          ? theme.colors[tile.accentRamp][500]
+          : theme.colors.bright.lavender;
+        const accentHover = tile.accentRamp
+          ? theme.colors[tile.accentRamp][600]
+          : theme.colors.bright.lavender;
 
         return (
           <ActionTile

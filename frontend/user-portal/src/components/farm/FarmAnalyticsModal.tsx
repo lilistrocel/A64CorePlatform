@@ -7,12 +7,41 @@
  * - Block Comparison (sortable table of all blocks)
  * - Historical Trends (yield timeline, performance trends)
  * - Current State Details (blocks by state)
+ *
+ * Night Observatory (T-901): glass modal shell over the fixed sky, phase-
+ * colour routing for every block state, lucide-react icons in place of
+ * emoji. See Docs/2-Working-Progress/night-observatory-spec.md.
  */
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import type { Theme, PhaseKey } from '@a64core/shared';
+import { glassPanel, glassControl, goldThread, monoLabel, phaseBadge } from '@a64core/shared';
+import type { LucideIcon } from 'lucide-react';
+import {
+  BarChart3,
+  ClipboardList,
+  TrendingUp,
+  TrendingDown,
+  Search,
+  X,
+  Construction,
+  Sprout,
+  Wheat,
+  Star,
+  Package,
+  Wand2,
+  Trophy,
+  Leaf,
+  AlertTriangle,
+  Calendar,
+  ArrowRight,
+  Minus,
+  Circle,
+  Grape,
+  Sparkles,
+} from 'lucide-react';
 import {
   PieChart,
   Pie,
@@ -51,40 +80,108 @@ export interface FarmAnalyticsModalProps {
 
 type TabType = 'overview' | 'comparison' | 'trends' | 'states';
 
-const TABS: Array<{ key: TabType; label: string; icon: string }> = [
-  { key: 'overview', label: 'Overview', icon: '📊' },
-  { key: 'comparison', label: 'Block Comparison', icon: '📋' },
-  { key: 'trends', label: 'Historical Trends', icon: '📈' },
-  { key: 'states', label: 'Current State Details', icon: '🔍' },
+const TABS: Array<{ key: TabType; label: string; icon: LucideIcon }> = [
+  { key: 'overview', label: 'Overview', icon: BarChart3 },
+  { key: 'comparison', label: 'Block Comparison', icon: ClipboardList },
+  { key: 'trends', label: 'Historical Trends', icon: TrendingUp },
+  { key: 'states', label: 'Current State Details', icon: Search },
 ];
 
-// Themed once per render (not a module constant) because it's consumed by
-// plain-string $color props, not just styled-components callbacks. "fruiting"
-// was purple in the old palette; the brand supplies no purple, so per the
-// spec's §3 "Purples -> judgement call" it takes gold (a genuine milestone
-// highlight, same call made in FarmDashboard.tsx's getStateColors).
-function getStateColors(theme: Theme): Record<string, string> {
+// Night Observatory (T-901, spec §5): block state -> the single phase
+// vocabulary. "planted" is a legacy synonym for "growing" some aggregation
+// payloads still emit; both route to "colonizing" (the in-progress phase).
+// Falls back to "empty" for anything unrecognised.
+const STATE_PHASE_MAP: Record<string, PhaseKey> = {
+  empty: 'empty',
+  planned: 'preparing',
+  planted: 'colonizing',
+  growing: 'colonizing',
+  fruiting: 'fruiting',
+  harvesting: 'harvesting',
+  cleaning: 'cleaning',
+  alert: 'quarantined',
+};
+
+function statePhaseKey(state: string): PhaseKey {
+  return STATE_PHASE_MAP[state] ?? 'empty';
+}
+
+const STATE_ICONS: Record<string, LucideIcon> = {
+  empty: Circle,
+  planned: ClipboardList,
+  growing: Sprout,
+  fruiting: Grape,
+  harvesting: Wheat,
+  cleaning: Sparkles,
+  alert: AlertTriangle,
+};
+
+// Performance-score tiering shared by the overview headline stat and the
+// comparison table. Uses phase hexes for the top/bottom tiers (they are
+// identical values to success/error already) and bright.terra — NOT
+// warning/gold-b — for the middle tier, since gold is not a status colour
+// outside the literal Harvesting phase (spec §3).
+function getPerformanceColor(score: number, theme: Theme): string {
+  if (score >= 80) return theme.colors.phase.fruiting;
+  if (score >= 60) return theme.colors.phase.inoculated;
+  if (score >= 40) return theme.colors.bright.terra;
+  return theme.colors.phase.quarantined;
+}
+
+// ── Recharts styling helpers (spec §4 "Charts") ────────────────────────────
+// Recharts props need plain values, not styled-components template literals,
+// so these read the theme object directly instead of composing a mixin.
+
+function chartTooltipStyle(theme: Theme) {
   return {
-    empty: theme.colors.textSecondary,
-    planned: theme.colors.primary[500],
-    planted: theme.colors.success,
-    growing: theme.colors.success,
-    fruiting: theme.colors.secondary[500],
-    harvesting: theme.colors.warning,
-    cleaning: theme.colors.terracotta[400],
-    alert: theme.colors.error,
+    background: theme.colors.cosmosHi,
+    border: `1px solid ${theme.colors.glass.border}`,
+    borderRadius: 10,
+    boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: '0.72rem',
+    padding: '8px 12px',
   };
 }
 
-const STATE_ICONS: Record<string, string> = {
-  empty: '⚪',
-  planned: '📋',
-  growing: '🌱',
-  fruiting: '🍇',
-  harvesting: '🌾',
-  cleaning: '🧹',
-  alert: '⚠️',
-};
+function chartLegendStyle(theme: Theme) {
+  return {
+    color: theme.colors.celeste,
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: '0.7rem',
+    paddingTop: 8,
+  };
+}
+
+function chartAxisTick(theme: Theme) {
+  return { fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono, fontSize: 11 };
+}
+
+// Custom Pie label renderer — the default recharts label ignores the theme
+// and renders dark text that disappears against the sky. Same content as
+// before, just legible.
+function renderPieLabel(theme: Theme) {
+  return (props: any) => {
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, outerRadius, name, value, percent } = props;
+    const radius = outerRadius + 20;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    return (
+      <text
+        x={x}
+        y={y}
+        fill={theme.colors.celeste}
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        fontFamily={theme.typography.fontFamily.mono}
+        fontSize={11}
+      >
+        {`${name}: ${formatNumber(value)} (${formatNumber(percent * 100, { decimals: 0 })}%)`}
+      </text>
+    );
+  };
+}
 
 // ============================================================================
 // COMPONENT
@@ -139,7 +236,9 @@ export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName, farmingY
     if (error) {
       return (
         <ErrorContainer>
-          <ErrorIcon>❌</ErrorIcon>
+          <ErrorIcon>
+            <X size={40} strokeWidth={1.6} />
+          </ErrorIcon>
           <ErrorTitle>Failed to load analytics</ErrorTitle>
           <ErrorMessage>{error.message}</ErrorMessage>
           <RetryButton onClick={refetch}>Try Again</RetryButton>
@@ -150,8 +249,7 @@ export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName, farmingY
     if (!analytics) {
       return (
         <EmptyContainer>
-          <EmptyIcon>📊</EmptyIcon>
-          <EmptyText>No analytics data available</EmptyText>
+          <EmptyHeadline>No analytics data available</EmptyHeadline>
         </EmptyContainer>
       );
     }
@@ -176,14 +274,17 @@ export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName, farmingY
         {/* Header */}
         <ModalHeader>
           <HeaderLeft>
-            <ModalTitle>📊 Farm Analytics</ModalTitle>
+            <ModalTitle>
+              <BarChart3 size={22} strokeWidth={1.7} />
+              Farm Analytics
+            </ModalTitle>
             <FarmInfo>
               <FarmName>{analytics?.farmName || farmName || 'Farm Statistics'}</FarmName>
             </FarmInfo>
           </HeaderLeft>
           <HeaderRight>
             <PeriodFilter>
-              <PeriodLabel>Period:</PeriodLabel>
+              <PeriodLabel>Period</PeriodLabel>
               <PeriodSelect value={period} onChange={(e) => handlePeriodChange(e.target.value as TimePeriod)}>
                 {TIME_PERIOD_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -193,19 +294,24 @@ export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName, farmingY
               </PeriodSelect>
             </PeriodFilter>
             <CloseButton onClick={onClose} aria-label="Close modal">
-              ×
+              <X size={20} strokeWidth={1.8} />
             </CloseButton>
           </HeaderRight>
         </ModalHeader>
 
         {/* Tabs */}
         <TabsContainer>
-          {TABS.map((tab) => (
-            <Tab key={tab.key} $active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
-              <TabIcon>{tab.icon}</TabIcon>
-              <TabLabel>{tab.label}</TabLabel>
-            </Tab>
-          ))}
+          {TABS.map((tab) => {
+            const TabIconComp = tab.icon;
+            return (
+              <Tab key={tab.key} $active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
+                <TabIcon>
+                  <TabIconComp size={15} strokeWidth={1.6} />
+                </TabIcon>
+                <TabLabel>{tab.label}</TabLabel>
+              </Tab>
+            );
+          })}
         </TabsContainer>
 
         {/* Content */}
@@ -223,22 +329,22 @@ export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName, farmingY
 
 function OverviewTab({ analytics }: { analytics: any }) {
   const theme = useTheme();
-  const stateColors = getStateColors(theme);
 
   if (!analytics || !analytics.aggregatedMetrics) {
     return <TabContent><EmptyText>Loading overview data...</EmptyText></TabContent>;
   }
 
   const performanceScore = analytics.aggregatedMetrics.overallPerformanceScore ?? 0;
-  const performanceColor =
-    performanceScore >= 80 ? theme.colors.success : performanceScore >= 60 ? theme.colors.primary[500] : performanceScore >= 40 ? theme.colors.warning : theme.colors.error;
+  const performanceColor = getPerformanceColor(performanceScore, theme);
 
-  // Prepare state breakdown pie chart data
+  // Prepare state breakdown pie chart data — routed through the single phase
+  // vocabulary (spec §5), not an arbitrary chart palette, since this chart is
+  // a literal state/status breakdown.
   const stateData = Object.entries(analytics.stateBreakdown)
     .map(([state, info]: [string, any]) => ({
       name: state.charAt(0).toUpperCase() + state.slice(1),
       value: info.count,
-      color: stateColors[state] || theme.colors.textSecondary,
+      color: theme.colors.phase[statePhaseKey(state)],
     }))
     .filter((item) => item.value > 0);
 
@@ -260,37 +366,39 @@ function OverviewTab({ analytics }: { analytics: any }) {
         <SectionTitle>Key Metrics</SectionTitle>
         <MetricsGrid>
           <MetricCard>
-            <MetricIcon>🏗️</MetricIcon>
+            <MetricIcon><Construction size={20} strokeWidth={1.6} /></MetricIcon>
             <MetricValue>{formatNumber(analytics.aggregatedMetrics.totalBlocks)}</MetricValue>
             <MetricLabel>Total Blocks</MetricLabel>
           </MetricCard>
           <MetricCard>
-            <MetricIcon>🌱</MetricIcon>
+            <MetricIcon><Sprout size={20} strokeWidth={1.6} /></MetricIcon>
             <MetricValue>{formatNumber(analytics.aggregatedMetrics.activePlantings)}</MetricValue>
             <MetricLabel>Active Plantings</MetricLabel>
           </MetricCard>
-          <MetricCard>
-            <MetricIcon>🌾</MetricIcon>
-            <MetricValue>{formatNumber(analytics.aggregatedMetrics.totalYieldKg, { decimals: 1 })} kg</MetricValue>
+          {/* The single headline metric for this grid — everything else in
+              the grid stays celeste (spec §3 gold discipline). */}
+          <MetricCard $primary>
+            <MetricIcon><Wheat size={20} strokeWidth={1.6} /></MetricIcon>
+            <MetricValue $primary>{formatNumber(analytics.aggregatedMetrics.totalYieldKg, { decimals: 1 })} kg</MetricValue>
             <MetricLabel>Total Yield</MetricLabel>
           </MetricCard>
           <MetricCard>
-            <MetricIcon>📊</MetricIcon>
+            <MetricIcon><BarChart3 size={20} strokeWidth={1.6} /></MetricIcon>
             <MetricValue>{formatPercentage(analytics.aggregatedMetrics.avgYieldEfficiency, 1)}</MetricValue>
             <MetricLabel>Avg Yield Efficiency</MetricLabel>
           </MetricCard>
           <MetricCard>
-            <MetricIcon>⭐</MetricIcon>
+            <MetricIcon><Star size={20} strokeWidth={1.6} /></MetricIcon>
             <MetricValue $color={performanceColor}>{formatNumber(performanceScore, { decimals: 0 })}</MetricValue>
             <MetricLabel>Overall Performance</MetricLabel>
           </MetricCard>
           <MetricCard>
-            <MetricIcon>📦</MetricIcon>
+            <MetricIcon><Package size={20} strokeWidth={1.6} /></MetricIcon>
             <MetricValue>{formatPercentage(analytics.aggregatedMetrics.currentUtilization, 0)}</MetricValue>
             <MetricLabel>Capacity Utilization</MetricLabel>
           </MetricCard>
           <MetricCard>
-            <MetricIcon>🔮</MetricIcon>
+            <MetricIcon><Wand2 size={20} strokeWidth={1.6} /></MetricIcon>
             <MetricValue>{formatNumber(analytics.aggregatedMetrics.predictedYieldKg, { decimals: 1 })} kg</MetricValue>
             <MetricLabel>Predicted Yield</MetricLabel>
           </MetricCard>
@@ -311,14 +419,19 @@ function OverviewTab({ analytics }: { analytics: any }) {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(entry) => `${entry.name}: ${formatNumber(entry.value)} (${formatNumber(((entry.value / analytics.aggregatedMetrics.totalBlocks) * 100), { decimals: 0 })}%)`}
+                  label={renderPieLabel(theme)}
+                  labelLine={{ stroke: theme.colors.line }}
                 >
                   {stateData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip
+                  contentStyle={chartTooltipStyle(theme)}
+                  labelStyle={{ color: theme.colors.celeste }}
+                  itemStyle={{ color: theme.colors.textPrimary }}
+                />
+                <Legend wrapperStyle={chartLegendStyle(theme)} />
               </PieChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -328,7 +441,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
       {/* Top Performers */}
       {topPerformers.length > 0 && (
         <Section>
-          <SectionTitle>🏆 Top Performing Blocks</SectionTitle>
+          <SectionTitle><Trophy size={16} strokeWidth={1.7} /> Top Performing Blocks</SectionTitle>
           <PerformersList>
             {topPerformers.map((block, index) => (
               <PerformerItem key={block.blockId}>
@@ -338,7 +451,9 @@ function OverviewTab({ analytics }: { analytics: any }) {
                     {block.blockCode} {block.name && `- ${block.name}`}
                   </PerformerName>
                   <PerformerDetails>
-                    {block.currentCrop && <span>🌿 {block.currentCrop}</span>}
+                    {block.currentCrop && (
+                      <span><Leaf size={13} strokeWidth={1.6} /> {block.currentCrop}</span>
+                    )}
                     <span>Performance: {formatNumber(block.performanceScore, { decimals: 0 })}/100</span>
                   </PerformerDetails>
                 </PerformerInfo>
@@ -351,7 +466,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
       {/* Needs Attention */}
       {needsAttention.length > 0 && (
         <Section>
-          <SectionTitle>⚠️ Needs Attention</SectionTitle>
+          <SectionTitle><AlertTriangle size={16} strokeWidth={1.7} /> Needs Attention</SectionTitle>
           <AttentionList>
             {needsAttention.map((block) => (
               <AttentionItem key={block.blockId}>
@@ -379,7 +494,6 @@ function OverviewTab({ analytics }: { analytics: any }) {
 
 function ComparisonTab({ analytics }: { analytics: any }) {
   const theme = useTheme();
-  const stateColors = getStateColors(theme);
   const [sortField, setSortField] = useState<keyof BlockComparisonItem>('performanceScore');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -387,8 +501,7 @@ function ComparisonTab({ analytics }: { analytics: any }) {
     return (
       <TabContent>
         <EmptyStateSection>
-          <EmptyIcon>📋</EmptyIcon>
-          <EmptyText>No blocks to compare</EmptyText>
+          <EmptyHeadline>No blocks to compare</EmptyHeadline>
         </EmptyStateSection>
       </TabContent>
     );
@@ -416,13 +529,6 @@ function ComparisonTab({ analytics }: { analytics: any }) {
 
     return sortDirection === 'asc' ? (aValue > bValue ? 1 : -1) : (bValue > aValue ? 1 : -1);
   });
-
-  const getPerformanceColor = (score: number) => {
-    if (score >= 80) return theme.colors.success;
-    if (score >= 60) return theme.colors.primary[500];
-    if (score >= 40) return theme.colors.warning;
-    return theme.colors.error;
-  };
 
   return (
     <TabContent>
@@ -470,7 +576,7 @@ function ComparisonTab({ analytics }: { analytics: any }) {
                   <TableCell $bold>{block.blockCode}</TableCell>
                   <TableCell>{block.name || '-'}</TableCell>
                   <TableCell>
-                    <StateBadge $color={stateColors[block.state] || theme.colors.textSecondary}>
+                    <StateBadge $phase={statePhaseKey(block.state)}>
                       {block.state.charAt(0).toUpperCase() + block.state.slice(1)}
                     </StateBadge>
                   </TableCell>
@@ -478,7 +584,7 @@ function ComparisonTab({ analytics }: { analytics: any }) {
                   <TableCell>{formatNumber(block.yieldKg, { decimals: 1 })}</TableCell>
                   <TableCell>{formatNumber(block.yieldEfficiency, { decimals: 1 })}</TableCell>
                   <TableCell>
-                    <PerformanceScore $color={getPerformanceColor(block.performanceScore)}>
+                    <PerformanceScore $color={getPerformanceColor(block.performanceScore, theme)}>
                       {formatNumber(block.performanceScore, { decimals: 0 })}
                     </PerformanceScore>
                   </TableCell>
@@ -510,32 +616,21 @@ function TrendsTab({ analytics }: { analytics: any }) {
   const hasYieldData = analytics.historicalTrends.yieldTimeline && analytics.historicalTrends.yieldTimeline.length > 0;
   const hasTransitionData = analytics.historicalTrends.stateTransitions && analytics.historicalTrends.stateTransitions.length > 0;
 
-  const getTrendIcon = () => {
-    switch (analytics.historicalTrends.performanceTrend) {
-      case 'improving': return '🔼';
-      case 'stable': return '➡️';
-      case 'declining': return '🔽';
-      default: return '➖';
-    }
-  };
-
-  const getTrendLabel = () => {
-    switch (analytics.historicalTrends.performanceTrend) {
-      case 'improving': return 'Improving';
-      case 'stable': return 'Stable';
-      case 'declining': return 'Declining';
-      default: return 'Insufficient Data';
-    }
-  };
-
-  const getTrendColor = () => {
-    switch (analytics.historicalTrends.performanceTrend) {
-      case 'improving': return theme.colors.success;
-      case 'stable': return theme.colors.primary[500];
-      case 'declining': return theme.colors.error;
-      default: return theme.colors.textDisabled;
-    }
-  };
+  const trend = analytics.historicalTrends.performanceTrend;
+  const TrendIconComponent =
+    trend === 'improving' ? TrendingUp : trend === 'declining' ? TrendingDown : trend === 'stable' ? ArrowRight : Minus;
+  const trendLabel =
+    trend === 'improving' ? 'Improving' : trend === 'stable' ? 'Stable' : trend === 'declining' ? 'Declining' : 'Insufficient Data';
+  // Trend is a 3-state improving/stable/declining read — the same extrapolated
+  // vocabulary as approved/open/rejected (spec §5.2).
+  const trendColor =
+    trend === 'improving'
+      ? theme.colors.phase.fruiting
+      : trend === 'stable'
+      ? theme.colors.phase.inoculated
+      : trend === 'declining'
+      ? theme.colors.phase.quarantined
+      : theme.colors.muted;
 
   return (
     <TabContent>
@@ -543,24 +638,26 @@ function TrendsTab({ analytics }: { analytics: any }) {
       <Section>
         <SectionTitle>Performance Trend</SectionTitle>
         <TrendIndicator>
-          <TrendIcon>{getTrendIcon()}</TrendIcon>
+          <TrendIcon $color={trendColor}>
+            <TrendIconComponent size={40} strokeWidth={1.5} />
+          </TrendIcon>
           <TrendInfo>
-            <TrendLabel $color={getTrendColor()}>{getTrendLabel()}</TrendLabel>
+            <TrendLabel $color={trendColor}>{trendLabel}</TrendLabel>
             <TrendDescription>
-              {analytics.historicalTrends.performanceTrend === 'improving' && 'Farm performance is improving over time'}
-              {analytics.historicalTrends.performanceTrend === 'stable' && 'Farm performance is consistent'}
-              {analytics.historicalTrends.performanceTrend === 'declining' && 'Farm performance needs attention'}
-              {!['improving', 'stable', 'declining'].includes(analytics.historicalTrends.performanceTrend) && 'Not enough data to determine trend'}
+              {trend === 'improving' && 'Farm performance is improving over time'}
+              {trend === 'stable' && 'Farm performance is consistent'}
+              {trend === 'declining' && 'Farm performance needs attention'}
+              {!['improving', 'stable', 'declining'].includes(trend) && 'Not enough data to determine trend'}
             </TrendDescription>
           </TrendInfo>
         </TrendIndicator>
       </Section>
 
-      {/* Harvest Frequency */}
+      {/* Harvest Frequency — the single headline stat of this tab */}
       <Section>
         <SectionTitle>Harvest Frequency</SectionTitle>
         <FrequencyCard>
-          <FrequencyIcon>📅</FrequencyIcon>
+          <FrequencyIcon><Calendar size={28} strokeWidth={1.6} /></FrequencyIcon>
           <FrequencyValue>{formatNumber(analytics.historicalTrends.avgHarvestsPerWeek, { decimals: 1 })}</FrequencyValue>
           <FrequencyLabel>Average Harvests Per Week</FrequencyLabel>
         </FrequencyCard>
@@ -573,30 +670,37 @@ function TrendsTab({ analytics }: { analytics: any }) {
           <ChartContainer>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={analytics.historicalTrends.yieldTimeline}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid stroke={theme.colors.line} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
+                  tick={chartAxisTick(theme)}
                   tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 />
-                <YAxis label={{ value: 'Yield (kg)', angle: -90, position: 'insideLeft' }} />
+                <YAxis
+                  tick={chartAxisTick(theme)}
+                  label={{ value: 'Yield (kg)', angle: -90, position: 'insideLeft', fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono, fontSize: 11 }}
+                />
                 <Tooltip
+                  contentStyle={chartTooltipStyle(theme)}
+                  labelStyle={{ color: theme.colors.celeste }}
+                  itemStyle={{ color: theme.colors.textPrimary }}
                   labelFormatter={(value) => new Date(value).toLocaleDateString()}
                   formatter={(value: number, name: string) => {
                     if (name === 'Total Yield') return [`${value.toFixed(2)} kg`, name];
                     return [value, name];
                   }}
                 />
-                <Legend />
-                <Line type="monotone" dataKey="totalYieldKg" stroke={theme.colors.success} name="Total Yield" strokeWidth={2} />
-                <Line type="monotone" dataKey="harvestCount" stroke={theme.colors.primary[500]} name="Harvest Count" strokeWidth={2} />
+                <Legend wrapperStyle={chartLegendStyle(theme)} />
+                {/* Chart series order (spec §4): celeste, then bright.gold */}
+                <Line type="monotone" dataKey="totalYieldKg" stroke={theme.colors.celeste} name="Total Yield" strokeWidth={2} />
+                <Line type="monotone" dataKey="harvestCount" stroke={theme.colors.bright.gold} name="Harvest Count" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
         </Section>
       ) : (
         <EmptyStateSection>
-          <EmptyIcon>📈</EmptyIcon>
-          <EmptyText>No yield data available for this period</EmptyText>
+          <EmptyHeadline>No yield data available for this period</EmptyHeadline>
         </EmptyStateSection>
       )}
 
@@ -611,7 +715,9 @@ function TrendsTab({ analytics }: { analytics: any }) {
                 <TransitionDetails>
                   <TransitionBlock>{transition.blockCode}</TransitionBlock>
                   <TransitionArrow>→</TransitionArrow>
-                  <TransitionState>{transition.toState.charAt(0).toUpperCase() + transition.toState.slice(1)}</TransitionState>
+                  <TransitionState $phase={statePhaseKey(transition.toState)}>
+                    {transition.toState.charAt(0).toUpperCase() + transition.toState.slice(1)}
+                  </TransitionState>
                 </TransitionDetails>
               </TransitionItem>
             ))}
@@ -624,7 +730,6 @@ function TrendsTab({ analytics }: { analytics: any }) {
 
 function StatesTab({ analytics }: { analytics: any }) {
   const theme = useTheme();
-  const stateColors = getStateColors(theme);
 
   if (!analytics || !analytics.stateBreakdown) {
     return <TabContent><EmptyText>Loading state data...</EmptyText></TabContent>;
@@ -639,14 +744,17 @@ function StatesTab({ analytics }: { analytics: any }) {
         if (!stateInfo) return null;
 
         const stateLabel = state.charAt(0).toUpperCase() + state.slice(1);
-        const stateIcon = STATE_ICONS[state] || '⚪';
-        const stateColor = stateColors[state] || theme.colors.textSecondary;
+        const StateIconComp = STATE_ICONS[state] || Circle;
+        const phaseKey = statePhaseKey(state);
+        const stateColor = theme.colors.phase[phaseKey];
 
         return (
           <Section key={state}>
             <StateHeader>
               <StateTitle>
-                <StateIconLarge>{stateIcon}</StateIconLarge>
+                <StateIconLarge $color={stateColor}>
+                  <StateIconComp size={26} strokeWidth={1.6} />
+                </StateIconLarge>
                 <StateTitleText>{stateLabel}</StateTitleText>
                 <StateCount $color={stateColor}>{stateInfo.count}</StateCount>
               </StateTitle>
@@ -660,7 +768,7 @@ function StatesTab({ analytics }: { analytics: any }) {
                 {analytics.blockComparison
                   ?.filter((block: BlockComparisonItem) => block.state === state)
                   .map((block: BlockComparisonItem) => (
-                    <BlockChip key={block.blockId} $color={stateColor}>
+                    <BlockChip key={block.blockId} $phase={phaseKey}>
                       {block.blockCode}
                     </BlockChip>
                   ))}
@@ -678,6 +786,10 @@ function StatesTab({ analytics }: { analytics: any }) {
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
+// Night Observatory (T-901): the modal shell is glassPanel at 24px blur
+// (spec §4 "Modals/drawers"); everything nested inside it stays under the
+// two-glass-layer ceiling via plain line-bordered/transparent surfaces
+// rather than a second glassPanel (spec §2).
 
 const Overlay = styled.div<{ $isOpen: boolean }>`
   display: ${({ $isOpen }) => ($isOpen ? 'flex' : 'none')};
@@ -686,8 +798,9 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   justify-content: center;
   align-items: center;
   z-index: 1100;
@@ -696,14 +809,15 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 1400px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -714,11 +828,10 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 
   @media (max-width: 768px) {
@@ -746,10 +859,18 @@ const HeaderRight = styled.div`
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 24px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.4rem;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
+
+  svg {
+    color: ${({ theme }) => theme.colors.celeste};
+    flex-shrink: 0;
+  }
 `;
 
 const FarmInfo = styled.div`
@@ -757,12 +878,12 @@ const FarmInfo = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const FarmName = styled.span`
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const PeriodFilter = styled.div`
@@ -772,32 +893,29 @@ const PeriodFilter = styled.div`
 `;
 
 const PeriodLabel = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PeriodSelect = styled.select`
+  ${glassControl}
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   padding: 0;
   width: 36px;
@@ -805,19 +923,23 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.25);
   }
 `;
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   overflow-x: auto;
   flex-shrink: 0;
 
@@ -832,22 +954,25 @@ const Tab = styled.button<{ $active: boolean }>`
   gap: 6px;
   padding: 14px 20px;
   border: none;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
-  font-size: 14px;
-  font-weight: ${({ $active }) => ($active ? '600' : '500')};
+  background: transparent;
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
+  font-size: 13px;
+  font-weight: ${({ $active }) => ($active ? '700' : '500')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  /* Tab underline uses celeste, not gold — gold is reserved for the sidebar
+     active-nav item, not every in-page tab bar (spec §3). */
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.celeste : 'transparent')};
   white-space: nowrap;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const TabIcon = styled.span`
-  font-size: 16px;
+  display: flex;
+  align-items: center;
 `;
 
 const TabLabel = styled.span``;
@@ -856,7 +981,6 @@ const ModalBody = styled.div`
   padding: 24px;
   overflow-y: auto;
   flex: 1;
-  background: ${({ theme }) => theme.colors.neutral[50]};
 `;
 
 const TabContent = styled.div`
@@ -866,53 +990,64 @@ const TabContent = styled.div`
 `;
 
 const Section = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  position: relative;
   padding: 20px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  border-radius: 14px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  background: transparent;
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
+
+  svg {
+    color: ${({ theme }) => theme.colors.celeste};
+    flex-shrink: 0;
+  }
 `;
 
 const MetricsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
 `;
 
-const MetricCard = styled.div`
+const MetricCard = styled.div<{ $primary?: boolean }>`
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 20px 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  padding: 18px 14px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  background: transparent;
   text-align: center;
+  ${({ $primary }) => $primary && goldThread}
 `;
 
 const MetricIcon = styled.div`
-  font-size: 32px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const MetricValue = styled.div<{ $color?: string }>`
-  font-size: 28px;
-  font-weight: 700;
-  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
+const MetricValue = styled.div<{ $color?: string; $primary?: boolean }>`
+  font-size: 24px;
+  font-weight: 800;
   line-height: 1;
+  color: ${({ $color, $primary, theme }) => $color ?? ($primary ? theme.colors.secondary[500] : theme.colors.celeste)};
+  text-shadow: ${({ $primary }) => ($primary ? '0 0 20px rgba(220, 185, 79, 0.4)' : 'none')};
 `;
 
 const MetricLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ChartContainer = styled.div`
@@ -930,32 +1065,34 @@ const PerformerItem = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  padding: 14px 16px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 `;
 
 const PerformerRank = styled.div<{ $rank: number }>`
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
+  flex-shrink: 0;
   background: ${({ $rank, theme }) => {
-    // Medal ranks 1-3 use brand ramps that echo the traditional gold/silver/
-    // bronze palette without leaving the token surface: gold (an exact fit
-    // for 1st), neutral (silver-gray for 2nd), terracotta (a warm bronze-like
-    // brown for 3rd).
+    // Medal ranks 1-3 keep the traditional gold/silver/bronze read. Rank 1 is
+    // the ONLY genuinely gold fill here — a literal medal is the same
+    // real-world exception the brief already makes for the Harvesting phase,
+    // so it is counted deliberately in the gold budget, not accidentally.
     if ($rank === 1) return `linear-gradient(135deg, ${theme.colors.gold[400]}, ${theme.colors.gold[600]})`;
     if ($rank === 2) return `linear-gradient(135deg, ${theme.colors.neutral[400]}, ${theme.colors.neutral[600]})`;
     if ($rank === 3) return `linear-gradient(135deg, ${theme.colors.terracotta[400]}, ${theme.colors.terracotta[600]})`;
     return theme.colors.neutral[300];
   }};
-  color: ${({ theme }) => theme.colors.onAccent};
-  flex-shrink: 0;
+  /* onAccent (dark text) only on the rank-1 GOLD fill; ranks 2/3/default sit
+     on non-gold fills and need onDark (spec §1.1's breaking change). */
+  color: ${({ $rank, theme }) => ($rank === 1 ? theme.colors.onAccent : theme.colors.onDark)};
 `;
 
 const PerformerInfo = styled.div`
@@ -966,17 +1103,27 @@ const PerformerInfo = styled.div`
 `;
 
 const PerformerName = styled.div`
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const PerformerDetails = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.muted};
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  svg {
+    color: ${({ theme }) => theme.colors.bright.laurel};
+  }
 `;
 
 const AttentionList = styled.div`
@@ -991,7 +1138,7 @@ const AttentionItem = styled.div`
   gap: 12px;
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.warningBg};
-  border-left: 4px solid ${({ theme }) => theme.colors.warning};
+  border-left: 3px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
 `;
 
@@ -1003,8 +1150,8 @@ const AttentionInfo = styled.div`
 `;
 
 const AttentionName = styled.div`
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -1015,21 +1162,19 @@ const AttentionIssue = styled.div`
 `;
 
 const AlertBadge = styled.span`
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  ${monoLabel}
+  padding: 3px 9px;
+  border-radius: 99px;
   background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
-  font-weight: 500;
 `;
 
 const PerformanceBadge = styled.span<{ $score: number }>`
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: ${({ $score, theme }) => $score < 40 ? theme.colors.errorBg : theme.colors.warningBg};
-  color: ${({ $score, theme }) => $score < 40 ? theme.colors.error : theme.colors.warning};
-  font-weight: 500;
+  ${monoLabel}
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: ${({ $score, theme }) => ($score < 40 ? theme.colors.errorBg : theme.colors.warningBg)};
+  color: ${({ $score, theme }) => ($score < 40 ? theme.colors.error : theme.colors.warning)};
 `;
 
 const TableContainer = styled.div`
@@ -1040,63 +1185,56 @@ const TableContainer = styled.div`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
 `;
 
 const TableHeader = styled.th<{ $sortable?: boolean }>`
+  ${monoLabel}
   text-align: left;
-  padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  padding: 10px 12px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
-  cursor: ${({ $sortable }) => $sortable ? 'pointer' : 'default'};
+  cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
 
   &:hover {
-    background: ${({ $sortable, theme }) => $sortable ? theme.colors.neutral[200] : theme.colors.surface};
+    color: ${({ $sortable, theme }) => ($sortable ? theme.colors.textPrimary : theme.colors.celeste)};
   }
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const TableCell = styled.td<{ $bold?: boolean }>`
-  padding: 12px;
+  padding: 10px 12px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-weight: ${({ $bold }) => $bold ? '600' : '400'};
+  font-weight: ${({ $bold }) => ($bold ? '700' : '400')};
 `;
 
-const StateBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => `${$color}20`};
-  color: ${({ $color }) => $color};
+const StateBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
 `;
 
 const PerformanceScore = styled.span<{ $color: string }>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 700;
   color: ${({ $color }) => $color};
 `;
 
 const AlertCount = styled.span`
+  ${monoLabel}
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 99px;
   background: ${({ theme }) => theme.colors.errorBg};
   color: ${({ theme }) => theme.colors.error};
-  font-weight: 600;
-  font-size: 13px;
 `;
 
 const TrendIndicator = styled.div`
@@ -1104,12 +1242,13 @@ const TrendIndicator = styled.div`
   align-items: center;
   gap: 20px;
   padding: 20px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 12px;
 `;
 
-const TrendIcon = styled.div`
-  font-size: 64px;
+const TrendIcon = styled.div<{ $color: string }>`
+  display: flex;
+  color: ${({ $color }) => $color};
 `;
 
 const TrendInfo = styled.div`
@@ -1119,41 +1258,43 @@ const TrendInfo = styled.div`
 `;
 
 const TrendLabel = styled.div<{ $color: string }>`
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   color: ${({ $color }) => $color};
 `;
 
 const TrendDescription = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const FrequencyCard = styled.div`
+  ${goldThread}
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
+  border-radius: 12px;
 `;
 
 const FrequencyIcon = styled.div`
-  font-size: 48px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const FrequencyValue = styled.div`
-  font-size: 48px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  font-size: 40px;
+  font-weight: 800;
+  color: ${({ theme }) => theme.colors.secondary[500]};
+  text-shadow: 0 0 20px rgba(220, 185, 79, 0.4);
 `;
 
 const FrequencyLabel = styled.div`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TransitionsList = styled.div`
@@ -1168,8 +1309,8 @@ const TransitionItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
 
   @media (max-width: 768px) {
@@ -1180,9 +1321,8 @@ const TransitionItem = styled.div`
 `;
 
 const TransitionDate = styled.div`
-  font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TransitionDetails = styled.div`
@@ -1192,17 +1332,18 @@ const TransitionDetails = styled.div`
 `;
 
 const TransitionBlock = styled.span`
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TransitionArrow = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
-const TransitionState = styled.span`
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary[500]};
+const TransitionState = styled.span<{ $phase: PhaseKey }>`
+  font-weight: 600;
+  color: ${({ theme, $phase }) => theme.colors.phase[$phase]};
 `;
 
 const StateHeader = styled.div`
@@ -1224,13 +1365,14 @@ const StateTitle = styled.div`
   gap: 12px;
 `;
 
-const StateIconLarge = styled.div`
-  font-size: 32px;
+const StateIconLarge = styled.div<{ $color: string }>`
+  display: flex;
+  color: ${({ $color }) => $color};
 `;
 
 const StateTitleText = styled.h4`
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
@@ -1239,19 +1381,21 @@ const StateCount = styled.span<{ $color: string }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 32px;
+  min-width: 30px;
+  height: 30px;
   padding: 0 10px;
-  border-radius: 9999px;
-  background: ${({ $color }) => `${$color}20`};
+  border-radius: 99px;
+  background: ${({ $color }) => `${$color}29`};
+  border: 1px solid ${({ $color }) => `${$color}73`};
   color: ${({ $color }) => $color};
-  font-size: 16px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 14px;
   font-weight: 700;
 `;
 
 const StateMetric = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const BlockChipsContainer = styled.div`
@@ -1260,20 +1404,15 @@ const BlockChipsContainer = styled.div`
   gap: 8px;
 `;
 
-const BlockChip = styled.div<{ $color: string }>`
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  background: ${({ $color }) => `${$color}15`};
-  color: ${({ $color }) => $color};
-  border: 1px solid ${({ $color }) => `${$color}40`};
+const BlockChip = styled.div<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const NoBlocksText = styled.div`
   padding: 20px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
@@ -1287,10 +1426,10 @@ const LoadingContainer = styled.div`
 `;
 
 const LoadingSpinner = styled.div`
-  width: 48px;
-  height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  width: 42px;
+  height: 42px;
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.celeste};
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1303,8 +1442,8 @@ const LoadingSpinner = styled.div`
 `;
 
 const LoadingText = styled.div`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ErrorContainer = styled.div`
@@ -1317,36 +1456,42 @@ const ErrorContainer = styled.div`
 `;
 
 const ErrorIcon = styled.div`
-  font-size: 64px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.error};
   margin-bottom: 16px;
 `;
 
 const ErrorTitle = styled.div`
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
 const ErrorMessage = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 24px;
 `;
 
 const RetryButton = styled.button`
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  ${glassControl}
+  padding: 10px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
-  transition: background 150ms ease-in-out;
+  transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    border-color: ${({ theme }) => theme.colors.celeste};
+    color: ${({ theme }) => theme.colors.celeste};
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -1366,17 +1511,19 @@ const EmptyStateSection = styled.div`
   justify-content: center;
   padding: 40px 20px;
   text-align: center;
-  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 12px;
 `;
 
-const EmptyIcon = styled.div`
-  font-size: 64px;
-  margin-bottom: 16px;
-  opacity: 0.5;
+const EmptyHeadline = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.1rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const EmptyText = styled.div`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.muted};
 `;

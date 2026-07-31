@@ -5,18 +5,24 @@
  */
 
 import type { StyleSpecification } from 'maplibre-gl';
-import { lightTheme } from '@a64core/shared';
+import { theme } from '@a64core/shared';
+import type { BlockState } from '../types/farm';
+import { BLOCK_STATE_PHASE_KEYS } from '../types/farm';
 
-// NOTE (A20Core sweep, T-900): these MapLibre paint specs are built once at
-// module load with no theme context, and every consumer (FarmMapView,
-// MapContainer, DrawingControls — all in src/components/) reads these as
-// plain exported constants, not a function of theme. Making this
-// theme-reactive would require changing the export shape and updating those
-// three call sites, which sit outside this shard's file set. So: these
-// reference lightTheme.colors directly (single source of truth, no
-// duplicated hex) but will NOT flip in dark mode. Flagged for a follow-up
-// shard that owns src/components/map + src/components/farm.
-const c = lightTheme.colors;
+// NOTE (A20Core sweep, T-900; updated Night Observatory sweep, T-901): these
+// MapLibre paint specs are built once at module load with no theme context,
+// and every consumer (FarmMapView, MapContainer, DrawingControls — all in
+// src/components/) reads these as plain exported constants, not a function
+// of theme. Making this theme-reactive would require changing the export
+// shape and updating those three call sites, which sit outside this shard's
+// file set (they belong to other agents in this same wave). So: these
+// reference `theme.colors` directly (single source of truth, no duplicated
+// hex) at module load. The original T-900 caveat ("won't flip in dark mode")
+// is now moot — dark is the only mode (`theme` === `darkTheme`) — but the
+// underlying problem (frozen-at-import-time, not reactive to a theme
+// context) is unchanged and would resurface if a light mode ever ships.
+// Flagged for a follow-up shard that owns src/components/map + src/components/farm.
+const c = theme.colors;
 
 /**
  * ESRI World Imagery satellite map style
@@ -110,11 +116,11 @@ export const MAP_CONTROLS = {
  */
 export const FARM_POLYGON_STYLE = {
   fill: {
-    color: c.emerald[500], // Emerald (was green)
+    color: c.bright.emerald, // categorical farm-shape colour, not a status — spec §3/#3
     opacity: 0.2,
   },
   stroke: {
-    color: c.emerald[600], // Darker emerald
+    color: c.emerald[700], // deeper emerald ramp step for the outline
     width: 3,
   },
 };
@@ -123,32 +129,48 @@ export const FARM_POLYGON_STYLE = {
  * Polygon styling for blocks by status.
  * Kept in sync with BLOCK_STATE_COLORS in src/types/farm.ts — same lifecycle
  * states, same hex per state, across the map overlay and badges/legends.
+ * Night Observatory (T-901): routed onto colors.phase.* (spec §5.2).
+ * `harvesting` is the ONE sanctioned gold status; `fruiting` previously
+ * (mis)used the raw gold ramp and has moved to phase.fruiting (emerald).
+ * `phase.*` tokens are flat (no light/dark ramp step per hue, unlike the old
+ * primary/gold/terracotta ramps), so fill and stroke share the same hex here
+ * — the two-tone fill/darker-stroke depth effect the ramp-based version had
+ * is lost. Follow-up: if that depth read is wanted back, the token layer
+ * would need a `phase.*.stroke` (darkened) companion set; out of scope here
+ * (would touch theme.ts, owned by phase 1).
+ *
+ * Consolidation pass (T-901 shard NON-UI-CLEANUP): derived from
+ * BLOCK_STATE_PHASE_KEYS (src/types/farm.ts — the canonical, frozen
+ * BlockState -> PhaseKey map; read-only import, not re-declared here) rather
+ * than a third hand-written state->colour table. One definition of "which
+ * phase each block state means"; this file only decides fill===stroke.
  */
-export const BLOCK_POLYGON_COLORS: Record<string, { fill: string; stroke: string }> = {
-  empty: { fill: c.neutral[400], stroke: c.neutral[600] },       // Neutral (was gray)
-  planned: { fill: c.primary[500], stroke: c.primary[600] },     // Lapis (was blue)
-  growing: { fill: c.emerald[500], stroke: c.emerald[600] },     // Emerald (was green)
-  fruiting: { fill: c.gold[400], stroke: c.gold[700] },          // Gold (was purple — categorical judgement call, spec §3)
-  harvesting: { fill: c.gold[500], stroke: c.gold[600] },        // Gold/warning (was amber)
-  cleaning: { fill: c.terracotta[400], stroke: c.terracotta[600] }, // Terracotta (was orange)
-  alert: { fill: c.terracotta[600], stroke: c.terracotta[700] }, // Terracotta, deepened — danger carries weight (spec §1)
-  partial: { fill: c.primary[400], stroke: c.primary[700] },     // Lapis (was cyan — art-only hue, spec §3)
-};
+export const BLOCK_POLYGON_COLORS: Record<BlockState, { fill: string; stroke: string }> = Object.fromEntries(
+  Object.entries(BLOCK_STATE_PHASE_KEYS).map(([state, key]) => [
+    state,
+    { fill: c.phase[key], stroke: c.phase[key] },
+  ])
+) as Record<BlockState, { fill: string; stroke: string }>;
 
 /**
- * Color scheme for different boundary types
+ * Color scheme for different boundary types. Categorical (drawing-mode
+ * distinction), not a status — routed onto colors.bright.* per spec's
+ * categorical-map rule, not colors.phase.* and not gold (farm boundaries
+ * previously used the raw gold ramp, which spec §3 reserves for Harvesting
+ * + chrome; moved to bright.terra to keep a warm, distinct hue without
+ * spending gold budget).
  */
 export const BOUNDARY_COLORS = {
-  // Farm boundaries - Gold/warning for clear distinction
+  // Farm boundaries - warm terra for clear distinction from block (lapis)
   farm: {
-    fill: c.gold[500],      // Gold (was amber)
-    stroke: c.gold[600],    // Darker gold
+    fill: c.bright.terra,
+    stroke: c.terracotta[600], // deeper terracotta-ramp step for the outline
     fillOpacity: 0.15,
   },
   // Block boundaries - Lapis for active drawing
   block: {
-    fill: c.primary[500],   // Lapis (was blue)
-    stroke: c.primary[600], // Darker lapis
+    fill: c.bright.lapis,
+    stroke: c.primary[600], // deeper lapis-ramp step for the outline
     fillOpacity: 0.25,
   },
 };
@@ -204,7 +226,12 @@ export const DRAW_STYLES = [
     filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
     paint: {
       'circle-radius': 6,
-      'circle-color': c.onAccent, // Cream (was pure white — brand never uses pure white, spec §2)
+      // Night Observatory (T-901): `onAccent` is the one BREAKING semantic
+      // change in spec §1.1 — it now means "dark text on a gold fill", not
+      // "cream on a dark/saturated fill". This marker needs the latter
+      // (a light dot visible against a satellite photo + lapis/gold stroke),
+      // so it uses `onDark` (cream), not `onAccent` (would render near-black).
+      'circle-color': c.onDark,
       'circle-stroke-width': 2,
       'circle-stroke-color': BOUNDARY_COLORS.block.fill,
     },
@@ -272,7 +299,12 @@ export const DRAW_STYLES_FARM = [
     filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
     paint: {
       'circle-radius': 6,
-      'circle-color': c.onAccent, // Cream (was pure white — brand never uses pure white, spec §2)
+      // Night Observatory (T-901): `onAccent` is the one BREAKING semantic
+      // change in spec §1.1 — it now means "dark text on a gold fill", not
+      // "cream on a dark/saturated fill". This marker needs the latter
+      // (a light dot visible against a satellite photo + lapis/gold stroke),
+      // so it uses `onDark` (cream), not `onAccent` (would render near-black).
+      'circle-color': c.onDark,
       'circle-stroke-width': 2,
       'circle-stroke-color': BOUNDARY_COLORS.farm.fill,
     },

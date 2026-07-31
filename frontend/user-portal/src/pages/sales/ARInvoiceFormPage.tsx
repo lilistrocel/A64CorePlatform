@@ -31,6 +31,7 @@ import { z } from 'zod';
 import styled from 'styled-components';
 import axios from 'axios';
 import { Trash2, Plus } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { useArInvoice, useCreateArInvoice, useUpdateArInvoice, useCreateArInvoiceFromDelivery, useCreateARInvoiceFromSO } from '../../hooks/queries/useArInvoices';
 import { useDelivery } from '../../hooks/queries/useDeliveries';
@@ -96,12 +97,12 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
   margin-bottom: 20px;
-  &:hover { text-decoration: underline; }
+  &:hover { text-decoration: underline; color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const PageTitle = styled.h1`
@@ -112,12 +113,9 @@ const PageTitle = styled.h1`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const CardTitle = styled.h2`
@@ -144,23 +142,21 @@ const FieldGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 13px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.glass.border)};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &:disabled {
     opacity: 0.6;
@@ -170,23 +166,23 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
 
 const Textarea = styled.textarea`
+  ${glassControl}
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 80px;
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
 `;
 
 const LinesTable = styled.table`
@@ -196,15 +192,11 @@ const LinesTable = styled.table`
 `;
 
 const LTh = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -214,70 +206,77 @@ const LThRight = styled(LTh)`
 
 const LTd = styled.td`
   padding: 8px 10px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const LTdRight = styled(LTd)`
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const LineInput = styled.input`
+  ${glassControl}
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   color: ${({ theme }) => theme.colors.textPrimary};
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &:disabled,
   &[readonly] {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.muted};
     cursor: not-allowed;
   }
 `;
 
 const LineSelect = styled.select`
+  ${glassControl}
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+  option {
+    background: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const IconButton = styled.button`
-  background: none;
-  border: none;
+  background: rgba(240, 138, 112, 0.16);
+  border: 1px solid rgba(240, 138, 112, 0.45);
   cursor: pointer;
   padding: 4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.bright.coral};
   border-radius: 4px;
   display: flex;
   align-items: center;
+  transition: background 150ms ease;
   &:hover {
-    color: ${({ theme }) => theme.colors.terracotta[600]};
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(240, 138, 112, 0.26);
   }
 `;
 
+// Ghost/ancillary button — transparent, celeste text/border (spec §4).
 const AddLineButton = styled.button`
   margin-top: 12px;
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  border: 1px dashed ${({ theme }) => theme.colors.primary[300]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -285,14 +284,17 @@ const AddLineButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
+// Nested one level inside a glassPanel Card — stays a plain `line` border
+// with no fill rather than a second glass layer (spec §2 two-layer limit).
 const TotalsCard = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   padding: 16px 20px;
   margin-top: 16px;
@@ -310,18 +312,20 @@ const TotalsRow = styled.div`
 `;
 
 const TotalsLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const TotalsValue = styled.span`
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 500;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TotalsGross = styled(TotalsRow)`
   font-size: 16px;
   font-weight: 700;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   padding-top: 8px;
   margin-top: 4px;
 `;
@@ -333,34 +337,40 @@ const ActionBar = styled.div`
   margin-top: 32px;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 10px 24px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
 const ErrorBanner = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.terracotta[700]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -369,8 +379,8 @@ const ErrorBanner = styled.div`
 
 const InfoBanner = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.lapis[700]};
-  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -378,13 +388,13 @@ const InfoBanner = styled.div`
 `;
 
 /**
- * T-201.8 — contextual help note shown in the Lines section of direct-create mode.
+ * T-201.8 - contextual help note shown in the Lines section of direct-create mode.
  * Reuses the InfoBanner palette but is inlined within the Card (no bottom margin).
  */
 const DirectCreateNote = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.lapis[700]};
-  border: 1px solid ${({ theme }) => theme.colors.lapis[200]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 16px;

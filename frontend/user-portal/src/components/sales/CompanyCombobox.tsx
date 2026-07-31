@@ -37,6 +37,7 @@
 
 import { useEffect } from 'react';
 import styled from 'styled-components';
+import { glassControl } from '@a64core/shared';
 import { useCompanies } from '../../hooks/queries/useCompanies';
 import type { Company } from '../../services/companiesService';
 
@@ -91,18 +92,15 @@ export function shouldShowCompanyField(
 // All transient props use the $ prefix per UI-Standards.md.
 
 const StyledSelect = styled.select<{ $hasError?: boolean; $disabled?: boolean }>`
+  ${glassControl}
   display: block;
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: 6px;
   font-size: 14px;
-  background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.surface : theme.colors.background};
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   color: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.textSecondary : theme.colors.textPrimary};
+    $disabled ? theme.colors.muted : theme.colors.textPrimary};
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   opacity: ${({ $disabled }) => ($disabled ? 0.7 : 1)};
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
@@ -110,10 +108,10 @@ const StyledSelect = styled.select<{ $hasError?: boolean; $disabled?: boolean }>
   outline: none;
 
   &:focus {
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
 `;
 
@@ -121,16 +119,16 @@ const HelpText = styled.span`
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const HelpLink = styled.a`
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.celeste};
   text-decoration: underline;
   cursor: pointer;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[700]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 

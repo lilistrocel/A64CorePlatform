@@ -19,12 +19,12 @@
  *   baseDocRef  — the Delivery Note this RR was raised against
  *   targetDocRefs — Return Notes created from this RR
  *
- * Status badge colours (A20Core tokens — shared vocabulary across all
- * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
- *   draft     → neutral   (neutral[100] / textSecondary)
- *   open      → emerald   (successBg / emerald[700])
- *   closed    → neutral (dark) (neutral[200] / neutral[800])
- *   cancelled → terracotta (errorBg / terracotta[700])
+ * Status badge colours — Night Observatory phase map (spec §5.2), routed
+ * through the single canonical helper in components/sales/statusPhase.ts:
+ *   draft     → phase.empty
+ *   open      → phase.inoculated
+ *   closed    → phase.resting
+ *   cancelled → phase.decommissioned
  *
  * Modals (delete confirm) do NOT close on overlay click — X button only.
  * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
@@ -36,6 +36,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
 import { ExternalLink, FileText } from 'lucide-react';
+import { glassPanel, glassControl, glassOpaque, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   useReturnRequest,
   useTransitionReturnRequest,
@@ -44,6 +45,7 @@ import {
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type {
   ReturnRequestStatus,
   ReturnRequestLine,
@@ -93,31 +95,12 @@ const Title = styled.h1`
   margin: 0;
 `;
 
+const DocNo = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
 const StatusBadge = styled.span<{ $status: ReturnRequestStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'closed': return theme.colors.neutral[200];
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'closed': return theme.colors.neutral[800];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const ActionBar = styled.div`
@@ -127,61 +110,67 @@ const ActionBar = styled.div`
   align-items: center;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4).
 const PrimaryButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 9px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primary[600]}; }
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
+  transition: background 150ms ease;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 9px 18px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
+  transition: background 150ms ease;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.errorBg}; }
+  &:hover:not(:disabled) { background: rgba(240, 138, 112, 0.26); }
 `;
 
 const GhostButton = styled.button`
   padding: 9px 18px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -206,11 +195,8 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const InfoValue = styled.span`
@@ -225,22 +211,18 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
@@ -255,7 +237,8 @@ const ProgressContainer = styled.div`
 const ProgressBar = styled.div`
   height: 6px;
   border-radius: 3px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   overflow: hidden;
 `;
 
@@ -263,13 +246,14 @@ const ProgressFill = styled.div<{ $pct: number; $isComplete: boolean }>`
   height: 100%;
   width: ${({ $pct }) => Math.min(100, $pct)}%;
   border-radius: 3px;
-  background: ${({ $isComplete, theme }) => ($isComplete ? theme.colors.primary[600] : theme.colors.success)};
+  background: ${({ $isComplete, theme }) => ($isComplete ? theme.colors.bright.lapis : theme.colors.bright.emerald)};
   transition: width 0.3s ease;
 `;
 
 const ProgressText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 // Tooltipped "coming soon" wrapper for Create Return Note
@@ -284,15 +268,15 @@ const TooltipWrapper = styled.div`
 `;
 
 const Tooltip = styled.span`
+  ${glassOpaque}
   position: absolute;
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: ${({ theme }) => theme.colors.textPrimary};
-  color: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 12px;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -302,19 +286,17 @@ const Tooltip = styled.span`
 
 // Doc-chain components
 const DocChainItem = styled.button`
+  ${glassControl}
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[600]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   cursor: pointer;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
-    border-color: ${({ theme }) => theme.colors.primary[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
@@ -325,11 +307,12 @@ const DocChainRow = styled.div`
   align-items: center;
 `;
 
-// Delete confirmation modal
+// Delete confirmation modal — canonical treatment (spec §4): glassPanel at
+// blur 24px over a cosmos scrim. Closes only via X button.
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -337,8 +320,10 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px;
   max-width: 420px;
   width: 90%;
@@ -354,7 +339,7 @@ const ModalTitle = styled.h3`
 
 const ModalBody = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 24px;
 `;
 
@@ -371,7 +356,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 20px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   line-height: 1;
   &:hover { color: ${({ theme }) => theme.colors.textPrimary}; }
@@ -379,11 +364,11 @@ const CloseButton = styled.button`
 
 const ActionError = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   padding: 12px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-bottom: 16px;
 `;
 
@@ -554,7 +539,7 @@ export function ReturnRequestDetailPage() {
 
       <TitleRow>
         <TitleGroup>
-          <Title>Return Request {rr.docNumber}</Title>
+          <Title>Return Request <DocNo>{rr.docNumber}</DocNo></Title>
           <StatusBadge $status={rr.status}>{statusLabel(rr.status)}</StatusBadge>
         </TitleGroup>
 
@@ -729,20 +714,20 @@ export function ReturnRequestDetailPage() {
                     </Td>
                     <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                       {consumed > 0 ? (
-                        <span style={{ color: theme.colors.primary[700], fontWeight: 600 }}>
+                        <span style={{ color: theme.colors.bright.lapis, fontWeight: 600 }}>
                           {consumed.toLocaleString('en-AE', { maximumFractionDigits: 3 })}
                         </span>
                       ) : (
-                        <span style={{ color: theme.colors.border }}>—</span>
+                        <span style={{ color: theme.colors.muted }}>—</span>
                       )}
                     </Td>
                     <Td style={{ textAlign: 'right', fontFamily: theme.typography.fontFamily.mono, fontSize: 13 }}>
                       {remaining > 0 ? (
-                        <span style={{ color: theme.colors.emerald[600], fontWeight: 600 }}>
+                        <span style={{ color: theme.colors.bright.emerald, fontWeight: 600 }}>
                           {remaining.toLocaleString('en-AE', { maximumFractionDigits: 3 })}
                         </span>
                       ) : (
-                        <span style={{ color: theme.colors.primary[700] }}>Fully Consumed</span>
+                        <span style={{ color: theme.colors.bright.lapis }}>Fully Consumed</span>
                       )}
                     </Td>
                     <Td>

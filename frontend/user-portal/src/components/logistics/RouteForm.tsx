@@ -2,12 +2,18 @@
  * RouteForm Component
  *
  * Form for creating and editing routes.
+ *
+ * Night Observatory (T-901 Phase 3): glassControl inputs, mono uppercase
+ * micro-labels, gold-hi focus ring, Primary gold submit button per spec §4
+ * "Inputs/selects/textareas" and "Buttons" — this form's submit action is a
+ * single per-modal primary CTA, well within the ≤4 gold-elements budget.
  */
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
+import { Button, glassControl, monoLabel } from '@a64core/shared';
 import type { RouteCreate, RouteUpdate, Route } from '../../types/logistics';
 
 // ============================================================================
@@ -67,39 +73,38 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.66rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 3px ${({ $hasError, theme }) => ($hasError ? `${theme.colors.error}1a` : `${theme.colors.primary[500]}1a`)};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   margin-top: 4px;
 `;
 
@@ -110,16 +115,16 @@ const FormRow = styled.div`
 `;
 
 const FormSection = styled.div`
+  ${glassControl}
+  border-radius: 14px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
   margin-top: 8px;
 `;
 
 const SectionTitle = styled.h4`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.68rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 16px 0;
 `;
 
@@ -133,6 +138,7 @@ const Checkbox = styled.input`
   width: 18px;
   height: 18px;
   cursor: pointer;
+  accent-color: ${({ theme }) => theme.colors.secondary[500]};
 `;
 
 const CheckboxLabel = styled.label`
@@ -146,40 +152,6 @@ const Actions = styled.div`
   gap: 12px;
   justify-content: flex-end;
   margin-top: 24px;
-`;
-
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-  border: none;
-
-  ${({ $variant, theme }) => {
-    if ($variant === 'secondary') {
-      return `
-        background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
-        &:hover {
-          background: ${theme.colors.surface};
-        }
-      `;
-    }
-    return `
-      background: ${theme.colors.primary[500]};
-      color: ${theme.colors.onAccent};
-      &:hover {
-        background: ${theme.colors.primary[600]};
-      }
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    `;
-  }}
 `;
 
 // ============================================================================
@@ -385,11 +357,11 @@ export function RouteForm({ route, onSubmit, onCancel, isSubmitting = false }: R
 
       <Actions>
         {onCancel && (
-          <Button type="button" $variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         )}
-        <Button type="submit" $variant="primary" disabled={isSubmitting}>
+        <Button type="submit" variant="primary" disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : route ? 'Update Route' : 'Create Route'}
         </Button>
       </Actions>

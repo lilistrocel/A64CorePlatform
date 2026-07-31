@@ -16,7 +16,8 @@
 
 import { useState } from 'react';
 import styled, { useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import type { Theme, PhaseKey } from '@a64core/shared';
+import { glassPanel, glassOpaque, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   LineChart,
   Line,
@@ -27,15 +28,15 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { Thermometer, Droplet, Wind, Lightbulb, X } from 'lucide-react';
 import type { GrowingRoom, RoomPhase } from '../../types/mushroom';
-import { ROOM_TYPE_ICONS, ROOM_TYPE_LABELS, OPERATIONAL_PHASES, isBatchRoom } from '../../types/mushroom';
+import { ROOM_TYPE_LABELS, OPERATIONAL_PHASES, isBatchRoom } from '../../types/mushroom';
 import {
-  PHASE_COLORS,
   PHASE_LABELS,
-  PHASE_TEXT_COLORS,
-  QUALITY_GRADE_COLORS,
   QUALITY_GRADE_LABELS,
+  ROOM_PHASE_TO_PHASE_KEY,
 } from '../../types/mushroom';
+import { ROOM_TYPE_ICON_COMPONENTS, QUALITY_GRADE_HUE } from './phaseTheme';
 import { useRoomHarvests } from '../../hooks/mushroom/useMushroomHarvests';
 import { useRoomEnvironmentHistory, useLatestEnvironmentReading } from '../../hooks/mushroom/useRoomEnvironment';
 import { useRoomContaminations, useResolveContamination } from '../../hooks/mushroom/useContamination';
@@ -48,6 +49,15 @@ import { DeleteRoomDialog } from './DeleteRoomDialog';
 import { useAccessions } from '../../hooks/genetics/useGenetics';
 import { VESSEL_LABELS, STATUS_LABELS } from '../../types/genetics';
 import { useNavigate } from 'react-router-dom';
+
+// Night Observatory (T-901): only text on a GOLD fill is dark (cosmos/
+// onAccent) — everything else (lapis/coral/emerald/muted) gets cream
+// (onDark). `warning` (gold-b) is the only semantic token that resolves to
+// a gold-family hue, so it's the one fill needing the dark variant among the
+// data-driven fills below (quality grade, contamination severity).
+function accessibleTextFor(fill: string, theme: Theme): string {
+  return fill === theme.colors.warning ? theme.colors.onAccent : theme.colors.onDark;
+}
 
 // Valid phase transitions — mirrors backend VALID_TRANSITIONS
 const VALID_TRANSITIONS: Record<RoomPhase, RoomPhase[]> = {
@@ -202,9 +212,10 @@ export function RoomDetailsModal({
   const isSubmitting = advancePhase.isPending || updateRoom.isPending;
 
   const theme = useTheme();
-  const phaseColor = PHASE_COLORS[room.currentPhase] ?? theme.colors.neutral[500];
-  const phaseTextColor = PHASE_TEXT_COLORS[room.currentPhase] ?? theme.colors.onAccent;
+  const phaseKey = ROOM_PHASE_TO_PHASE_KEY[room.currentPhase];
+  const phaseColor = theme.colors.phase[phaseKey];
   const phaseLabel = PHASE_LABELS[room.currentPhase] ?? room.currentPhase;
+  const RoomTypeIcon = ROOM_TYPE_ICON_COMPONENTS[room.roomType];
 
   // Prepare chart data - last 24 readings, oldest first
   const chartData = [...envHistory]
@@ -233,7 +244,7 @@ export function RoomDetailsModal({
         <ModalHeader $bgColor={phaseColor}>
           <HeaderLeft>
             <RoomCodeText id="room-modal-title">{room.roomCode}</RoomCodeText>
-            <PhaseBadge $textColor={phaseTextColor}>{phaseLabel}</PhaseBadge>
+            <PhaseBadge $phaseKey={phaseKey}>{phaseLabel}</PhaseBadge>
           </HeaderLeft>
           <HeaderRight>
             <BiologicalEfficiencyGauge
@@ -249,7 +260,7 @@ export function RoomDetailsModal({
               Delete
             </DangerButton>
             <CloseButton onClick={onClose} aria-label="Close room details">
-              &#10005;
+              <X size={16} strokeWidth={2} />
             </CloseButton>
           </HeaderRight>
         </ModalHeader>
@@ -298,7 +309,7 @@ export function RoomDetailsModal({
             <Section>
               <ContentsHeader>
                 <ContentsIntro>
-                  {ROOM_TYPE_ICONS[room.roomType]} A{' '}
+                  {RoomTypeIcon && <RoomTypeIcon size={13} strokeWidth={1.6} />} A{' '}
                   {ROOM_TYPE_LABELS[room.roomType].toLowerCase()} room holds many
                   independently tracked items — each carries its own generation and
                   lineage, so the room itself has no single strain or crop phase.
@@ -417,9 +428,7 @@ export function RoomDetailsModal({
               <TwoCol>
                 <InfoGroup>
                   <InfoLabel>Current Phase</InfoLabel>
-                  <PhasePill $bg={phaseColor} $text={phaseTextColor}>
-                    {phaseLabel}
-                  </PhasePill>
+                  <PhasePill $phaseKey={phaseKey}>{phaseLabel}</PhasePill>
                 </InfoGroup>
                 <InfoGroup>
                   <InfoLabel>Flush Progress</InfoLabel>
@@ -448,8 +457,7 @@ export function RoomDetailsModal({
                         {validTargets.map((phase) => (
                           <PhaseOptionBtn
                             key={phase}
-                            $bg={PHASE_COLORS[phase]}
-                            $text={PHASE_TEXT_COLORS[phase]}
+                            $phaseKey={ROOM_PHASE_TO_PHASE_KEY[phase]}
                             $selected={selectedPhase === phase}
                             onClick={() => setSelectedPhase(phase)}
                             type="button"
@@ -678,23 +686,23 @@ export function RoomDetailsModal({
               {latestEnv && (
                 <LatestReadingGrid>
                   <ReadingCard>
-                    <ReadingIcon>🌡️</ReadingIcon>
+                    <ReadingIcon><Thermometer size={18} strokeWidth={1.6} /></ReadingIcon>
                     <ReadingValue>{latestEnv.temperature?.toFixed(1) ?? '—'}°C</ReadingValue>
                     <ReadingLabel>Temperature</ReadingLabel>
                   </ReadingCard>
                   <ReadingCard>
-                    <ReadingIcon>💧</ReadingIcon>
+                    <ReadingIcon><Droplet size={18} strokeWidth={1.6} /></ReadingIcon>
                     <ReadingValue>{latestEnv.humidity?.toFixed(1) ?? '—'}%</ReadingValue>
                     <ReadingLabel>Humidity</ReadingLabel>
                   </ReadingCard>
                   <ReadingCard>
-                    <ReadingIcon>💨</ReadingIcon>
+                    <ReadingIcon><Wind size={18} strokeWidth={1.6} /></ReadingIcon>
                     <ReadingValue>{latestEnv.co2Ppm?.toFixed(0) ?? '—'} ppm</ReadingValue>
                     <ReadingLabel>CO2</ReadingLabel>
                   </ReadingCard>
                   {latestEnv.lightLux != null && (
                     <ReadingCard>
-                      <ReadingIcon>💡</ReadingIcon>
+                      <ReadingIcon><Lightbulb size={18} strokeWidth={1.6} /></ReadingIcon>
                       <ReadingValue>{latestEnv.lightLux.toFixed(0)} lux</ReadingValue>
                       <ReadingLabel>Light</ReadingLabel>
                     </ReadingCard>
@@ -709,21 +717,40 @@ export function RoomDetailsModal({
                   <ChartTitle>Last {chartData.length} Readings</ChartTitle>
                   <ResponsiveContainer width="100%" height={240}>
                     <LineChart data={chartData} margin={{ top: 5, right: 16, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.neutral[200]} />
-                      <XAxis dataKey="time" tick={{ fontSize: 11 }} />
-                      <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Legend />
-                      {/* Three distinct series need three distinct hues; error/info
-                          carry no "temp is bad" implication here, they're just
-                          visually separated categorical lines. Gold is reserved
-                          (brand §1.4), so CO2 takes emerald as the third voice. */}
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.line} />
+                      <XAxis
+                        dataKey="time"
+                        tick={{ fontSize: 11, fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono }}
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        tick={{ fontSize: 11, fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        tick={{ fontSize: 11, fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: theme.colors.cosmosHi,
+                          border: `1px solid ${theme.colors.glass.border}`,
+                          borderRadius: 10,
+                          color: theme.colors.textPrimary,
+                          fontSize: 12,
+                        }}
+                        labelStyle={{ color: theme.colors.celeste }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 12, color: theme.colors.celeste }} />
+                      {/* Charts contract (spec §4): series order celeste, bright.gold,
+                          bright.emerald, bright.lapis, ... — gold is reserved for
+                          Harvesting/CTA use, so these three data series (none of
+                          which are a status) take celeste/lapis/emerald. */}
                       <Line
                         yAxisId="left"
                         type="monotone"
                         dataKey="temp"
-                        stroke={theme.colors.error}
+                        stroke={theme.colors.celeste}
                         strokeWidth={2}
                         dot={false}
                         name="Temp (°C)"
@@ -732,7 +759,7 @@ export function RoomDetailsModal({
                         yAxisId="left"
                         type="monotone"
                         dataKey="humidity"
-                        stroke={theme.colors.info}
+                        stroke={theme.colors.bright.lapis}
                         strokeWidth={2}
                         dot={false}
                         name="Humidity (%)"
@@ -742,7 +769,7 @@ export function RoomDetailsModal({
                           yAxisId="right"
                           type="monotone"
                           dataKey="co2"
-                          stroke={theme.colors.emerald[500]}
+                          stroke={theme.colors.bright.emerald}
                           strokeWidth={1.5}
                           dot={false}
                           name="CO2 (ppm)"
@@ -796,7 +823,7 @@ export function RoomDetailsModal({
                             : '—'}
                         </Td>
                         <Td>
-                          <GradePill $color={QUALITY_GRADE_COLORS[h.qualityGrade]}>
+                          <GradePill $hue={QUALITY_GRADE_HUE[h.qualityGrade]}>
                             {QUALITY_GRADE_LABELS[h.qualityGrade]}
                           </GradePill>
                         </Td>
@@ -915,20 +942,17 @@ const StatusRow = styled.div`
 `;
 
 const StatusLabel = styled.label`
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const StatusSelect = styled.select`
+  ${glassOpaque}
   padding: 6px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
@@ -936,7 +960,14 @@ const ContentsIntro = styled.p`
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
+  display: flex;
+  gap: 6px;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
 `;
 
 const ContentsSummary = styled.div`
@@ -950,14 +981,16 @@ const SummaryChip = styled.span`
   padding: 5px 11px;
   border-radius: 999px;
   font-size: 12.5px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[800]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.bright.lapis};
 `;
 
 const SummaryCount = styled.strong`
   font-weight: 700;
 `;
 
+// Transparent rows, Space Mono uppercase celeste headers, `line` dividers
+// (spec §4 "Tables").
 const ContentsTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -967,25 +1000,23 @@ const ContentsTable = styled.table`
 const ContentsTh = styled.th`
   text-align: left;
   padding: 8px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const ContentsTd = styled.td`
   padding: 9px 10px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const ContentsRow = styled.tr`
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -993,8 +1024,12 @@ const AccessionCode = styled.span`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 700;
   font-size: 12.5px;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+// Generation badge — categorical, not a phase/status. Built from bright.*
+// (terra, a warm hue distinct from gold) rather than the phase map or gold,
+// per the shard brief's genetics-badge note.
 const GenPill = styled.span<{ $warm: boolean }>`
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 11px;
@@ -1002,12 +1037,12 @@ const GenPill = styled.span<{ $warm: boolean }>`
   padding: 2px 7px;
   border-radius: 999px;
   background: ${({ $warm, theme }) =>
-    $warm ? theme.colors.warningBg : theme.colors.primary[50]};
-  color: ${({ $warm, theme }) => ($warm ? theme.colors.gold[800] : theme.colors.primary[800])};
+    $warm ? `${theme.colors.bright.terra}29` : theme.colors.infoBg};
+  color: ${({ $warm, theme }) => ($warm ? theme.colors.bright.terra : theme.colors.bright.lapis)};
 `;
 
 const MutedText = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 12.5px;
 `;
 
@@ -1016,16 +1051,19 @@ const EmptyBox = styled.div`
   text-align: center;
   font-size: 13.5px;
   line-height: 1.6;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.muted};
+  border: 1px dashed ${({ theme }) => theme.colors.line};
+  border-radius: 10px;
 `;
 
+// Modal scrim + glass box — spec §4 "Modals/drawers": glassPanel at blur
+// 24px over an rgba(10,14,36,.6) scrim, 20px radius.
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(10, 14, 36, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1034,9 +1072,10 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.lg};
+  ${glassPanel}
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
@@ -1077,24 +1116,16 @@ const RoomCodeText = styled.h2`
   margin: 0;
 `;
 
-interface PhaseBadgeProps {
-  $textColor: string;
-}
-
-const PhaseBadge = styled.span<PhaseBadgeProps>`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ $textColor }) => $textColor};
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 20px;
-  padding: 3px 10px;
+const PhaseBadge = styled.span<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
 `;
 
+// Destructive: coral-tinted glass, never solid red (spec §4 "Buttons").
 const DangerButton = styled.button`
   background: none;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: pointer;
   font-size: 12.5px;
   font-weight: 600;
@@ -1104,34 +1135,36 @@ const DangerButton = styled.button`
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
     border-color: ${({ theme }) => theme.colors.error};
-    color: ${({ theme }) => theme.colors.terracotta[700]};
+    color: ${({ theme }) => theme.colors.error};
   }
 `;
 
 const CloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 150ms;
+  color: ${({ theme }) => theme.colors.muted};
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 150ms, color 150ms;
   line-height: 1;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(180, 200, 220, 0.1);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   overflow-x: auto;
   flex-shrink: 0;
 `;
@@ -1140,14 +1173,16 @@ interface TabButtonProps {
   $active: boolean;
 }
 
+// Secondary emphasis is celeste, never gold (spec §3) — the active tab
+// indicator uses celeste, not the gold treatment reserved for nav/CTA/stats.
 const TabButton = styled.button<TabButtonProps>`
   padding: 12px 18px;
-  font-size: 13px;
-  font-weight: ${({ $active }) => ($active ? '600' : '400')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[700])};
+  font-size: 0.82rem;
+  font-weight: ${({ $active }) => ($active ? '700' : '500')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.muted)};
   background: none;
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.celeste : 'transparent')};
   cursor: pointer;
   white-space: nowrap;
   display: flex;
@@ -1157,10 +1192,10 @@ const TabButton = styled.button<TabButtonProps>`
 
   &:hover {
     color: ${({ theme }) => theme.colors.textPrimary};
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(180, 200, 220, 0.05);
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: -2px;
   }
 `;
@@ -1170,12 +1205,13 @@ const TabDot = styled.span`
   height: 6px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.success};
+  box-shadow: 0 0 6px ${({ theme }) => theme.colors.success};
   display: inline-block;
 `;
 
 const AlertDot = styled.span`
   background: ${({ theme }) => theme.colors.error};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: 10px;
   font-weight: 700;
   border-radius: 10px;
@@ -1226,19 +1262,8 @@ const InfoValue = styled.span`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-interface PhasePillProps {
-  $bg: string;
-  $text: string;
-}
-
-const PhasePill = styled.span<PhasePillProps>`
-  display: inline-block;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${({ $bg }) => $bg};
-  color: ${({ $text }) => $text};
-  border-radius: 20px;
-  padding: 3px 10px;
+const PhasePill = styled.span<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
 `;
 
 // ---- Assignment Row -------------------------------------------------------
@@ -1255,23 +1280,23 @@ const AssignmentRow = styled.div`
 
 const EditAssignmentBtn = styled.button`
   padding: 4px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
   flex-shrink: 0;
   margin-top: 2px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -1282,28 +1307,29 @@ const AdvancePhaseSection = styled.div``;
 
 const AdvancePhaseBtn = styled.button`
   padding: 8px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.glass.hi};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const AdvanceFormBox = styled.div`
-  background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
-  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 12px;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -1312,8 +1338,8 @@ const AdvanceFormBox = styled.div`
 
 const AdvanceFormTitle = styled.span`
   font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.neutral[800]};
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const PhaseOptionRow = styled.div`
@@ -1323,30 +1349,37 @@ const PhaseOptionRow = styled.div`
 `;
 
 interface PhaseOptionBtnProps {
-  $bg: string;
-  $text: string;
+  $phaseKey: PhaseKey;
   $selected: boolean;
 }
 
+// A hand-rolled variant of the badge pattern (spec §4) that also needs a
+// filled "selected" state — the badge mixin itself is tint-only, so the
+// phase colour + accessibleTextFor() contrast rule are applied directly.
 const PhaseOptionBtn = styled.button<PhaseOptionBtnProps>`
   padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: 99px;
+  ${monoLabel}
+  font-size: 0.66rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms;
-  border: 2px solid ${({ $bg }) => $bg};
-  background: ${({ $selected, $bg, theme }) => ($selected ? $bg : theme.colors.background)};
-  color: ${({ $selected, $bg, $text }) => ($selected ? $text : $bg)};
-  box-shadow: ${({ $selected }) =>
-    $selected ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'};
+  border: 1px solid ${({ theme, $phaseKey }) => theme.colors.phase[$phaseKey]};
+  background: ${({ $selected, theme, $phaseKey }) =>
+    $selected ? theme.colors.phase[$phaseKey] : 'transparent'};
+  color: ${({ $selected, theme, $phaseKey }) =>
+    $selected
+      ? accessibleTextFor(theme.colors.phase[$phaseKey], theme)
+      : theme.colors.phase[$phaseKey]};
+  box-shadow: ${({ $selected, theme, $phaseKey }) =>
+    $selected ? `0 0 12px ${theme.colors.phase[$phaseKey]}66` : 'none'};
 
   &:hover {
-    background: ${({ $bg }) => $bg};
-    color: ${({ $text }) => $text};
+    background: ${({ theme, $phaseKey }) => theme.colors.phase[$phaseKey]};
+    color: ${({ theme, $phaseKey }) => accessibleTextFor(theme.colors.phase[$phaseKey], theme)};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -1364,44 +1397,42 @@ const AdvanceFormLabel = styled.label`
 `;
 
 const AdvanceSelect = styled.select`
+  ${glassOpaque}
   padding: 8px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}26`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const AdvanceTextarea = styled.textarea`
+  ${glassOpaque}
   padding: 8px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   font-family: inherit;
   outline: none;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 2px ${theme.colors.primary[500]}26`};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const AdvanceError = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
+  color: ${({ theme }) => theme.colors.error};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 6px;
+  border: 1px solid ${({ theme }) => theme.colors.error}66;
+  border-radius: 8px;
   padding: 8px 10px;
 `;
 
@@ -1413,28 +1444,29 @@ const AdvanceActions = styled.div`
 
 const AdvanceCancelBtn = styled.button`
   padding: 7px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const AdvanceConfirmBtn = styled.button`
   padding: 7px 16px;
   border: none;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms;
 
@@ -1496,8 +1528,10 @@ const ReadingCard = styled.div`
 `;
 
 const ReadingIcon = styled.div`
-  font-size: 20px;
-  margin-bottom: 4px;
+  display: flex;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 6px;
 `;
 
 const ReadingValue = styled.div`
@@ -1539,11 +1573,11 @@ const SectionHeading = styled.h3`
 const AddButton = styled.button`
   padding: 7px 14px;
   border: 1px solid ${({ theme }) => theme.colors.success};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
+  border-radius: 10px;
+  background: transparent;
   color: ${({ theme }) => theme.colors.success};
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms;
 
@@ -1556,6 +1590,8 @@ const AddButton = styled.button`
   }
 `;
 
+// Transparent rows, Space Mono uppercase celeste column headers, `line` row
+// dividers, numeric/code cells in Space Mono (spec §4 "Tables").
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -1565,38 +1601,39 @@ const Table = styled.table`
 const Th = styled.th`
   text-align: left;
   padding: 8px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.surface};
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 10px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  color: ${({ theme }) => theme.colors.neutral[800]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.82rem;
 `;
 
 const TfootTd = styled.td`
   padding: 10px;
-  border-top: 2px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 interface GradePillProps {
-  $color: string;
+  $hue: string;
 }
 
 const GradePill = styled.span<GradePillProps>`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.onAccent};
-  background: ${({ $color }) => $color};
-  border-radius: 20px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]};
+  background: ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]}29;
+  border: 1px solid ${({ theme, $hue }) => (theme.colors.bright as Record<string, string>)[$hue]}73;
+  border-radius: 99px;
   padding: 2px 8px;
 `;
 
@@ -1611,9 +1648,9 @@ interface ContamCardProps {
 }
 
 const ContamCard = styled.div<ContamCardProps>`
-  background: ${({ $resolved, theme }) => ($resolved ? theme.colors.neutral[100] : theme.colors.errorBg)};
-  border: 1px solid ${({ $resolved, theme }) => ($resolved ? theme.colors.border : theme.colors.terracotta[200])};
-  border-radius: 10px;
+  background: ${({ $resolved, theme }) => ($resolved ? theme.colors.glass.base : theme.colors.errorBg)};
+  border: 1px solid ${({ $resolved, theme }) => ($resolved ? theme.colors.glass.border : theme.colors.error)}66;
+  border-radius: 12px;
   padding: 14px;
   opacity: ${({ $resolved }) => ($resolved ? 0.7 : 1)};
 `;
@@ -1628,7 +1665,7 @@ const ContamHeader = styled.div`
 
 const ContamType = styled.span`
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   text-transform: capitalize;
   flex: 1;
@@ -1638,23 +1675,42 @@ interface SeverityBadgeProps {
   $severity: string;
 }
 
-// Contamination severity is a data encoding — walk a single ramp from low
-// risk to critical rather than mixing hues, so the ordering stays legible.
-function getSeverityColors(theme: Theme): Record<string, string> {
-  return {
-    low: theme.colors.success,
-    medium: theme.colors.warning,
-    high: theme.colors.error,
-    critical: theme.colors.terracotta[900],
+/** `#rrggbb` -> `rgba(...)`, local to this file (mixins.ts doesn't export
+ * its version). Needed for the severity ramp below, which walks a single
+ * hue's opacity rather than mixing hues (per the shard brief) so the
+ * low->critical ordering stays perceptually legible without borrowing gold
+ * (reserved for Harvesting, spec §3) or mixing in other phase hues. */
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const bigint = parseInt(clean, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Contamination severity is a data encoding (low -> critical risk) — walked
+// as one hue's (coral, the "quarantined"/alert phase colour) opacity ramp
+// rather than mixing hues, so band ordering stays legible at a glance.
+function getSeverityStyle(theme: Theme, severity: string): { bg: string; border: string; text: string } {
+  const coral = theme.colors.bright.coral;
+  const steps: Record<string, { bg: string; border: string; text: string }> = {
+    low: { bg: hexToRgba(coral, 0.12), border: hexToRgba(coral, 0.35), text: coral },
+    medium: { bg: hexToRgba(coral, 0.24), border: hexToRgba(coral, 0.5), text: coral },
+    high: { bg: hexToRgba(coral, 0.5), border: coral, text: theme.colors.onDark },
+    critical: { bg: coral, border: coral, text: theme.colors.onDark },
   };
+  return steps[severity] ?? { bg: theme.colors.glass.base, border: theme.colors.glass.border, text: theme.colors.muted };
 }
 
 const SeverityBadge = styled.span<SeverityBadgeProps>`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.onAccent};
-  background: ${({ $severity, theme }) => getSeverityColors(theme)[$severity] ?? theme.colors.neutral[500]};
-  border-radius: 20px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: ${({ theme, $severity }) => getSeverityStyle(theme, $severity).text};
+  background: ${({ theme, $severity }) => getSeverityStyle(theme, $severity).bg};
+  border: 1px solid ${({ theme, $severity }) => getSeverityStyle(theme, $severity).border};
+  border-radius: 99px;
   padding: 2px 8px;
   text-transform: capitalize;
 `;
@@ -1663,36 +1719,40 @@ interface StatusBadgeProps {
   $resolved: boolean;
 }
 
+// Unresolved reads as the "quarantined" (coral, alert) status colour, not
+// gold — gold is reserved for the literal Harvesting phase (spec §5.1),
+// never a generic pending/problem state.
 const StatusBadge = styled.span<StatusBadgeProps>`
-  font-size: 11px;
-  font-weight: 600;
-  color: ${({ $resolved, theme }) => ($resolved ? theme.colors.success : theme.colors.warning)};
-  background: ${({ $resolved, theme }) => ($resolved ? theme.colors.successBg : theme.colors.warningBg)};
-  border-radius: 20px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: ${({ $resolved, theme }) => ($resolved ? theme.colors.success : theme.colors.error)};
+  background: ${({ $resolved, theme }) => ($resolved ? theme.colors.successBg : theme.colors.errorBg)};
+  border-radius: 99px;
   padding: 2px 8px;
   text-transform: capitalize;
 `;
 
 const ContamMeta = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin-bottom: 4px;
 `;
 
 const ContamDesc = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.neutral[800]};
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
 const ResolveButton = styled.button`
   padding: 5px 12px;
   border: 1px solid ${({ theme }) => theme.colors.success};
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
+  border-radius: 8px;
+  background: transparent;
   color: ${({ theme }) => theme.colors.success};
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 150ms;
 
@@ -1718,10 +1778,10 @@ const LoadingText = styled.div`
 
 const EmptyTabState = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
   padding: 32px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-radius: 10px;
-  border: 1px dashed ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border-radius: 12px;
+  border: 1px dashed ${({ theme }) => theme.colors.line};
 `;

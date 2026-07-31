@@ -24,6 +24,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { Inbox, RefreshCw } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   useIncomingPRs,
@@ -149,39 +151,12 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 12px;
-`;
-
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 4px 0 0;
-`;
-
+// "N pending" — routed through the phase map like everywhere else: "pending
+// / awaiting approval" -> `fruitingInit` (terra), spec §5.2. Was
+// `warningBg`/`warning` (gold-b) — a status colour collision with the
+// reserved Harvesting gold.
 const PendingBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 700;
-  background: ${({ theme }) => theme.colors.warningBg};
-  color: ${({ theme }) => theme.colors.warning};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
-  white-space: nowrap;
+  ${phaseBadge('fruitingInit')}
   align-self: center;
 `;
 
@@ -198,7 +173,8 @@ const ToolbarRow = styled.div`
 // Doc type pill toggle
 const PillGroup = styled.div`
   display: inline-flex;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   padding: 3px;
   gap: 2px;
@@ -217,61 +193,60 @@ const PillButton = styled.button<PillButtonProps>`
   cursor: pointer;
   transition: all 120ms ease;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.surface : 'transparent'};
+    $active ? theme.colors.glass.hi : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.textPrimary : theme.colors.textSecondary};
-  box-shadow: ${({ $active }) => ($active ? '0 1px 3px rgba(59, 44, 24, 0.12)' : 'none')};
+    $active ? theme.colors.textPrimary : theme.colors.celeste};
+  box-shadow: ${({ $active }) => ($active ? '0 1px 3px rgba(4, 6, 18, 0.35)' : 'none')};
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   flex: 1;
   min-width: 200px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const RefreshButton = styled.button`
+  ${glassControl}
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 14px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: all 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:disabled {
@@ -282,10 +257,11 @@ const RefreshButton = styled.button`
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
+// Dense table, spec §4: one glass panel, transparent rows/header, Space Mono
+// uppercase celeste column headers, `line` row dividers, hover
+// rgba(180,200,220,.05).
 const TableWrapper = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   overflow: hidden;
 `;
 
@@ -296,18 +272,16 @@ const Table = styled.table`
 `;
 
 const Thead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: transparent;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 14px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   white-space: nowrap;
 `;
 
@@ -318,21 +292,21 @@ interface TrProps {
 }
 
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   transition: background 100ms ease;
-  background: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.neutral[50] : 'transparent'};
+  background: ${({ $expanded }) =>
+    $expanded ? 'rgba(180, 200, 220, 0.05)' : 'transparent'};
   &:last-child {
     border-bottom: none;
   }
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
 const ExpansionTr = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(180, 200, 220, 0.04);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
@@ -391,6 +365,10 @@ const AvatarWrapper = styled.span`
   gap: 6px;
 `;
 
+// Was `primary[100]`/`primary[700]` — a near-white chip with dark-blue text,
+// tuned for a light page background; illegible/jarring on the dark ground.
+// Rebuilt as an informational lapis tint chip, matching the categorical-pill
+// recipe used elsewhere in this shard.
 const Avatar = styled.span`
   display: inline-flex;
   align-items: center;
@@ -398,8 +376,8 @@ const Avatar = styled.span`
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.primary[100]};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: rgba(107, 138, 224, 0.18);
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 10px;
   font-weight: 700;
   flex-shrink: 0;
@@ -411,25 +389,24 @@ interface ViewButtonProps {
   $expanded: boolean;
 }
 
+// Was `primary[700]` text when expanded (dark-on-dark, illegible) and a
+// solid `primary[50]` (near-white) hover fill. Rebuilt as a lapis-tinted
+// glass toggle — filled when expanded (pressed state), outline otherwise.
 const ViewButton = styled.button<ViewButtonProps>`
   padding: 5px 12px;
-  background: transparent;
-  color: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.primary[700] : theme.colors.primary[500]};
-  border: 1px solid
-    ${({ $expanded, theme }) =>
-      $expanded ? theme.colors.primary[700] : theme.colors.primary[300]};
+  background: ${({ $expanded }) => ($expanded ? 'rgba(107, 138, 224, 0.16)' : 'transparent')};
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: rgba(107, 138, 224, 0.24);
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -438,7 +415,7 @@ const ViewButton = styled.button<ViewButtonProps>`
 
 const ExpansionPanel = styled.div`
   padding: 20px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ExpansionSection = styled.div`
@@ -449,14 +426,15 @@ const ExpansionSection = styled.div`
 `;
 
 const ExpansionSectionTitle = styled.h3`
-  font-size: 12px;
+  ${monoLabel}
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0 0 10px;
 `;
 
+// Sits inside the already-glass TableWrapper — spec §2 two-layer rule: no
+// second glass fill, just transparent thead + `line` row dividers (same
+// dense-table recipe as the outer table).
 const LinesTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -464,36 +442,35 @@ const LinesTable = styled.table`
 `;
 
 const LinesThead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: transparent;
 `;
 
 const LinesTh = styled.th`
+  ${monoLabel}
   padding: 7px 10px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const LinesTd = styled.td`
   padding: 7px 10px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
 const LinesWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   overflow: hidden;
 `;
 
 const ApprovalTimeline = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin: 0;
   line-height: 1.6;
 `;
@@ -501,8 +478,8 @@ const ApprovalTimeline = styled.p`
 const NotesBox = styled.p`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   padding: 10px 14px;
   margin: 0;
@@ -512,7 +489,7 @@ const NotesBox = styled.p`
 const LoadingInPanel = styled.div`
   padding: 20px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 13px;
 `;
 
@@ -528,14 +505,16 @@ const ErrorInPanel = styled.div`
 const EmptyState = styled.div`
   padding: 64px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 15px;
   line-height: 1.6;
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 48px;
+  display: flex;
+  justify-content: center;
   margin-bottom: 12px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ─── Unified doc row type ──────────────────────────────────────────────────────
@@ -865,20 +844,18 @@ export function IncomingPreviewPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <div>
-          <PageTitle>Incoming Preview</PageTitle>
-          <PageSubtitle>
-            Read-only view of PRs and POs currently awaiting approval. Approvals
-            are actioned on the operational side via Purchasing &rsaquo; Approval Inbox.
-          </PageSubtitle>
-        </div>
-        {totalPending > 0 && (
+      <PageHeader
+        breadcrumb="FINANCE · INCOMING"
+        title="Incoming Preview"
+        description="Read-only view of PRs and POs currently awaiting approval. Approvals are actioned on the operational side via Purchasing > Approval Inbox."
+      />
+      {totalPending > 0 && (
+        <div style={{ marginTop: -12, marginBottom: 16 }}>
           <PendingBadge aria-label={`${totalPending} documents pending approval`}>
             {totalPending} pending
           </PendingBadge>
-        )}
-      </PageHeader>
+        </div>
+      )}
 
       <ToolbarRow>
         {/* Doc type pill toggle */}
@@ -929,7 +906,8 @@ export function IncomingPreviewPage() {
           aria-label="Refresh incoming documents"
           title="Refresh list"
         >
-          ↻ Refresh
+          <RefreshCw size={14} strokeWidth={1.6} aria-hidden="true" />
+          Refresh
         </RefreshButton>
       </ToolbarRow>
 
@@ -938,7 +916,7 @@ export function IncomingPreviewPage() {
 
       {/* Error state */}
       {!isLoading && (prError || poError) && (
-        <EmptyState style={{ color: 'var(--color-error)' }}>
+        <EmptyState style={{ color: theme.colors.error }}>
           Failed to load documents. Please refresh the page.
         </EmptyState>
       )}
@@ -949,7 +927,9 @@ export function IncomingPreviewPage() {
           {showEmptyState ? (
             // Empty state — displayed inside the table wrapper area
             <EmptyState>
-              <EmptyIcon aria-hidden="true">📭</EmptyIcon>
+              <EmptyIcon aria-hidden="true">
+                <Inbox size={40} strokeWidth={1.4} />
+              </EmptyIcon>
               No documents are currently pending approval. New submissions will
               appear here automatically.
             </EmptyState>
@@ -1023,7 +1003,7 @@ export function IncomingPreviewPage() {
                                 {userInitials(row.requesterOrIssuer)}
                               </Avatar>
                               <span
-                                style={{ fontSize: 12, color: 'var(--color-text-disabled)' }}
+                                style={{ fontSize: 12, color: theme.colors.muted }}
                               >
                                 {row.requesterOrIssuer.length > 20
                                   ? `${row.requesterOrIssuer.slice(0, 18)}…`
@@ -1097,8 +1077,8 @@ export function IncomingPreviewPage() {
               style={{
                 padding: '10px 14px',
                 fontSize: 12,
-                color: 'var(--color-text-disabled)',
-                borderTop: '1px solid var(--color-neutral-100)',
+                color: theme.colors.muted,
+                borderTop: `1px solid ${theme.colors.line}`,
               }}
             >
               {filteredRows.length} document{filteredRows.length !== 1 ? 's' : ''}

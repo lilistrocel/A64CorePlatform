@@ -32,6 +32,7 @@
 
 import React, { useMemo, useCallback } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { glassPanel, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { FinanceReportPage } from '../../components/finance/FinanceReportPage';
 import { useIncomeStatement } from '../../hooks/queries/useFinanceReports';
@@ -185,11 +186,12 @@ function fmtRunning(n: number): string {
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
+// Dense statement table — spec §4 "Tables": one glass panel wraps the whole
+// table, transparent header/rows, Space Mono uppercase celeste column
+// headers, `line` row dividers, hover rgba(180,200,220,.05).
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const ISTable = styled.table`
@@ -199,21 +201,19 @@ const ISTable = styled.table`
 `;
 
 const ISHead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: transparent;
   position: sticky;
   top: 0;
   z-index: 1;
 `;
 
 const ISHeadTh = styled.th`
+  ${monoLabel}
   padding: 12px 16px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -222,17 +222,15 @@ const ISHeadThRight = styled(ISHeadTh)`
 `;
 
 const SectionHeaderRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: transparent;
+  border-top: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const SectionHeaderCell = styled.td`
+  ${monoLabel}
   padding: 10px 16px;
-  font-size: 13px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 interface DataRowProps {
@@ -241,14 +239,13 @@ interface DataRowProps {
 }
 
 const DataRow = styled.tr<DataRowProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   cursor: ${({ $isClickable }) => ($isClickable ? 'pointer' : 'default')};
   &:hover {
-    background: ${({ theme, $isClickable }) =>
-      $isClickable ? theme.colors.neutral[50] : 'transparent'};
+    background: ${({ $isClickable }) => ($isClickable ? 'rgba(180, 200, 220, 0.05)' : 'transparent')};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: -2px;
   }
 `;
@@ -276,8 +273,8 @@ const AmountCell = styled.td`
 `;
 
 const SectionTotalRow = styled.tr`
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  border-top: 2px solid ${({ theme }) => theme.colors.line};
+  background: rgba(180, 200, 220, 0.04);
 `;
 
 const SectionTotalCell = styled.td`
@@ -295,44 +292,62 @@ const SectionTotalAmountCell = styled.td`
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
-  border-bottom: 3px double ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 3px double ${({ theme }) => theme.colors.line};
 `;
 
-/** Highlighted subtotal rows: Gross Profit, EBIT, Net Income. */
+// Debit/credit — here, profit/loss — polarity, spec judgment call: the
+// pre-redesign ramp (emerald[600]/terracotta[600], then primary[700] for
+// this row specifically) read as illegible dark-on-dark against Cosmos Ink.
+// Moved to `bright.*` (brightened for this ground): bright.emerald for a
+// gain, bright.coral for a loss. Mirrors PnlStatementTable's Gross
+// Profit/Operating Profit convention — the ONLY cells in this statement that
+// carry polarity colour are the three bottom-line subtotals (Gross Profit,
+// EBIT, Net Income); ordinary revenue/cost line items and section totals
+// stay neutral (same precedent as PnlStatementTable's breakdown rows).
+interface PolarityProps {
+  $positive?: boolean;
+  $negative?: boolean;
+}
+
+/** Highlighted subtotal rows: Gross Profit, EBIT. */
 const SubtotalRow = styled.tr`
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border-top: 2px solid ${({ theme }) => theme.colors.primary[200]};
+  background: rgba(180, 200, 220, 0.06);
+  border-top: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const SubtotalCell = styled.td`
   padding: 11px 16px;
   font-size: 13px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.primary[700] || theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-const SubtotalAmountCell = styled.td`
+const SubtotalAmountCell = styled.td<PolarityProps>`
   padding: 11px 16px;
   font-size: 13px;
   font-weight: 700;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
-  color: ${({ theme }) => theme.colors.primary[700] || theme.colors.textPrimary};
+  color: ${({ theme, $positive, $negative }) => {
+    if ($positive) return theme.colors.bright.emerald;
+    if ($negative) return theme.colors.bright.coral;
+    return theme.colors.textPrimary;
+  }};
   white-space: nowrap;
-  border-bottom: 3px double ${({ theme }) => theme.colors.primary[200] || theme.colors.neutral[300]};
+  border-bottom: 3px double ${({ theme }) => theme.colors.line};
 `;
 
 /** Gross Margin % row — secondary styling, italic. */
 const MarginRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: transparent;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const MarginCell = styled.td`
   padding: 8px 16px 8px 36px;
   font-size: 12px;
   font-style: italic;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const MarginAmountCell = styled.td`
@@ -340,13 +355,13 @@ const MarginAmountCell = styled.td`
   font-size: 12px;
   font-style: italic;
   text-align: right;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   white-space: nowrap;
 `;
 
 /** Net Income footer row — bold double-underline. */
 const NetIncomeRow = styled.tr`
-  border-top: 3px double ${({ theme }) => theme.colors.neutral[400]};
+  border-top: 3px double ${({ theme }) => theme.colors.line};
   background: transparent;
 `;
 
@@ -357,20 +372,24 @@ const NetIncomeCell = styled.td`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-const NetIncomeAmountCell = styled.td`
+const NetIncomeAmountCell = styled.td<PolarityProps>`
   padding: 14px 16px;
   font-size: 15px;
   font-weight: 700;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: right;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme, $positive, $negative }) => {
+    if ($positive) return theme.colors.bright.emerald;
+    if ($negative) return theme.colors.bright.coral;
+    return theme.colors.textPrimary;
+  }};
   white-space: nowrap;
 `;
 
 const EmptyState = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   line-height: 1.6;
 `;
@@ -378,25 +397,28 @@ const EmptyState = styled.div`
 const LoadingOverlay = styled.div`
   padding: 48px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.error};
+  background: rgba(240, 138, 112, 0.14);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.4);
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
 `;
 
+// Uses the semantic `warning` token directly (bright.gold's warning/toast
+// twin — see mixins.ts note — NOT the decorative CTA gold).
 const WarningBanner = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.gold[800]};
+  color: ${({ theme }) => theme.colors.warning};
   font-size: 13px;
   margin-bottom: 16px;
 `;
@@ -404,11 +426,13 @@ const WarningBanner = styled.div`
 const AccessDenied = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
 // ─── Drill-down styled components ────────────────────────────────────────────
+// Rendered inside the FinanceReportPage shell's own glass modal — these stay
+// unfilled/transparent so they don't add a second glass layer (spec §2).
 
 const DrillTable = styled.table`
   width: 100%;
@@ -417,18 +441,16 @@ const DrillTable = styled.table`
 `;
 
 const DrillTHead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: transparent;
 `;
 
 const DrillTh = styled.th`
+  ${monoLabel}
   padding: 10px 14px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -437,9 +459,9 @@ const DrillThRight = styled(DrillTh)`
 `;
 
 const DrillTr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -461,7 +483,7 @@ const DrillTdMono = styled.td`
 const DrillStatusCell = styled.div`
   padding: 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 13px;
 `;
 
@@ -961,11 +983,17 @@ function IncomeStatementContent({
                   </SectionTotalRow>
                   <SubtotalRow>
                     <SubtotalCell>Gross Profit</SubtotalCell>
-                    <SubtotalAmountCell>
+                    <SubtotalAmountCell
+                      $positive={parseFloat(subtotals.grossProfit) >= 0}
+                      $negative={parseFloat(subtotals.grossProfit) < 0}
+                    >
                       {fmt(subtotals.grossProfit)}
                     </SubtotalAmountCell>
                     {hasCompare && (
-                      <SubtotalAmountCell>
+                      <SubtotalAmountCell
+                        $positive={!!compareSubtotals && parseFloat(compareSubtotals.grossProfit) >= 0}
+                        $negative={!!compareSubtotals && parseFloat(compareSubtotals.grossProfit) < 0}
+                      >
                         {compareSubtotals ? fmt(compareSubtotals.grossProfit) : '—'}
                       </SubtotalAmountCell>
                     )}
@@ -1059,11 +1087,17 @@ function IncomeStatementContent({
                   </SectionTotalRow>
                   <SubtotalRow>
                     <SubtotalCell>Operating Income (EBIT)</SubtotalCell>
-                    <SubtotalAmountCell>
+                    <SubtotalAmountCell
+                      $positive={parseFloat(subtotals.operatingIncome) >= 0}
+                      $negative={parseFloat(subtotals.operatingIncome) < 0}
+                    >
                       {fmt(subtotals.operatingIncome)}
                     </SubtotalAmountCell>
                     {hasCompare && (
-                      <SubtotalAmountCell>
+                      <SubtotalAmountCell
+                        $positive={!!compareSubtotals && parseFloat(compareSubtotals.operatingIncome) >= 0}
+                        $negative={!!compareSubtotals && parseFloat(compareSubtotals.operatingIncome) < 0}
+                      >
                         {compareSubtotals
                           ? fmt(compareSubtotals.operatingIncome)
                           : '—'}
@@ -1161,11 +1195,17 @@ function IncomeStatementContent({
             {/* Net Income footer row */}
             <NetIncomeRow>
               <NetIncomeCell>Net Income</NetIncomeCell>
-              <NetIncomeAmountCell>
+              <NetIncomeAmountCell
+                $positive={parseFloat(subtotals.netIncome) >= 0}
+                $negative={parseFloat(subtotals.netIncome) < 0}
+              >
                 {fmt(subtotals.netIncome)}
               </NetIncomeAmountCell>
               {hasCompare && (
-                <NetIncomeAmountCell>
+                <NetIncomeAmountCell
+                  $positive={!!compareSubtotals && parseFloat(compareSubtotals.netIncome) >= 0}
+                  $negative={!!compareSubtotals && parseFloat(compareSubtotals.netIncome) < 0}
+                >
                   {compareSubtotals ? fmt(compareSubtotals.netIncome) : '—'}
                 </NetIncomeAmountCell>
               )}

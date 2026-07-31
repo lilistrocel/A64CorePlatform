@@ -10,7 +10,7 @@
 
 import { useState } from 'react';
 import styled, { keyframes, useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { glassPanel, type Theme } from '@a64core/shared';
 import {
   ResponsiveContainer,
   BarChart,
@@ -35,21 +35,17 @@ function formatTooltipValue(value: number): string {
   return `${value.toLocaleString()} AED`;
 }
 
-// Bar-shade ramps for the per-item Cell fills — one brand voice per chart,
-// stepping from full saturation down to a tint (spec: categorical ramps).
-const farmColors = (theme: Theme) => [
-  theme.colors.primary[500],
-  theme.colors.primary[400],
-  theme.colors.primary[300],
-  theme.colors.primary[200],
-  theme.colors.primary[100],
-];
-const cropColors = (theme: Theme) => [
-  theme.colors.emerald[500],
-  theme.colors.emerald[400],
-  theme.colors.emerald[300],
-  theme.colors.emerald[200],
-  theme.colors.emerald[100],
+// Categorical bar-fill order — spec §4 "Charts": celeste, bright.gold,
+// bright.emerald, bright.lapis, bright.terra, bright.lavender, cycled by
+// index. Both bar charts (farm, crop) share this one series order rather
+// than each rolling its own ramp — "no rainbow defaults" per spec.
+const chartSeries = (theme: Theme) => [
+  theme.colors.celeste,
+  theme.colors.bright.gold,
+  theme.colors.bright.emerald,
+  theme.colors.bright.lapis,
+  theme.colors.bright.terra,
+  theme.colors.bright.lavender,
 ];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
@@ -72,11 +68,8 @@ const Row = styled.div`
 `;
 
 const Panel = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const FarmPanel = styled(Panel)`
@@ -105,9 +98,9 @@ const SkeletonBar = styled.div`
   border-radius: ${({ theme }) => theme.borderRadius.md};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.glass.base} 25%,
+    ${({ theme }) => theme.colors.glass.hi} 50%,
+    ${({ theme }) => theme.colors.glass.base} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -118,7 +111,7 @@ const EmptyState = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
@@ -133,10 +126,13 @@ const ErrorState = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
+// `primary[500]` is a lapis-b fill — needs `onDark` (cream), not `onAccent`
+// (cosmos, reserved for gold fills). See CardValue/CCChip in sibling files
+// for the same onAccent-misuse pattern.
 const RetryButton = styled.button`
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
@@ -155,23 +151,23 @@ const ShowMoreBtn = styled.button`
   margin-top: ${({ theme }) => theme.spacing.sm};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.primary[300]};
   background: transparent;
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px dashed ${({ theme }) => theme.colors.line};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
     border-color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
 const Hint = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: ${({ theme }) => theme.spacing.sm} 0 0 0;
 `;
 
@@ -190,16 +186,25 @@ function BarTooltip({
   return (
     <div
       style={{
-        background: theme.colors.background,
-        border: `1px solid ${theme.colors.border}`,
+        // glassOpaque recipe (mixins.ts), inlined — recharts renders tooltip
+        // content outside styled-components' `css` context.
+        background: theme.colors.cosmosHi,
+        border: `1px solid ${theme.colors.glass.border}`,
         borderRadius: '8px',
         padding: '10px 14px',
-        boxShadow: theme.shadows.md,
+        boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
         fontSize: '13px',
       }}
     >
       <div style={{ fontWeight: 600, marginBottom: '4px', color: theme.colors.textPrimary }}>{label}</div>
-      <div style={{ color: theme.colors.textSecondary }}>{formatTooltipValue(payload[0].value)}</div>
+      <div
+        style={{
+          fontFamily: theme.typography.fontFamily.mono,
+          color: theme.colors.celeste,
+        }}
+      >
+        {formatTooltipValue(payload[0].value)}
+      </div>
     </div>
   );
 }
@@ -271,11 +276,11 @@ export function PnlBreakdownCharts({
                 data={topFarms}
                 margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.colors.border} />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.colors.line} />
                 <XAxis
                   type="number"
                   tickFormatter={formatAed}
-                  tick={{ fontSize: 11, fill: theme.colors.textSecondary }}
+                  tick={{ fontSize: 11, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.muted }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -283,7 +288,7 @@ export function PnlBreakdownCharts({
                   type="category"
                   dataKey="farmName"
                   width={120}
-                  tick={{ fontSize: 11, fill: theme.colors.textPrimary }}
+                  tick={{ fontSize: 11, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.celeste }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -295,11 +300,11 @@ export function PnlBreakdownCharts({
                   onClick={onFarmClick ? (data: PnlFarmDataPoint) => onFarmClick(data.farmId) : undefined}
                 >
                   {topFarms.map((_, index) => {
-                    const farmPalette = farmColors(theme);
+                    const palette = chartSeries(theme);
                     return (
                       <Cell
                         key={`farm-cell-${index}`}
-                        fill={farmPalette[index % farmPalette.length]}
+                        fill={palette[index % palette.length]}
                       />
                     );
                   })}
@@ -342,11 +347,11 @@ export function PnlBreakdownCharts({
                   data={topCrops}
                   margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.colors.border} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.colors.line} />
                   <XAxis
                     type="number"
                     tickFormatter={formatAed}
-                    tick={{ fontSize: 11, fill: theme.colors.textSecondary }}
+                    tick={{ fontSize: 11, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.muted }}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -354,7 +359,7 @@ export function PnlBreakdownCharts({
                     type="category"
                     dataKey="cropName"
                     width={120}
-                    tick={{ fontSize: 11, fill: theme.colors.textPrimary }}
+                    tick={{ fontSize: 11, fontFamily: theme.typography.fontFamily.mono, fill: theme.colors.celeste }}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -367,11 +372,11 @@ export function PnlBreakdownCharts({
                     aria-label="Click to filter by this crop"
                   >
                     {topCrops.map((_, index) => {
-                      const cropPalette = cropColors(theme);
+                      const palette = chartSeries(theme);
                       return (
                         <Cell
                           key={`crop-cell-${index}`}
-                          fill={cropPalette[index % cropPalette.length]}
+                          fill={palette[index % palette.length]}
                         />
                       );
                     })}

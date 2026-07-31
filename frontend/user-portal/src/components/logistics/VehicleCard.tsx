@@ -2,11 +2,31 @@
  * VehicleCard Component
  *
  * Displays vehicle information in a card format.
+ *
+ * Night Observatory (T-901 Phase 3): glassPanel card (glassPanelHover when
+ * clickable), Space Mono for the vehicle code/costs, phase badge for status.
+ * See `VEHICLE_STATUS_TO_PHASE` below — the same literal map is duplicated
+ * in `VehicleTable.tsx` (the only other consumer); kept as two small inline
+ * maps rather than a new shared file per the shard brief.
  */
 
 import styled from 'styled-components';
-import type { Vehicle } from '../../types/logistics';
-import { getVehicleStatusColor, getVehicleTypeLabel, formatCapacity } from '../../services/logisticsService';
+import type { PhaseKey } from '@a64core/shared';
+import { glassPanel, glassPanelHover, monoLabel, phaseBadge } from '@a64core/shared';
+import type { Vehicle, VehicleStatus } from '../../types/logistics';
+import { getVehicleTypeLabel, formatCapacity } from '../../services/logisticsService';
+
+// Vehicle status -> phase key (spec §5.2 extrapolation). "available" reads
+// as a ready/productive asset (fruiting, the "alive" phase); "in_use" reads
+// as "open/active/in progress" (inoculated); "maintenance" maps directly to
+// the maintenance phase; "retired" reads as "cancelled/void/archived"
+// (decommissioned).
+const VEHICLE_STATUS_TO_PHASE: Record<VehicleStatus, PhaseKey> = {
+  available: 'fruiting',
+  in_use: 'inoculated',
+  maintenance: 'maintenance',
+  retired: 'decommissioned',
+};
 
 // ============================================================================
 // COMPONENT PROPS
@@ -25,16 +45,8 @@ export interface VehicleCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $clickable: boolean }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${({ $clickable }) => ($clickable ? glassPanelHover : glassPanel)}
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  transition: all 150ms ease-in-out;
-  cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
-
-  &:hover {
-    box-shadow: ${({ $clickable }) => ($clickable ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none')};
-  }
 `;
 
 const CardHeader = styled.div`
@@ -57,19 +69,12 @@ const VehicleName = styled.h3`
 
 const VehicleCode = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
-const StatusBadge = styled.span<{ $color: string }>`
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
-  color: ${({ $color }) => $color};
-  text-transform: capitalize;
+const StatusBadge = styled.span<{ $phaseKey: PhaseKey }>`
+  ${({ $phaseKey }) => phaseBadge($phaseKey)}
 `;
 
 const CardBody = styled.div`
@@ -83,7 +88,7 @@ const InfoRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   &:last-child {
     border-bottom: none;
@@ -91,15 +96,16 @@ const InfoRow = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 500;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: 500;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TypeBadge = styled.span`
@@ -108,8 +114,9 @@ const TypeBadge = styled.span`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Actions = styled.div`
@@ -117,36 +124,36 @@ const Actions = styled.div`
   gap: 8px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
+const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
   flex: 1;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
-        background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
+        background: rgba(240, 138, 112, 0.12);
+        color: ${theme.colors.bright.coral};
+        border: 1px solid rgba(240, 138, 112, 0.35);
         &:hover {
-          background: ${theme.colors.terracotta[100]};
+          background: rgba(240, 138, 112, 0.2);
         }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      color: ${theme.colors.celeste};
+      border: 1px solid ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.primary[50]};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
@@ -180,7 +187,7 @@ export function VehicleCard({ vehicle, onClick, showActions = false, onEdit, onD
           <VehicleName>{vehicle.name}</VehicleName>
           <VehicleCode>{vehicle.vehicleCode}</VehicleCode>
         </VehicleInfo>
-        <StatusBadge $color={getVehicleStatusColor(vehicle.status)}>
+        <StatusBadge $phaseKey={VEHICLE_STATUS_TO_PHASE[vehicle.status]}>
           {vehicle.status.replace('_', ' ')}
         </StatusBadge>
       </CardHeader>

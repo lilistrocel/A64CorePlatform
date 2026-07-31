@@ -19,6 +19,8 @@
  */
 
 import styled from 'styled-components';
+import { Boxes, Sprout, BarChart3, Target } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
 import { formatNumber } from '../../utils';
 import type { DashboardSummary } from '../../types/farm';
 
@@ -31,7 +33,7 @@ export function BlockMonitorHero({ summary }: BlockMonitorHeroProps) {
     <HeroGrid>
       {/* Stat 1 — Total Blocks (split into Physical / Virtual breakdown) */}
       <HeroCard>
-        <HeroIcon aria-hidden="true">🔢</HeroIcon>
+        <HeroIcon aria-hidden="true"><Boxes size={22} strokeWidth={1.6} /></HeroIcon>
         {summary.physicalBlocks !== undefined && summary.virtualBlocks !== undefined ? (
           <BreakdownGrid>
             <BreakdownPair>
@@ -52,14 +54,14 @@ export function BlockMonitorHero({ summary }: BlockMonitorHeroProps) {
 
       {/* Stat 2 — Active Plantings */}
       <HeroCard>
-        <HeroIcon aria-hidden="true">🌱</HeroIcon>
+        <HeroIcon aria-hidden="true"><Sprout size={22} strokeWidth={1.6} /></HeroIcon>
         <HeroValue>{summary.totalActivePlantings}</HeroValue>
         <HeroLabel>Active Plantings</HeroLabel>
       </HeroCard>
 
       {/* Stat 3 — Avg Yield Efficiency */}
       <HeroCard>
-        <HeroIcon aria-hidden="true">📊</HeroIcon>
+        <HeroIcon aria-hidden="true"><BarChart3 size={22} strokeWidth={1.6} /></HeroIcon>
         <HeroValue>
           {summary.avgYieldEfficiency > 0
             ? `${summary.avgYieldEfficiency.toFixed(1)}%`
@@ -76,7 +78,7 @@ export function BlockMonitorHero({ summary }: BlockMonitorHeroProps) {
 
       {/* Stat 4 — Total Predicted Yield */}
       <HeroCard>
-        <HeroIcon aria-hidden="true">🎯</HeroIcon>
+        <HeroIcon aria-hidden="true"><Target size={22} strokeWidth={1.6} /></HeroIcon>
         <HeroValue>
           {summary.totalPredictedYieldKg > 0
             ? `${formatNumber(summary.totalPredictedYieldKg, { decimals: 0 })} kg`
@@ -99,15 +101,17 @@ const HeroGrid = styled.div`
 `;
 
 const HeroCard = styled.div`
+  ${glassPanel}
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
+  border-radius: 14px;
   text-align: center;
-  position: relative;
 `;
 
 const HeroIcon = styled.div`
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 8px;
 `;
 
@@ -142,12 +146,10 @@ const BreakdownValue = styled.div`
 `;
 
 const BreakdownPairLabel = styled.div`
-  font-size: 10px;
+  ${monoLabel}
+  font-size: 0.56rem;
   margin-top: 4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const BreakdownDivider = styled.div`
@@ -156,20 +158,22 @@ const BreakdownDivider = styled.div`
 `;
 
 const HeroLabel = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
+// "Exceeding target" reads as the fruiting phase (peak output); "on track" as
+// inoculated (steady, in-progress) — spec §5.2 extrapolated vocabulary. Both
+// fills are bright/saturated, so their text is `onDark` (cream-hi), never
+// `onAccent` (which now means "text on a GOLD fill" — spec §1.1).
 const PerformanceBadge = styled.div<{ $variant: 'exceeding' | 'good' }>`
+  ${monoLabel}
   margin-top: 8px;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  background: ${({ $variant, theme }) => ($variant === 'exceeding' ? theme.colors.success : theme.colors.primary[500])};
-  color: ${({ theme }) => theme.colors.onAccent};
+  font-size: 0.58rem;
+  background: ${({ $variant, theme }) =>
+    $variant === 'exceeding' ? theme.colors.phase.fruiting : theme.colors.phase.inoculated};
+  color: ${({ theme }) => theme.colors.onDark};
 `;

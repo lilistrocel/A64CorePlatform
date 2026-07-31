@@ -7,6 +7,7 @@
  */
 
 import styled from 'styled-components';
+import { glassPanel, glassControl } from '@a64core/shared';
 import type { PnlFilters } from '../../pages/pnl/PnLPage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -28,14 +29,12 @@ interface PnlFiltersBarProps {
 // ─── Styled Components ────────────────────────────────────────────────────────
 
 const FiltersBar = styled.div`
+  ${glassPanel}
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
 `;
 
@@ -48,16 +47,14 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.label`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const Select = styled.select`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-family: inherit;
@@ -65,31 +62,28 @@ const Select = styled.select`
   min-width: 160px;
 
   &:focus {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
     opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const DateInput = styled.input`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-family: inherit;
 
   &:focus {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: 2px;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -111,12 +105,13 @@ interface ToggleInputProps {
   $checked: boolean;
 }
 
+// Toggles, spec §4 "Inputs/selects/textareas": glass track, active emerald-b.
 const ToggleInput = styled.input<ToggleInputProps>`
   appearance: none;
   width: 36px;
   height: 20px;
-  background: ${({ $checked, theme }) =>
-    $checked ? theme.colors.success : theme.colors.neutral[300]};
+  background: ${({ $checked, theme }) => ($checked ? theme.colors.success : theme.colors.glass.base)};
+  border: 1px solid ${({ $checked, theme }) => ($checked ? theme.colors.success : theme.colors.glass.border)};
   border-radius: ${({ theme }) => theme.borderRadius.full};
   position: relative;
   cursor: pointer;
@@ -126,18 +121,18 @@ const ToggleInput = styled.input<ToggleInputProps>`
   &::after {
     content: '';
     position: absolute;
-    top: 2px;
-    left: ${({ $checked }) => ($checked ? '18px' : '2px')};
+    top: 1px;
+    left: ${({ $checked }) => ($checked ? '17px' : '1px')};
     width: 16px;
     height: 16px;
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.onDark};
     border-radius: ${({ theme }) => theme.borderRadius.full};
     transition: left 150ms ease-in-out;
-    box-shadow: 0 1px 3px rgba(59, 44, 24, 0.2);
+    box-shadow: 0 1px 3px rgba(4, 6, 18, 0.4);
   }
 
   &:focus {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;

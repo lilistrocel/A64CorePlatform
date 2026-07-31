@@ -19,6 +19,8 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams, Navigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { Lock } from 'lucide-react';
+import { PageHeader, type PageHeaderStat } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { getFarms } from '../../services/farmApi';
 import { useQuery } from '@tanstack/react-query';
@@ -106,46 +108,9 @@ const Container = styled.div`
   }
 `;
 
-const Header = styled.div`
+const AccessDeniedIconWrap = styled.div`
+  color: ${({ theme }) => theme.colors.muted};
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-`;
-
-const HeaderLeft = styled.div``;
-
-const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const TitleIcon = styled.span`
-  font-size: 28px;
-`;
-
-const Subtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
-const PeriodBadge = styled.span`
-  display: inline-block;
-  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-  color: ${({ theme }) => theme.colors.primary[700]};
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  margin-left: ${({ theme }) => theme.spacing.sm};
 `;
 
 const AccessDenied = styled.div`
@@ -155,10 +120,15 @@ const AccessDenied = styled.div`
   justify-content: center;
   min-height: 400px;
   gap: ${({ theme }) => theme.spacing.md};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xl};
+
+  strong {
+    color: ${({ theme }) => theme.colors.textPrimary};
+    font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -172,7 +142,7 @@ export function PnLPage() {
     return (
       <Container>
         <AccessDenied role="alert">
-          <span style={{ fontSize: '48px' }}>🔒</span>
+          <AccessDeniedIconWrap aria-hidden="true"><Lock size={40} strokeWidth={1.4} /></AccessDeniedIconWrap>
           <strong>Access Restricted</strong>
           <p>You do not have permission to view the P&amp;L dashboard.</p>
           <p>Contact your administrator to request &quot;finance.view&quot; access.</p>
@@ -250,21 +220,18 @@ export function PnLPage() {
     summaryQuery.data?.period?.label ||
     (filters.farmingYear ? filters.farmingYear : 'All time');
 
+  const headerStats: PageHeaderStat[] = [{ value: periodLabel, label: 'Period' }];
+
   return (
     <Container>
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <Header>
-        <HeaderLeft>
-          <Title>
-            <TitleIcon aria-hidden="true">📊</TitleIcon>
-            Profit &amp; Loss
-            <PeriodBadge>{periodLabel}</PeriodBadge>
-          </Title>
-          <Subtitle>
-            Financial performance overview — revenue, margins, and accounts receivable
-          </Subtitle>
-        </HeaderLeft>
-      </Header>
+      <PageHeader
+        breadcrumb="Finance · Live"
+        title="Profit & Loss"
+        emphasizeLastWord
+        description="Financial performance overview — revenue, margins, and accounts receivable"
+        stats={headerStats}
+      />
 
       {/* ── Filters ────────────────────────────────────────────────── */}
       <PnlFiltersBar

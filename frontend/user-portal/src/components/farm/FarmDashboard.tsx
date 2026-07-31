@@ -9,7 +9,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import styled, { keyframes, useTheme } from 'styled-components';
-import type { Theme } from '@a64core/shared';
+import { Filter, ChevronUp, ChevronDown } from 'lucide-react';
+import type { Theme, PhaseKey } from '@a64core/shared';
+import { PageHeader as SharedPageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import {
   BarChart,
   Bar,
@@ -99,24 +101,33 @@ type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 
 // CONSTANTS
 // ============================================================================
 
-// Themed once per render (not a module constant) because Recharts `fill` props
-// take plain strings, not styled-components callbacks — see rule in the rebrand
-// sweep spec. fruiting/cleaning are both "purple" in the old palette but the
-// brand supplies no purple; per spec §3 "Purples -> judgement call": fruiting
-// (a meaningful, near-harvest milestone) gets secondary/gold, cleaning
-// (an ordinary, non-highlight state) gets primary[700] to keep it distinct
-// from planned's primary[500] without reaching for gold.
+// Block-state → room-phase map (Night Observatory spec §5.2 — "crop stage" is
+// named explicitly as an extrapolation target). Themed once per render (not a
+// module constant) because Recharts `fill` props take plain strings, not
+// styled-components callbacks. Each of the 8 block states gets its own,
+// DISTINCT phase key (this feeds the pie/stacked-bar chart legends, filter
+// chips and KPI accents, which all need 8 visually distinct colours) —
+// mapped by literal name where the block-state vocabulary already matches a
+// room-phase name (empty/fruiting/harvesting/cleaning), and by closest
+// lifecycle analogue otherwise. Gold (`harvesting`) is used exactly once,
+// for the one state that is literally the harvest phase — the predecessor
+// map incorrectly also gold-ed `fruiting`, which broke the "≤1 gold status"
+// rule (spec §3/§5.2).
+const BLOCK_STATE_PHASE_MAP: Record<string, PhaseKey> = {
+  empty: 'empty',              // literal match
+  planned: 'preparing',        // scheduled, not yet growing
+  growing: 'colonizing',       // active vegetative growth
+  fruiting: 'fruiting',        // literal match
+  harvesting: 'harvesting',    // literal match — the ONE gold status
+  cleaning: 'cleaning',        // literal match
+  alert: 'quarantined',        // problem state, coral — the only red
+  partial: 'maintenance',      // mixed/composite virtual-block state
+};
+
 function getStateColors(theme: Theme): Record<string, string> {
-  return {
-    empty: theme.colors.textDisabled,
-    planned: theme.colors.primary[500],
-    growing: theme.colors.success,
-    fruiting: theme.colors.secondary[500],
-    harvesting: theme.colors.warning,
-    cleaning: theme.colors.primary[700],
-    alert: theme.colors.error,
-    partial: theme.colors.terracotta[400],
-  };
+  return Object.fromEntries(
+    Object.entries(BLOCK_STATE_PHASE_MAP).map(([state, phase]) => [state, theme.colors.phase[phase]])
+  );
 }
 
 const STATE_LABELS: Record<string, string> = {
@@ -165,6 +176,8 @@ const fadeIn = keyframes`
 // ============================================================================
 
 const Container = styled.div`
+  /* No background here — the fixed Sky layer (spec §7) must show through
+     every routed page. */
   padding: ${({ theme }) => theme.spacing.xl};
   max-width: 1440px;
   margin: 0 auto;
@@ -174,54 +187,15 @@ const Container = styled.div`
   }
 `;
 
-const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
-  flex-wrap: wrap;
-`;
-
-const HeaderLeft = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
-
-const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
-  line-height: ${({ theme }) => theme.typography.lineHeight.tight};
-`;
-
-const Subtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  flex-shrink: 0;
-`;
-
-// ============================================================================
-// STYLED COMPONENTS — YEAR FILTER
-// ============================================================================
-
 // ============================================================================
 // STYLED COMPONENTS — TABS
 // ============================================================================
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   margin-bottom: ${({ theme }) => theme.spacing.md};
-  gap: 0;
+  gap: 4px;
   overflow-x: auto;
 
   &::-webkit-scrollbar {
@@ -233,24 +207,21 @@ const TabButton = styled.button<{ $active: boolean }>`
   position: relative;
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.lg}`};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ $active, theme }) =>
-    $active
-      ? theme.typography.fontWeight.semibold
-      : theme.typography.fontWeight.regular};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[600] : theme.colors.textSecondary};
+  font-weight: ${({ $active }) => ($active ? 700 : 500)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
   background: none;
   border: none;
-  /* Pull the button down 2px so its ::after underline overlays the TabBar's
-     own gray border-bottom instead of sitting just above it. */
-  margin-bottom: -2px;
+  /* Pull the button down 1px so its ::after underline overlays the TabBar's
+     own hairline border-bottom instead of sitting just above it. */
+  margin-bottom: -1px;
   cursor: pointer;
   white-space: nowrap;
   transition: color 150ms ease-in-out;
 
   /* Sliding underline indicator: scales horizontally from 0 → 1 when the
-     tab becomes active. Sits exactly on top of the TabBar's gray
-     border-bottom so it visually replaces it for the active tab. */
+     tab becomes active. Sits exactly on top of the TabBar's hairline
+     border-bottom so it visually replaces it for the active tab. Celeste,
+     not gold — tab emphasis is secondary emphasis (spec §3). */
   &::after {
     content: '';
     position: absolute;
@@ -258,7 +229,7 @@ const TabButton = styled.button<{ $active: boolean }>`
     right: 0;
     bottom: 0;
     height: 2px;
-    background: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.celeste};
     transform: scaleX(${({ $active }) => ($active ? 1 : 0)});
     transform-origin: center;
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -266,17 +237,15 @@ const TabButton = styled.button<{ $active: boolean }>`
   }
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[600]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:hover::after {
     transform: scaleX(${({ $active }) => ($active ? 1 : 0.4)});
-    background: ${({ $active, theme }) =>
-      $active ? theme.colors.primary[500] : theme.colors.primary[300]};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[400]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -297,15 +266,13 @@ const KpiGrid = styled.div`
 `;
 
 const KpiCard = styled.div<{ $borderColor: string }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  border-left: 4px solid ${({ $borderColor }) => $borderColor};
+  border-radius: 14px;
+  border-left: 3px solid ${({ $borderColor }) => $borderColor};
   transition: box-shadow 150ms ease-in-out, transform 150ms ease-in-out;
 
   &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.lg};
     transform: translateY(-2px);
   }
 `;
@@ -315,29 +282,28 @@ const KpiIndicator = styled.div<{ $color: string }>`
   height: 8px;
   border-radius: ${({ theme }) => theme.borderRadius.full};
   background: ${({ $color }) => $color};
+  box-shadow: 0 0 6px ${({ $color }) => $color}99;
   margin-bottom: ${({ theme }) => theme.spacing.sm};
 `;
 
 const KpiLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
-const KpiValue = styled.div`
+const KpiValue = styled.div<{ $color?: string }>`
   font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 800;
+  color: ${({ theme, $color }) => $color || theme.colors.textPrimary};
   line-height: ${({ theme }) => theme.typography.lineHeight.tight};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const KpiSubtext = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -356,10 +322,8 @@ const ChartGrid = styled.div`
 `;
 
 const Panel = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const PanelFull = styled(Panel)`
@@ -368,7 +332,7 @@ const PanelFull = styled(Panel)`
 
 const PanelTitle = styled.h2`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 ${({ theme }) => theme.spacing.lg} 0;
 `;
@@ -390,18 +354,20 @@ const StateLegend = styled.div`
 `;
 
 const StateLegendItem = styled.div`
+  ${monoLabel}
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xs};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const StateDot = styled.span<{ $color: string }>`
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: ${({ theme }) => theme.borderRadius.full};
   background: ${({ $color }) => $color};
+  box-shadow: 0 0 6px ${({ $color }) => $color}99;
   flex-shrink: 0;
 `;
 
@@ -415,47 +381,53 @@ const QuickActionsRow = styled.div`
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
+// Variant recipes mirror the shared Button.tsx primary/secondary/ghost
+// treatment (spec §4 "Buttons") — kept local because this button also needs
+// an `outline`-named alias for its one existing call site.
 const ActionBtn = styled.button<{ $variant?: 'primary' | 'secondary' | 'outline' }>`
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xs};
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 10px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: 700;
   cursor: pointer;
   transition: background 150ms ease-in-out, box-shadow 150ms ease-in-out,
-    border-color 150ms ease-in-out;
+    border-color 150ms ease-in-out, transform 150ms ease-in-out;
   border: 1px solid transparent;
 
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.primary[500]};
+        background: linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]});
         color: ${theme.colors.onAccent};
-        &:hover { background: ${theme.colors.primary[700]}; }
+        box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+        &:hover { transform: translateY(-1px); }
       `;
     }
     if ($variant === 'secondary') {
       return `
-        background: ${theme.colors.success};
-        color: ${theme.colors.onAccent};
-        &:hover { background: ${theme.colors.emerald[600]}; }
+        background: ${theme.colors.glass.base};
+        border-color: ${theme.colors.glass.border};
+        color: ${theme.colors.textPrimary};
+        &:hover { background: ${theme.colors.glass.hi}; }
       `;
     }
+    // outline — ghost treatment (ghost/secondary CTA, never gold)
     return `
-      background: ${theme.colors.background};
-      color: ${theme.colors.primary[600]};
-      border-color: ${theme.colors.primary[300]};
+      background: transparent;
+      color: ${theme.colors.celeste};
+      border-color: ${theme.colors.glass.border};
       &:hover {
-        background: ${theme.colors.primary[50]};
-        border-color: ${theme.colors.primary[400]};
+        background: rgba(180, 200, 220, 0.07);
+        color: ${theme.colors.textPrimary};
       }
     `;
   }}
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[400]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -464,10 +436,10 @@ const ActionBtn = styled.button<{ $variant?: 'primary' | 'secondary' | 'outline'
 // STYLED COMPONENTS — FARM BREAKDOWN TABLE
 // ============================================================================
 
+// Table sits inside ONE glass Panel already (spec §4 "Tables" two-layer
+// rule) — no independent chrome here, transparent rows on the panel ground.
 const TableWrapper = styled.div`
   overflow-x: auto;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 const Table = styled.table`
@@ -476,33 +448,28 @@ const Table = styled.table`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
-const Thead = styled.thead`
-  background: ${({ theme }) => theme.colors.surface};
-`;
+const Thead = styled.thead``;
 
 const Th = styled.th<{ $sortable?: boolean }>`
+  ${monoLabel}
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   text-align: left;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
 
   &:hover {
-    color: ${({ $sortable, theme }) =>
-      $sortable ? theme.colors.textPrimary : theme.colors.textSecondary};
+    color: ${({ $sortable, theme }) => ($sortable ? theme.colors.textPrimary : theme.colors.celeste)};
   }
 `;
 
 const Tbody = styled.tbody``;
 
 const Tr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   transition: background 150ms ease-in-out;
 
   &:last-child {
@@ -510,7 +477,7 @@ const Tr = styled.tr`
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -520,8 +487,14 @@ const Td = styled.td`
   white-space: nowrap;
 `;
 
+// Numeric/code table cells (spec §4 "Tables" — Space Mono for numeric/code
+// cells).
 const TdSecondary = styled(Td)`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.78rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const SortIndicator = styled.span`
@@ -541,53 +514,48 @@ const ActivityGrid = styled.div`
 `;
 
 const ActivityCard = styled.div<{ $accent: string }>`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
   border-top: 3px solid ${({ $accent }) => $accent};
 `;
 
 const ActivityCardLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const ActivityCardValue = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const ActivityCardNote = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const FuturePlaceholder = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  ${glassPanel}
   padding: ${({ theme }) => theme.spacing.xl};
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
   text-align: center;
 `;
 
 const PlaceholderTitle = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const PlaceholderText = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 // ============================================================================
@@ -604,8 +572,10 @@ const LoadingContainer = styled.div`
 const SpinnerEl = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  /* celeste, not gold — a loading spinner isn't on the gold-budget allowlist
+     (spec §3). */
+  border-top-color: ${({ theme }) => theme.colors.celeste};
   border-radius: ${({ theme }) => theme.borderRadius.full};
   animation: ${spin} 0.8s linear infinite;
 `;
@@ -613,7 +583,7 @@ const SpinnerEl = styled.div`
 const ErrorContainer = styled.div`
   padding: ${({ theme }) => theme.spacing.lg};
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  border: 1px solid rgba(240, 138, 112, 0.45);
   border-radius: ${({ theme }) => theme.borderRadius.md};
   color: ${({ theme }) => theme.colors.error};
   text-align: center;
@@ -623,7 +593,7 @@ const ErrorContainer = styled.div`
 const EmptyPlaceholder = styled.div`
   text-align: center;
   padding: ${({ theme }) => `${theme.spacing['2xl']} ${theme.spacing.xl}`};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
@@ -643,28 +613,25 @@ const FilterToggleRow = styled.div`
 `;
 
 const FilterToggleBtn = styled.button`
+  ${glassControl}
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xs};
-  padding: 6px ${({ theme }) => theme.spacing.sm};
+  padding: 7px ${({ theme }) => theme.spacing.sm};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: border-color 150ms ease-in-out, color 150ms ease-in-out,
     background 150ms ease-in-out;
-  position: relative;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[400]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[400]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -673,7 +640,7 @@ const FilterActiveDot = styled.span`
   width: 7px;
   height: 7px;
   border-radius: ${({ theme }) => theme.borderRadius.full};
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.bright.lapis};
   flex-shrink: 0;
 `;
 
@@ -685,30 +652,31 @@ const FilterActiveCount = styled.span`
   height: 18px;
   padding: 0 5px;
   border-radius: ${({ theme }) => theme.borderRadius.full};
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  /* onDark, not onAccent — this fill is lapis, not gold (spec §1.1). */
+  color: ${({ theme }) => theme.colors.onDark};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: 700;
   line-height: 1;
 `;
 
 const ClearAllBtn = styled.button`
-  padding: 6px ${({ theme }) => theme.spacing.sm};
+  padding: 7px ${({ theme }) => theme.spacing.sm};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.error};
-  background: none;
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: transparent;
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 11px;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => `${theme.colors.error}14`};
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.error};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -722,10 +690,9 @@ const FilterPanel = styled.div<{ $open: boolean }>`
 `;
 
 const FilterPanelInner = styled.div`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: 14px;
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.md};
@@ -744,11 +711,11 @@ const FilterRow = styled.div`
 `;
 
 const FilterLabel = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.celeste};
   white-space: nowrap;
-  padding-top: 5px;
+  padding-top: 6px;
   min-width: 52px;
 `;
 
@@ -766,15 +733,16 @@ const FilterFarmItem = styled.label`
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   padding: 4px ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  border-radius: 6px;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: rgba(180, 200, 220, 0.07);
   }
 
+  /* Checkbox/radio: celeste border, gold-hi checked (spec §4 "Inputs"). */
   input[type='checkbox'] {
-    accent-color: ${({ theme }) => theme.colors.primary[500]};
+    accent-color: ${({ theme }) => theme.colors.secondary[500]};
     width: 15px;
     height: 15px;
     cursor: pointer;
@@ -796,14 +764,17 @@ interface FilterChipStyledProps {
 const FilterChip = styled.button<FilterChipStyledProps>`
   padding: 4px ${({ theme }) => theme.spacing.sm};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: 700;
   border-radius: ${({ theme }) => theme.borderRadius.full};
   border: 1.5px solid ${({ $color }) => $color};
   cursor: pointer;
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
-  background: ${({ $color, $selected }) =>
-    $selected ? $color : 'transparent'};
-  color: ${({ $color, $selected, theme }) => ($selected ? theme.colors.onAccent : $color)};
+  background: ${({ $color, $selected, theme }) =>
+    $selected ? $color : theme.colors.glass.base};
+  /* onDark, not onAccent — these fills are phase colours (lapis/emerald/
+     coral/etc.), never gold except the literal "harvesting" chip, which is
+     still a light-on-dark pairing (spec §1.1). */
+  color: ${({ $color, $selected, theme }) => ($selected ? theme.colors.onDark : $color)};
 
   &:hover {
     background: ${({ $color, $selected }) =>
@@ -811,30 +782,29 @@ const FilterChip = styled.button<FilterChipStyledProps>`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ $color }) => $color};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
 
 const FilterSelect = styled.select`
+  ${glassControl}
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 6px ${({ theme }) => theme.spacing.sm};
+  padding: 7px ${({ theme }) => theme.spacing.sm};
   cursor: pointer;
   min-width: 160px;
   transition: border-color 150ms ease-in-out;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[400]};
+    border-color: ${({ theme }) => theme.colors.glass.border};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -847,27 +817,26 @@ const FilterDateGroup = styled.div`
 
 const FilterDateLabel = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const FilterDateInput = styled.input`
+  ${glassControl}
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 6px ${({ theme }) => theme.spacing.sm};
+  padding: 7px ${({ theme }) => theme.spacing.sm};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
+  color-scheme: dark;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[400]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -938,31 +907,31 @@ interface CustomTooltipProps {
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   const theme = useTheme();
   if (!active || !payload || payload.length === 0) return null;
-  // Inverted chip (background/text swapped from the page ground) so the
-  // tooltip stays legible floating over any chart in either theme, rather
-  // than hardcoding a fixed dark chrome.
+  // glassOpaque recipe (spec §4 "Charts" — tooltips are glassOpaque, not a
+  // glass layer stacked on top of the chart's own glass Panel).
   return (
     <div
       style={{
-        background: theme.colors.textPrimary,
-        borderRadius: 8,
+        background: theme.colors.cosmosHi,
+        border: `1px solid ${theme.colors.glass.border}`,
+        borderRadius: 10,
         padding: '10px 14px',
         fontSize: 13,
-        color: theme.colors.canvas,
-        boxShadow: theme.shadows.lg,
+        color: theme.colors.textPrimary,
+        boxShadow: '0 12px 32px rgba(4, 6, 18, 0.5)',
         maxWidth: 220,
       }}
     >
       {label && (
-        <div style={{ fontWeight: 600, marginBottom: 6, borderBottom: `1px solid ${theme.colors.canvas}26`, paddingBottom: 4 }}>
+        <div style={{ fontWeight: 700, marginBottom: 6, borderBottom: `1px solid ${theme.colors.line}`, paddingBottom: 4 }}>
           {label}
         </div>
       )}
       {payload.map((entry) => (
         <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color, flexShrink: 0, display: 'inline-block' }} />
-          <span style={{ color: `${theme.colors.canvas}99` }}>{entry.name}:</span>
-          <span style={{ fontWeight: 500 }}>{typeof entry.value === 'number' && entry.name === 'kg' ? `${formatNumber(entry.value)} kg` : formatNumber(entry.value)}</span>
+          <span style={{ color: theme.colors.celeste }}>{entry.name}:</span>
+          <span style={{ fontWeight: 700 }}>{typeof entry.value === 'number' && entry.name === 'kg' ? `${formatNumber(entry.value)} kg` : formatNumber(entry.value)}</span>
         </div>
       ))}
     </div>
@@ -1172,12 +1141,11 @@ export function FarmDashboard() {
   return (
     <Container>
       {/* Page Header */}
-      <PageHeader>
-        <HeaderLeft>
-          <Title>Farm Manager Dashboard</Title>
-          <Subtitle>Overview of your farming operations</Subtitle>
-        </HeaderLeft>
-      </PageHeader>
+      <SharedPageHeader
+        breadcrumb="OPERATIONS · FARM"
+        title="Farm Manager Dashboard"
+        description="Overview of your farming operations"
+      />
 
       {/* Tab Bar */}
       <TabBar role="tablist" aria-label="Dashboard sections">
@@ -1203,8 +1171,9 @@ export function FarmDashboard() {
             aria-expanded={showFilters}
             aria-controls="dashboard-filter-panel"
           >
+            <Filter size={14} strokeWidth={1.8} />
             Filters
-            {showFilters ? ' \u25b2' : ' \u25bc'}
+            {showFilters ? <ChevronUp size={14} strokeWidth={1.8} /> : <ChevronDown size={14} strokeWidth={1.8} />}
             {hasActiveFilters && <FilterActiveDot aria-hidden="true" />}
             {activeFilterCount > 0 && (
               <FilterActiveCount aria-label={`${activeFilterCount} active filter${activeFilterCount > 1 ? 's' : ''}`}>
@@ -1311,38 +1280,43 @@ export function FarmDashboard() {
       {/* ── Tab: Overview ─────────────────────────────────────────────────────── */}
       {activeTab === 'overview' && (
         <TabContent role="tabpanel" aria-label="Overview">
-          {/* KPI Cards */}
+          {/* KPI Cards — accent colours are either a bright.* structural hue
+              (counts unrelated to any block state) or the matching phase
+              colour for state-derived metrics. Only Upcoming Harvests (the
+              literal harvest phase) gets a gold numeral — every other value
+              stays textPrimary/bright so gold isn't spent on six tiles at
+              once (spec §3 gold budget). */}
           <KpiGrid>
-            <KpiCard $borderColor={stateColors.planned}>
-              <KpiIndicator $color={stateColors.planned} aria-hidden="true" />
+            <KpiCard $borderColor={theme.colors.bright.lapis}>
+              <KpiIndicator $color={theme.colors.bright.lapis} aria-hidden="true" />
               <KpiLabel>Total Farms</KpiLabel>
               <KpiValue>{formatNumber(overview.totalFarms)}</KpiValue>
               <KpiSubtext>Active locations</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor={stateColors.growing}>
-              <KpiIndicator $color={stateColors.growing} aria-hidden="true" />
+            <KpiCard $borderColor={theme.colors.bright.lavender}>
+              <KpiIndicator $color={theme.colors.bright.lavender} aria-hidden="true" />
               <KpiLabel>Total Blocks</KpiLabel>
               <KpiValue>{formatNumber(overview.totalBlocks)}</KpiValue>
               <KpiSubtext>Across all farms</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor={stateColors.fruiting}>
-              <KpiIndicator $color={stateColors.fruiting} aria-hidden="true" />
+            <KpiCard $borderColor={stateColors.growing}>
+              <KpiIndicator $color={stateColors.growing} aria-hidden="true" />
               <KpiLabel>Active Plantings</KpiLabel>
-              <KpiValue>{formatNumber(overview.activePlantings)}</KpiValue>
+              <KpiValue $color={theme.colors.bright.emerald}>{formatNumber(overview.activePlantings)}</KpiValue>
               <KpiSubtext>Currently growing</KpiSubtext>
             </KpiCard>
 
             <KpiCard $borderColor={stateColors.harvesting}>
               <KpiIndicator $color={stateColors.harvesting} aria-hidden="true" />
               <KpiLabel>Upcoming Harvests</KpiLabel>
-              <KpiValue>{formatNumber(overview.upcomingHarvests)}</KpiValue>
+              <KpiValue $color={theme.colors.secondary[500]}>{formatNumber(overview.upcomingHarvests)}</KpiValue>
               <KpiSubtext>Blocks ready to harvest</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor={theme.colors.secondary[600]}>
-              <KpiIndicator $color={theme.colors.secondary[600]} aria-hidden="true" />
+            <KpiCard $borderColor={theme.colors.bright.verdi}>
+              <KpiIndicator $color={theme.colors.bright.verdi} aria-hidden="true" />
               <KpiLabel>Total Yield</KpiLabel>
               <KpiValue>{formatNumber(Math.round(harvestSummary.totalHarvestsKg))}</KpiValue>
               <KpiSubtext>kg harvested</KpiSubtext>
@@ -1351,7 +1325,9 @@ export function FarmDashboard() {
             <KpiCard $borderColor={stateColors.alert}>
               <KpiIndicator $color={stateColors.alert} aria-hidden="true" />
               <KpiLabel>Active Alerts</KpiLabel>
-              <KpiValue>{formatNumber(recentActivity.activeAlerts)}</KpiValue>
+              <KpiValue $color={recentActivity.activeAlerts > 0 ? theme.colors.error : undefined}>
+                {formatNumber(recentActivity.activeAlerts)}
+              </KpiValue>
               <KpiSubtext>Require attention</KpiSubtext>
             </KpiCard>
           </KpiGrid>
@@ -1423,15 +1399,15 @@ export function FarmDashboard() {
                 <ChartContainer style={{ height: 320 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stackedBarData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={`${theme.colors.textPrimary}0F`} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.line} />
                       <XAxis
                         dataKey="name"
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11, fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono }}
                         tickLine={false}
-                        axisLine={{ stroke: `${theme.colors.textPrimary}1F` }}
+                        axisLine={{ stroke: theme.colors.line }}
                       />
                       <YAxis
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11, fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono }}
                         tickLine={false}
                         axisLine={false}
                         allowDecimals={false}
@@ -1440,7 +1416,7 @@ export function FarmDashboard() {
                       <Legend
                         iconType="circle"
                         iconSize={10}
-                        wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                        wrapperStyle={{ fontSize: 11, paddingTop: 8, color: theme.colors.celeste, fontFamily: theme.typography.fontFamily.mono }}
                       />
                       {(Object.keys(STATE_LABELS) as string[]).map((key) => (
                         <Bar
@@ -1472,12 +1448,12 @@ export function FarmDashboard() {
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        stroke={`${theme.colors.textPrimary}0F`}
+                        stroke={theme.colors.line}
                         horizontal={false}
                       />
                       <XAxis
                         type="number"
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11, fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono }}
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(v: number) => `${formatNumber(v)}`}
@@ -1485,13 +1461,16 @@ export function FarmDashboard() {
                       <YAxis
                         type="category"
                         dataKey="name"
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11, fill: theme.colors.muted, fontFamily: theme.typography.fontFamily.mono }}
                         tickLine={false}
                         axisLine={false}
                         width={80}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="kg" name="kg" fill={theme.colors.secondary[600]} radius={[0, 4, 4, 0]} />
+                      {/* Single-series bar, not a status chart — celeste per
+                          the chart series order (spec §4 "Charts"), never
+                          gold (gold is not a chart series default, spec §3). */}
+                      <Bar dataKey="kg" name="kg" fill={theme.colors.celeste} radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -1575,7 +1554,12 @@ export function FarmDashboard() {
       {activeTab === 'activity' && (
         <TabContent role="tabpanel" aria-label="Activity and Alerts">
           <ActivityGrid>
-            <ActivityCard $accent={stateColors.growing}>
+            {/* "Recent Harvests" is literally the harvest phase — gold — and
+                "Pending Tasks" is the extrapolated "pending/awaiting" phase
+                (spec §5.2), not the block-state `planned` accent it borrowed
+                by convenience before (planned ≠ pending — different
+                vocabularies). */}
+            <ActivityCard $accent={theme.colors.phase.harvesting}>
               <ActivityCardLabel>Recent Harvests</ActivityCardLabel>
               <ActivityCardValue>{formatNumber(recentActivity.recentHarvests)}</ActivityCardValue>
               <ActivityCardNote>Last 7 days</ActivityCardNote>
@@ -1587,7 +1571,7 @@ export function FarmDashboard() {
               <ActivityCardNote>Require attention</ActivityCardNote>
             </ActivityCard>
 
-            <ActivityCard $accent={stateColors.planned}>
+            <ActivityCard $accent={theme.colors.phase.fruitingInit}>
               <ActivityCardLabel>Pending Tasks</ActivityCardLabel>
               <ActivityCardValue>{formatNumber(recentActivity.pendingTasks)}</ActivityCardValue>
               <ActivityCardNote>Scheduled actions</ActivityCardNote>

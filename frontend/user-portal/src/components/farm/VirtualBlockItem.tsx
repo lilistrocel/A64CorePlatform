@@ -8,8 +8,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import {
+  Square,
+  ClipboardList,
+  Sprout,
+  Grape,
+  Wheat,
+  Sparkles,
+  AlertTriangle,
+  BarChart3,
+  Trash2,
+} from 'lucide-react';
+import { glassPanelHover, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { EmptyVirtualBlockModal } from './EmptyVirtualBlockModal';
-import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
+import { BLOCK_STATE_LABELS } from '../../types/farm';
 import type { Block, BlockState } from '../../types/farm';
 
 // ============================================================================
@@ -23,24 +36,37 @@ export interface VirtualBlockItemProps {
 }
 
 // ============================================================================
+// PHASE MAP
+// ============================================================================
+
+// BlockState -> Night Observatory phase colour (spec §5.2 extrapolation, plus
+// literal matches where the crop-growth vocabulary already lines up with the
+// room-phase one: empty/fruiting/harvesting/cleaning are exact). Kept in sync
+// with the identical map in PhysicalBlockCard.tsx — same status vocabulary
+// (BlockState), same colour everywhere (spec §5: "same status = same colour
+// in every context").
+const BLOCK_STATE_PHASE: Record<BlockState, PhaseKey> = {
+  empty: 'empty',
+  planned: 'fruitingInit', // pending / awaiting — not yet actively growing
+  growing: 'inoculated', // open / active / in progress
+  fruiting: 'fruiting', // literal match
+  harvesting: 'harvesting', // literal match — the one gold status
+  cleaning: 'cleaning', // literal match
+  alert: 'quarantined', // rejected / failed / needs attention
+  partial: 'colonizing', // partially done
+};
+
+// ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
-const Container = styled.div`
+const Container = styled.div<{ $phase: PhaseKey }>`
+  ${glassPanelHover}
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: 8px;
-  border-left: 3px solid ${({ theme }) => theme.colors.primary[600]};
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    transform: translateX(4px);
-  }
+  border-left: 3px solid ${({ theme, $phase }) => theme.colors.phase[$phase]};
 `;
 
 const LeftSection = styled.div`
@@ -52,8 +78,9 @@ const LeftSection = styled.div`
 `;
 
 const CropIcon = styled.span`
-  font-size: 20px;
+  display: flex;
   flex-shrink: 0;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const CropInfo = styled.div`
@@ -74,9 +101,11 @@ const CropName = styled.div`
 `;
 
 const BlockCode = styled.div`
-  font-size: 11px;
+  ${monoLabel}
+  font-size: 0.64rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-family: 'Courier New', monospace;
 `;
 
 const RightSection = styled.div`
@@ -86,39 +115,37 @@ const RightSection = styled.div`
   flex-shrink: 0;
 `;
 
-const StateBadge = styled.span<{ $color: string }>`
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  background: ${({ $color }) => $color};
-  color: ${({ theme }) => theme.colors.onAccent};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
+const StateBadge = styled.span<{ $phase: PhaseKey }>`
+  ${({ $phase }) => phaseBadge($phase)}
 `;
 
 const DaysInfo = styled.div`
-  font-size: 12px;
+  ${monoLabel}
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.64rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
   color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
 `;
 
 const DeleteButton = styled.button`
-  padding: 4px 8px;
-  background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[600]};
-  border-radius: 4px;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 4px 8px;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  border-radius: 6px;
+  color: ${({ theme }) => theme.colors.error};
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    filter: brightness(1.15);
   }
 
   &:disabled {
@@ -135,7 +162,7 @@ export function VirtualBlockItem({ virtualBlock, farmId, onRefresh }: VirtualBlo
   const navigate = useNavigate();
   const [showRemoveModal, setShowRemoveModal] = useState(false);
 
-  const stateColor = BLOCK_STATE_COLORS[virtualBlock.state];
+  const statePhase: PhaseKey = BLOCK_STATE_PHASE[virtualBlock.state] ?? 'empty';
   const stateLabel = BLOCK_STATE_LABELS[virtualBlock.state];
 
   // Calculate days in current state
@@ -173,20 +200,22 @@ export function VirtualBlockItem({ virtualBlock, farmId, onRefresh }: VirtualBlo
 
   const daysInState = calculateDaysInState();
 
-  const getCropIcon = (state: BlockState): string => {
+  const getCropIcon = (state: BlockState) => {
     const icons = {
-      empty: '⬜',
-      planned: '📋',
-      planted: '🌱',
-      growing: '🌱',
-      fruiting: '🍇',
-      harvesting: '🌾',
-      cleaning: '🧹',
-      alert: '⚠️',
-      partial: '📊',
+      empty: Square,
+      planned: ClipboardList,
+      planted: Sprout,
+      growing: Sprout,
+      fruiting: Grape,
+      harvesting: Wheat,
+      cleaning: Sparkles,
+      alert: AlertTriangle,
+      partial: BarChart3,
     };
-    return icons[state] || '🌱';
+    return icons[state] || Sprout;
   };
+
+  const CropTypeIcon = getCropIcon(virtualBlock.state);
 
   const handleClick = () => {
     navigate(`/farm/farms/${farmId}/blocks/${virtualBlock.blockId}`);
@@ -199,9 +228,11 @@ export function VirtualBlockItem({ virtualBlock, farmId, onRefresh }: VirtualBlo
 
   return (
     <>
-      <Container onClick={handleClick}>
+      <Container $phase={statePhase} onClick={handleClick}>
         <LeftSection>
-          <CropIcon>{getCropIcon(virtualBlock.state)}</CropIcon>
+          <CropIcon>
+            <CropTypeIcon size={18} strokeWidth={1.6} />
+          </CropIcon>
           <CropInfo>
             <CropName>{virtualBlock.targetCropName || virtualBlock.name || 'Unknown Crop'}</CropName>
             <BlockCode>{virtualBlock.blockCode || virtualBlock.legacyBlockCode || 'N/A'}</BlockCode>
@@ -209,9 +240,16 @@ export function VirtualBlockItem({ virtualBlock, farmId, onRefresh }: VirtualBlo
         </LeftSection>
 
         <RightSection>
-          <StateBadge $color={stateColor}>{stateLabel}</StateBadge>
-          {daysInState > 0 && <DaysInfo>📊 {daysInState}d</DaysInfo>}
-          <DeleteButton onClick={handleRemoveClick}>🗑️</DeleteButton>
+          <StateBadge $phase={statePhase}>{stateLabel}</StateBadge>
+          {daysInState > 0 && (
+            <DaysInfo>
+              <BarChart3 size={12} strokeWidth={1.6} />
+              {daysInState}d
+            </DaysInfo>
+          )}
+          <DeleteButton onClick={handleRemoveClick}>
+            <Trash2 size={13} strokeWidth={1.6} />
+          </DeleteButton>
         </RightSection>
       </Container>
 

@@ -34,6 +34,9 @@
 
 import { useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { useSalesAudit } from '../../hooks/queries/useSalesAudit';
 import { useAdminUsers } from '../../hooks/queries/useAdminUsers';
 import type { SalesAuditDocType } from '../../services/salesApi';
@@ -92,13 +95,37 @@ function formatAction(action: string): string {
     .replace(' To ', ' → ');
 }
 
+/**
+ * Map a raw audit action string to a Night Observatory phase colour (spec
+ * §5.2 phase map). Audit actions are verbs ("transition_draft_to_open"), not
+ * one of the six document-status values statusPhase.ts covers, so this picks
+ * the closest phase by category rather than routing through
+ * salesStatusToPhase — but it still draws exclusively from `colors.phase.*`
+ * so the vocabulary stays canonical (same meaning, same colour everywhere).
+ */
+function actionToPhase(action: string): PhaseKey {
+  const lc = action.toLowerCase();
+  if (lc.includes('create') || lc.includes('from_delivery') || lc.includes('from_so')) {
+    return 'empty'; // draft / not started
+  }
+  if (lc.includes('open') || lc.includes('post')) {
+    return 'fruiting'; // approved / posted
+  }
+  if (lc.includes('cancel')) {
+    return 'decommissioned'; // cancelled / void
+  }
+  if (lc.includes('update') || lc.includes('edit')) {
+    return 'inoculated'; // active / in progress
+  }
+  return 'empty';
+}
+
 // ─── Styled components ────────────────────────────────────────────────────────
 
 const ModalBackdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 1100;
   display: flex;
   align-items: center;
@@ -107,13 +134,13 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 700px;
   padding: 28px 28px 24px;
-  position: relative;
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -134,7 +161,7 @@ const ModalTitle = styled.h2`
 
 const ModalSubtitle = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 20px;
 `;
 
@@ -150,16 +177,16 @@ const ModalCloseBtn = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 18px;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease;
   flex-shrink: 0;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -176,25 +203,23 @@ const ModalFooter = styled.div`
   justify-content: flex-end;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const CloseButton = styled.button`
+  ${glassControl}
   padding: 9px 22px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -202,33 +227,36 @@ const CloseButton = styled.button`
 const StateBox = styled.div`
   padding: 40px 24px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   line-height: 1.6;
 `;
 
+// Secondary action (not the page's gold CTA — this modal is opened from a
+// page that already has its own gold budget spent elsewhere) — bright.lapis
+// filled with onDark text.
 const RetryButton = styled.button`
   margin-top: 12px;
   padding: 8px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  color: ${({ theme }) => theme.colors.onDark};
   border: none;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background 150ms ease;
+  transition: opacity 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    opacity: 0.88;
   }
 `;
 
 const Spinner = styled.div`
   width: 28px;
   height: 28px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   margin: 0 auto 12px;
@@ -239,7 +267,7 @@ const Spinner = styled.div`
 `;
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 10px;
   overflow-x: auto;
 `;
@@ -250,29 +278,24 @@ const Table = styled.table`
   min-width: 480px;
 `;
 
-const THead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
-`;
+const THead = styled.thead``;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 14px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const Tr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   &:last-child {
     border-bottom: none;
   }
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -283,55 +306,20 @@ const Td = styled.td`
 `;
 
 const TdMuted = styled(Td)`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
-// Action badge — colour by action category
+// Action badge — phase-coloured via the canonical phaseBadge mixin (see
+// actionToPhase() above for how a free-form audit-action verb maps onto the
+// spec §5.2 phase vocabulary).
 interface ActionBadgeProps {
   $action: string;
 }
 
 const ActionBadge = styled.span<ActionBadgeProps>`
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  ${({ $action, theme }) => {
-    const lc = $action.toLowerCase();
-    if (lc.includes('create') || lc.includes('from_delivery') || lc.includes('from_so')) {
-      return `
-        background: ${theme.colors.neutral[100]};
-        color: ${theme.colors.textSecondary};
-      `;
-    }
-    if (lc.includes('open') || lc.includes('post')) {
-      return `
-        background: ${theme.colors.successBg};
-        color: ${theme.colors.emerald[600]};
-      `;
-    }
-    if (lc.includes('cancel')) {
-      return `
-        background: ${theme.colors.errorBg};
-        color: ${theme.colors.error};
-      `;
-    }
-    if (lc.includes('update') || lc.includes('edit')) {
-      return `
-        background: ${theme.colors.infoBg};
-        color: ${theme.colors.lapis[600]};
-      `;
-    }
-    // Default — neutral
-    return `
-      background: ${theme.colors.neutral[100]};
-      color: ${theme.colors.textSecondary};
-    `;
-  }}
+  ${({ $action }) => phaseBadge(actionToPhase($action))}
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -450,7 +438,7 @@ export function SalesAuditHistoryModal({
           onClick={onClose}
           aria-label={`Close audit history for ${docLabel}`}
         >
-          ×
+          <X size={18} strokeWidth={1.8} />
         </ModalCloseBtn>
 
         <ModalHeader>

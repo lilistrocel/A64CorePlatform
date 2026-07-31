@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { FlaskConical, Plus } from 'lucide-react';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { BatchFormModal } from '../../components/genetics/BatchFormModal';
 import { RecipeFormModal } from '../../components/genetics/RecipeFormModal';
@@ -83,27 +84,29 @@ const Version = styled.span`
 `;
 
 const Muted = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 12.5px;
 `;
 
+// A filter-chip "active" state, not a status — celeste is the correct
+// secondary-emphasis colour (spec §3: "gold is never a link/filter colour").
 const AdditiveChip = styled.button<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 3px 9px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
+  border-radius: 99px;
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid
-    ${({ $active, theme }) => ($active ? theme.colors.warning : theme.colors.neutral[300])};
+    ${({ $active, theme }) => ($active ? theme.colors.celeste : theme.colors.glass.border)};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.warningBg : theme.colors.background};
-  color: ${({ $active, theme }) => ($active ? theme.colors.gold[800] : theme.colors.textSecondary)};
+    $active ? 'rgba(180, 200, 220, 0.14)' : 'transparent'};
+  color: ${({ $active, theme }) => ($active ? theme.colors.textPrimary : theme.colors.muted)};
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.warning};
+    border-color: ${({ theme }) => theme.colors.celeste};
   }
 `;
 
@@ -118,7 +121,7 @@ const CardActions = styled.div`
   gap: 8px;
   margin-top: auto;
   padding-top: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 export function MediaLibraryPage() {
@@ -140,7 +143,10 @@ export function MediaLibraryPage() {
     <PageWrap>
       <PageHeader>
         <div>
-          <PageTitle>🧪 Media &amp; Recipes<HelpButton topic="genetics.media" /></PageTitle>
+          <PageTitle>
+            <FlaskConical size={22} strokeWidth={1.6} /> Media &amp; Recipes
+            <HelpButton topic="genetics.media" />
+          </PageTitle>
           <PageSubtitle>
             Versioned formulations and the batches poured from them. Additives are tracked
             separately from the base recipe so you can trace what any experiment was actually
@@ -159,9 +165,11 @@ export function MediaLibraryPage() {
             }}
             disabled={recipes.length === 0}
           >
-            + Record batch
+            <Plus size={14} strokeWidth={2} /> Record batch
           </Button>
-          <Button onClick={() => setShowRecipeForm(true)}>+ New recipe</Button>
+          <Button onClick={() => setShowRecipeForm(true)}>
+            <Plus size={14} strokeWidth={2} /> New recipe
+          </Button>
         </div>
       </PageHeader>
 

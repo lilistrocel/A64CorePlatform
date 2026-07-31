@@ -45,6 +45,8 @@ import {
 } from 'react';
 import ReactDOM from 'react-dom';
 import styled from 'styled-components';
+import { X, ChevronDown } from 'lucide-react';
+import { glassControl, glassOpaque } from '@a64core/shared';
 import type { GLAccount } from '../../services/financeAccountsService';
 import { DRAWER_LABELS, ACCOUNT_TYPE_LABELS } from '../../services/financeAccountsService';
 
@@ -101,17 +103,14 @@ const InputRow = styled.div`
 `;
 
 const ComboInput = styled.input<{ $hasError?: boolean; $disabled?: boolean; $hasSelection?: boolean }>`
+  ${glassControl}
   width: 100%;
   box-sizing: border-box;
   /* Right padding: 12px chevron gap (10px icon + 8px margin) + 26px clear btn + 4px gap = ~58px when selection exists, 38px otherwise */
   padding: 9px ${({ $hasSelection }) => ($hasSelection ? '64px' : '38px')} 9px 13px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
-  border-radius: 8px;
+  border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.glass.border)};
   font-size: 14px;
   font-family: inherit;
-  background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.neutral[50] : theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'text')};
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
@@ -122,18 +121,18 @@ const ComboInput = styled.input<{ $hasError?: boolean; $disabled?: boolean; $has
   white-space: nowrap;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.error : theme.colors.secondary[500]};
     box-shadow: 0 0 0 3px
-      ${({ $hasError, theme }) =>
+      ${({ $hasError }) =>
         $hasError
-          ? `${theme.colors.error}1a`
-          : `${theme.colors.primary[500]}1a`};
+          ? 'rgba(240, 138, 112, 0.15)'
+          : 'rgba(220, 185, 79, 0.15)'};
   }
 `;
 
@@ -147,13 +146,13 @@ const ChevronIcon = styled.span<{ $open: boolean; $disabled?: boolean; $hasSelec
   transition: transform 150ms ease-in-out;
   pointer-events: none;
   color: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.textDisabled : theme.colors.textSecondary};
-  font-size: 10px;
+    $disabled ? theme.colors.muted : theme.colors.celeste};
+  display: flex;
   line-height: 1;
   user-select: none;
 `;
 
-/** Small ✕ clear button inside the input, visible only when a selection exists. */
+/** Small clear button inside the input, visible only when a selection exists. */
 const ClearButton = styled.button`
   position: absolute;
   right: 8px;
@@ -168,15 +167,14 @@ const ClearButton = styled.button`
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 15px;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
   line-height: 1;
   padding: 0;
 
   &:hover {
-    background: ${({ theme }) => `${theme.colors.error}1a`};
+    background: rgba(240, 138, 112, 0.1);
     color: ${({ theme }) => theme.colors.error};
   }
 
@@ -212,11 +210,9 @@ const InputControlBadge = styled.span`
  * Position (top/left/width) is supplied as inline styles from JS.
  */
 const Dropdown = styled.ul`
+  ${glassOpaque}
   position: fixed;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(59, 44, 24, 0.14);
   max-height: 280px;
   overflow-y: auto;
   z-index: 9999;
@@ -230,8 +226,8 @@ const Dropdown = styled.ul`
 const DropdownItem = styled.li<{ $highlighted?: boolean; $taken?: boolean }>`
   padding: 9px 14px;
   cursor: ${({ $taken }) => ($taken ? 'not-allowed' : 'pointer')};
-  background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+  background: ${({ $highlighted }) =>
+    $highlighted ? 'rgba(180, 200, 220, 0.08)' : 'transparent'};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -239,13 +235,13 @@ const DropdownItem = styled.li<{ $highlighted?: boolean; $taken?: boolean }>`
   opacity: ${({ $taken }) => ($taken ? 0.45 : 1)};
 
   &:hover {
-    background: ${({ $taken, theme }) => ($taken ? 'transparent' : theme.colors.surface)};
+    background: ${({ $taken }) => ($taken ? 'transparent' : 'rgba(180, 200, 220, 0.08)')};
   }
 `;
 
 const OptionText = styled.span<{ $taken?: boolean }>`
   font-size: 13px;
-  color: ${({ $taken, theme }) => ($taken ? theme.colors.textDisabled : theme.colors.textPrimary)};
+  color: ${({ $taken, theme }) => ($taken ? theme.colors.muted : theme.colors.textPrimary)};
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -270,16 +266,16 @@ const ControlBadge = styled.span`
 const DropdownState = styled.li`
   padding: 12px 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-align: center;
 `;
 
 const TruncationFooter = styled.li`
   padding: 8px 14px;
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   margin-top: 2px;
 `;
 
@@ -294,8 +290,8 @@ const DrawerTypeBadge = styled.span`
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 99px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: rgba(180, 200, 220, 0.1);
+  color: ${({ theme }) => theme.colors.celeste};
   white-space: nowrap;
   letter-spacing: 0.2px;
 `;
@@ -652,7 +648,7 @@ export function AccountCombobox({
           $disabled={disabled}
           $hasSelection={hasSelection}
         >
-          ▾
+          <ChevronDown size={13} strokeWidth={1.6} />
         </ChevronIcon>
 
         {hasSelection && !disabled && (
@@ -663,7 +659,7 @@ export function AccountCombobox({
             title="Clear selection"
             tabIndex={-1}
           >
-            ×
+            <X size={13} strokeWidth={1.6} />
           </ClearButton>
         )}
       </InputRow>

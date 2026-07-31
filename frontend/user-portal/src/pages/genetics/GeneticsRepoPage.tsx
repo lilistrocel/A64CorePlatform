@@ -9,8 +9,11 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
+import { Plus } from 'lucide-react';
+import { PageHeader as SharedPageHeader, glassPanel } from '@a64core/shared';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { LineFormModal } from '../../components/genetics/LineFormModal';
+import { KIND_ICON_COMPONENTS } from '../../components/genetics/kindIcons';
 import {
   Banner,
   Button,
@@ -19,9 +22,6 @@ import {
   Grid,
   Input,
   KindBadge,
-  PageHeader,
-  PageSubtitle,
-  PageTitle,
   PageWrap,
   Select,
   Tag,
@@ -29,7 +29,22 @@ import {
 } from '../../components/genetics/styled';
 import { useGeneticLines, useGeneticsDashboard } from '../../hooks/genetics/useGenetics';
 import type { GeneticLine, OrganismKind } from '../../types/genetics';
-import { KIND_ICONS, KIND_LABELS, SENESCENCE_WATCH_GENERATION } from '../../types/genetics';
+import { KIND_LABELS, SENESCENCE_WATCH_GENERATION } from '../../types/genetics';
+
+const HeaderRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+`;
 
 const StatRow = styled.div`
   display: grid;
@@ -38,13 +53,17 @@ const StatRow = styled.div`
   margin-bottom: 24px;
 `;
 
+// Senescence-watch / novel-trait-pending are data cues, not the Harvesting
+// phase — bright.terra rather than gold (spec §3).
 const Stat = styled.div<{ $tone?: 'warn' }>`
+  ${glassPanel}
   padding: 14px 16px;
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  border: 1px solid
-    ${({ $tone, theme }) => ($tone === 'warn' ? theme.colors.warning : theme.colors.neutral[300])};
-  background: ${({ $tone, theme }) =>
-    $tone === 'warn' ? theme.colors.warningBg : theme.colors.background};
+  ${({ $tone, theme }) =>
+    $tone === 'warn' &&
+    `
+    border-color: ${theme.colors.bright.terra}66;
+    background: linear-gradient(155deg, ${theme.colors.bright.terra}22 0%, ${theme.colors.glass.base} 60%);
+  `}
 `;
 
 const StatValue = styled.div`
@@ -112,10 +131,11 @@ const Metric = styled.div`
   flex-direction: column;
 `;
 
-const MetricValue = styled.span<{ $warn?: boolean }>`
+const MetricValue = styled.span<{ $warn?: boolean; $hue?: 'terra' | 'coral' }>`
   font-size: 15px;
   font-weight: 700;
-  color: ${({ $warn, theme }) => ($warn ? theme.colors.gold[800] : theme.colors.textPrimary)};
+  color: ${({ $warn, $hue, theme }) =>
+    $warn ? theme.colors.bright[$hue ?? 'terra'] : theme.colors.textPrimary};
 `;
 
 const MetricLabel = styled.span`
@@ -172,8 +192,8 @@ const StepNum = styled.span`
   place-items: center;
   font-size: 12px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.primary[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
+  background: ${({ theme }) => theme.colors.bright.lapis};
+  color: ${({ theme }) => theme.colors.onDark};
 `;
 
 const StepBody = styled.div`
@@ -244,29 +264,31 @@ export function GeneticsRepoPage() {
 
   return (
     <PageWrap>
-      <PageHeader>
-        <div>
-          <PageTitle>🧬 Genetics Repo<HelpButton topic="genetics.repo" /></PageTitle>
-          <PageSubtitle>
-            Strains, varieties and bloodlines across every department — with full traceability
-            from the dish in your hand back to where it came from.
-          </PageSubtitle>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+      <HeaderRow>
+        <SharedPageHeader
+          breadcrumb="Library"
+          title="Genetics Repo"
+          emphasizeLastWord
+          description="Strains, varieties and bloodlines across every department — with full traceability from the dish in your hand back to where it came from."
+        />
+        <HeaderActions>
+          <HelpButton topic="genetics.repo" />
           <Button $variant="ghost" onClick={() => navigate('/genetics/media')}>
             Media &amp; recipes
           </Button>
-          <Button onClick={() => setShowCreate(true)}>+ New line</Button>
-        </div>
-      </PageHeader>
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus size={15} strokeWidth={2} /> New line
+          </Button>
+        </HeaderActions>
+      </HeaderRow>
 
       {dashboard && (
         <StatRow>
           <Stat>
             <StatValue>{dashboard.totalLines}</StatValue>
             <StatLabel>
-              Genetic lines · {dashboard.linesByKind.plant}🌿 {dashboard.linesByKind.fungus}🍄{' '}
-              {dashboard.linesByKind.animal}🐐
+              Genetic lines · {dashboard.linesByKind.plant} plant ·{' '}
+              {dashboard.linesByKind.fungus} fungus · {dashboard.linesByKind.animal} animal
             </StatLabel>
           </Stat>
           <Stat>
@@ -329,7 +351,7 @@ export function GeneticsRepoPage() {
           <option value="">All kinds</option>
           {(Object.keys(KIND_LABELS) as OrganismKind[]).map((k) => (
             <option key={k} value={k}>
-              {KIND_ICONS[k]} {KIND_LABELS[k]}
+              {KIND_LABELS[k]}
             </option>
           ))}
         </FilterSelect>
@@ -394,7 +416,9 @@ export function GeneticsRepoPage() {
                 <Button $variant="ghost" onClick={() => navigate('/genetics/media')}>
                   Start with media &amp; recipes
                 </Button>
-                <Button onClick={() => setShowCreate(true)}>+ New line</Button>
+                <Button onClick={() => setShowCreate(true)}>
+                  <Plus size={15} strokeWidth={2} /> New line
+                </Button>
               </StartActions>
             </StartHere>
           )}
@@ -415,7 +439,11 @@ export function GeneticsRepoPage() {
                     {line.scientificName && <Sci>{line.scientificName}</Sci>}
                   </div>
                   <KindBadge $kind={line.kind}>
-                    {KIND_ICONS[line.kind]} {KIND_LABELS[line.kind]}
+                    {(() => {
+                      const KindIcon = KIND_ICON_COMPONENTS[line.kind];
+                      return <KindIcon size={12} strokeWidth={1.8} />;
+                    })()}
+                    {KIND_LABELS[line.kind]}
                   </KindBadge>
                 </CardTop>
 
@@ -442,7 +470,7 @@ export function GeneticsRepoPage() {
                   </Metric>
                   {(stats?.contaminatedAccessions ?? 0) > 0 && (
                     <Metric>
-                      <MetricValue $warn>{stats?.contaminatedAccessions}</MetricValue>
+                      <MetricValue $warn $hue="coral">{stats?.contaminatedAccessions}</MetricValue>
                       <MetricLabel>contaminated</MetricLabel>
                     </Metric>
                   )}

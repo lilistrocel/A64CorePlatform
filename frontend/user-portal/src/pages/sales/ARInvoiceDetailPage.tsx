@@ -16,14 +16,14 @@
  *
  * Modals do NOT close on overlay click — X button only (project rule).
  *
- * Status badge colours (A20Core tokens — shared vocabulary across all
- * Wave 3 sales detail pages, see a20core-rebrand-spec.md):
- *   draft             → neutral      (neutral[100] / textSecondary)
- *   pending_approval  → gold         (warningBg / gold[700])
- *   open              → emerald      (successBg / emerald[700])
- *   partly_closed     → lapis        (infoBg / lapis[700])
- *   closed            → neutral (dark) (neutral[200] / neutral[800])
- *   cancelled         → terracotta   (errorBg / terracotta[700])
+ * Status badge colours — Night Observatory phase map (spec §5.2), routed
+ * through the single canonical helper in components/sales/statusPhase.ts:
+ *   draft             → phase.empty          (slate)
+ *   pending_approval  → phase.fruitingInit    (terra)
+ *   open              → phase.inoculated      (lapis)
+ *   partly_closed     → phase.colonizing      (laurel)
+ *   closed            → phase.resting         (lavender)
+ *   cancelled         → phase.decommissioned  (dim)
  *
  * Route: /sales/ar-invoices/:docId
  */
@@ -32,10 +32,12 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
 import { Link2, ExternalLink } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import { useArInvoice, useTransitionArInvoice, useDeleteArInvoice } from '../../hooks/queries/useArInvoices';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { ARInvoiceStatus, ARInvoiceLine } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -80,35 +82,12 @@ const Title = styled.h1`
   margin: 0;
 `;
 
+const DocNo = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
 const StatusBadge = styled.span<{ $status: ARInvoiceStatus }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'pending_approval': return theme.colors.warningBg;
-      case 'open': return theme.colors.successBg;
-      case 'partly_closed': return theme.colors.infoBg;
-      case 'closed': return theme.colors.neutral[200];
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'pending_approval': return theme.colors.gold[700];
-      case 'open': return theme.colors.emerald[700];
-      case 'partly_closed': return theme.colors.lapis[700];
-      case 'closed': return theme.colors.neutral[800];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const ActionBar = styled.div`
@@ -117,42 +96,52 @@ const ActionBar = styled.div`
   flex-wrap: wrap;
 `;
 
+// Primary CTA — the ONE gold budget item on this page (spec §3/§4): gold
+// gradient fill, cosmos (onAccent) text. Matches the shared Button
+// 'primary' variant treatment.
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const SecondaryButton = styled.button`
+  ${glassControl}
   padding: 10px 20px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
+// Destructive — coral-b tinted glass, never solid red (spec §4).
 const DangerButton = styled.button`
   padding: 10px 20px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: rgba(240, 138, 112, 0.26);
   }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
@@ -160,21 +149,19 @@ const DangerButton = styled.button`
 const GhostButton = styled.button`
   padding: 10px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const CardTitle = styled.h2`
@@ -205,11 +192,8 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const InfoValue = styled.span`
@@ -220,10 +204,11 @@ const InfoValue = styled.span`
 const InfoValueBold = styled(InfoValue)`
   font-weight: 600;
   font-size: 16px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const InfoValueMuted = styled(InfoValue)`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const Table = styled.table`
@@ -233,15 +218,11 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -253,13 +234,14 @@ const Td = styled.td`
   padding: 12px;
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
 `;
 
 const TdRight = styled(Td)`
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
 
 const TotalsRow = styled.div`
@@ -271,12 +253,13 @@ const TotalsRow = styled.div`
 `;
 
 const TotalsLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   min-width: 120px;
 `;
 
 const TotalsValue = styled.span`
   font-variant-numeric: tabular-nums;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-weight: 500;
   min-width: 120px;
   text-align: right;
@@ -285,7 +268,7 @@ const TotalsValue = styled.span`
 const TotalsGross = styled(TotalsRow)`
   font-size: 16px;
   font-weight: 700;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   margin-top: 4px;
   padding-top: 12px;
 `;
@@ -294,7 +277,7 @@ const DocChainLink = styled.a`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.bright.lapis};
   font-size: 14px;
   text-decoration: none;
   &:hover { text-decoration: underline; }
@@ -305,43 +288,41 @@ const DocChainItem = styled.div`
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   &:last-child { border-bottom: none; }
 `;
 
 const DocChainType = styled.span`
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   min-width: 100px;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 15px;
 `;
 
 const ErrorBanner = styled.div`
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  color: ${({ theme }) => theme.colors.terracotta[700]};
-  border-radius: 8px;
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 20px;
   font-size: 14px;
 `;
 
 // ─── Confirm Delete Modal ─────────────────────────────────────────────────────
-// Inline modal — does NOT close on overlay click (project rule).
+// Inline modal — does NOT close on overlay click (project rule). Canonical
+// modal treatment (spec §4): glassPanel at blur 24px over a cosmos scrim.
 
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,12 +330,13 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 28px;
   max-width: 460px;
   width: 90%;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 `;
 
 const ModalTitle = styled.h3`
@@ -536,7 +518,7 @@ export function ARInvoiceDetailPage() {
 
       <TitleRow>
         <TitleGroup>
-          <Title>AR Invoice {invoice.docNumber}</Title>
+          <Title>AR Invoice <DocNo>{invoice.docNumber}</DocNo></Title>
           <StatusBadge $status={invoice.status} aria-label={`Status: ${statusLabel(invoice.status)}`}>
             {statusLabel(invoice.status)}
           </StatusBadge>
@@ -667,7 +649,7 @@ export function ARInvoiceDetailPage() {
           </InfoItem>
           <InfoItem>
             <InfoLabel>Open Amount</InfoLabel>
-            <InfoValueBold style={{ color: invoice.totals.openAmount > 0 ? theme.colors.emerald[600] : undefined }}>
+            <InfoValueBold style={{ color: invoice.totals.openAmount > 0 ? theme.colors.bright.emerald : undefined }}>
               {formatAmount(invoice.totals.openAmount, invoice.currency)}
             </InfoValueBold>
           </InfoItem>

@@ -12,6 +12,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
+import { X, Trash2 } from 'lucide-react';
+import { glassPanel, monoLabel } from '@a64core/shared';
 import { CompactBlockCard } from './dashboard/CompactBlockCard';
 import { EmptyVirtualBlockModal } from './EmptyVirtualBlockModal';
 import { useDashboardConfig } from '../../hooks/farm/useDashboardConfig';
@@ -39,7 +41,9 @@ export interface PhysicalBlockPlantingsModalProps {
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Night Observatory scrim (spec §4 Modals/drawers) — cosmos-tinted, not
+     pure black. */
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(2px);
   /* Sits below all child modals that can be opened from cards inside it.
      Child modal z-indexes range from 1000 (QuickPlanModal, ResolveAlertModal)
@@ -53,9 +57,10 @@ const Backdrop = styled.div`
 `;
 
 const Dialog = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 12px;
-  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.3);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   max-width: min(1200px, 90vw);
   width: 100%;
   max-height: 85vh;
@@ -66,7 +71,7 @@ const Dialog = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   align-items: center;
   gap: 16px;
@@ -83,14 +88,14 @@ const ModalTitle = styled.h2.attrs({ id: TitleId })`
 `;
 
 const PlantingCountChip = styled.span`
+  ${monoLabel}
   padding: 4px 12px;
   border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 13px;
-  font-weight: 600;
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.celeste};
+  font-size: 0.66rem;
   white-space: nowrap;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 `;
 
 const CloseButton = styled.button`
@@ -102,19 +107,18 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   border-radius: 8px;
-  font-size: 18px;
   cursor: pointer;
   color: ${({ theme }) => theme.colors.textSecondary};
   transition: all 150ms ease-in-out;
   flex-shrink: 0;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -149,21 +153,20 @@ const TrashButton = styled.button`
   align-items: center;
   justify-content: center;
   background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
-  color: ${({ theme }) => theme.colors.terracotta[600]};
-  font-size: 14px;
+  color: ${({ theme }) => theme.colors.error};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   z-index: 2;
 
   &:hover {
-    background: ${({ theme }) => `${theme.colors.terracotta[600]}1A`};
-    border-color: ${({ theme }) => theme.colors.terracotta[600]};
+    background: ${({ theme }) => theme.colors.errorBg};
+    border-color: ${({ theme }) => theme.colors.error};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.terracotta[600]};
+    outline: 2px solid ${({ theme }) => theme.colors.error};
     outline-offset: 2px;
   }
 `;
@@ -171,34 +174,46 @@ const TrashButton = styled.button`
 const EmptyState = styled.div`
   padding: 48px 24px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  font-size: 14px;
+`;
+
+const EmptyTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: 19px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin-bottom: 6px;
+`;
+
+const EmptyDescription = styled.div`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   justify-content: flex-end;
 `;
 
 const FooterCloseButton = styled.button`
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -270,13 +285,16 @@ export function PhysicalBlockPlantingsModal({
             onClick={onClose}
             aria-label="Close"
           >
-            ✕
+            <X size={17} strokeWidth={1.6} />
           </CloseButton>
         </ModalHeader>
 
         <ModalBody>
           {virtualBlocks.length === 0 ? (
-            <EmptyState>No active plantings.</EmptyState>
+            <EmptyState>
+              <EmptyTitle>No active plantings</EmptyTitle>
+              <EmptyDescription>This block has no virtual plantings yet.</EmptyDescription>
+            </EmptyState>
           ) : (
             <BlocksGrid>
               {virtualBlocks.map((block) => (
@@ -296,7 +314,7 @@ export function PhysicalBlockPlantingsModal({
                       setBlockToArchive(block);
                     }}
                   >
-                    🗑️
+                    <Trash2 size={13} strokeWidth={1.6} />
                   </TrashButton>
                 </CardWrapper>
               ))}

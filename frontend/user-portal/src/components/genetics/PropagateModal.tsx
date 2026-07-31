@@ -107,6 +107,13 @@ const METHOD_DEFAULT_RESULT: Record<
   embryo_transfer: { form: 'embryo', unit: 'embryos' },
 };
 
+/** Blank is always valid — a value must parse to an integer in `1..ceiling`. */
+function isValidVesselNo(value: string, ceiling: number): boolean {
+  if (value === '') return true;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= ceiling;
+}
+
 const ROLE_OPTIONS: ParentRole[] = [
   'clone_source',
   'seed_parent',
@@ -124,11 +131,13 @@ const MethodHead = styled.div`
   gap: 8px;
 `;
 
+// Innermost surface inside the modal's glassPanel drops to a flat tint with
+// a line border rather than a second glass layer (spec §2 two-layer rule).
 const Preview = styled.div`
   padding: 14px 16px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -150,21 +159,28 @@ const Mono = styled.span`
 
 const Divider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.line};
 `;
 
+// Secondary emphasis — celeste, never gold (spec §3).
 const Toggle = styled.button`
   background: none;
   border: none;
   padding: 0;
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   align-self: flex-start;
 
   &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
     text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
+    outline-offset: 2px;
   }
 `;
 
@@ -192,9 +208,11 @@ export function PropagateModal({
   const [method, setMethod] = useState<PropagationMethodValue>('agar_to_agar');
   const [parentAId, setParentAId] = useState(sourceAccession?.id ?? '');
   const [parentARole, setParentARole] = useState<ParentRole>('clone_source');
+  const [parentAVesselNo, setParentAVesselNo] = useState('');
   const [parentBId, setParentBId] = useState('');
   const [parentBRole, setParentBRole] = useState<ParentRole>('sire');
   const [parentBUnknown, setParentBUnknown] = useState(false);
+  const [parentBVesselNo, setParentBVesselNo] = useState('');
 
   const [form, setForm] = useState<VesselForm>(sourceAccession?.form ?? 'petri_dish');
   const [quantity, setQuantity] = useState('8');
@@ -251,6 +269,12 @@ export function PropagateModal({
   const parentA = accessions.find((a) => a.id === parentAId) ?? sourceAccession;
   const parentB = accessions.find((a) => a.id === parentBId);
 
+  // Mirrors the server's max(labelledVesselCount, quantity) ceiling exactly.
+  const parentACeiling = parentA ? Math.max(parentA.labelledVesselCount, parentA.quantity) : 0;
+  const parentBCeiling = parentB ? Math.max(parentB.labelledVesselCount, parentB.quantity) : 0;
+  const parentAVesselValid = isValidVesselNo(parentAVesselNo, parentACeiling);
+  const parentBVesselValid = isValidVesselNo(parentBVesselNo, parentBCeiling);
+
   // Mirrors PropagationService.derive_generations so the preview matches what
   // the server will actually do.
   const isExpansion = !!methodInfo && !methodInfo.advancesCloneGeneration && !isSexual;
@@ -276,12 +300,20 @@ export function PropagateModal({
   }, [targetLineId, parentA, lines]);
 
   const canSubmit =
-    !!(parentAId || parentBId || targetLineId) && Number(quantity) >= 1 && !propagate.isPending;
+    !!(parentAId || parentBId || targetLineId) &&
+    Number(quantity) >= 1 &&
+    parentAVesselValid &&
+    parentBVesselValid &&
+    !propagate.isPending;
 
   const handleSubmit = async () => {
     const parents = [];
     if (parentAId) {
-      parents.push({ accessionId: parentAId, role: parentARole });
+      parents.push({
+        accessionId: parentAId,
+        role: parentARole,
+        vesselNo: parentAVesselNo ? Number(parentAVesselNo) : undefined,
+      });
     }
     if (allowsTwoParents) {
       if (parentBUnknown) {
@@ -289,7 +321,11 @@ export function PropagateModal({
         // is known, rather than forcing the whole thing to be anonymous.
         parents.push({ accessionId: null, role: parentBRole, note: 'Parent not identified' });
       } else if (parentBId) {
-        parents.push({ accessionId: parentBId, role: parentBRole });
+        parents.push({
+          accessionId: parentBId,
+          role: parentBRole,
+          vesselNo: parentBVesselNo ? Number(parentBVesselNo) : undefined,
+        });
       }
     }
 
@@ -403,6 +439,22 @@ export function PropagateModal({
         </FormRow>
       </Field>
 
+      {parentAId && (
+        <Field>
+          <Label>From vessel #</Label>
+          <Input
+            type="number"
+            min={1}
+            value={parentAVesselNo}
+            onChange={(e) => setParentAVesselNo(e.target.value)}
+            placeholder="optional"
+          />
+          <Hint>
+            If this vessel later turns out contaminated, its descendants can be traced.
+          </Hint>
+        </Field>
+      )}
+
       {allowsTwoParents && (
         <Field>
           <Label>Parent B</Label>
@@ -443,6 +495,35 @@ export function PropagateModal({
             known half is still recorded.
           </Hint>
         </Field>
+      )}
+
+      {allowsTwoParents && parentBId && !parentBUnknown && (
+        <Field>
+          <Label>From vessel #</Label>
+          <Input
+            type="number"
+            min={1}
+            value={parentBVesselNo}
+            onChange={(e) => setParentBVesselNo(e.target.value)}
+            placeholder="optional"
+          />
+          <Hint>
+            If this vessel later turns out contaminated, its descendants can be traced.
+          </Hint>
+        </Field>
+      )}
+
+      {(!parentAVesselValid || !parentBVesselValid) && (
+        <Banner $tone="warning">
+          {!parentAVesselValid &&
+            (parentACeiling > 0
+              ? `Parent A vessel # must be between 1 and ${parentACeiling}. `
+              : 'Parent A has no vessels recorded — leave its vessel # blank. ')}
+          {!parentBVesselValid &&
+            (parentBCeiling > 0
+              ? `Parent B vessel # must be between 1 and ${parentBCeiling}.`
+              : 'Parent B has no vessels recorded — leave its vessel # blank.')}
+        </Banner>
       )}
 
       <Preview>

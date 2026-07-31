@@ -8,6 +8,8 @@
  */
 
 import styled, { useTheme, type DefaultTheme } from 'styled-components';
+import type { LucideIcon } from 'lucide-react';
+import { Settings, Radio, BarChart3, Lightbulb } from 'lucide-react';
 import type { AIHubSection } from '../../types/aiHub';
 
 // ============================================================================
@@ -23,7 +25,7 @@ interface TabDefinition {
   section: AIHubSection;
   label: string;
   subtitle: string;
-  icon: string;
+  icon: LucideIcon;
   color: string;
 }
 
@@ -32,17 +34,20 @@ interface TabDefinition {
 // ============================================================================
 
 /**
- * Same 4-section identity colours as AIHubChat's SECTION_BADGE — keep the
- * two in sync. `report` was purple; it stays visually distinct from
- * `monitor`'s blue via a darker lapis shade (primary[700]) rather than gold,
- * since `control` already owns `warning` (== gold[500] at the token level).
+ * Night Observatory (T-901): same 4-section identity colours as AIHubChat's
+ * SECTION_BADGE / AIHub page's accent — keep all three in sync. These are
+ * purely categorical (which tab am I on), not status/semantic, so per spec
+ * §3 they're pulled from `colors.bright.*` rather than the semantic
+ * success/warning/info tokens — `warning` === gold-b, which is reserved
+ * (harvesting/logo/nav/FAB/primary-CTA), never a categorical tab colour.
+ * Four distinct bright hues, none of them bright.gold.
  */
 function getTabs(theme: DefaultTheme): TabDefinition[] {
   return [
-    { section: 'control', label: 'Control', subtitle: 'Execute & Manage', icon: '⚙️', color: theme.colors.warning },
-    { section: 'monitor', label: 'Monitor', subtitle: 'Live Data',         icon: '📡', color: theme.colors.info },
-    { section: 'report',  label: 'Report',  subtitle: 'Generate & Export', icon: '📊', color: theme.colors.primary[700] },
-    { section: 'advise',  label: 'Advise',  subtitle: 'Expert Guidance',   icon: '💡', color: theme.colors.success },
+    { section: 'control', label: 'Control', subtitle: 'Execute & Manage', icon: Settings,   color: theme.colors.bright.terra },
+    { section: 'monitor', label: 'Monitor', subtitle: 'Live Data',         icon: Radio,      color: theme.colors.bright.lapis },
+    { section: 'report',  label: 'Report',  subtitle: 'Generate & Export', icon: BarChart3,  color: theme.colors.bright.lavender },
+    { section: 'advise',  label: 'Advise',  subtitle: 'Expert Guidance',   icon: Lightbulb,  color: theme.colors.bright.emerald },
   ];
 }
 
@@ -113,8 +118,8 @@ const TabMainRow = styled.span`
 `;
 
 const TabIcon = styled.span`
-  font-size: 16px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
 
   @media (max-width: 400px) {
     display: none;
@@ -142,24 +147,27 @@ export function AIHubTabBar({ activeSection, onSectionChange }: AIHubTabBarProps
   const TABS = getTabs(theme);
   return (
     <TabBarContainer role="tablist" aria-label="AI Hub sections">
-      {TABS.map((tab) => (
-        <TabButton
-          key={tab.section}
-          role="tab"
-          aria-selected={activeSection === tab.section}
-          aria-controls={`ai-hub-panel-${tab.section}`}
-          id={`ai-hub-tab-${tab.section}`}
-          $isActive={activeSection === tab.section}
-          $accentColor={tab.color}
-          onClick={() => onSectionChange(tab.section)}
-        >
-          <TabMainRow>
-            <TabIcon aria-hidden="true">{tab.icon}</TabIcon>
-            {tab.label}
-          </TabMainRow>
-          <TabSubtitle aria-hidden="true">{tab.subtitle}</TabSubtitle>
-        </TabButton>
-      ))}
+      {TABS.map((tab) => {
+        const Icon = tab.icon;
+        return (
+          <TabButton
+            key={tab.section}
+            role="tab"
+            aria-selected={activeSection === tab.section}
+            aria-controls={`ai-hub-panel-${tab.section}`}
+            id={`ai-hub-tab-${tab.section}`}
+            $isActive={activeSection === tab.section}
+            $accentColor={tab.color}
+            onClick={() => onSectionChange(tab.section)}
+          >
+            <TabMainRow>
+              <TabIcon aria-hidden="true"><Icon size={16} strokeWidth={1.8} /></TabIcon>
+              {tab.label}
+            </TabMainRow>
+            <TabSubtitle aria-hidden="true">{tab.subtitle}</TabSubtitle>
+          </TabButton>
+        );
+      })}
     </TabBarContainer>
   );
 }

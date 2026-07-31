@@ -29,10 +29,13 @@
 
 import { useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { glassPanel, monoLabel, phaseBadge } from '@a64core/shared';
 import { useAuditLog } from '../../../hooks/queries/useAuditLog';
 import { useAdminUsers } from '../../../hooks/queries/useAdminUsers';
 import type { AuditLogEntry } from '../../../services/auditLogService';
 import { useToastStore } from '../../../stores/toast.store';
+import { statusToPhaseKey } from '../statusPhase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -96,7 +99,7 @@ function truncateUserId(userId: string): string {
 const ModalBackdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(3px);
   z-index: 1100;
   display: flex;
@@ -106,13 +109,13 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(59, 44, 24, 0.2);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 680px;
   padding: 28px 28px 24px;
-  position: relative;
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -133,7 +136,7 @@ const ModalTitle = styled.h2`
 
 const ModalSubtitle = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   margin: 0 0 20px;
 `;
 
@@ -149,16 +152,15 @@ const ModalCloseBtn = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 18px;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease;
   flex-shrink: 0;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -175,25 +177,25 @@ const ModalFooter = styled.div`
   justify-content: flex-end;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const CloseButton = styled.button`
   padding: 9px 22px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -211,25 +213,25 @@ const StateBox = styled.div`
 const RetryButton = styled.button`
   margin-top: 12px;
   padding: 8px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: background 150ms ease;
+  transition: transform 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
   }
 `;
 
 const Spinner = styled.div`
   width: 28px;
   height: 28px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.secondary[500]};
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   margin: 0 auto 12px;
@@ -240,9 +242,12 @@ const Spinner = styled.div`
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
+// Dense table, spec §4 "Tables": transparent rows, Space Mono uppercase
+// celeste column headers, `line` row dividers, hover rgba(180,200,220,.05).
+// Already sits inside the ModalBox glass panel — no per-row/per-wrapper glass.
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 10px;
   overflow-x: auto;
 `;
@@ -254,28 +259,26 @@ const Table = styled.table`
 `;
 
 const THead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: transparent;
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 14px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const Tr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   &:last-child {
     border-bottom: none;
   }
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -286,7 +289,7 @@ const Td = styled.td`
 `;
 
 const TdMuted = styled(Td)`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 12px;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
 `;
@@ -300,46 +303,24 @@ const TdReason = styled(Td)`
 // ─── Action badge ─────────────────────────────────────────────────────────────
 
 /**
- * Action badge colour convention:
- *   CLOSE   → amber (matches the CLOSED period status badge)
- *   REOPEN  → red (matches the "reopen" warning colour)
- *   Others  → neutral
+ * Action badge colour convention — routed through the shared finance phase
+ * map (statusPhase.ts, spec §5.2) instead of a local switch:
+ *   CLOSE   → `resting` (lavender) — the badge shows the resulting "closed" state
+ *   REOPEN  → `inoculated` (lapis) — the resulting "open" state
+ *   Others  → `empty` (slate)
  *
- * Uses the theme's warningBg/warning and errorBg/error tokens directly —
- * the full A20Core theme surface always defines these, so no hex fallback
- * is needed.
+ * Previously rendered with `warningBg`/`errorBg` tokens that read as
+ * gold-warning / coral-error — CLOSE is a routine action, not a warning, and
+ * REOPEN is not an error, so neither semantic fit. The phase map is correct
+ * here: same status = same colour as everywhere else the app shows period
+ * state (PeriodsPage status badges).
  */
 interface ActionBadgeProps {
   $action: string;
 }
 
 const ActionBadge = styled.span<ActionBadgeProps>`
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  ${({ $action, theme }) => {
-    switch ($action.toUpperCase()) {
-      case 'CLOSE':
-        return `
-          background: ${theme.colors.warningBg};
-          color: ${theme.colors.warning};
-        `;
-      case 'REOPEN':
-        return `
-          background: ${theme.colors.errorBg};
-          color: ${theme.colors.error};
-        `;
-      default:
-        return `
-          background: ${theme.colors.neutral[100]};
-          color: ${theme.colors.textSecondary};
-        `;
-    }
-  }}
+  ${({ $action }) => phaseBadge(statusToPhaseKey($action))}
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -480,7 +461,7 @@ export function AuditHistoryModal({
           onClick={onClose}
           aria-label={`Close audit history for ${entityLabel}`}
         >
-          ×
+          <X size={17} strokeWidth={1.6} aria-hidden="true" />
         </ModalCloseBtn>
 
         <ModalHeader>

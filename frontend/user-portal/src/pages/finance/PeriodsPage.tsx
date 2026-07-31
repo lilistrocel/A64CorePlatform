@@ -59,7 +59,9 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import styled, { css } from 'styled-components';
+import styled from 'styled-components';
+import { X } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceCompanies } from '../../hooks/queries/useFinanceCompanies';
 import {
@@ -71,11 +73,11 @@ import {
 } from '../../hooks/queries/useFiscalPeriods';
 import type {
   FiscalPeriod,
-  PeriodStatus,
   ClosingJePreview,
 } from '../../services/fiscalPeriodsService';
 import { useToastStore } from '../../stores/toast.store';
 import { AuditHistoryModal } from '../../components/finance/AuditHistoryModal';
+import { StatusBadge } from '../../components/finance/StatusBadge';
 
 // ─── Role gates ───────────────────────────────────────────────────────────────
 
@@ -278,33 +280,10 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
-const PageTitle = styled.h1`
-  font-size: 26px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 0 24px;
-  line-height: 1.6;
-  max-width: 820px;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  margin-bottom: 24px;
-`;
-
 // ─── Toolbar ──────────────────────────────────────────────────────────────────
 
 const ToolbarCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
   padding: 16px 20px;
   margin-bottom: 20px;
 `;
@@ -331,26 +310,22 @@ const ToolbarField = styled.div`
 `;
 
 const ToolbarLabel = styled.label`
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const ToolbarSelect = styled.select`
+  ${glassControl}
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 180px;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -358,7 +333,7 @@ const ToolbarSelect = styled.select`
 
 const PillToggleGroup = styled.div`
   display: flex;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -373,11 +348,11 @@ const PillToggleButton = styled.button<PillToggleButtonProps>`
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   font-family: inherit;
   border: none;
-  border-right: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-right: 1px solid ${({ theme }) => theme.colors.glass.border};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.background};
+    $active ? theme.colors.primary[500] : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? 'white' : theme.colors.textSecondary};
+    $active ? theme.colors.onDark : theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   white-space: nowrap;
@@ -388,64 +363,69 @@ const PillToggleButton = styled.button<PillToggleButtonProps>`
 
   &:hover:not([disabled]) {
     background: ${({ $active, theme }) =>
-      $active ? theme.colors.primary[700] : theme.colors.neutral[100]};
+      $active ? theme.colors.primary[700] : theme.colors.glass.hi};
   }
 `;
 
 // ─── Create button ─────────────────────────────────────────────────────────────
 
+// The page's one primary CTA — spec §4 Buttons: gold gradient + onAccent
+// (cosmos) text. Was a solid `primary[500]` (lapis) fill with `onAccent`
+// text — dark-on-lapis, near invisible.
 const CreateButton = styled.button`
   padding: 10px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
 `;
 
+// Dense table, spec §4: one glass panel, transparent rows/header, Space Mono
+// uppercase celeste column headers, `line` row dividers, hover
+// rgba(180,200,220,.05).
 const Table = styled.table`
+  ${glassPanel}
   width: 100%;
   border-collapse: collapse;
   min-width: 760px;
 `;
 
 const THead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: transparent;
   position: sticky;
   top: 0;
   z-index: 1;
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 12px 16px;
   text-align: left;
-  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
@@ -455,12 +435,13 @@ interface TrProps {
 }
 
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   border-left: ${({ $current, theme }) =>
     $current ? `3px solid ${theme.colors.primary[500]}` : '3px solid transparent'};
   opacity: ${({ $muted }) => ($muted ? 0.7 : 1)};
+  transition: background 100ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: rgba(180, 200, 220, 0.05);
   }
 `;
 
@@ -472,66 +453,28 @@ const Td = styled.td`
 `;
 
 const TdMuted = styled(Td)`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 12px;
 `;
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
+//
+// The three-state open/closed/locked pill now renders via the shared
+// StatusBadge component (components/finance/StatusBadge), which routes
+// through statusToPhaseKey() (statusPhase.ts, spec §5.2):
+//   open   → `inoculated` (lapis)    — same "open/active" mapping as everywhere else
+//   closed → `resting`    (lavender) — matches AuditHistoryModal's CLOSE action badge
+//   locked → `resting`    (lavender) — same phase as closed, terminal state
+// This replaces the old success/warning/error three-state switch, which used
+// `warning` (gold-b) for "closed" — a status colour collision with the
+// reserved Harvesting gold, and inconsistent with the audit-history badges
+// for the same entity.
 
-/**
- * Three-state status badge:
- *   open   → green (success)
- *   closed → amber (warning)
- *   locked → red (error / danger)
- *
- * Uses theme tokens so the badge adapts to light/dark mode.
- * Fallbacks ensure the badge is visible even when the theme doesn't define
- * all three semantic color sets.
- */
-interface StatusBadgeProps {
-  $status: PeriodStatus;
-}
-
-const statusBadgeStyles = css<StatusBadgeProps>`
-  ${({ $status, theme }) => {
-    switch ($status) {
-      case 'open':
-        return css`
-          background: ${theme.colors.successBg};
-          color: ${theme.colors.success};
-        `;
-      case 'closed':
-        return css`
-          background: ${theme.colors.warningBg};
-          color: ${theme.colors.warning};
-        `;
-      case 'locked':
-        return css`
-          background: ${theme.colors.errorBg};
-          color: ${theme.colors.error};
-        `;
-      default:
-        return css`
-          background: ${theme.colors.neutral[100]};
-          color: ${theme.colors.textSecondary};
-        `;
-    }
-  }}
-`;
-
-const StatusBadge = styled.span<StatusBadgeProps>`
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  ${statusBadgeStyles}
-`;
-
+// "Current" is a supplementary, non-phase indicator (this period contains
+// today's date) — categorical, not a status, so it stays off the phase map.
+// Styled as a small informational lapis chip rather than the old
+// primary[50]/primary[700] pairing (light-theme literals, illegible on the
+// dark ground).
 const CurrentBadge = styled.span`
   display: inline-flex;
   align-items: center;
@@ -541,27 +484,10 @@ const CurrentBadge = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: rgba(107, 138, 224, 0.16);
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  border: 1px solid rgba(107, 138, 224, 0.45);
   margin-left: 6px;
-`;
-
-// ─── Status dot indicator ─────────────────────────────────────────────────────
-
-const StatusDot = styled.span<{ $status: PeriodStatus }>`
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'open':   return theme.colors.success;
-      case 'closed': return theme.colors.warning;
-      case 'locked': return theme.colors.error;
-      default:       return theme.colors.neutral[400];
-    }
-  }};
 `;
 
 // ─── Action buttons ────────────────────────────────────────────────────────────
@@ -591,14 +517,14 @@ const ReopenActionButton = styled.button`
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:disabled {
@@ -609,29 +535,29 @@ const ReopenActionButton = styled.button`
 
 const LockedLabel = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-style: italic;
 `;
 
-/** Audit history button — neutral/secondary style, sits alongside close/reopen. */
+/** Audit history button — glass/secondary style, sits alongside close/reopen. */
 const AuditActionButton = styled.button`
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
     color: ${({ theme }) => theme.colors.textPrimary};
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
+    border-color: ${({ theme }) => theme.colors.muted};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -649,7 +575,7 @@ const ActionsCell = styled.div`
 const EmptyState = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
   line-height: 1.6;
 `;
@@ -657,7 +583,7 @@ const EmptyState = styled.div`
 const LoadingOverlay = styled.div`
   padding: 48px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 14px;
 `;
 
@@ -679,7 +605,7 @@ const ErrorBanner = styled.div`
 const ModalBackdrop = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   backdrop-filter: blur(3px);
   z-index: 1100;
   display: flex;
@@ -689,13 +615,13 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(59, 44, 24, 0.2);
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 520px;
   padding: 28px 28px 24px;
-  position: relative;
   max-height: calc(100vh - 48px);
   overflow-y: auto;
 `;
@@ -721,16 +647,15 @@ const ModalCloseBtn = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 18px;
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   transition: background 150ms ease;
   flex-shrink: 0;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.secondary[500]};
     outline-offset: 2px;
   }
 `;
@@ -744,24 +669,28 @@ const ModalActions = styled.div`
 
 const CancelButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.glass.hi};
   }
 `;
 
+// Destructive confirm (Close Period / Continue to Close) — coral-b tinted
+// glass, never a solid fill (spec §4 Buttons: Destructive). Was a solid
+// terracotta[600]/[700] fill with onAccent text — illegible on the dark
+// ground and against the button-fill rule.
 const DangerConfirmButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.terracotta[600]};
-  color: ${({ theme }) => theme.colors.onAccent};
-  border: none;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
@@ -769,7 +698,7 @@ const DangerConfirmButton = styled.button`
   cursor: pointer;
   transition: background 150ms ease;
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.terracotta[700]};
+    background: rgba(240, 138, 112, 0.24);
   }
   &:disabled {
     opacity: 0.5;
@@ -777,23 +706,30 @@ const DangerConfirmButton = styled.button`
   }
 `;
 
+// A modal's single primary action (Confirm Reopen / Create Periods) — gold
+// gradient + onAccent text, same convention as AuditHistoryModal's
+// RetryButton. Was a solid `primary[500]` (lapis) fill with `onAccent`
+// text — dark-on-lapis, near invisible.
 const ConfirmButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease;
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
   }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
@@ -828,10 +764,13 @@ const InfoPanelText = styled.p`
  * Scrollable container: keeps the table compact when there are many lines.
  * max-height of ~260px (about 12 rows) before scroll kicks in.
  */
+// Sits inside the already-glass ModalBox — spec §2 two-layer rule: no second
+// glass fill here, just a plain `line` border (transparent thead/rows,
+// matching the dense-table pattern from spec §4).
 const PreviewTableContainer = styled.div`
   max-height: 260px;
   overflow-y: auto;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 8px;
   margin-bottom: 12px;
 `;
@@ -843,27 +782,24 @@ const PreviewTable = styled.table`
 `;
 
 const PreviewThead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: transparent;
   position: sticky;
   top: 0;
   z-index: 1;
 `;
 
 const PreviewTfoot = styled.tfoot`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(180, 200, 220, 0.05);
+  border-top: 2px solid ${({ theme }) => theme.colors.line};
 `;
 
 const PreviewTh = styled.th`
+  ${monoLabel}
   padding: 7px 10px;
   text-align: left;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   white-space: nowrap;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 
   &:nth-child(4),
   &:nth-child(5) {
@@ -874,7 +810,7 @@ const PreviewTh = styled.th`
 const PreviewTd = styled.td`
   padding: 6px 10px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 
   &:nth-child(4),
@@ -947,7 +883,7 @@ const FieldLabel = styled.label`
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -959,26 +895,23 @@ const RequiredMark = styled.span`
 `;
 
 const Textarea = styled.textarea`
+  ${glassControl}
   width: 100%;
   box-sizing: border-box;
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 80px;
   line-height: 1.5;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textSecondary};
-    opacity: 0.7;
+    color: ${({ theme }) => theme.colors.muted};
   }
 `;
 
@@ -986,7 +919,7 @@ const CharCount = styled.p<{ $warn: boolean }>`
   font-size: 11px;
   text-align: right;
   margin: 4px 0 0;
-  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.textSecondary)};
+  color: ${({ $warn, theme }) => ($warn ? theme.colors.error : theme.colors.muted)};
 `;
 
 // ─── Reopen warning box ────────────────────────────────────────────────────────
@@ -1016,41 +949,39 @@ const WizardSectionLabel = styled.label`
   display: block;
   font-size: 12px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 8px;
 `;
 
 const WizardInput = styled.input`
+  ${glassControl}
   width: 100%;
   box-sizing: border-box;
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
 const WizardSelect = styled.select`
+  ${glassControl}
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
   }
 `;
 
@@ -1078,7 +1009,8 @@ const WizardErrorText = styled.p`
 
 const ProgressBar = styled.div`
   height: 4px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: rgba(10, 14, 36, 0.6);
+  border: 1px solid ${({ theme }) => theme.colors.line};
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 16px;
@@ -1090,7 +1022,7 @@ interface ProgressFillProps {
 
 const ProgressFill = styled.div<ProgressFillProps>`
   height: 100%;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.bright.lapis};
   width: ${({ $percent }) => $percent}%;
   transition: width 200ms ease;
 `;
@@ -1671,14 +1603,15 @@ export function PeriodsPage() {
 
   return (
     <PageContainer>
-      <PageTitle>Fiscal Periods</PageTitle>
-      <PageSubtitle>
-        Open periods accept new postings. Closed periods reject any new journal entries,
-        including reversals. Locked periods are permanently closed and cannot be reopened
-        from this page. To correct a posting in a closed period, reopen it temporarily or
-        post a reversal in the current open period.
-      </PageSubtitle>
-      <Divider />
+      <PageHeader
+        breadcrumb="FINANCE · PERIODS"
+        title="Fiscal Periods"
+        description="Open periods accept new postings. Closed periods reject any new journal entries, including reversals. Locked periods are permanently closed and cannot be reopened from this page."
+        stats={[
+          { value: allPeriods.length, label: 'Total Periods' },
+          { value: allPeriods.filter((p) => p.status === 'open').length, label: 'Open', alive: true },
+        ]}
+      />
 
       {/* ── Toolbar ── */}
       <ToolbarCard>
@@ -1812,14 +1745,16 @@ export function PeriodsPage() {
                       <Td>{formatDate(period.startDate)}</Td>
                       <Td>{formatDate(period.endDate)}</Td>
                       <Td>
-                        <StatusBadge $status={period.status}>
-                          <StatusDot $status={period.status} />
-                          {period.status === 'open'
-                            ? 'OPEN'
-                            : period.status === 'closed'
-                            ? 'CLOSED'
-                            : 'LOCKED'}
-                        </StatusBadge>
+                        <StatusBadge
+                          status={period.status}
+                          label={
+                            period.status === 'open'
+                              ? 'OPEN'
+                              : period.status === 'closed'
+                              ? 'CLOSED'
+                              : 'LOCKED'
+                          }
+                        />
                         {isCurrent && <CurrentBadge>Current</CurrentBadge>}
                       </Td>
                       <TdMuted>{formatDateTime(period.updatedAt)}</TdMuted>
@@ -1892,7 +1827,7 @@ export function PeriodsPage() {
               onClick={dismissCloseModal}
               aria-label="Cancel — do not close this period"
             >
-              ×
+              <X size={17} strokeWidth={1.6} aria-hidden="true" />
             </ModalCloseBtn>
 
             <ModalTitle id="close-modal-title">
@@ -2001,7 +1936,7 @@ export function PeriodsPage() {
               onClick={dismissReopenModal}
               aria-label="Cancel — do not reopen this period"
             >
-              ×
+              <X size={17} strokeWidth={1.6} aria-hidden="true" />
             </ModalCloseBtn>
             <ModalTitle id="reopen-modal-title">
               Reopen Period — {reopenTarget.fiscalYear} P{reopenTarget.periodNumber}
@@ -2083,7 +2018,7 @@ export function PeriodsPage() {
               aria-label="Close wizard"
               disabled={wizardRunning}
             >
-              ×
+              <X size={17} strokeWidth={1.6} aria-hidden="true" />
             </ModalCloseBtn>
             <ModalTitle id="wizard-modal-title">
               Create Periods for Year

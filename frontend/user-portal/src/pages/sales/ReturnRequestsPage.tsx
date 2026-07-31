@@ -11,15 +11,27 @@
  *
  * Route: /sales/return-requests
  * NO Audit History button — sales audit endpoint pending T-200.x.
+ *
+ * Night Observatory reskin (T-901): status filter chips and the status
+ * column both route through the single canonical helper in
+ * components/sales/statusPhase.ts — see StatusBadge / Chip below. Reason
+ * chips have no phase (categorical, not status) — celeste emphasis instead.
  */
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
 import { Plus } from 'lucide-react';
+import { glassPanel, glassControl, monoLabel, phaseBadge, PageHeader } from '@a64core/shared';
+import type { PhaseKey } from '@a64core/shared';
 import { useReturnRequests } from '../../hooks/queries/useReturnRequests';
 import { useAuthStore } from '../../stores/auth.store';
+import { salesStatusToPhase } from '../../components/sales/statusPhase';
 import type { ReturnRequestStatus, ReturnReason, ReturnRequestListItem } from '../../services/salesApi';
+
+function chipPhase(value: ReturnRequestStatus | ''): PhaseKey | null {
+  return value === '' ? null : salesStatusToPhase(value);
+}
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -29,28 +41,10 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
+const ActionRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-  gap: 16px;
-`;
-
-const TitleGroup = styled.div``;
-
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px;
-`;
-
-const Subtitle = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 `;
 
 const NewButton = styled.button`
@@ -58,15 +52,20 @@ const NewButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 22px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.primary[600]}; }
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
 `;
 
 const Toolbar = styled.div`
@@ -78,15 +77,17 @@ const Toolbar = styled.div`
 `;
 
 const SearchInput = styled.input`
+  ${glassControl}
   padding: 9px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   width: 280px;
-  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textSecondary}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[400]}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
 `;
 
 const ChipGroup = styled.div`
@@ -95,28 +96,33 @@ const ChipGroup = styled.div`
   gap: 6px;
 `;
 
-const Chip = styled.button<{ $active: boolean }>`
+const Chip = styled.button<{ $active: boolean; $phase?: PhaseKey | null }>`
+  ${({ $active, $phase }) => ($active && $phase ? phaseBadge($phase) : glassControl)}
   padding: 5px 12px;
   border-radius: 99px;
-  font-size: 13px;
-  font-weight: 500;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.66rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
   cursor: pointer;
-  border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] : theme.colors.surface};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] : theme.colors.textSecondary};
+  transition: all 150ms ease;
+
+  ${({ $active, $phase, theme }) =>
+    !($active && $phase) &&
+    css`
+      color: ${$active ? theme.colors.celeste : theme.colors.muted};
+    `}
+
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[400]};
-    color: ${({ theme }) => theme.colors.primary[700]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
+// A dense results table lives inside one glass panel — no nested glass.
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: 12px;
+  ${glassPanel}
+  padding: 8px;
   overflow: hidden;
 `;
 
@@ -126,71 +132,40 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 11px 14px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   white-space: nowrap;
 `;
 
 const Tr = styled.tr`
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover td { background: rgba(180, 200, 220, 0.05); }
 `;
 
 const Td = styled.td`
   padding: 13px 14px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
   vertical-align: middle;
+  transition: background 100ms ease;
 `;
 
-// Status badge colours — A20Core document-status canon, shared across all
-// Wave 3 sales list/detail pages (see a20core-rebrand-spec.md). This page
-// previously used a distinct purple for `closed`; converged onto the shared
-// neutral(dark) treatment used by every other sales list/detail page:
-//   draft     → neutral   (neutral[100] / textSecondary)
-//   open      → emerald   (successBg / emerald[700])
-//   closed    → neutral (dark) (neutral[200] / neutral[800])
-//   cancelled → terracotta (errorBg / terracotta[700])
-interface StatusBadgeProps { $status: ReturnRequestStatus }
-const StatusBadge = styled.span<StatusBadgeProps>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.neutral[100];
-      case 'open': return theme.colors.successBg;
-      case 'closed': return theme.colors.neutral[200];
-      case 'cancelled': return theme.colors.errorBg;
-      default: return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'draft': return theme.colors.textSecondary;
-      case 'open': return theme.colors.emerald[700];
-      case 'closed': return theme.colors.neutral[800];
-      case 'cancelled': return theme.colors.terracotta[700];
-      default: return theme.colors.textSecondary;
-    }
-  }};
+const TdMono = styled(Td)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+`;
+
+const StatusBadge = styled.span<{ $status: ReturnRequestStatus }>`
+  ${({ $status }) => phaseBadge(salesStatusToPhase($status))}
 `;
 
 const EmptyState = styled.div`
   padding: 56px 24px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   font-size: 15px;
 `;
 
@@ -198,10 +173,9 @@ const Pagination = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: 14px 8px 4px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const PaginationButtons = styled.div`
@@ -210,23 +184,21 @@ const PaginationButtons = styled.div`
 `;
 
 const PageButton = styled.button<{ $disabled?: boolean }>`
+  ${glassControl}
   padding: 6px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ $disabled, theme }) => $disabled ? theme.colors.neutral[400] : theme.colors.textPrimary};
+  color: ${({ $disabled, theme }) => $disabled ? theme.colors.muted : theme.colors.celeste};
   font-size: 13px;
   cursor: ${({ $disabled }) => $disabled ? 'not-allowed' : 'pointer'};
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover:not(:disabled) { color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ErrorBanner = styled.div`
   padding: 14px 20px;
   background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.terracotta[200]};
-  border-radius: 8px;
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
   margin-bottom: 16px;
-  color: ${({ theme }) => theme.colors.terracotta[700]};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 14px;
 `;
 
@@ -317,15 +289,18 @@ export function ReturnRequestsPage() {
 
   return (
     <Container>
-      <Header>
-        <TitleGroup>
-          <Title>Return Requests</Title>
-          <Subtitle>RMA authorisations — gate for the returns flow</Subtitle>
-        </TitleGroup>
+      <PageHeader
+        breadcrumb="SALES · LIVE"
+        title="Return Requests"
+        description="RMA authorisations — gate for the returns flow"
+        stats={[{ value: total, label: 'Total Requests' }]}
+      />
+
+      <ActionRow>
         <NewButton onClick={() => navigate('/sales/return-requests/new')}>
-          <Plus size={16} /> New Return Request
+          <Plus size={16} strokeWidth={1.8} /> New Return Request
         </NewButton>
-      </Header>
+      </ActionRow>
 
       {error && (
         <ErrorBanner>Failed to load Return Requests. Please refresh and try again.</ErrorBanner>
@@ -342,6 +317,7 @@ export function ReturnRequestsPage() {
             <Chip
               key={opt.value}
               $active={statusFilter === opt.value}
+              $phase={chipPhase(opt.value)}
               onClick={() => { setStatusFilter(opt.value as ReturnRequestStatus | ''); setPage(1); }}
             >
               {opt.label}
@@ -400,13 +376,13 @@ export function ReturnRequestsPage() {
                     key={rr.docEntry}
                     onClick={() => navigate(`/sales/return-requests/${rr.docEntry}`)}
                   >
-                    <Td style={{ fontWeight: 600 }}>{rr.docNumber}</Td>
-                    <Td>{formatDate(rr.docDate)}</Td>
-                    <Td>{formatDate(rr.validUntilDate)}</Td>
+                    <TdMono style={{ fontWeight: 600 }}>{rr.docNumber}</TdMono>
+                    <TdMono>{formatDate(rr.docDate)}</TdMono>
+                    <TdMono>{formatDate(rr.validUntilDate)}</TdMono>
                     <Td>{rr.customerName}</Td>
                     <Td>{reasonLabel(rr.reason)}</Td>
-                    <Td style={{ color: dn ? undefined : theme.colors.textDisabled }}>{dn ?? '—'}</Td>
-                    <Td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <TdMono style={{ color: dn ? undefined : theme.colors.muted }}>{dn ?? '—'}</TdMono>
+                    <Td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontFamily: theme.typography.fontFamily.mono }}>
                       {Number(rr.totals.gross).toLocaleString('en-AE', {
                         minimumFractionDigits: 2, maximumFractionDigits: 2,
                       })}

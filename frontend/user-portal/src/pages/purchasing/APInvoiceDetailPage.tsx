@@ -8,19 +8,29 @@
  *   Approved/Rejected — read-only
  *
  * On Approved, shows a green banner linking to the finance JE list.
- * Variance > 0 (invoice exceeds PO) — row is amber-highlighted, value in red.
- * Variance < 0 (invoice below PO)   — value in muted green.
+ * Variance > 0 (invoice exceeds PO) — row is coral-tinted, value in coral.
+ * Variance < 0 (invoice below PO)   — value in muted emerald.
  *
  * Role gating: procurement_officer, procurement_manager, accountant,
  *   finance_admin, auditor, admin, super_admin.
  * Modals do NOT close on overlay click — X button only.
  *
  * Route: /purchasing/ap/:docId
+ *
+ * Night Observatory (T-901 Phase 3): status badge colour is routed through
+ * the single canonical purchasingStatusToPhase() map in ./statusPhase.ts.
+ * The line-variance row highlight previously used gold[50] (amber) as a
+ * generic "has variance" flag — gold is reserved for the Harvesting phase /
+ * primary CTA / breadcrumb per spec §3, so it has been swapped for a subtle
+ * coral-tinted flag instead (a CSS-only change; the underlying
+ * `hasLineVariance` boolean and its computation are untouched).
  */
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
+import { X, HelpCircle } from 'lucide-react';
+import { PageHeader, glassPanel, glassControl, monoLabel, phaseBadge } from '@a64core/shared';
 import {
   useAPInvoice,
   useSubmitAPInvoice,
@@ -30,6 +40,7 @@ import {
 } from '../../hooks/queries/useAPInvoices';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { purchasingStatusToPhase } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -50,75 +61,101 @@ const BackLink = styled.button`
   &:hover { text-decoration: underline; }
 `;
 
-const TitleRow = styled.div`
+const HeaderActionsRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-const Title = styled.h1`
-  font-size: 26px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 20px;
 `;
 
 const ActionBar = styled.div`
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 `;
 
+// Primary CTA — the ONE gold budget item in the action bar (spec §3/§4/§8).
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
   color: ${({ theme }) => theme.colors.onAccent};
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(4, 6, 18, 0.45), 0 0 16px rgba(220, 185, 79, 0.25);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+const SecondaryButton = styled.button`
+  ${glassControl}
+  padding: 10px 20px;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
-const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.success};
-  &:hover { background: ${({ theme }) => theme.colors.emerald[600]}; }
-`;
-
-const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.error};
-  &:hover { background: ${({ theme }) => theme.colors.terracotta[600]}; }
+// Destructive — coral-b tinted glass, never solid red (spec §4).
+const DangerButton = styled.button`
+  padding: 10px 20px;
+  background: rgba(240, 138, 112, 0.16);
+  color: ${({ theme }) => theme.colors.bright.coral};
+  border: 1px solid rgba(240, 138, 112, 0.45);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+  &:hover { background: rgba(240, 138, 112, 0.26); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const GhostButton = styled.button`
-  padding: 10px 20px;
+  padding: 10px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  border-radius: 10px;
+  font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  transition: all 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.07); color: ${({ theme }) => theme.colors.textPrimary}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+// A quiet non-interactive status chip (e.g. "Read-only (Approved)") — glass,
+// celeste text, never gold; distinct from the phase StatusBadge below.
+const ReadOnlyTag = styled.span`
+  ${monoLabel}
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.glass.base};
+  border: 1px solid ${({ theme }) => theme.colors.glass.border};
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  ${glassPanel}
   padding: 24px 28px;
   margin-bottom: 20px;
 `;
 
 const CardTitle = styled.h2`
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px;
 `;
@@ -132,17 +169,26 @@ const InfoGrid = styled.div`
 const InfoItem = styled.div``;
 
 const InfoLabel = styled.div`
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  ${monoLabel}
+  color: ${({ theme }) => theme.colors.celeste};
   margin-bottom: 4px;
 `;
 
 const InfoValue = styled.div`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+// Space Mono for quantities/currency amounts/timestamps (spec §6).
+const InfoValueMono = styled(InfoValue)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+`;
+
+const InfoLink = styled.span`
+  color: ${({ theme }) => theme.colors.bright.lapis};
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
 `;
 
 const Table = styled.table`
@@ -152,71 +198,60 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  ${monoLabel}
   padding: 10px 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.celeste};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
-/** Line row is amber-tinted when variance exists */
+const TdMono = styled(Td)`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
+`;
+
+/** Line row gets a subtle coral-tinted flag when a price variance exists.
+ * Previously used gold[50] (amber) — replaced because gold is reserved for
+ * the Harvesting phase / primary CTA / breadcrumb (spec §3); coral already
+ * carries "needs attention" meaning elsewhere in this file (VarianceValue).
+ * CSS-only change — `$hasVariance` is computed exactly as before. */
 const LineRow = styled.tr<{ $hasVariance: boolean }>`
-  background: ${({ $hasVariance, theme }) => ($hasVariance ? theme.colors.gold[50] : 'transparent')};
+  background: ${({ $hasVariance }) => ($hasVariance ? 'rgba(240, 138, 112, 0.05)' : 'transparent')};
   transition: background 100ms ease;
   &:last-child td { border-bottom: none; }
 `;
 
+// Night Observatory (T-901 Phase 3): was a per-status switch statement over
+// neutral/warningBg/emerald/terracotta tokens. Now routes the AP Invoice's
+// own status field through the single canonical purchasingStatusToPhase()
+// map + the shared phaseBadge mixin, matching PR/PO/GR.
 const StatusBadge = styled.span<{ $status: string }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'Draft':            return theme.colors.neutral[100];
-      case 'Pending Approval': return theme.colors.warningBg;
-      case 'Approved':         return theme.colors.emerald[100];
-      case 'Rejected':         return theme.colors.terracotta[100];
-      default:                 return theme.colors.neutral[100];
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'Draft':            return theme.colors.textSecondary;
-      case 'Pending Approval': return theme.colors.gold[800];
-      case 'Approved':         return theme.colors.emerald[700];
-      case 'Rejected':         return theme.colors.terracotta[800];
-      default:                 return theme.colors.textSecondary;
-    }
-  }};
+  ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
 `;
 
-/** Inline variance value, coloured by sign */
+/** Inline variance value, coloured by sign — bright.coral (unfavourable),
+ * bright.emerald (favourable), muted (zero). */
 const VarianceValue = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
   font-weight: ${({ $sign }) => ($sign === 'zero' ? '400' : '600')};
   font-size: 13px;
   color: ${({ $sign, theme }) => {
-    if ($sign === 'positive') return theme.colors.terracotta[600];
-    if ($sign === 'negative') return theme.colors.emerald[600];
-    return theme.colors.textDisabled;
+    if ($sign === 'positive') return theme.colors.bright.coral;
+    if ($sign === 'negative') return theme.colors.bright.emerald;
+    return theme.colors.muted;
   }};
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.bright.coral};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -229,7 +264,7 @@ const TotalsBlock = styled.div`
   gap: 6px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const TotalsRow = styled.div`
@@ -240,26 +275,29 @@ const TotalsRow = styled.div`
 `;
 
 const TotalsLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.celeste};
   min-width: 140px;
   text-align: right;
 `;
 
 const TotalsValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
   min-width: 120px;
   text-align: right;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-/** JE link banner — appears when the AP Invoice is Approved */
+/** JE link banner — appears when the AP Invoice is Approved. Emerald-tinted
+ * glass, never gold (spec §5.2 "approved/posted -> fruiting"). */
 const JELinkBanner = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
-  border-radius: 8px;
+  border: 1px solid rgba(84, 211, 155, 0.35);
+  border-radius: 12px;
   padding: 14px 18px;
   margin-bottom: 20px;
   gap: 12px;
@@ -268,44 +306,46 @@ const JELinkBanner = styled.div`
 
 const JELinkText = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.emerald[700]};
+  color: ${({ theme }) => theme.colors.bright.emerald};
   font-weight: 500;
 `;
 
 const JELinkButton = styled.a`
+  ${glassControl}
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.emerald[600]};
+  color: ${({ theme }) => theme.colors.bright.emerald};
   font-weight: 600;
   text-decoration: none;
-  border: 1px solid ${({ theme }) => theme.colors.emerald[200]};
-  border-radius: 6px;
   padding: 6px 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.emerald[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.glass.hi}; }
 `;
 
-/** Variance tooltip trigger — "?" badge with title hover */
+/** Variance tooltip trigger — glass "?" badge with title hover. Swapped the
+ * bare "?" glyph for a lucide HelpCircle icon (not an emoji replacement —
+ * this glyph never matched the spec §6 emoji table — but a low-risk visual
+ * polish consistent with the rest of the icon system; the title attribute
+ * (the actual tooltip) is unchanged.) */
 const VarianceTooltip = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 10px;
-  font-weight: 700;
+  color: ${({ theme }) => theme.colors.muted};
   cursor: help;
   margin-left: 6px;
   vertical-align: middle;
 `;
 
-/** Modal plumbing — mirrors GoodsReceiptDetailPage */
+/** Modal plumbing — glassPanel at blur 24px over a rgba(10,14,36,.6) scrim,
+ * 20px radius (spec §4 "Modals/drawers"). Retinted from the previous
+ * rgba(0,0,0,.5)-style scrim. */
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 36, 0.6);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -314,9 +354,10 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  ${glassPanel}
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   width: 100%;
   max-width: 480px;
 `;
@@ -326,25 +367,28 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 700;
   margin: 0;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const CloseButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 18px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  padding: 4px;
-  border-radius: 6px;
-  line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  color: ${({ theme }) => theme.colors.celeste};
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 150ms ease, color 150ms ease;
+  &:hover { background: rgba(180, 200, 220, 0.1); color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const ModalBody = styled.div`
@@ -359,22 +403,49 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.line};
 `;
 
+// Inputs/selects/textareas — glassControl, 11px radius, cream-hi text, muted
+// placeholder, gold-hi focus ring (spec §4 "Inputs/selects/textareas").
 const ModalTextarea = styled.textarea`
+  ${glassControl}
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
   box-sizing: border-box;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.muted}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+`;
+
+// ─── Empty / loading / error states (spec §4 "Empty states") ──────────────────
+
+const StateWrap = styled.div`
+  text-align: center;
+  padding: 96px 32px;
+`;
+
+const StateHeadline = styled.h2`
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.6rem;
+  color: ${({ theme }) => theme.colors.celeste};
+  margin: 0 0 10px;
+`;
+
+const StateBody = styled.p`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.muted};
+  margin: 0 0 24px;
 `;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -499,8 +570,30 @@ export function APInvoiceDetailPage() {
     }
   };
 
-  if (isLoading) return <Container><p>Loading...</p></Container>;
-  if (isError || !ap) return <Container><p>AP Invoice not found.</p></Container>;
+  if (isLoading) {
+    return (
+      <Container>
+        <BackLink onClick={() => navigate('/purchasing/ap')}>&larr; Back to AP Invoices</BackLink>
+        <StateWrap>
+          <StateHeadline>Loading invoice…</StateHeadline>
+          <StateBody>Fetching the latest details.</StateBody>
+        </StateWrap>
+      </Container>
+    );
+  }
+
+  if (isError || !ap) {
+    return (
+      <Container>
+        <BackLink onClick={() => navigate('/purchasing/ap')}>&larr; Back to AP Invoices</BackLink>
+        <StateWrap>
+          <StateHeadline>AP Invoice not found</StateHeadline>
+          <StateBody>It may have been deleted, or the link is out of date.</StateBody>
+          <PrimaryButton onClick={() => navigate('/purchasing/ap')}>Back to AP Invoices</PrimaryButton>
+        </StateWrap>
+      </Container>
+    );
+  }
 
   const currency = ap.currencyCode;
   const totalVarianceSign = getVarianceSign(ap.totalPriceVariance);
@@ -530,49 +623,46 @@ export function APInvoiceDetailPage() {
         </JELinkBanner>
       )}
 
-      <TitleRow>
-        <div>
-          <Title>{ap.docNumber}</Title>
-          <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 }}>
-            {ap.vendorName ?? ap.vendorCode ?? 'No vendor'} &bull;{' '}
-            Vendor Invoice: <strong>{ap.invoiceNumber}</strong>
-            {ap.grDocNumber && (
-              <>
-                {' '}&bull;{' '}
-                <span
-                  style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
-                  onClick={() => navigate(`/purchasing/gr/${ap.grDocId}`)}
-                >
-                  GR: {ap.grDocNumber}
-                </span>
-              </>
-            )}
-            {ap.poDocId && ap.poDocNumber && (
-              <>
-                {' '}&bull;{' '}
-                <span
-                  style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
-                  onClick={() => navigate(`/purchasing/po/${ap.poDocId}`)}
-                >
-                  PO: {ap.poDocNumber}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+      <PageHeader
+        breadcrumb={`— PURCHASING · ${ap.docNumber}`}
+        title="AP Invoice"
+        emphasizeLastWord
+        description={`${ap.vendorName ?? ap.vendorCode ?? 'No vendor'} · Vendor Invoice: ${ap.invoiceNumber}`}
+        stats={[
+          { value: formatAmount(ap.totalGross, currency), label: `Total Gross · ${ap.lines.length} Lines` },
+        ]}
+      />
 
+      {(ap.grDocNumber || (ap.poDocId && ap.poDocNumber)) && (
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 20, fontSize: 14 }}>
+          {ap.grDocNumber && (
+            <span>
+              <InfoLabel style={{ display: 'inline', marginBottom: 0, marginRight: 6 }}>Source GR</InfoLabel>
+              <InfoLink onClick={() => navigate(`/purchasing/gr/${ap.grDocId}`)}>{ap.grDocNumber}</InfoLink>
+            </span>
+          )}
+          {ap.poDocId && ap.poDocNumber && (
+            <span>
+              <InfoLabel style={{ display: 'inline', marginBottom: 0, marginRight: 6 }}>Source PO</InfoLabel>
+              <InfoLink onClick={() => navigate(`/purchasing/po/${ap.poDocId}`)}>{ap.poDocNumber}</InfoLink>
+            </span>
+          )}
+        </div>
+      )}
+
+      <HeaderActionsRow>
         <ActionBar>
           {isDraft && (
             <>
-              <GhostButton onClick={() => navigate(`/purchasing/ap/${docId}/edit`)}>
+              <SecondaryButton onClick={() => navigate(`/purchasing/ap/${docId}/edit`)}>
                 Edit
-              </GhostButton>
-              <SuccessButton
+              </SecondaryButton>
+              <PrimaryButton
                 onClick={() => setConfirmSubmit(true)}
                 disabled={submitMutation.isPending}
               >
                 Submit
-              </SuccessButton>
+              </PrimaryButton>
               <DangerButton
                 onClick={() => setConfirmDelete(true)}
                 disabled={deleteMutation.isPending}
@@ -584,12 +674,12 @@ export function APInvoiceDetailPage() {
 
           {isPending && canApprove && (
             <>
-              <SuccessButton
+              <PrimaryButton
                 onClick={() => setConfirmApprove(true)}
                 disabled={approveMutation.isPending}
               >
                 Approve
-              </SuccessButton>
+              </PrimaryButton>
               <DangerButton
                 onClick={() => setShowRejectModal(true)}
                 disabled={rejectMutation.isPending}
@@ -599,18 +689,9 @@ export function APInvoiceDetailPage() {
             </>
           )}
 
-          {(isApproved || isRejected) && (
-            <span style={{
-              fontSize: 13, color: theme.colors.textSecondary,
-              padding: '8px 12px',
-              background: theme.colors.neutral[100],
-              borderRadius: 8,
-            }}>
-              Read-only ({ap.status})
-            </span>
-          )}
+          {(isApproved || isRejected) && <ReadOnlyTag>Read-only ({ap.status})</ReadOnlyTag>}
         </ActionBar>
-      </TitleRow>
+      </HeaderActionsRow>
 
       {actionError && (
         <ErrorText style={{ marginBottom: 16 }}>{actionError}</ErrorText>
@@ -633,38 +714,32 @@ export function APInvoiceDetailPage() {
           <InfoItem>
             <InfoLabel>Source GR</InfoLabel>
             <InfoValue>
-              <span
-                style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
-                onClick={() => navigate(`/purchasing/gr/${ap.grDocId}`)}
-              >
+              <InfoLink onClick={() => navigate(`/purchasing/gr/${ap.grDocId}`)}>
                 {ap.grDocNumber ?? ap.grDocId}
-              </span>
+              </InfoLink>
             </InfoValue>
           </InfoItem>
           {ap.poDocId && (
             <InfoItem>
               <InfoLabel>Source PO</InfoLabel>
               <InfoValue>
-                <span
-                  style={{ color: theme.colors.primary[600], cursor: 'pointer' }}
-                  onClick={() => navigate(`/purchasing/po/${ap.poDocId}`)}
-                >
+                <InfoLink onClick={() => navigate(`/purchasing/po/${ap.poDocId}`)}>
                   {ap.poDocNumber ?? ap.poDocId}
-                </span>
+                </InfoLink>
               </InfoValue>
             </InfoItem>
           )}
           <InfoItem>
             <InfoLabel>Vendor Invoice #</InfoLabel>
-            <InfoValue>{ap.invoiceNumber}</InfoValue>
+            <InfoValueMono>{ap.invoiceNumber}</InfoValueMono>
           </InfoItem>
           <InfoItem>
             <InfoLabel>Invoice Date</InfoLabel>
-            <InfoValue>{formatDate(ap.invoiceDate)}</InfoValue>
+            <InfoValueMono>{formatDate(ap.invoiceDate)}</InfoValueMono>
           </InfoItem>
           <InfoItem>
             <InfoLabel>Due Date</InfoLabel>
-            <InfoValue>{formatDate(ap.dueDate)}</InfoValue>
+            <InfoValueMono>{formatDate(ap.dueDate)}</InfoValueMono>
           </InfoItem>
           <InfoItem>
             <InfoLabel>Payment Terms</InfoLabel>
@@ -676,7 +751,7 @@ export function APInvoiceDetailPage() {
           </InfoItem>
           <InfoItem>
             <InfoLabel>Total Gross</InfoLabel>
-            <InfoValue><strong>{formatAmount(ap.totalGross, currency)}</strong></InfoValue>
+            <InfoValueMono><strong>{formatAmount(ap.totalGross, currency)}</strong></InfoValueMono>
           </InfoItem>
           <InfoItem>
             <InfoLabel>
@@ -684,7 +759,7 @@ export function APInvoiceDetailPage() {
               <VarianceTooltip
                 title="Total difference between PO prices and vendor invoice prices. Posted to Purchase Price Variance account at approval."
               >
-                ?
+                <HelpCircle size={13} strokeWidth={1.6} />
               </VarianceTooltip>
             </InfoLabel>
             <InfoValue>
@@ -692,7 +767,7 @@ export function APInvoiceDetailPage() {
                 <strong>{totalVarianceLabel}</strong>
               </VarianceValue>
               {totalVarianceSign !== 'zero' && (
-                <div style={{ fontSize: 11, color: theme.colors.textDisabled, marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: theme.colors.muted, marginTop: 2 }}>
                   {totalVarianceSign === 'positive'
                     ? 'Vendor invoiced more than agreed.'
                     : 'Vendor invoiced less than agreed.'}
@@ -720,7 +795,7 @@ export function APInvoiceDetailPage() {
               {ap.rejectionComment && (
                 <InfoItem style={{ gridColumn: '1/-1' }}>
                   <InfoLabel>Rejection Reason</InfoLabel>
-                  <InfoValue style={{ color: theme.colors.terracotta[800] }}>{ap.rejectionComment}</InfoValue>
+                  <InfoValue style={{ color: theme.colors.bright.coral }}>{ap.rejectionComment}</InfoValue>
                 </InfoItem>
               )}
             </>
@@ -764,23 +839,23 @@ export function APInvoiceDetailPage() {
                   const hasLineVariance = line.priceVarianceAmount !== 0;
                   return (
                     <LineRow key={line.apLineId} $hasVariance={hasLineVariance}>
-                      <Td>{line.lineNumber}</Td>
+                      <TdMono>{line.lineNumber}</TdMono>
                       <Td>
-                        <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
+                        <div style={{ fontWeight: 600, fontFamily: theme.typography.fontFamily.mono }}>{line.itemCode}</div>
                         <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>{line.itemName}</div>
                       </Td>
-                      <Td>{line.quantity}</Td>
+                      <TdMono>{line.quantity}</TdMono>
                       <Td>{line.uom}</Td>
-                      <Td style={{ color: theme.colors.textSecondary }}>{formatAmount(line.poUnitPrice, currency)}</Td>
-                      <Td><strong>{formatAmount(line.invoiceUnitPrice, currency)}</strong></Td>
+                      <TdMono style={{ color: theme.colors.muted }}>{formatAmount(line.poUnitPrice, currency)}</TdMono>
+                      <TdMono><strong>{formatAmount(line.invoiceUnitPrice, currency)}</strong></TdMono>
                       <Td>
                         <VarianceValue $sign={lineVarianceSign}>
                           {lineVarianceLabel}
                         </VarianceValue>
                       </Td>
                       <Td>{line.taxCode}</Td>
-                      <Td>{formatAmount(line.lineNet, currency)}</Td>
-                      <Td><strong>{formatAmount(line.lineGross, currency)}</strong></Td>
+                      <TdMono>{formatAmount(line.lineNet, currency)}</TdMono>
+                      <TdMono><strong>{formatAmount(line.lineGross, currency)}</strong></TdMono>
                     </LineRow>
                   );
                 })}
@@ -810,7 +885,7 @@ export function APInvoiceDetailPage() {
                     <VarianceTooltip
                       title="Total difference between PO prices and vendor invoice prices. Posted to Purchase Price Variance account at approval."
                     >
-                      ?
+                      <HelpCircle size={13} strokeWidth={1.6} />
                     </VarianceTooltip>
                   </TotalsLabel>
                   <TotalsValue>
@@ -846,7 +921,7 @@ export function APInvoiceDetailPage() {
                 onClick={() => { setConfirmSubmit(false); setActionError(null); }}
                 aria-label="Close"
               >
-                ✕
+                <X size={16} strokeWidth={1.8} />
               </CloseButton>
             </ModalHeader>
             <ModalBody>
@@ -862,12 +937,12 @@ export function APInvoiceDetailPage() {
               <GhostButton onClick={() => { setConfirmSubmit(false); setActionError(null); }}>
                 Cancel
               </GhostButton>
-              <SuccessButton
+              <PrimaryButton
                 disabled={submitMutation.isPending}
                 onClick={handleSubmit}
               >
                 {submitMutation.isPending ? 'Submitting...' : 'Confirm Submit'}
-              </SuccessButton>
+              </PrimaryButton>
             </ModalFooter>
           </Modal>
         </Overlay>
@@ -884,7 +959,7 @@ export function APInvoiceDetailPage() {
                 onClick={() => { setConfirmApprove(false); setActionError(null); }}
                 aria-label="Close"
               >
-                ✕
+                <X size={16} strokeWidth={1.8} />
               </CloseButton>
             </ModalHeader>
             <ModalBody>
@@ -903,12 +978,12 @@ export function APInvoiceDetailPage() {
               <GhostButton onClick={() => { setConfirmApprove(false); setActionError(null); }}>
                 Cancel
               </GhostButton>
-              <SuccessButton
+              <PrimaryButton
                 disabled={approveMutation.isPending}
                 onClick={handleApprove}
               >
                 {approveMutation.isPending ? 'Approving...' : 'Confirm Approve'}
-              </SuccessButton>
+              </PrimaryButton>
             </ModalFooter>
           </Modal>
         </Overlay>
@@ -925,7 +1000,7 @@ export function APInvoiceDetailPage() {
                 onClick={() => { setShowRejectModal(false); setActionError(null); setRejectComment(''); }}
                 aria-label="Close"
               >
-                ✕
+                <X size={16} strokeWidth={1.8} />
               </CloseButton>
             </ModalHeader>
             <ModalBody>
@@ -965,7 +1040,7 @@ export function APInvoiceDetailPage() {
                 onClick={() => { setConfirmDelete(false); setActionError(null); }}
                 aria-label="Close"
               >
-                ✕
+                <X size={16} strokeWidth={1.8} />
               </CloseButton>
             </ModalHeader>
             <ModalBody>

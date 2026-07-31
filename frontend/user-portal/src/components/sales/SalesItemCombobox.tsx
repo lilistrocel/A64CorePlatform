@@ -36,6 +36,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
+import { glassControl, glassOpaque } from '@a64core/shared';
 import { useSaleItemFinanceExtList } from '../../hooks/queries/useSaleItemFinanceExt';
 import { useAuthStore } from '../../stores/auth.store';
 
@@ -100,31 +101,30 @@ const Wrapper = styled.div`
 `;
 
 const ComboInput = styled.input<{ $hasError?: boolean }>`
+  ${glassControl}
   padding: 7px 8px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 6px;
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.muted};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
-    box-shadow: 0 0 0 2px
-      ${({ $hasError, theme }) =>
-        $hasError ? `${theme.colors.error}1A` : `${theme.colors.primary[500]}1A`};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.bright.coral : theme.colors.secondary[500])};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
     opacity: 0.7;
   }
@@ -132,16 +132,15 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
 
 /** Read-only chip shown when an item is selected. */
 const SelectedChip = styled.div<{ $hasError?: boolean; $disabled?: boolean }>`
+  ${glassControl}
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 6px 8px 6px 10px;
-  border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 6px;
-  background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.surface : theme.colors.primary[50]};
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? 'rgba(240, 138, 112, 0.45)' : theme.colors.glass.border};
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
   width: 100%;
@@ -177,11 +176,11 @@ const ClearButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.error};
+    color: ${({ theme }) => theme.colors.bright.coral};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.error};
+    outline: 2px solid ${({ theme }) => theme.colors.bright.coral};
     outline-offset: 2px;
   }
 `;
@@ -203,7 +202,10 @@ interface DropdownPanelStyle {
   bottom?: number;
 }
 
+/* Dropdown/menu popup — glassOpaque, the "opaque menu popping out of a glass
+   panel" pattern that stays under the spec §2 two-glass-layer limit. */
 const Dropdown = styled.ul<{ $style: DropdownPanelStyle }>`
+  ${glassOpaque}
   position: fixed;
   top: ${({ $style }) =>
     $style.bottom !== undefined ? 'auto' : `${$style.top}px`};
@@ -211,10 +213,7 @@ const Dropdown = styled.ul<{ $style: DropdownPanelStyle }>`
     $style.bottom !== undefined ? `${$style.bottom}px` : 'auto'};
   left: ${({ $style }) => `${$style.left}px`};
   width: ${({ $style }) => `${$style.width}px`};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   max-height: 260px;
   overflow-y: auto;
   z-index: 9999;
@@ -223,22 +222,24 @@ const Dropdown = styled.ul<{ $style: DropdownPanelStyle }>`
   padding: 4px 0;
 `;
 
+/* Selected/highlighted item — subtle neutral tint, never gold (spec §3). */
 const DropdownItem = styled.li<{ $highlighted?: boolean }>`
   padding: 8px 12px;
   cursor: pointer;
-  background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+  background: ${({ $highlighted }) =>
+    $highlighted ? 'rgba(180, 200, 220, 0.07)' : 'transparent'};
   display: flex;
   flex-direction: column;
   gap: 2px;
   transition: background 80ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: rgba(180, 200, 220, 0.07);
   }
 `;
 
 const ItemCode = styled.strong`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: 600;
@@ -246,18 +247,19 @@ const ItemCode = styled.strong`
 
 const ItemName = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const TaxBadge = styled.span`
   display: inline-block;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.4px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: rgba(180, 200, 220, 0.07);
+  color: ${({ theme }) => theme.colors.celeste};
   margin-left: 6px;
   vertical-align: middle;
 `;
@@ -265,7 +267,7 @@ const TaxBadge = styled.span`
 const DropdownState = styled.li`
   padding: 12px 12px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   text-align: center;
 `;
 
@@ -273,8 +275,8 @@ const Spinner = styled.span`
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.line};
+  border-top-color: ${({ theme }) => theme.colors.bright.lapis};
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   vertical-align: middle;

@@ -8,6 +8,7 @@
 
 import { useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import { MessageCircle } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import type { ChatMessage } from '../../stores/aiAssistant.store';
 
@@ -42,7 +43,7 @@ export function MessageList({
     return (
       <Container role="log" aria-live="polite" aria-label="Chat messages">
         <EmptyState>
-          <EmptyIcon aria-hidden="true">💬</EmptyIcon>
+          <EmptyIcon aria-hidden="true"><MessageCircle size={32} strokeWidth={1.6} /></EmptyIcon>
           <EmptyTitle>Ask me anything about your farms</EmptyTitle>
           <EmptyDescription>
             I can query sensor data, check alerts, review block status, compare
@@ -81,6 +82,8 @@ export function MessageList({
 // Styled components
 // ---------------------------------------------------------------------------
 
+// Transparent — the AIAssistantPanel drawer itself is the one glass layer
+// (spec §2); this scroll area must not add a second opaque/tinted fill.
 const Container = styled.div`
   flex: 1;
   overflow-y: auto;
@@ -88,7 +91,6 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: ${({ theme }) => theme.colors.neutral[50]};
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -98,7 +100,7 @@ const Container = styled.div`
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.cosmosHi};
     border-radius: 3px;
   }
 `;
@@ -121,18 +123,23 @@ const EmptyState = styled.div`
 `;
 
 const EmptyIcon = styled.div`
-  font-size: 36px;
+  display: flex;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
+// Night Observatory empty-state pattern (spec §4 "Empty states"): Fraunces
+// italic celeste headline + one muted sentence.
 const EmptyTitle = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: ${({ theme }) => theme.typography.fontFamily.display};
+  font-style: italic;
+  font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const EmptyDescription = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.muted};
   line-height: 1.6;
   max-width: 320px;
 `;

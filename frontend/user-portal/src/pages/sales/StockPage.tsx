@@ -7,10 +7,15 @@
  *
  * Reads from farm-side endpoints via inventoryApi (not the retired /v1/sales/inventory/*).
  * Deep-linkable via ?tab=sellable or ?tab=waste.
+ *
+ * Night Observatory (T-901): page title now uses the shared PageHeader
+ * (no local numbers to surface as stats — this page's own state is just the
+ * active tab/filter, the real data lives in the child list components).
  */
 
 import { useSearchParams } from 'react-router-dom';
 import styled, { type DefaultTheme } from 'styled-components';
+import { PageHeader } from '@a64core/shared';
 import { HarvestInventoryList, type HarvestStockStatus } from '../inventory/HarvestInventoryList';
 import WasteInventoryList from '../inventory/WasteInventoryList';
 import { ReturnedInventoryList } from '../inventory/ReturnedInventoryList';
@@ -39,23 +44,6 @@ const PageContainer = styled.div`
   margin: 0 auto;
 `;
 
-const PageHeader = styled.div`
-  margin-bottom: 8px;
-`;
-
-const PageTitle = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 4px 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 0 28px 0;
-`;
-
 const TabRow = styled.div`
   display: flex;
   gap: 8px;
@@ -74,18 +62,17 @@ const TabButton = styled.button<TabButtonProps>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: 1px solid
-    ${({ theme, $active }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  background: ${({ theme, $active }) =>
-    $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ theme, $active }) => ($active ? theme.colors.onAccent : theme.colors.textSecondary)};
+    ${({ theme, $active }) => ($active ? theme.colors.bright.lapis : theme.colors.glass.border)};
+  background: ${({ theme, $active }) => ($active ? theme.colors.bright.lapis : 'transparent')};
+  color: ${({ theme, $active }) => ($active ? theme.colors.onDark : theme.colors.celeste)};
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    color: ${({ theme, $active }) => ($active ? theme.colors.onAccent : theme.colors.primary[500])};
+    border-color: ${({ theme }) => theme.colors.bright.lapis};
+    color: ${({ theme, $active }) => ($active ? theme.colors.onDark : theme.colors.textPrimary)};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.bright.lapis};
     outline-offset: 2px;
   }
 `;
@@ -103,13 +90,14 @@ interface StatusChipProps {
 }
 
 // Stock lot status vocabulary (available/reserved/sold/expired) — distinct from
-// the document-status canon used elsewhere in sales; mapped by semantics here.
+// the document-status canon used elsewhere in sales (statusPhase.ts); mapped
+// by semantics here onto the Night Observatory bright.* hues directly.
 function getStatusAccent(status: HarvestStockStatus, theme: DefaultTheme): string {
   switch (status) {
-    case 'available': return theme.colors.success;
-    case 'reserved': return theme.colors.info;
-    case 'sold': return theme.colors.textSecondary;
-    case 'expired': return theme.colors.error;
+    case 'available': return theme.colors.bright.emerald;
+    case 'reserved': return theme.colors.bright.lapis;
+    case 'sold': return theme.colors.muted;
+    case 'expired': return theme.colors.bright.coral;
   }
 }
 
@@ -125,7 +113,7 @@ const StatusChip = styled.button<StatusChipProps>`
   background: ${({ $active, $status, theme }) =>
     $active ? getStatusAccent($status, theme) + '20' : 'transparent'};
   color: ${({ $active, $status, theme }) =>
-    $active ? getStatusAccent($status, theme) : theme.colors.textSecondary};
+    $active ? getStatusAccent($status, theme) : theme.colors.celeste};
 
   &:hover {
     border-color: ${({ $status, theme }) => getStatusAccent($status, theme)};
@@ -181,10 +169,10 @@ export function StockPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Stock</PageTitle>
-        <PageSubtitle>Sellable harvested goods, customer returns, and waste tracking</PageSubtitle>
-      </PageHeader>
+      <PageHeader
+        title="Stock"
+        description="Sellable harvested goods, customer returns, and waste tracking"
+      />
 
       <SalesActionTiles activeKey="stock" />
 

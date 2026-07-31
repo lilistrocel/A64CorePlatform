@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { forwardRef, useId } from 'react';
+import { glassControl, monoLabel } from '../../theme/mixins';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -32,38 +33,39 @@ const InputWrapper = styled.div<{ $fullWidth: boolean }>`
 `;
 
 const Label = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
 `;
 
 const StyledInput = styled.input<{ $hasError: boolean }>`
+  ${glassControl}
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme, $hasError }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-color: ${({ theme, $hasError }) =>
+    $hasError ? theme.colors.error : theme.colors.glass.border};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-family: ${({ theme }) => theme.typography.fontFamily.primary};
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
+  /* Gold focus ring (spec §4 Inputs) — errors keep the coral ring instead. */
   &:focus {
     outline: none;
     border-color: ${({ theme, $hasError }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme, $hasError }) =>
-      $hasError ? `${theme.colors.error}40` : `${theme.colors.primary[500]}40`};
+      $hasError ? theme.colors.error : theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px ${({ $hasError }) =>
+      $hasError ? 'rgba(240, 138, 112, 0.15)' : 'rgba(220, 185, 79, 0.15)'};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    opacity: 0.5;
     cursor: not-allowed;
-    opacity: 0.6;
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.muted};
+    font-weight: 400;
   }
 `;
 
