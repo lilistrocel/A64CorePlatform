@@ -118,8 +118,14 @@ const Crumb = styled.button<{ $current?: boolean; $unknown?: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* The "you are here" crumb is a tinted glass fill, NOT primary[50]. Under
+     the Night Observatory dark theme primary[50] is #EEF2FC — the palest step
+     of a ramp that kept its light-to-dark ordering through the rebrand — and
+     textPrimary is cream #FAF3E2, so the current crumb rendered cream-on-white
+     at a 1.53:1 contrast ratio: invisible. A low-alpha tint of the 500 step
+     reads as "highlighted" on a dark ground and keeps the cream legible. */
   background: ${({ theme, $current }) =>
-    $current ? theme.colors.primary[50] : theme.colors.background};
+    $current ? `${theme.colors.primary[500]}29` : theme.colors.background};
   border: 1px solid
     ${({ theme, $current }) =>
       $current ? theme.colors.primary[400] : theme.colors.neutral[300]};
