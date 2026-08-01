@@ -11,6 +11,7 @@ import type {
   Accession,
   AdditiveReadout,
   AncestryChain,
+  CascadePurgeResult,
   CreateAccessionPayload,
   CreateBatchPayload,
   CreateLinePayload,
@@ -20,16 +21,20 @@ import type {
   GeneticLine,
   GeneticsDashboard,
   LineageGraph,
+  LineDependents,
   LinkedProfileCounts,
   MediumBatch,
   MediumRecipe,
   MethodInfo,
   Observation,
+  OrphanRecords,
   Paginated,
+  PlainPurgeResult,
   PromoteTraitPayload,
   PromotionResult,
   PropagationEvent,
   PropagationOutcome,
+  PurgeLineParams,
   RoomOccupancy,
   SplitAccessionPayload,
   SplitResult,
@@ -89,6 +94,33 @@ export async function updateLine(lineId: string, payload: UpdateLinePayload): Pr
 
 export async function deactivateLine(lineId: string): Promise<GeneticLine> {
   const { data } = await apiClient.delete(`${BASE}/lines/${lineId}`);
+  return data.data;
+}
+
+/** What would block (or be destroyed by) purging this line. */
+export async function getLineDependents(lineId: string): Promise<LineDependents> {
+  const { data } = await apiClient.get(`${BASE}/lines/${lineId}/dependents`);
+  return data.data;
+}
+
+/**
+ * Hard-delete a line. Plain (cascade omitted/false) only ever succeeds at
+ * zero dependents — 409 otherwise, never cascades. `cascade: true` is the
+ * super_admin-only escalation: `dryRun: true` previews exactly what would be
+ * destroyed without deleting anything and without `confirm`; a real cascade
+ * delete (`dryRun` false/omitted) requires `confirm` to equal the line's
+ * exact code — server-enforced, but RemoveLineModal also checks this
+ * client-side before ever sending the request.
+ */
+export async function purgeLine(
+  lineId: string,
+  params: PurgeLineParams = {}
+): Promise<PlainPurgeResult | CascadePurgeResult> {
+  const { cascade = false, dryRun = false, confirm } = params;
+  const { data } = await apiClient.delete(`${BASE}/lines/${lineId}/purge`, {
+    params: { cascade, dryRun },
+    data: cascade ? { confirm } : undefined,
+  });
   return data.data;
 }
 
@@ -400,6 +432,24 @@ export async function getLineageGraph(params: LineageGraphParams): Promise<Linea
 
 export async function getAncestry(accessionId: string): Promise<AncestryChain> {
   const { data } = await apiClient.get(`${BASE}/lineage/ancestry/${accessionId}`);
+  return data.data;
+}
+
+// ============================================================================
+// MAINTENANCE — org-wide orphan sweep (T-809), not line-scoped. super_admin.
+// ============================================================================
+
+/** Read-only. Deletes nothing. */
+export async function getOrphans(): Promise<OrphanRecords> {
+  const { data } = await apiClient.get(`${BASE}/maintenance/orphans`);
+  return data.data;
+}
+
+/** `dryRun: true` previews (same response shape) without deleting anything. */
+export async function deleteOrphans(params: { dryRun?: boolean } = {}): Promise<OrphanRecords> {
+  const { data } = await apiClient.delete(`${BASE}/maintenance/orphans`, {
+    params: { dryRun: params.dryRun ?? false },
+  });
   return data.data;
 }
 

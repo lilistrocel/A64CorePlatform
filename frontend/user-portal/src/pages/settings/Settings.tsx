@@ -9,6 +9,7 @@ import { authService, type MfaStatusResponse } from '../../services/auth.service
 import { useToastStore } from '../../stores/toast.store';
 import { TelegramBotSettings } from '../../components/settings/TelegramBotSettings';
 import { ModulesSettingsCard } from '../../components/settings/ModulesSettingsCard';
+import { OrphanSweepCard } from '../../components/settings/OrphanSweepCard';
 
 // Month names for farming year configuration
 const MONTH_NAMES = [
@@ -869,6 +870,9 @@ export function Settings() {
 
       {/* Wave 0 — super_admin only; component self-gates */}
       <ModulesSettingsCard />
+
+      {/* T-809 — Genetics Repo orphan sweep, super_admin only; component self-gates */}
+      <OrphanSweepCard />
 
       {isAdmin && <TelegramBotSettings />}
     </SettingsContainer>

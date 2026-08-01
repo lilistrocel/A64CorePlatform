@@ -237,6 +237,86 @@ export interface CreateLinePayload {
 
 export type UpdateLinePayload = Partial<CreateLinePayload> & { isActive?: boolean };
 
+// ----------------------------------------------------------------------------
+// Line removal — dependents check, zero-dependent purge, confirmed cascade
+// purge, and the org-wide orphan sweep. See LineService's docstring
+// (deactivate_line / purge_line / cascade_purge_line) for when each of the
+// three operations applies — this UI must not blur the distinction.
+// ----------------------------------------------------------------------------
+
+/** What would block (or be destroyed by) purging a line. Mirrors
+ * LineService.line_dependents(). */
+export interface LineDependents {
+  accessions: number;
+  propagationEvents: number;
+  observations: number;
+  childLines: number;
+  harvests: number;
+}
+
+/** Result of a zero-dependents purge (cascade omitted/false). */
+export interface PlainPurgeResult {
+  code: string;
+  lineId: string;
+}
+
+/** Result of a cascade purge, real or dry-run. Mirrors
+ * LineService.cascade_purge_line()'s return shape. */
+export interface CascadePurgeResult {
+  lineId: string;
+  code: string;
+  dryRun: boolean;
+  accessionsRemoved: number;
+  accessionCodesRemoved: string[];
+  propagationEventsRemoved: number;
+  propagationEventIds: string[];
+  observationsRemoved: number;
+  observationIds: string[];
+}
+
+export interface PurgeLineParams {
+  /** Escalate to a confirmed cascade delete. super_admin only. */
+  cascade?: boolean;
+  /** With cascade=true, preview only — deletes nothing, no confirm required. */
+  dryRun?: boolean;
+  /** Required (must equal the line's exact code) for a real cascade delete. */
+  confirm?: string;
+}
+
+// -- Maintenance (org-wide orphan sweep) — not line-scoped. Mirrors
+// MaintenanceService.find_orphans() / delete_orphans(). --
+
+export interface OrphanAccession {
+  accessionId: string;
+  accessionCode: string;
+  lineId: string;
+}
+
+export interface OrphanObservation {
+  observationId: string;
+  lineId: string;
+}
+
+export interface OrphanPropagationEvent {
+  eventId: string;
+  lineIds: string[];
+}
+
+export interface OrphanCounts {
+  accessions: number;
+  observations: number;
+  propagationEvents: number;
+}
+
+export interface OrphanRecords {
+  accessions: OrphanAccession[];
+  observations: OrphanObservation[];
+  propagationEvents: OrphanPropagationEvent[];
+  counts: OrphanCounts;
+  /** Present on the DELETE response (real or dry-run), absent on GET. */
+  dryRun?: boolean;
+}
+
 // ============================================================================
 // ACCESSION
 // ============================================================================

@@ -12,6 +12,7 @@ import * as api from '../../services/geneticsApi';
 import type {
   Accession,
   AncestryChain,
+  CascadePurgeResult,
   CreateAccessionPayload,
   CreateBatchPayload,
   CreateLinePayload,
@@ -21,16 +22,20 @@ import type {
   GeneticLine,
   GeneticsDashboard,
   LineageGraph,
+  LineDependents,
   LinkedProfileCounts,
   MediumBatch,
   MediumRecipe,
   MethodInfo,
   Observation,
+  OrphanRecords,
   Paginated,
+  PlainPurgeResult,
   PromoteTraitPayload,
   PromotionResult,
   PropagationEvent,
   PropagationOutcome,
+  PurgeLineParams,
   RoomOccupancy,
   SplitAccessionPayload,
   SplitResult,
@@ -92,6 +97,59 @@ export function useUpdateLine(lineId: string) {
   return useMutation<GeneticLine, Error, UpdateLinePayload>({
     mutationFn: (payload) => api.updateLine(lineId, payload),
     onSuccess: invalidate,
+  });
+}
+
+/** Soft-delete — sets isActive: false, keeps the document and its history. */
+export function useDeactivateLine(lineId: string) {
+  const invalidate = useInvalidateGenetics();
+  return useMutation<GeneticLine, Error, void>({
+    mutationFn: () => api.deactivateLine(lineId),
+    onSuccess: invalidate,
+  });
+}
+
+/** What would block (or be destroyed by) purging this line. */
+export function useLineDependents(lineId: string | undefined) {
+  return useQuery<LineDependents>({
+    queryKey: [...ROOT, 'lines', lineId, 'dependents'],
+    queryFn: () => api.getLineDependents(lineId as string),
+    enabled: !!lineId,
+  });
+}
+
+/**
+ * Hard-delete a line — zero-dependents purge by default, or (with
+ * `cascade: true`) the confirmed/dry-runnable cascade escalation. See
+ * `api.purgeLine`'s docstring; RemoveLineModal is the sole consumer and
+ * drives every branch through this one mutation.
+ */
+export function usePurgeLine(lineId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<PlainPurgeResult | CascadePurgeResult, Error, PurgeLineParams | undefined>({
+    mutationFn: (params) => api.purgeLine(lineId, params),
+    onSuccess: () => {
+      // The line itself is gone. RemoveLineModal navigates away only
+      // *after* this resolves, so the detail page underneath (and this
+      // modal) are still mounted with active observers for exactly this
+      // lineId at the instant this runs — useGeneticLine(lineId) and
+      // useLineDependents(lineId). A plain broad invalidateQueries()
+      // refetches every *active* observer under the root, and an active
+      // observer for a query removeQueries() just evicted refetches
+      // immediately too (it has no cached data left to serve) — either way
+      // that refetch 404s against a line that no longer exists, surfacing a
+      // scary "not found" toast right after a successful delete. Exclude
+      // this line's own key (and its /dependents sub-query, same prefix)
+      // from the invalidation instead: its last-known data simply goes
+      // stale and unmounts with the page a moment later, never refetched.
+      // Everything else under the genetics root still gets the normal
+      // broad invalidate.
+      queryClient.invalidateQueries({
+        queryKey: ROOT,
+        predicate: (query) =>
+          !(query.queryKey[1] === 'lines' && query.queryKey[2] === lineId),
+      });
+    },
   });
 }
 
@@ -312,6 +370,33 @@ export function useAncestry(accessionId: string | undefined) {
     queryKey: [...ROOT, 'ancestry', accessionId],
     queryFn: () => api.getAncestry(accessionId as string),
     enabled: !!accessionId,
+  });
+}
+
+// ============================================================================
+// MAINTENANCE — org-wide orphan sweep (T-809), not line-scoped. super_admin.
+// ============================================================================
+
+/**
+ * @param enabled Pass the caller's own super_admin check — GET /orphans
+ * itself only requires curation tier (genetics.delete), but every other
+ * consumer of this sweep is super_admin-gated (T-809), and firing it
+ * unconditionally from a page every authenticated user can open (Settings)
+ * would 403 for everyone below moderator on every page load.
+ */
+export function useOrphans(enabled: boolean = true) {
+  return useQuery<OrphanRecords>({
+    queryKey: [...ROOT, 'maintenance', 'orphans'],
+    queryFn: api.getOrphans,
+    enabled,
+  });
+}
+
+export function useDeleteOrphans() {
+  const invalidate = useInvalidateGenetics();
+  return useMutation<OrphanRecords, Error, { dryRun?: boolean } | undefined>({
+    mutationFn: (params) => api.deleteOrphans(params),
+    onSuccess: invalidate,
   });
 }
 

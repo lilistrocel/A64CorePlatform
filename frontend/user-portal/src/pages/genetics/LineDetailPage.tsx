@@ -14,8 +14,10 @@ import { KIND_ICON_COMPONENTS } from '../../components/genetics/kindIcons';
 import { LineYieldPanel } from '../../components/genetics/LineYieldPanel';
 import { LineageTree } from '../../components/genetics/LineageTree';
 import { LineFormModal } from '../../components/genetics/LineFormModal';
+import { canDeleteLines } from '../../components/genetics/permissions';
 import { PropagateModal } from '../../components/genetics/PropagateModal';
 import { RegisterAccessionModal } from '../../components/genetics/RegisterAccessionModal';
+import { RemoveLineModal } from '../../components/genetics/RemoveLineModal';
 import {
   Banner,
   Button,
@@ -45,6 +47,7 @@ import {
   useMediumBatches,
   usePropagations,
 } from '../../hooks/genetics/useGenetics';
+import { useAuthStore } from '../../stores/auth.store';
 import {
   DERIVATION_LABELS,
   KIND_LABELS,
@@ -126,9 +129,12 @@ export function LineDetailPage() {
   const { lineId } = useParams<{ lineId: string }>();
   const navigate = useNavigate();
 
+  const { user } = useAuthStore();
+
   const [showEdit, setShowEdit] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showPropagate, setShowPropagate] = useState(false);
+  const [showRemove, setShowRemove] = useState(false);
 
   const { data: line, isLoading } = useGeneticLine(lineId);
   const { data: accessionPage } = useAccessions({ lineId, perPage: 100 });
@@ -196,8 +202,20 @@ export function LineDetailPage() {
           <Button onClick={() => setShowPropagate(true)} disabled={accessions.length === 0}>
             Propagate
           </Button>
+          {canDeleteLines(user?.role) && (
+            <Button $variant="danger" onClick={() => setShowRemove(true)}>
+              Remove line
+            </Button>
+          )}
         </div>
       </PageHeader>
+
+      {!line.isActive && (
+        <Banner $tone="warning">
+          This line is <strong>deactivated</strong> — kept for its history, hidden from
+          active-only views. Nothing was deleted.
+        </Banner>
+      )}
 
       {line.provenance.sourceNote && (
         <Banner>
@@ -343,6 +361,13 @@ export function LineDetailPage() {
           lineId={line.id}
           sourceAccession={accessions.find((a) => a.status === 'active') ?? accessions[0]}
           onClose={() => setShowPropagate(false)}
+        />
+      )}
+      {showRemove && (
+        <RemoveLineModal
+          line={line}
+          onClose={() => setShowRemove(false)}
+          onPurged={() => navigate('/genetics')}
         />
       )}
     </PageWrap>
