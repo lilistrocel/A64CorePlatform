@@ -1,6 +1,6 @@
 # Service Map
 
-> Generated: 2026-07-29 10:20 UTC  
+> Generated: 2026-08-01 08:10 UTC  
 > Source: MongoDB `mapper_nodes` (layer=service)
 
 ## Overview
@@ -10,7 +10,7 @@ Services are injected into API endpoints via FastAPI dependency injection.
 
 **Related Maps:** [api-map.md](api-map.md) | [database-map.md](database-map.md) | [module-map.md](module-map.md)
 
-## Services by Module (71 total)
+## Services by Module (73 total)
 
 ### `ai_analytics`
 
@@ -70,12 +70,14 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `AccessionService` | `src/modules/genetics/services/accession/accession_service.py:1` | mint_code, create_accession, get_accession, get_by_code, lis | T-800 Physical material CRUD, accession-code minting (sequence restarts per line+generation), and split_accession which copies generations and parents verbatim so a split is not mistaken for a propagation. |
 | `DashboardService` | `src/modules/genetics/services/dashboard_service.py:1` | get_dashboard, GeneticsDashboard, KindBreakdown, SENESCENCE_ | T-800 Repo-wide counters. SENESCENCE_WATCH_GENERATION (5) flags active accessions deep in a clone chain as re-isolation candidates. |
 | `GeneticsDatabaseManager` | `src/modules/genetics/services/database.py:1` | genetics_db, LINES, ACCESSIONS, PROPAGATIONS, RECIPES, BATCH | T-800 Collection-name constants and index creation. Delegates connection management to the core MongoDB manager. Indexes parents.accessionId for the lineage traversal hot path. |
-| `LineService` | `src/modules/genetics/services/line/line_service.py:1` | create_line, get_line, list_lines, get_line_with_stats, upda | T-800 Genetic line CRUD plus _bulk_stats — one aggregation for accession rollups across many lines, and a second for derived-line counts. |
+| `LineService` | `src/modules/genetics/services/line/line_service.py:1` | create_line, get_line, list_lines, get_line_with_stats, upda | T-800 Genetic line CRUD plus _bulk_stats — one aggregation for accession rollups across many lines, and a second for derived-line counts. T-807: line_dependents() counts everything that would be orphaned (accessions, propagation events, observations, child lines, harvests); purge_line() hard-deletes only at zero dependents, else 409 naming what blocks it. T-809: cascade_purge_line() is the confirmed escalation — gathers explicit id lists (never a broad filter) for accessions/propagation events/observations under the line and removes them plus the line itself; hard-refuses unconditionally (409, even with a correct confirm) when harvests or child lines exist; dry_run=True returns the same preview shape without deleting. |
 | `LineageService` | `src/modules/genetics/services/lineage/lineage_service.py:1` | build_graph, get_ancestry | T-800 Breadth-first DAG traversal, batched one query per depth level and capped by MAX_LINEAGE_DEPTH / MAX_LINEAGE_NODES. get_ancestry follows the primary parent per hop and flags branching plus unrecorded origins. |
+| `MaintenanceService` | `src/modules/genetics/services/maintenance/maintenance_service.py:1` | find_orphans, delete_orphans | T-809. find_orphans() diffs accessions/propagation-event lineIds/observations against the current set of existing line ids (_existing_line_ids) and reports the leftovers — found live: accession T808-TEST-G1-002 whose line no longer existed. delete_orphans() removes exactly that reported set by explicit id list, never a broad filter; dry_run=True computes the same result without writing. |
 | `MediumService` | `src/modules/genetics/services/medium/medium_service.py:1` | create_recipe, get_recipe, list_recipes, update_recipe, crea | T-800 Recipes and batches. Editing any formulation field bumps recipe version; batches snapshot ingredients/additives at pour time so history is never rewritten. find_accessions_by_additive matches batch snapshots, not live recipes. |
 | `ObservationService` | `src/modules/genetics/services/observation/observation_service.py:1` | create_observation, get_observation, list_observations, upda | T-800 Observations plus promote_trait: creates a child line parented to the observed material's line and mints a founding accession whose parent is the observed accession, keeping the physical chain unbroken. |
-| `PropagationService` | `src/modules/genetics/services/propagation/propagation_service.py:1` | derive_generations, propagate, get_event, list_events, get_e | T-800 CORE RULE lives here. derive_generations: asexual method -> G+1 with F inherited; sexual method -> F+1 with G reset to 0. A spore print off a G5 fruit is F1-G0, not G6. Children are written before the event so an orphaned accession is recoverable but a dangling event is not. |
+| `PropagationService` | `src/modules/genetics/services/propagation/propagation_service.py:1` | derive_generations, propagate, get_event, list_events, get_e | T-800 CORE RULE lives here. derive_generations: asexual method -> G+1 with F inherited; sexual method -> F+1 with G reset to 0. A spore print off a G5 fruit is F1-G0, not G6. Children are written before the event so an orphaned accession is recoverable but a dangling event is not. T-808: amend_event() corrects performedAt only, cascades to resultAccessionIds' acquiredAt where still equal to the OLD performedAt, stamps amendedAt/amendedBy, returns (event, accessions_updated, accessions_skipped). |
 | `genetics service helpers` | `src/modules/genetics/services/common.py:1` | doc_to_model, model_to_doc, slugify_code, generation_label,  | T-800 id<->{entity}Id renaming, code generation (PO-BLU-G2-014 / PO-BLU-F1-G2-003), and stripping computed fields such as generationLabel before persistence. |
+| `resolve_vessel` | `src/modules/genetics/services/accession/vessel_resolver.py:36` | resolve_vessel | T-804/T-805. Walks split() chains forward (capped) so a scan of a split-off physical vessel resolves to the CHILD accession record that currently holds it, without the printed label ever needing to be reprinted — labelledVesselCount is a high-water mark on the parent, never decremented, so the ordinal on the sticker stays meaningful across splits. Shared verbatim by the public route, the authenticated by-token route (genetics.api.accessions), and labels.py's lineage/parentage rendering. |
 
 ### `hr`
 

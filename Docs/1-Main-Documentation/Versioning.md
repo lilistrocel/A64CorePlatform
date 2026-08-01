@@ -39,10 +39,21 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ## Current Versions
 
-**Last Updated:** 2026-05-18
+**Last Updated:** 2026-08-01
+
+> **Known drift (flagged, not resolved by this update):** this section's
+> `1.15.0` and the `src/main.py` version constant (`1.17.0`) both trail the
+> Version History below, which already documents through `v1.20.0` plus two
+> further independent Unreleased entries (Genetics, and Wave 3 Phase 2 Sales
+> AR). `src/main.py` has not been bumped since the `v1.16.0` release commit.
+> Out of scope for this pass (docs/CodeMaps only, no source-file edits) —
+> reconciling `main.py`, this summary table, and a real release/tag is a
+> release-manager decision, not a `change-guardian` doc-sync one.
 
 ### Platform Version
-**A64 Core Platform:** `1.15.0` (Unreleased)
+**A64 Core Platform:** `1.15.0` (Unreleased) — see drift note above; the
+Version History section below is authoritative for what has actually
+shipped/landed.
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
@@ -88,6 +99,72 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 ## Version History
 
 ### Platform Version History
+
+#### Unreleased — Genetics: label/QR traceability, safe line removal, public info page — 2026-08-01
+**Type:** Minor Release (pending) — T-804 through T-809 on the `genetics`
+module. See `CHANGELOG.md` (`## [Unreleased] — Genetics: label/QR
+traceability, safe line removal, public info page`) for the full itemised
+list; summarized here per this document's own "update on every version
+change" rule.
+
+**Author: Viet Anh**
+
+**Note on version number:** Not yet assigned a concrete `X.Y.Z`. This work
+sits on `feat/a20core-rebrand` alongside an independent, also-unreleased
+Wave 3 Phase 2 Sales AR entry (see below, and its own note there); this
+document is not the place to decide which ships first or whether they merge
+into one release. **Classification is fixed regardless of numbering: MINOR**
+— every change is additive (new routes, new optional model fields, new
+opt-in query parameters); nothing existing was removed or changed shape.
+
+**Added (summary — see CHANGELOG.md for full detail):**
+- First unauthenticated route in the platform: `GET
+  /api/v1/public/genetics/i/{token}[/{vesselNo}]`, mounted on its own
+  router in `register.py`, gated per-tenant by new `PublicInfoPageConfig`
+  on `Organization.modules` (`PATCH /api/v1/organizations/{orgId}/modules`
+  extended to accept it).
+- Label PDF generation (`GET /api/v1/genetics/accessions/{id}/labels`),
+  vessel-level parentage (`ParentRef.vesselNo`, `ObservationBase.vesselNo`,
+  `LineageEdge.kind`), scan-to-act token resolution (`GET
+  /api/v1/genetics/accessions/by-token/{token}`).
+- Line dependents/purge (`GET`/`DELETE .../lines/{id}/purge`, refuse rather
+  than cascade by default) plus a confirmed `?cascade=true` escalation and
+  an org-wide orphan sweep (`GET`/`DELETE
+  /api/v1/genetics/maintenance/orphans`) — both new destructive paths
+  `super_admin`-only, gated by two new permission tiers
+  (`genetics.delete.cascade`, `genetics.maintenance`), both audit-logged.
+- Propagation date amendment (`PATCH /api/v1/genetics/propagations/{id}`,
+  `performedAt` only, cascaded to child accessions where unmodified).
+- New backend modules: `services/maintenance/maintenance_service.py`,
+  `services/accession/vessel_resolver.py`, asset dir
+  `src/modules/genetics/assets/` (vendored brand fonts + mark, used by the
+  label PDF renderer).
+- New frontend: `pages/public/LabelInfoPage.tsx` (outside
+  `ProtectedRoute`/`MainLayout`, routes `/i/:token`, `/I/:token`),
+  `components/genetics/PrintLabelsModal.tsx`,
+  `components/genetics/EditAccessionModal.tsx`,
+  `components/genetics/LocationPicker.tsx`.
+
+**Compatibility:**
+- No breaking changes to any existing genetics endpoint or response shape.
+- New public route exposes no internal UUIDs to anonymous callers; disabled
+  by default per-tenant (`PublicInfoPageConfig` `show*` flags default
+  `False`).
+- Fully backward-compatible with the prior genetics module baseline
+  (2026-07-28 regen, T-800).
+
+**CodeMaps:** Regenerated as part of this pass — see
+`Docs/CodeMaps/api-map.md`, `database-map.md`, `frontend-map.md`,
+`module-map.md`, `service-map.md`. The public route is called out in
+`api-map.md` as unauthenticated (no `Depends(require_view)` /
+`Depends(require_permission(...))` in its Auth column) since it is the
+first route in the platform without one — flagged explicitly rather than
+relying on a reader noticing an absence. Frontend map may need one further
+incremental pass: a concurrent session was still landing line-removal UI
+(`RemoveLineModal.tsx`, `permissions.ts`, `OrphanSweepCard.tsx`) as this
+entry was written.
+
+---
 
 #### v1.15.0 - 2026-05-18 (Unreleased)
 **Type:** Minor Release — Fertilizer Cost Calculator (new Tools module), Plant Library Fertigation Schedule Editor, Yield Mode toggle, P&L Dashboard integration, and extensive UX polish/bug fixes.

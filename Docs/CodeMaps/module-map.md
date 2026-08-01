@@ -1,6 +1,6 @@
 # Module Map
 
-> Generated: 2026-07-29 10:20 UTC  
+> Generated: 2026-08-01 08:10 UTC  
 > Source: MongoDB `mapper_nodes` (grouped by module)
 
 ## Backend Module Architecture
@@ -19,7 +19,7 @@ Each module contains API, service, and model layers.
 | `ai_analytics` | 8 | api, model, service |
 | `analytics` | 5 | frontend |
 | `auth` | 12 | api, frontend |
-| `core` | 21 | core, frontend, infrastructure |
+| `core` | 23 | api, core, frontend, infrastructure, model |
 | `crm` | 13 | api, frontend, infrastructure, model, repository, service |
 | `dashboard` | 7 | api, frontend |
 | `debug` | 1 | frontend |
@@ -27,7 +27,7 @@ Each module contains API, service, and model layers.
 | `farm_manager` | 137 | api, config, infrastructure, model, repository, service |
 | `finance` | 51 | frontend |
 | `frontend` | 7 | config, frontend |
-| `genetics` | 53 | api, config, frontend, middleware, model, service |
+| `genetics` | 67 | api, config, frontend, middleware, model, service |
 | `hr` | 32 | api, frontend, infrastructure, model, repository, service |
 | `inventory` | 7 | frontend |
 | `logistics` | 27 | api, frontend, infrastructure, model, repository, service |
@@ -121,10 +121,11 @@ Each module contains API, service, and model layers.
 | store | `useAuthStore` | frontend | `frontend/user-portal/src/stores/auth.store.ts` |
 | hook | `useMFA` | frontend | `frontend/user-portal/src/hooks/queries/useMFA.ts` |
 
-### `core` (21 nodes)
+### `core` (23 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
+| api_endpoint | `PATCH /organizations/{organizationId}/modules` | api | `src/api/v1/organizations.py` |
 | pydantic_model | `BPReferenceMixin` | core | `src/core/documents/bp_ref.py` |
 | class | `DivisionContextMiddleware` | core | `src/middleware/division_context.py` |
 | class | `DivisionScopedRepository` | core | `src/core/repository_base.py` |
@@ -146,6 +147,7 @@ Each module contains API, service, and model layers.
 | class | `RedisCache` | infrastructure | `src/core/cache/redis_cache.py` |
 | function | `cache_response / invalidate_cache_pattern` | infrastructure | `src/core/cache/decorators.py` |
 | config | `setup_logging / JSONFormatter` | infrastructure | `src/core/logging_config.py` |
+| pydantic_model | `Organization / module config models` | model | `src/models/organization.py` |
 
 ### `crm` (13 nodes)
 
@@ -479,7 +481,7 @@ Each module contains API, service, and model layers.
 | config | `theme` | frontend | `frontend/shared/src/theme/theme.ts` |
 | file | `utils/index` | frontend | `frontend/user-portal/src/utils/index.ts` |
 
-### `genetics` (53 nodes)
+### `genetics` (67 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -488,27 +490,39 @@ Each module contains API, service, and model layers.
 | api_endpoint | `CRUD /genetics/media` | api | `src/modules/genetics/api/v1/media.py` |
 | api_endpoint | `CRUD /genetics/observations` | api | `src/modules/genetics/api/v1/observations.py` |
 | api_endpoint | `CRUD /genetics/propagations` | api | `src/modules/genetics/api/v1/propagations.py` |
+| api_endpoint | `GET /genetics/accessions/{id}/labels` | api | `src/modules/genetics/api/v1/labels.py` |
 | api_endpoint | `GET /genetics/dashboard` | api | `src/modules/genetics/api/v1/dashboard.py` |
 | api_endpoint | `GET /genetics/lineage` | api | `src/modules/genetics/api/v1/lineage.py` |
+| api_endpoint | `GET /public/genetics/i/{token}[/{vesselNo}]` | api | `src/modules/genetics/api/v1/public.py` |
+| api_endpoint | `GET/DELETE /genetics/maintenance/orphans` | api | `src/modules/genetics/api/v1/maintenance.py` |
 | function | `genetics response envelopes` | api | `src/modules/genetics/utils/responses.py` |
 | config | `Genetics module settings` | config | `src/modules/genetics/config/settings.py` |
 | file | `genetics module registration` | config | `src/modules/genetics/register.py` |
 | component | `AccessionDetailPage` | frontend | `frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx` |
 | component | `BatchFormModal` | frontend | `frontend/user-portal/src/components/genetics/BatchFormModal.tsx` |
+| component | `EditAccessionModal` | frontend | `frontend/user-portal/src/components/genetics/EditAccessionModal.tsx` |
 | component | `GeneticsRepoPage` | frontend | `frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx` |
 | component | `GrowingProfilePanel` | frontend | `frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx` |
+| component | `KIND_ICON_COMPONENTS` | frontend | `frontend/user-portal/src/components/genetics/kindIcons.ts` |
+| component | `LabelInfoPage` | frontend | `frontend/user-portal/src/pages/public/LabelInfoPage.tsx` |
 | component | `LineDetailPage` | frontend | `frontend/user-portal/src/pages/genetics/LineDetailPage.tsx` |
 | component | `LineFormModal` | frontend | `frontend/user-portal/src/components/genetics/LineFormModal.tsx` |
+| component | `LineYieldPanel` | frontend | `frontend/user-portal/src/components/genetics/LineYieldPanel.tsx` |
 | component | `LineageTree` | frontend | `frontend/user-portal/src/components/genetics/LineageTree.tsx` |
+| component | `LocationPicker` | frontend | `frontend/user-portal/src/components/genetics/LocationPicker.tsx` |
 | component | `MediaLibraryPage` | frontend | `frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx` |
 | component | `Modal` | frontend | `frontend/user-portal/src/components/genetics/Modal.tsx` |
 | component | `ObservationModal` | frontend | `frontend/user-portal/src/components/genetics/ObservationModal.tsx` |
+| component | `OrphanSweepCard` | frontend | `frontend/user-portal/src/components/settings/OrphanSweepCard.tsx` |
+| component | `PrintLabelsModal` | frontend | `frontend/user-portal/src/components/genetics/PrintLabelsModal.tsx` |
 | component | `PromoteTraitModal` | frontend | `frontend/user-portal/src/components/genetics/PromoteTraitModal.tsx` |
 | component | `PropagateModal` | frontend | `frontend/user-portal/src/components/genetics/PropagateModal.tsx` |
 | component | `RecipeFormModal` | frontend | `frontend/user-portal/src/components/genetics/RecipeFormModal.tsx` |
 | component | `RegisterAccessionModal` | frontend | `frontend/user-portal/src/components/genetics/RegisterAccessionModal.tsx` |
+| component | `RemoveLineModal` | frontend | `frontend/user-portal/src/components/genetics/RemoveLineModal.tsx` |
 | component | `SplitAccessionModal` | frontend | `frontend/user-portal/src/components/genetics/SplitAccessionModal.tsx` |
 | type | `genetics` | frontend | `frontend/user-portal/src/types/genetics.ts` |
+| function | `genetics frontend permission helpers` | frontend | `frontend/user-portal/src/components/genetics/permissions.ts` |
 | component | `genetics styled primitives` | frontend | `frontend/user-portal/src/components/genetics/styled.ts` |
 | function | `geneticsApi` | frontend | `frontend/user-portal/src/services/geneticsApi.ts` |
 | hook | `useGenetics` | frontend | `frontend/user-portal/src/hooks/genetics/useGenetics.ts` |
@@ -532,10 +546,12 @@ Each module contains API, service, and model layers.
 | class | `GeneticsDatabaseManager` | service | `src/modules/genetics/services/database.py` |
 | class | `LineService` | service | `src/modules/genetics/services/line/line_service.py` |
 | class | `LineageService` | service | `src/modules/genetics/services/lineage/lineage_service.py` |
+| class | `MaintenanceService` | service | `src/modules/genetics/services/maintenance/maintenance_service.py` |
 | class | `MediumService` | service | `src/modules/genetics/services/medium/medium_service.py` |
 | class | `ObservationService` | service | `src/modules/genetics/services/observation/observation_service.py` |
 | class | `PropagationService` | service | `src/modules/genetics/services/propagation/propagation_service.py` |
 | function | `genetics service helpers` | service | `src/modules/genetics/services/common.py` |
+| function | `resolve_vessel` | service | `src/modules/genetics/services/accession/vessel_resolver.py` |
 
 ### `hr` (32 nodes)
 
@@ -883,3 +899,11 @@ Each module contains API, service, and model layers.
 | `genetics.service.lineage_service` | depends_on | `genetics.service.medium_service` |
 | `genetics.register` | depends_on | `core.middleware.auth` |
 | `genetics.middleware.auth` | depends_on | `core.middleware.auth` |
+| `genetics.api.accessions` | depends_on | `genetics.api.public` |
+| `genetics.api.accessions` | depends_on | `genetics.service.vessel_resolver` |
+| `genetics.api.public` | depends_on | `genetics.service.vessel_resolver` |
+| `genetics.api.public` | depends_on | `genetics.service.accession_service` |
+| `genetics.api.public` | depends_on | `genetics.service.line_service` |
+| `genetics.api.public` | depends_on | `core.model.organization` |
+| `genetics.api.public` | depends_on | `core.middleware.auth` |
+| `core.api.organizations` | depends_on | `core.model.organization` |

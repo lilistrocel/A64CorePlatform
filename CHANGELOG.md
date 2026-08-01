@@ -5,6 +5,125 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Genetics: label/QR traceability, safe line removal, public info page
+
+**Scope:** T-804 through T-809 on the `genetics` module — per-vessel QR labels
+with a public unauthenticated lineage page (the platform's first
+unauthenticated route), vessel-level parentage tracking, scan-to-act token
+resolution, propagation date correction, and two new opt-in destructive
+paths (line cascade purge, org-wide orphan sweep) alongside the existing
+safe-by-default purge. **Classification: MINOR** (substantial new
+functionality, additive-only — no removed/changed existing endpoints).
+Version number TBD pending release; this entry sits independently of, and
+does not presume an ordering against, the Wave 3 Phase 2 Sales AR entry
+below — both are currently unreleased on `feat/a20core-rebrand`.
+(Viet Anh)
+
+### Added
+
+- **T-804 — Genetics label & QR system.** `GET /api/v1/public/genetics/i/{token}[/{vesselNo}]`
+  — the platform's **first unauthenticated route**, mounted as its own
+  `app.include_router()` call in `src/modules/genetics/register.py`
+  (`PUBLIC_API_PREFIX`), separate from the authenticated `api_router` so no
+  route can become public by accident. Two hand-built response shapes
+  (`PublicAccessionInfo` anonymous / `AuthenticatedAccessionInfo`
+  authenticated via optional, fail-closed auth), never `response_model`
+  filtering, as the leakage guard. Byte-identical 404 for every failure
+  mode. Gated per-tenant by new `PublicInfoPageConfig` (`showMediumIngredients`
+  / `showProtocolSteps` / `showOperatorName` / `showFacilityName`, all
+  default `False`) on `Organization.modules`, editable via `PATCH
+  /api/v1/organizations/{orgId}/modules` (now accepts a `publicInfoPage`
+  partial update alongside the existing `financeEnabled`).
+  `GET /api/v1/genetics/accessions/{id}/labels` renders a print-ready label
+  PDF (reportlab + qrcode) for a Brother QL-800 — 29x90 / 17x87 fixed
+  die-cut tape or 62xN continuous tape (N = mm, 12-100), vendored brand
+  typefaces (Space Mono Bold / Hanken Grotesk under new
+  `src/modules/genetics/assets/`) with a Helvetica fallback, and a small
+  brand mark drawn only where measured spare space genuinely exists.
+  `Accession` gains `publicToken` (opaque, unique, never the readable
+  accession code), `labelledVesselCount` (a high-water mark that is never
+  decremented by `split()`) and `sourceVesselNumbers`, backfilled
+  idempotently for existing records.
+- **T-805 — Vessel-level parentage.** `ParentRef.vesselNo` and
+  `ObservationBase.vesselNo` record which physical vessel of a parent batch
+  a propagation/split/observation applies to. `LineageEdge.kind`
+  distinguishes propagation-derived edges from split-derived edges. New
+  `resolve_vessel()` (`src/modules/genetics/services/accession/vessel_resolver.py`)
+  walks `split()` chains forward so a scan of a split-off vessel resolves to
+  the accession that currently holds it, without ever needing a label
+  reprint.
+- **T-806 — Scan-to-act (parts 1 & 3).** `GET
+  /api/v1/genetics/accessions/by-token/{token}?vesselNo=N` — authenticated
+  counterpart to the public route, turning a scanned token into the full
+  internal `Accession` (UUIDs included) for a logged-in user to act on. The
+  public route itself was made two-tiered: an authenticated caller gets a
+  richer shape (`accessionId` + per-node tokens) that ignores the tenant's
+  `PublicInfoPageConfig` flags entirely, while `enabled=false` on that
+  config now 404s anonymous callers only (public-exposure switch, not an
+  access-control gate). Frontend "act on scan" UI (part 2) not yet started.
+- **T-807 — Line purge, refuse-rather-than-cascade.** `GET
+  /api/v1/genetics/lines/{id}/dependents` + `DELETE
+  /api/v1/genetics/lines/{id}/purge` — hard delete only at zero dependents
+  (accessions, propagation events, observations, child lines, harvests),
+  else 409 naming what blocks it. Permission `genetics.delete`.
+- **T-808 — Propagation date amendment.** `PATCH
+  /api/v1/genetics/propagations/{id}` amends `performedAt` only (a factual
+  bench-entry correction); every structural/attribution field stays
+  immutable. Cascades to `resultAccessionIds.acquiredAt` where still equal
+  to the event's old `performedAt`; `amendedAt`/`amendedBy` always stamped.
+  Permission `genetics.edit`.
+- **T-809 — Cascade purge for cancelled test lines + org-wide orphan sweep.**
+  Same `DELETE .../purge` route gains `?cascade=true` — **super_admin
+  only** (new permission tier `genetics.delete.cascade`), requires body
+  `{"confirm": "<exact line code>"}` (GitHub repo-deletion pattern, mismatch
+  is 400), hard-refuses unconditionally when the line has harvests or child
+  lines, `?dryRun=true` previews without deleting or requiring confirm.
+  `GET`/`DELETE /api/v1/genetics/maintenance/orphans` (new
+  `src/modules/genetics/api/v1/maintenance.py` +
+  `services/maintenance/maintenance_service.py`, new permission tier
+  `genetics.maintenance`, super_admin only) finds/removes accessions,
+  propagation events and observations whose `lineId` matches no existing
+  line — a null/absent `lineId` is explicitly not an orphan. Real deletes
+  from both new destructive paths are audit-logged to `admin_audit_log`
+  with a full pre-deletion snapshot.
+- **Frontend:** `LabelInfoPage.tsx` (new, `frontend/user-portal/src/pages/public/`)
+  — the public page a scanned QR opens, registered at `/i/:token`,
+  `/i/:token/:vesselNo`, `/I/:token`, `/I/:token/:vesselNo` in `App.tsx`,
+  deliberately **outside `ProtectedRoute`/`MainLayout`** (plain `fetch`, not
+  the shared axios instance, so an anonymous scan is never redirected to
+  `/login`). Both `/i/` and `/I/` are registered because a 17×87 label
+  prints its URL uppercase for QR alphanumeric mode and React Router paths
+  are case-sensitive. New `PrintLabelsModal.tsx` (range/tape picker),
+  `EditAccessionModal.tsx` (accession editing, paired with the existing
+  `RegisterAccessionModal.tsx`), and shared `LocationPicker.tsx`.
+
+### Fixed
+
+- Genetics "current ancestry" breadcrumb chip rendered cream-on-near-white
+  under the dark theme (`primary[50]` background, measured 1.53:1 contrast)
+  — replaced with a 16% tint of `primary[500]` (measured 13.08:1).
+
+### Compatibility
+
+- No breaking changes to any existing genetics endpoint, model field, or
+  response shape — every addition above is a new route, a new optional
+  model field, or a new opt-in query parameter.
+- The new public route is unauthenticated by construction; it exposes no
+  internal UUIDs to anonymous callers and is gated per-tenant by
+  `PublicInfoPageConfig` (default: all `show*` flags off).
+- The two new destructive paths (`?cascade=true` line purge, orphan-sweep
+  delete) are both `super_admin`-only, opt-in via explicit query parameters
+  or a dedicated route, and both audit-logged. The existing safe-by-default
+  `purge_line()` (T-807, refuse rather than cascade) is unchanged.
+- **CodeMaps regenerated** as part of this entry — see
+  `Docs/CodeMaps/api-map.md`, `Docs/CodeMaps/database-map.md`,
+  `Docs/CodeMaps/frontend-map.md`. The frontend map may need one further
+  incremental pass: a second, concurrent frontend session was still landing
+  line-removal UI (`RemoveLineModal.tsx`, `permissions.ts`,
+  `OrphanSweepCard.tsx`) as this entry was written.
+
+---
+
 ## [Unreleased] — Wave 3 Phase 2: Sales AR cycle (Quote → Cash + Returns)
 
 **Scope:** Full quote-to-cash cycle for Wave 3 Phase 2 — 8 new MongoDB document

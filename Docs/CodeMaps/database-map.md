@@ -1,6 +1,6 @@
 # Database Map
 
-> Generated: 2026-07-29 10:20 UTC  
+> Generated: 2026-08-01 08:10 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=db_model, layer=model)
 
 ## Overview
@@ -18,6 +18,12 @@ This map covers all collections, document schemas, and inter-collection relation
 |------------------|------|-------------|
 | `ChatQueryResponse` | `src/modules/ai_analytics/models/chat.py:110` | AI chat request/response models with query info, visualization suggestions, cost info. | ChatQueryRequest, ChatQueryResponse, SchemaResponse |
 | `ai_query_log` | `src/services/database.py` | MongoDB collection: ai_query_log - tracks AI query usage and costs (Vertex AI) |
+
+### Module: `core`
+
+| Collection/Model | File | Description |
+|------------------|------|-------------|
+| `Organization / module config models` | `src/models/organization.py:1` | T-804: PublicInfoPageConfig — what a scanned genetics label may reveal to the public internet. Every show* flag (showMediumIngredients/showProtocolSteps/showOperatorName/showFacilityName) defaults to False, a deliberate privacy/trade-secret decision. Read directly by genetics.api.public to gate the anonymous response shape; ignored entirely by the authenticated shape. NOTE: only these module-config models are mapped here; the rest of organization.py is unmapped pending map_core_api. | PublicInfoPageConfig, PublicInfoPageConfigUpdate, OrganizationModules, Organizat |
 
 ### Module: `crm`
 
@@ -84,13 +90,13 @@ This map covers all collections, document schemas, and inter-collection relation
 
 | Collection/Model | File | Description |
 |------------------|------|-------------|
-| `Accession models` | `src/modules/genetics/models/accession.py:1` | T-800 Physical material carrying dual generation counters (cloneGeneration G, filialGeneration F) and a parents list supporting 0, 1 or 2 entries with independently nullable accessionIds for half-known ancestry. generationLabel is a computed field, never persisted. | Accession, AccessionCreate, AccessionUpdate, AccessionSplit, ParentRef, StorageL |
+| `Accession models` | `src/modules/genetics/models/accession.py:1` | T-800 Physical material carrying dual generation counters (cloneGeneration G, filialGeneration F) and a parents list supporting 0, 1 or 2 entries with independently nullable accessionIds for half-known ancestry. generationLabel is a computed field, never persisted. T-804: publicToken (secrets-based Crockford base32, unique, backing the public label-info route), labelledVesselCount (a high-water mark that is NEVER decremented by split — the sticker is physical and permanent, the record is not) and sourceVesselNumbers. T-805: ParentRef.vesselNo records which physical vessel of a parent batch a propagation/split was taken from — same field/shape/validation reused on ObservationBase (T-805b). | Accession, AccessionCreate, AccessionUpdate, AccessionSplit, ParentRef, StorageL |
 | `Genetic line models` | `src/modules/genetics/models/line.py:1` | T-800 The named identity, spanning plants, fungi and animals. Provenance records unknown origin as a state rather than a blank field. | Line, LineCreate, LineUpdate, LineStats, LineWithStats, Provenance, Trait |
 | `Genetics enumerations` | `src/modules/genetics/models/enums.py:1` | T-800 Shared vocabulary. _SEXUAL_METHODS is the single source of truth for generation numbering; PropagationMethod.reproduction_mode and .max_parents derive from it. | OrganismKind, ProvenanceType, DerivationType, VesselForm, AccessionStatus, Paren |
-| `Lineage graph models` | `src/modules/genetics/models/lineage.py:1` | T-800 Flat nodes+edges response shape for the DAG, plus the linear ancestry breadcrumb with branching and unknown-origin flags. | LineageGraph, LineageNode, LineageEdge, AncestryChain, AncestryStep |
+| `Lineage graph models` | `src/modules/genetics/models/lineage.py:1` | T-800 Flat nodes+edges response shape for the DAG, plus the linear ancestry breadcrumb with branching and unknown-origin flags. T-805: LineageEdge.kind distinguishes a propagation-derived edge from a split-derived edge, since split() copies generations/parents verbatim and is not a propagation. | LineageGraph, LineageNode, LineageEdge, AncestryChain, AncestryStep |
 | `Medium recipe & batch models` | `src/modules/genetics/models/medium.py:1` | T-800 Versioned formulations plus per-pour batches. Additives are modelled apart from base ingredients so trialled elements stay queryable; batches carry ingredientsSnapshot/additivesSnapshot. | Recipe, RecipeCreate, RecipeUpdate, Batch, BatchCreate, BatchUpdate, BatchQC, In |
-| `Observation models` | `src/modules/genetics/models/observation.py:1` | T-800 Dated notes with optional quantitative metrics. isNovelTrait is what makes an observation promotable into its own line. | Observation, ObservationCreate, ObservationUpdate, ObservationMetrics, PromoteTr |
-| `Propagation models` | `src/modules/genetics/models/propagation.py:1` | T-800 The traceability edge: method, operator, date and medium alongside the parent pointers. reproductionMode is stored so historic events survive enum changes. | PropagationEvent, PropagationCreate, PropagationTarget, PropagationResult |
+| `Observation models` | `src/modules/genetics/models/observation.py:1` | T-800 Dated notes with optional quantitative metrics. isNovelTrait is what makes an observation promotable into its own line. T-805b: ObservationBase.vesselNo records which physical vessel of the observed accession the note applies to — same field/shape/validation as ParentRef.vesselNo (T-805a); capture-only, not yet surfaced anywhere in the UI. | Observation, ObservationCreate, ObservationUpdate, ObservationMetrics, PromoteTr |
+| `Propagation models` | `src/modules/genetics/models/propagation.py:1` | T-800 The traceability edge: method, operator, date and medium alongside the parent pointers. reproductionMode is stored so historic events survive enum changes. T-808: amendedAt/amendedBy record when/who corrected performedAt; PropagationAmend is the single-field (performedAt-only) request model, PropagationAmendResult wraps the updated event plus accessionsUpdated/accessionsSkipped counts. | PropagationEvent, PropagationCreate, PropagationTarget, PropagationResult, Propa |
 | `genetic_accessions` | `src/modules/genetics/services/database.py` | MongoDB collection: genetic_accessions - physical material with dual G/F generation counters, batch quantity and parents[]. Unique on accessionId and accessionCode; parents.accessionId indexed for lineage traversal. |
 | `genetic_lines` | `src/modules/genetics/services/database.py` | MongoDB collection: genetic_lines - named genetic identities (strain/variety/bloodline) across plants, fungi and animals. Unique on lineId and code; indexed on kind, parentLineId, tags. |
 | `genetic_observations` | `src/modules/genetics/services/database.py` | MongoDB collection: genetic_observations - dated notes per accession with metrics, novel-trait flag and promotedToLineId back-reference. |
@@ -191,6 +197,7 @@ This map covers all collections, document schemas, and inter-collection relation
 | `genetics.service.medium_service` | reads_from | `collection_genetic_accessions` | find_accessions_by_additive walks additive -> batches -> accessions. |
 | `genetics.service.lineage_service` | reads_from | `collection_genetic_accessions` | Breadth-first traversal over parents.accessionId, one query per depth level. |
 | `genetics.service.dashboard_service` | reads_from | `collection_genetic_accessions` | Counts live material, vessels and the senescence watch list. |
+| `genetics.service.maintenance_service` | reads_from | `collection_genetic_lines` | _existing_line_ids builds the reference set every other collection's lineId is d |
 | `farm_manager.service.FarmRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | FarmRepository reads/writes 'farms' collection via farm_db. |
 | `farm_manager.service.BlockRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | BlockRepository reads/writes 'blocks' collection via farm_db. |
 | `farm_manager.service.HarvestRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | HarvestRepository reads/writes 'block_harvests' collection via farm_db. |
@@ -208,7 +215,13 @@ This map covers all collections, document schemas, and inter-collection relation
 | `genetics.service.line_service` | stores_in | `collection_genetic_lines` | CRUD against genetic_lines. |
 | `genetics.service.accession_service` | stores_in | `collection_genetic_accessions` | CRUD and split against genetic_accessions. |
 | `genetics.service.propagation_service` | stores_in | `collection_propagation_events` | Writes the propagation event after its child accessions. |
-| `genetics.service.propagation_service` | stores_in | `collection_genetic_accessions` | Bulk-inserts the child accessions produced by a propagation. |
+| `genetics.service.propagation_service` | stores_in | `collection_genetic_accessions` | amend_event cascades a corrected performedAt to child accessions' acquiredAt whe |
 | `genetics.service.medium_service` | stores_in | `collection_medium_recipes` | Recipe CRUD with version bumping on formulation change. |
 | `genetics.service.medium_service` | stores_in | `collection_medium_batches` | Batch creation snapshots the recipe formulation. |
 | `genetics.service.observation_service` | stores_in | `collection_genetic_observations` | CRUD against genetic_observations plus promotedToLineId back-reference. |
+| `genetics.service.maintenance_service` | stores_in | `collection_genetic_accessions` | Diffs accession lineIds against existing lines; deletes the orphaned subset by e |
+| `genetics.service.maintenance_service` | stores_in | `collection_propagation_events` | Diffs every referenced lineId on each propagation event; deletes the orphaned su |
+| `genetics.service.maintenance_service` | stores_in | `collection_genetic_observations` | Diffs observation lineIds against existing lines; deletes the orphaned subset. |
+| `genetics.service.line_service` | stores_in | `collection_genetic_accessions` | cascade_purge_line removes gathered accession ids under a purged line. |
+| `genetics.service.line_service` | stores_in | `collection_propagation_events` | cascade_purge_line removes gathered propagation-event ids under a purged line. |
+| `genetics.service.line_service` | stores_in | `collection_genetic_observations` | cascade_purge_line removes gathered observation ids under a purged line. |

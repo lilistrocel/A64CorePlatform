@@ -1,6 +1,6 @@
 # Frontend Map
 
-> Generated: 2026-07-29 10:20 UTC  
+> Generated: 2026-08-01 08:10 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=component|hook|store|type, layer=frontend)
 
 ## Overview
@@ -10,7 +10,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 
 **Related Maps:** [api-map.md](api-map.md) | [module-map.md](module-map.md)
 
-## React Components (237)
+## React Components (245)
 
 | Component | File | Description |
 |-----------|------|-------------|
@@ -89,6 +89,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `DivisionSelector` | `frontend/user-portal/src/pages/division/DivisionSelector.tsx:1` | Page: organization-division selector (post-login) | default |
 | `DivisionSwitcher` | `frontend/user-portal/src/components/layout/DivisionSwitcher.tsx:1` | Header switcher for active organization division/branch | DivisionSwitcher |
 | `DrawingControls` | `frontend/user-portal/src/components/map/DrawingControls.tsx:1` | MapLibre drawing controls (draw polygon, edit, delete) | DrawingControls |
+| `EditAccessionModal` | `frontend/user-portal/src/components/genetics/EditAccessionModal.tsx:1` | Edits an existing accession's editable fields (storage location via LocationPicker, status, notes, etc.) via useUpdateAccession. Companion to RegisterAccessionModal (create) rather than a replacement. | EditAccessionModal |
 | `EditBlockModal` | `frontend/user-portal/src/components/farm/EditBlockModal.tsx:1` | Modal to edit a block | EditBlockModal |
 | `EditFarmBoundaryModal` | `frontend/user-portal/src/components/farm/EditFarmBoundaryModal.tsx:1` | Modal for editing farm geo-boundary polygon | EditFarmBoundaryModal |
 | `EditFarmModal` | `frontend/user-portal/src/components/farm/EditFarmModal.tsx:1` | Modal to edit a farm. Uses farmApi | EditFarmModal |
@@ -125,7 +126,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `GoodsReceiptDetailPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptDetailPage.tsx:1` | Page: goods receipt detail | default |
 | `GoodsReceiptFormPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptFormPage.tsx:1` | Page: goods receipt form. Renders FinanceUnreachableBanner. Uses goodsReceiptsService | default |
 | `GoodsReceiptsPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptsPage.tsx:1` | Page: goods receipts list. Uses goodsReceiptsService | default |
-| `GrowingProfilePanel` | `frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx:1` | T-801 Renders the linked library record's cultivation targets on the line detail page, so temp/humidity setpoints sit beside the lineage. The join, not a merge: the library owns growing conditions, the line owns ancestry. | GrowingProfilePanel |
+| `GrowingProfilePanel` | `frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx:1` | Renders a genetic line's growing-profile parameters on LineDetailPage. | GrowingProfilePanel |
 | `GrowingRoomCard` | `frontend/user-portal/src/components/mushroom/GrowingRoomCard.tsx:1` | Growing room summary card | GrowingRoomCard |
 | `GrowingRoomGrid` | `frontend/user-portal/src/components/mushroom/GrowingRoomGrid.tsx:1` | Grid of growing-room cards | GrowingRoomGrid |
 | `HRDashboardPage` | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx:1` | Page: HR dashboard. Uses hrService | default |
@@ -141,9 +142,13 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `InventoryDashboard` | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx:1` | Page: inventory dashboard. Uses inventoryApi getInventorySummary | default |
 | `ItemMappingPage` | `frontend/user-portal/src/pages/finance/ItemMappingPage.tsx:1` | Page: item-to-GL-account mapping editor. Uses itemMappingService + taxCodesService + financeAccountsService | default |
 | `JournalEntriesPage` | `frontend/user-portal/src/pages/finance/JournalEntriesPage.tsx:1` | Page: journal entries list. Uses journalEntriesService types | default |
+| `KIND_ICON_COMPONENTS` | `frontend/user-portal/src/components/genetics/kindIcons.ts:1` | Night Observatory-era per-domain icon map: OrganismKind -> lucide-react icon component, used anywhere a line's biological kind (plant/fungus/animal/other) needs a consistent glyph. | KIND_ICON_COMPONENTS |
+| `LabelInfoPage` | `frontend/user-portal/src/pages/public/LabelInfoPage.tsx:1` | T-804/T-805/T-806 part 3. The public page a scanned QR opens — registered at both /i/:token and /I/:token (plus /:vesselNo variants), outside ProtectedRoute and MainLayout entirely. Plain fetch on a relative path rather than the shared axios instance/geneticsApi, deliberately: the authenticated client would attach a token and redirect an anonymous scan to /login. Renders lineageGraph as a lightweight local generation-row tree (not an adapter onto components/genetics/LineageTree.tsx, which is sized for the much larger authenticated graph and keyed by internal UUID the public payload never carries) with the scanned node highlighted at a measured 14.08:1 contrast. | LabelInfoPage |
 | `LineDetailPage` | `frontend/user-portal/src/pages/genetics/LineDetailPage.tsx:1` | T-800 /genetics/lines/:lineId — lineage tree as the hero, accession table, recent propagations, and a senescence warning past G5. | LineDetailPage |
 | `LineFormModal` | `frontend/user-portal/src/components/genetics/LineFormModal.tsx:1` | T-800 Create/edit a genetic line, including parent line, derivation and provenance. | LineFormModal |
+| `LineYieldPanel` | `frontend/user-portal/src/components/genetics/LineYieldPanel.tsx:1` | Renders yield history/rollups for a genetic line on LineDetailPage. | LineYieldPanel |
 | `LineageTree` | `frontend/user-portal/src/components/genetics/LineageTree.tsx:1` | T-800 Renders the lineage DAG as generation rows joined by SVG curves. Layout is computed deterministically from fixed node dimensions, so no measurement pass is needed. Edge colour encodes reproduction mode; unidentified parents render as dashed stubs. | LineageTree |
+| `LocationPicker` | `frontend/user-portal/src/components/genetics/LocationPicker.tsx:1` | Shared storage-location picker (facility/room/tape-style position field) used by both RegisterAccessionModal (create) and EditAccessionModal (edit) so the two forms can't drift on how a StorageLocation is captured. | LocationPicker |
 | `Login` | `frontend/user-portal/src/pages/auth/Login.tsx:1` | Page: login form | default |
 | `LogisticsDashboardPage` | `frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx:1` | Page: logistics dashboard. Uses logisticsService | default |
 | `MFARouteGuards` | `frontend/user-portal/src/components/common/MFARouteGuards.tsx:1` | MFA route guards: MFAVerifyGuard requires MFA pending token, MFASetupGuard blocks if MFA already enabled | MFAVerifyGuard, MFASetupGuard |
@@ -169,6 +174,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `OrderCard` | `frontend/user-portal/src/components/sales/OrderCard.tsx:1` | Sales order summary card | OrderCard |
 | `OrderForm` | `frontend/user-portal/src/components/sales/OrderForm.tsx:1` | Create/edit sales order form | OrderForm |
 | `OrderTable` | `frontend/user-portal/src/components/sales/OrderTable.tsx:1` | Paginated sales order table | OrderTable |
+| `OrphanSweepCard` | `frontend/user-portal/src/components/settings/OrphanSweepCard.tsx:38` | T-809. Settings-page card wrapping useOrphans/useDeleteOrphans — the org-wide orphan sweep UI. Self-gates to super_admin (same pattern as the existing ModulesSettingsCard), rendered alongside it in Settings.tsx. | OrphanSweepCard |
 | `PaymentDetailPage` | `frontend/user-portal/src/pages/finance/PaymentDetailPage.tsx:1` | Page: AP payment detail. Uses paymentsService types | default |
 | `PaymentTermsPage` | `frontend/user-portal/src/pages/purchasing/PaymentTermsPage.tsx:1` | Page: payment terms editor. Uses purchasingApi | default |
 | `PaymentsPage` | `frontend/user-portal/src/pages/finance/PaymentsPage.tsx:1` | Page: AP payments list. Uses paymentsService | default |
@@ -192,6 +198,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `PnlRevenueTrendChart` | `frontend/user-portal/src/components/pnl/PnlRevenueTrendChart.tsx:1` | Revenue trend chart | PnlRevenueTrendChart |
 | `PnlStatementTable` | `frontend/user-portal/src/components/pnl/PnlStatementTable.tsx:1` | P&L statement-style table | PnlStatementTable |
 | `PostingSetupPage` | `frontend/user-portal/src/pages/finance/PostingSetupPage.tsx:1` | Page: company posting-setup editor. Renders AccountCombobox. Uses postingSetupService + financeAccountsService + financeCompaniesService | default |
+| `PrintLabelsModal` | `frontend/user-portal/src/components/genetics/PrintLabelsModal.tsx:1` | T-804 step 5. Range + tape-size picker for genetics.api.labels, page count shown before commit, and an 'Actual size / 100%' print-dialog warning since fit-to-page rescales the QR (the most likely reason a batch fails to scan). Handles the inverted default range that arises once quantity drops below labelledVesselCount after a split. | PrintLabelsModal |
 | `Profile` | `frontend/user-portal/src/pages/profile/Profile.tsx:1` | Page: user profile + MFA management. Uses authService | default |
 | `PromoteTraitModal` | `frontend/user-portal/src/components/genetics/PromoteTraitModal.tsx:1` | T-800 Promotes a flagged observation into a new parent-linked line, optionally minting the founding accession. | PromoteTraitModal |
 | `PropagateModal` | `frontend/user-portal/src/components/genetics/PropagateModal.tsx:1` | T-800 One form for clones and crosses. Method choice drives parent-slot count, default roles and a live preview that mirrors derive_generations so the G/F numbering is never a black box. Supports an 'exists but unidentified' second parent. | PropagateModal |
@@ -208,6 +215,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `RecordPaymentPage` | `frontend/user-portal/src/pages/finance/RecordPaymentPage.tsx:1` | Page: record AP payment. Renders AccountCombobox. Uses paymentsService + apInvoicesService + financeReportsService | default |
 | `Register` | `frontend/user-portal/src/pages/auth/Register.tsx:1` | Page: user registration form | default |
 | `RegisterAccessionModal` | `frontend/user-portal/src/components/genetics/RegisterAccessionModal.tsx:1` | T-800 Registers founding material by hand with a live accession-code preview. | RegisterAccessionModal |
+| `RemoveLineModal` | `frontend/user-portal/src/components/genetics/RemoveLineModal.tsx:97` | T-807/T-809 frontend. Sole intended consumer of usePurgeLine's cascade path (see hook::useGenetics). Surfaces LineService's three removal tiers distinctly: deactivate (soft), zero-dependents purge, and the confirmed super_admin-only ?cascade=true escalation requiring the line's exact code as confirmation, mirroring the backend's GitHub repo-deletion pattern. Gated in LineDetailPage by canDeleteLines(user?.role). | RemoveLineModal |
 | `ReportAlertModal` | `frontend/user-portal/src/components/operations/ReportAlertModal.tsx:1` | Modal for reporting a farm/block alert | ReportAlertModal |
 | `ReportReturnModal` | `frontend/user-portal/src/components/sales/ReportReturnModal.tsx:1` | Modal to report a sales return | ReportReturnModal |
 | `ResolveAlertModal` | `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx:1` | Modal to resolve a farm alert | ResolveAlertModal |
@@ -283,7 +291,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `useFinancePnl` | `frontend/user-portal/src/hooks/useFinancePnl.ts:1` | Aggregated farm-P&L slices (summary / by-month / by-farm / by-crop) + AR aging + revenue sources. | useFinancePnlSummary, useFinancePnlByMonth, useFinancePnlByFarm, useFinancePnlBy |
 | `useFinanceReports` | `frontend/user-portal/src/hooks/queries/useFinanceReports.ts:1` | Finance reports: AP aging, Balance Sheet, Income Statement, Cash Flow (T-060.5 indirect), vendor sub-ledger. | useApAging, useBalanceSheet, useIncomeStatement, useCashFlow, useVendorSubLedger |
 | `useFiscalPeriods` | `frontend/user-portal/src/hooks/queries/useFiscalPeriods.ts:1` | Fiscal period CRUD + close/reopen + closing-JE preview. | useFiscalPeriods, useCreatePeriod, useClosePeriod, useReopenPeriod, useClosePeri |
-| `useGenetics` | `frontend/user-portal/src/hooks/genetics/useGenetics.ts:1` | T-800 TanStack Query hooks. Mutations invalidate the whole ['genetics'] root because a propagation touches lines, accessions, lineage and dashboard at once. | useGeneticLines, useGeneticLine, useCreateLine, useAccessions, useAccession, use |
+| `useGenetics` | `frontend/user-portal/src/hooks/genetics/useGenetics.ts:1` | T-800 TanStack Query hooks. Mutations invalidate the whole ['genetics'] root because a propagation touches lines, accessions, lineage and dashboard at once. T-807/T-809: useLineDependents/usePurgeLine (RemoveLineModal is documented as the sole intended consumer of usePurgeLine's cascade path) and useOrphans/useDeleteOrphans. | useGeneticLines, useGeneticLine, useLinkedProfileCounts, useCreateLine, useUpdat |
 | `useGlobalAnalytics` | `frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts:1` | Global cross-farm analytics. | useGlobalAnalytics |
 | `useGoodsReceipts` | `frontend/user-portal/src/hooks/queries/useGoodsReceipts.ts:1` | GR list/detail + create-from-PO + update/post/delete mutations. | useGoodsReceipts, useGoodsReceipt, useCreateGRFromPO, useUpdateGoodsReceipt, use |
 | `useGrowingProfiles` | `frontend/user-portal/src/hooks/genetics/useGrowingProfiles.ts:1` | T-801 Joins a genetic line to its cultivation-parameters record — mushroom_strains for fungi, plant_data_enhanced for plants. profileSourceForKind returns null for animals, which have no growing-profile library. | useProfileOptions, useLinkedStrain, useLinkedPlantData, profileSourceForKind, PR |
@@ -340,7 +348,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `farmAI types` | `frontend/user-portal/src/types/farmAI.ts:1` | Farm-scoped AI chat types: chat messages, request/response, pending actions, growth stage info, confirm-action flow, AI scope, farm/global response variants. | ChatMessage, FarmAIChatRequest, PendingAction, GrowthStageInfo, FarmAIChatRespon |
 | `farmAnalytics types` | `frontend/user-portal/src/types/farmAnalytics.ts:1` | Farm-level analytics (camelCase variant): FarmAnalytics root, aggregated metrics, state breakdown, block comparison, historical trends, yield timeline, state transitions. | FarmAnalytics, AggregatedMetrics, StateBreakdown, StateInfo, BlockState, BlockCo |
 | `finance types` | `frontend/user-portal/src/types/finance.ts:1` | Finance P&L and AR aging types: filter params, P&L periods/breakdowns (revenue/COGS/Opex/order-counts), summary, monthly/farm/crop dimensions, AR aging buckets, revenue sources. | PnlFilterParams, PnlPeriod, PnlRevenueBreakdown, PnlCOGSBreakdown, PnlOpexBreakd |
-| `genetics` | `frontend/user-portal/src/types/genetics.ts:1` | T-800 TypeScript mirror of the genetics Pydantic models plus display-label maps. SENESCENCE_WATCH_GENERATION mirrors the backend dashboard constant. | GeneticLine, Accession, PropagationEvent, MediumRecipe, MediumBatch, Observation |
+| `genetics` | `frontend/user-portal/src/types/genetics.ts:1` | T-800 TypeScript mirror of the genetics Pydantic models plus display-label maps. SENESCENCE_WATCH_GENERATION mirrors the backend dashboard constant. T-807/T-809 additions: LineDependents/PlainPurgeResult/CascadePurgeResult/PurgeLineParams mirror LineService's three removal paths; OrphanAccession/OrphanObservation/OrphanPropagationEvent/OrphanCounts/OrphanRecords mirror MaintenanceService.find_orphans()/delete_orphans(). | GeneticLine, Accession, PropagationEvent, MediumRecipe, MediumBatch, Observation |
 | `global-analytics types` | `frontend/user-portal/src/types/global-analytics.ts:1` | Cross-farm (global) analytics types: time period options, global aggregated metrics, state breakdown, farm summary, yield timeline, performance trend/insights, GlobalAnalyticsData root. | TimePeriod, TimePeriodOption, TIME_PERIOD_OPTIONS, GlobalAggregatedMetrics, Glob |
 | `hr types` | `frontend/user-portal/src/types/hr.ts:1` | HR domain types: employee status, emergency contact, Employee entity; contract type/status, Contract; visa status/Visa; insurance type/Insurance; performance reviews; CRUD payloads; search params; dashboard stats and department distribution. | EmployeeStatus, EmergencyContact, Employee, ContractType, ContractStatus, Contra |
 | `inventory types` | `frontend/user-portal/src/types/inventory.ts:1` | Inventory domain types: inventory/product/input/asset categories and statuses, quality grades, movement types, base/display units; harvest/input/asset inventory CRUD; movements; summary; pagination; farming-year config; returned inventory; unit options and label/color maps. | InventoryType, HarvestProductType, InputCategory, AssetCategory, AssetStatus, Qu |

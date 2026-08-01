@@ -4,17 +4,20 @@
     "generator": "codebase_mapper/batch_genetics",
     "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
     "node_id_convention_summary": "Backend dot-notation at file-level snake_case (genetics.api.*, genetics.service.*, genetics.model.*) per the 'new modules' rule. Frontend double-colon (component::, hook::, service::, type::). Collections use collection_<snake_case>.",
-    "task": "T-800 — Genetics Repo module",
+    "task": "T-800 \u2014 Genetics Repo module (extended: T-804/805/806/807/808/809 label/QR, purge & maintenance)",
     "scope": [
       "src/modules/genetics/",
       "frontend/user-portal/src/pages/genetics/",
       "frontend/user-portal/src/components/genetics/",
       "frontend/user-portal/src/hooks/genetics/",
       "frontend/user-portal/src/services/geneticsApi.ts",
-      "frontend/user-portal/src/types/genetics.ts"
+      "frontend/user-portal/src/types/genetics.ts",
+      "frontend/user-portal/src/pages/public/LabelInfoPage.tsx"
     ],
     "convention_divergences": [
-      "components/genetics/Modal.tsx exports `Modal`, but a bare `component::Modal` node_id would be too generic and would collide with the first other modal any future task maps. Scoped to `component::GeneticsModal` (name field keeps the real export, `Modal`)."
+      "components/genetics/Modal.tsx exports `Modal`, but a bare `component::Modal` node_id would be too generic and would collide with the first other modal any future task maps. Scoped to `component::GeneticsModal` (name field keeps the real export, `Modal`).",
+      "components/genetics/kindIcons.ts exports a Record<OrganismKind, LucideIcon> map, not a component, but is scoped as component::GeneticsKindIcons (name field keeps the real export, KIND_ICON_COMPONENTS) since it is a small shared UI primitive rather than a type/service/hook.",
+      "frontend/user-portal/src/pages/public/LabelInfoPage.tsx lives outside pages/genetics/ (and outside ProtectedRoute/MainLayout entirely \u2014 it is the public unauthenticated page a scanned QR opens) but is mapped in this genetics batch since it is genetics-domain content with no other natural home."
     ]
   },
   "nodes": [
@@ -26,8 +29,11 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["router"],
-      "description": "T-800 Genetic line CRUD — the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line."
+      "exports": [
+        "router",
+        "CascadePurgeConfirm"
+      ],
+      "description": "T-800 Genetic line CRUD \u2014 the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line. T-807: GET /{id}/dependents (counts accessions/propagations/observations/child lines/harvests) + DELETE /{id}/purge, hard-delete only at zero dependents (409 otherwise), genetics.delete tier. T-809: same purge route's ?cascade=true escalation \u2014 super_admin-only (genetics.delete.cascade), body {\"confirm\": \"<exact line code>\"} (GitHub repo-deletion pattern, mismatch is 400), hard-refuses even with a correct confirm when the line has harvests or child lines, ?dryRun=true previews without requiring confirm. Real cascade deletes are audit-logged to admin_audit_log with a full pre-deletion snapshot."
     },
     {
       "node_id": "genetics.api.accessions",
@@ -37,8 +43,11 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["router", "SplitResult"],
-      "description": "T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations."
+      "exports": [
+        "router",
+        "SplitResult"
+      ],
+      "description": "T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations. T-806: GET /by-token/{token}?vesselNo=N \u2014 authenticated counterpart to the public label-info page, turns a scanned {token, vesselNo} into the full internal Accession (UUIDs included). Reuses public.py's _load_accession_by_token and vessel_resolver.resolve_vessel verbatim. Declared before /{accession_id} (route-ordering guard, verified live, not just structurally safe)."
     },
     {
       "node_id": "genetics.api.propagations",
@@ -48,8 +57,12 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["router", "PropagationOutcome", "MethodInfo"],
-      "description": "T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview."
+      "exports": [
+        "router",
+        "PropagationOutcome",
+        "MethodInfo"
+      ],
+      "description": "T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview. T-808: PATCH /{event_id} amends ONLY performedAt (a factual date correction, e.g. logged late) \u2014 attribution and every structural field stay immutable through this or any route. Cascades to each result accession's acquiredAt, but only where it still equals the event's OLD performedAt (an already-hand-corrected accession is skipped, not overwritten). amendedAt/amendedBy always stamped \u2014 the correction is recorded, never made invisible. Rejects a future performedAt with 400. Permission: genetics.edit (bench tier)."
     },
     {
       "node_id": "genetics.api.media",
@@ -59,8 +72,11 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["router", "AdditiveReadout"],
-      "description": "T-800 Medium recipes and prepared batches, plus GET /additives/{name}/accessions — the experiment readout returning every accession ever grown on a medium containing an additive."
+      "exports": [
+        "router",
+        "AdditiveReadout"
+      ],
+      "description": "T-800 Medium recipes and prepared batches, plus GET /additives/{name}/accessions \u2014 the experiment readout returning every accession ever grown on a medium containing an additive."
     },
     {
       "node_id": "genetics.api.observations",
@@ -70,7 +86,10 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["router", "PromotionResult"],
+      "exports": [
+        "router",
+        "PromotionResult"
+      ],
       "description": "T-800 Dated observations against accessions, plus POST /{id}/promote which turns a flagged novel trait into its own genetic line with a founding accession."
     },
     {
@@ -81,7 +100,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["router"],
+      "exports": [
+        "router"
+      ],
       "description": "T-800 Lineage DAG (/graph) and flattened ancestry breadcrumb (/ancestry/{id}). Returns flat nodes+edges rather than a nested tree because a cross gives a node two parents."
     },
     {
@@ -92,10 +113,11 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["router"],
+      "exports": [
+        "router"
+      ],
       "description": "T-800 Repo-wide counters: lines by biological domain, live material, 30-day activity, novel traits awaiting promotion, and the senescence watch list."
     },
-
     {
       "node_id": "genetics.service.line_service",
       "node_type": "class",
@@ -104,8 +126,19 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["create_line", "get_line", "list_lines", "get_line_with_stats", "update_line", "deactivate_line", "get_line_codes"],
-      "description": "T-800 Genetic line CRUD plus _bulk_stats — one aggregation for accession rollups across many lines, and a second for derived-line counts."
+      "exports": [
+        "create_line",
+        "get_line",
+        "list_lines",
+        "get_line_with_stats",
+        "update_line",
+        "deactivate_line",
+        "get_line_codes",
+        "line_dependents",
+        "purge_line",
+        "cascade_purge_line"
+      ],
+      "description": "T-800 Genetic line CRUD plus _bulk_stats \u2014 one aggregation for accession rollups across many lines, and a second for derived-line counts. T-807: line_dependents() counts everything that would be orphaned (accessions, propagation events, observations, child lines, harvests); purge_line() hard-deletes only at zero dependents, else 409 naming what blocks it. T-809: cascade_purge_line() is the confirmed escalation \u2014 gathers explicit id lists (never a broad filter) for accessions/propagation events/observations under the line and removes them plus the line itself; hard-refuses unconditionally (409, even with a correct confirm) when harvests or child lines exist; dry_run=True returns the same preview shape without deleting."
     },
     {
       "node_id": "genetics.service.accession_service",
@@ -115,7 +148,17 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["mint_code", "create_accession", "get_accession", "get_by_code", "list_accessions", "list_children", "update_accession", "split_accession", "get_many"],
+      "exports": [
+        "mint_code",
+        "create_accession",
+        "get_accession",
+        "get_by_code",
+        "list_accessions",
+        "list_children",
+        "update_accession",
+        "split_accession",
+        "get_many"
+      ],
       "description": "T-800 Physical material CRUD, accession-code minting (sequence restarts per line+generation), and split_accession which copies generations and parents verbatim so a split is not mistaken for a propagation."
     },
     {
@@ -126,8 +169,15 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["derive_generations", "propagate", "get_event", "list_events", "get_events_for_accessions"],
-      "description": "T-800 CORE RULE lives here. derive_generations: asexual method -> G+1 with F inherited; sexual method -> F+1 with G reset to 0. A spore print off a G5 fruit is F1-G0, not G6. Children are written before the event so an orphaned accession is recoverable but a dangling event is not."
+      "exports": [
+        "derive_generations",
+        "propagate",
+        "get_event",
+        "list_events",
+        "get_events_for_accessions",
+        "amend_event"
+      ],
+      "description": "T-800 CORE RULE lives here. derive_generations: asexual method -> G+1 with F inherited; sexual method -> F+1 with G reset to 0. A spore print off a G5 fruit is F1-G0, not G6. Children are written before the event so an orphaned accession is recoverable but a dangling event is not. T-808: amend_event() corrects performedAt only, cascades to resultAccessionIds' acquiredAt where still equal to the OLD performedAt, stamps amendedAt/amendedBy, returns (event, accessions_updated, accessions_skipped)."
     },
     {
       "node_id": "genetics.service.medium_service",
@@ -137,7 +187,18 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["create_recipe", "get_recipe", "list_recipes", "update_recipe", "create_batch", "get_batch", "list_batches", "update_batch", "find_accessions_by_additive", "get_batch_codes"],
+      "exports": [
+        "create_recipe",
+        "get_recipe",
+        "list_recipes",
+        "update_recipe",
+        "create_batch",
+        "get_batch",
+        "list_batches",
+        "update_batch",
+        "find_accessions_by_additive",
+        "get_batch_codes"
+      ],
       "description": "T-800 Recipes and batches. Editing any formulation field bumps recipe version; batches snapshot ingredients/additives at pour time so history is never rewritten. find_accessions_by_additive matches batch snapshots, not live recipes."
     },
     {
@@ -148,7 +209,14 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["create_observation", "get_observation", "list_observations", "update_observation", "promote_trait", "latest_for_accessions"],
+      "exports": [
+        "create_observation",
+        "get_observation",
+        "list_observations",
+        "update_observation",
+        "promote_trait",
+        "latest_for_accessions"
+      ],
       "description": "T-800 Observations plus promote_trait: creates a child line parented to the observed material's line and mints a founding accession whose parent is the observed accession, keeping the physical chain unbroken."
     },
     {
@@ -159,7 +227,10 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["build_graph", "get_ancestry"],
+      "exports": [
+        "build_graph",
+        "get_ancestry"
+      ],
       "description": "T-800 Breadth-first DAG traversal, batched one query per depth level and capped by MAX_LINEAGE_DEPTH / MAX_LINEAGE_NODES. get_ancestry follows the primary parent per hop and flags branching plus unrecorded origins."
     },
     {
@@ -170,7 +241,12 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["get_dashboard", "GeneticsDashboard", "KindBreakdown", "SENESCENCE_WATCH_GENERATION"],
+      "exports": [
+        "get_dashboard",
+        "GeneticsDashboard",
+        "KindBreakdown",
+        "SENESCENCE_WATCH_GENERATION"
+      ],
       "description": "T-800 Repo-wide counters. SENESCENCE_WATCH_GENERATION (5) flags active accessions deep in a clone chain as re-isolation candidates."
     },
     {
@@ -181,7 +257,15 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["genetics_db", "LINES", "ACCESSIONS", "PROPAGATIONS", "RECIPES", "BATCHES", "OBSERVATIONS"],
+      "exports": [
+        "genetics_db",
+        "LINES",
+        "ACCESSIONS",
+        "PROPAGATIONS",
+        "RECIPES",
+        "BATCHES",
+        "OBSERVATIONS"
+      ],
       "description": "T-800 Collection-name constants and index creation. Delegates connection management to the core MongoDB manager. Indexes parents.accessionId for the lineage traversal hot path."
     },
     {
@@ -192,10 +276,17 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "service",
-      "exports": ["doc_to_model", "model_to_doc", "slugify_code", "generation_label", "build_accession_code", "build_batch_code", "scope_fields"],
+      "exports": [
+        "doc_to_model",
+        "model_to_doc",
+        "slugify_code",
+        "generation_label",
+        "build_accession_code",
+        "build_batch_code",
+        "scope_fields"
+      ],
       "description": "T-800 id<->{entity}Id renaming, code generation (PO-BLU-G2-014 / PO-BLU-F1-G2-003), and stripping computed fields such as generationLabel before persistence."
     },
-
     {
       "node_id": "genetics.model.enums",
       "node_type": "pydantic_model",
@@ -204,7 +295,20 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "model",
-      "exports": ["OrganismKind", "ProvenanceType", "DerivationType", "VesselForm", "AccessionStatus", "ParentRole", "ReproductionMode", "PropagationMethod", "MediumType", "SterilizationMethod", "MediumBatchStatus", "ObservationType"],
+      "exports": [
+        "OrganismKind",
+        "ProvenanceType",
+        "DerivationType",
+        "VesselForm",
+        "AccessionStatus",
+        "ParentRole",
+        "ReproductionMode",
+        "PropagationMethod",
+        "MediumType",
+        "SterilizationMethod",
+        "MediumBatchStatus",
+        "ObservationType"
+      ],
       "description": "T-800 Shared vocabulary. _SEXUAL_METHODS is the single source of truth for generation numbering; PropagationMethod.reproduction_mode and .max_parents derive from it."
     },
     {
@@ -215,7 +319,15 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "model",
-      "exports": ["Line", "LineCreate", "LineUpdate", "LineStats", "LineWithStats", "Provenance", "Trait"],
+      "exports": [
+        "Line",
+        "LineCreate",
+        "LineUpdate",
+        "LineStats",
+        "LineWithStats",
+        "Provenance",
+        "Trait"
+      ],
       "description": "T-800 The named identity, spanning plants, fungi and animals. Provenance records unknown origin as a state rather than a blank field."
     },
     {
@@ -226,8 +338,15 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "model",
-      "exports": ["Accession", "AccessionCreate", "AccessionUpdate", "AccessionSplit", "ParentRef", "StorageLocation"],
-      "description": "T-800 Physical material carrying dual generation counters (cloneGeneration G, filialGeneration F) and a parents list supporting 0, 1 or 2 entries with independently nullable accessionIds for half-known ancestry. generationLabel is a computed field, never persisted."
+      "exports": [
+        "Accession",
+        "AccessionCreate",
+        "AccessionUpdate",
+        "AccessionSplit",
+        "ParentRef",
+        "StorageLocation"
+      ],
+      "description": "T-800 Physical material carrying dual generation counters (cloneGeneration G, filialGeneration F) and a parents list supporting 0, 1 or 2 entries with independently nullable accessionIds for half-known ancestry. generationLabel is a computed field, never persisted. T-804: publicToken (secrets-based Crockford base32, unique, backing the public label-info route), labelledVesselCount (a high-water mark that is NEVER decremented by split \u2014 the sticker is physical and permanent, the record is not) and sourceVesselNumbers. T-805: ParentRef.vesselNo records which physical vessel of a parent batch a propagation/split was taken from \u2014 same field/shape/validation reused on ObservationBase (T-805b)."
     },
     {
       "node_id": "genetics.model.propagation",
@@ -237,8 +356,15 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "model",
-      "exports": ["PropagationEvent", "PropagationCreate", "PropagationTarget", "PropagationResult"],
-      "description": "T-800 The traceability edge: method, operator, date and medium alongside the parent pointers. reproductionMode is stored so historic events survive enum changes."
+      "exports": [
+        "PropagationEvent",
+        "PropagationCreate",
+        "PropagationTarget",
+        "PropagationResult",
+        "PropagationAmend",
+        "PropagationAmendResult"
+      ],
+      "description": "T-800 The traceability edge: method, operator, date and medium alongside the parent pointers. reproductionMode is stored so historic events survive enum changes. T-808: amendedAt/amendedBy record when/who corrected performedAt; PropagationAmend is the single-field (performedAt-only) request model, PropagationAmendResult wraps the updated event plus accessionsUpdated/accessionsSkipped counts."
     },
     {
       "node_id": "genetics.model.medium",
@@ -248,7 +374,18 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "model",
-      "exports": ["Recipe", "RecipeCreate", "RecipeUpdate", "Batch", "BatchCreate", "BatchUpdate", "BatchQC", "Ingredient", "Additive", "Sterilization"],
+      "exports": [
+        "Recipe",
+        "RecipeCreate",
+        "RecipeUpdate",
+        "Batch",
+        "BatchCreate",
+        "BatchUpdate",
+        "BatchQC",
+        "Ingredient",
+        "Additive",
+        "Sterilization"
+      ],
       "description": "T-800 Versioned formulations plus per-pour batches. Additives are modelled apart from base ingredients so trialled elements stay queryable; batches carry ingredientsSnapshot/additivesSnapshot."
     },
     {
@@ -259,8 +396,14 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "model",
-      "exports": ["Observation", "ObservationCreate", "ObservationUpdate", "ObservationMetrics", "PromoteTraitRequest"],
-      "description": "T-800 Dated notes with optional quantitative metrics. isNovelTrait is what makes an observation promotable into its own line."
+      "exports": [
+        "Observation",
+        "ObservationCreate",
+        "ObservationUpdate",
+        "ObservationMetrics",
+        "PromoteTraitRequest"
+      ],
+      "description": "T-800 Dated notes with optional quantitative metrics. isNovelTrait is what makes an observation promotable into its own line. T-805b: ObservationBase.vesselNo records which physical vessel of the observed accession the note applies to \u2014 same field/shape/validation as ParentRef.vesselNo (T-805a); capture-only, not yet surfaced anywhere in the UI."
     },
     {
       "node_id": "genetics.model.lineage",
@@ -270,10 +413,15 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "model",
-      "exports": ["LineageGraph", "LineageNode", "LineageEdge", "AncestryChain", "AncestryStep"],
-      "description": "T-800 Flat nodes+edges response shape for the DAG, plus the linear ancestry breadcrumb with branching and unknown-origin flags."
+      "exports": [
+        "LineageGraph",
+        "LineageNode",
+        "LineageEdge",
+        "AncestryChain",
+        "AncestryStep"
+      ],
+      "description": "T-800 Flat nodes+edges response shape for the DAG, plus the linear ancestry breadcrumb with branching and unknown-origin flags. T-805: LineageEdge.kind distinguishes a propagation-derived edge from a split-derived edge, since split() copies generations/parents verbatim and is not a propagation."
     },
-
     {
       "node_id": "genetics.config.settings",
       "node_type": "config",
@@ -282,7 +430,12 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "config",
-      "exports": ["settings", "API_PREFIX", "MAX_LINEAGE_DEPTH", "MAX_LINEAGE_NODES"],
+      "exports": [
+        "settings",
+        "API_PREFIX",
+        "MAX_LINEAGE_DEPTH",
+        "MAX_LINEAGE_NODES"
+      ],
       "description": "T-800 Module settings. API_PREFIX=/api/v1/genetics; lineage traversal guards cap depth at 25 and nodes at 500."
     },
     {
@@ -293,8 +446,12 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "config",
-      "exports": ["register", "startup_hook", "shutdown_hook"],
-      "description": "T-800 Plugin-system entry point. Manifest declares industries:['all'] / industry_mode:'shared' so the repo is visible to every division, unlike the exclusive mushroom_manager module."
+      "exports": [
+        "register",
+        "startup_hook",
+        "shutdown_hook"
+      ],
+      "description": "T-800 Plugin-system entry point. Manifest declares industries:['all'] / industry_mode:'shared' so the repo is visible to every division, unlike the exclusive mushroom_manager module. T-804 step 3: mounts a SECOND router (api.v1.public:router) at the fixed literal prefix /api/v1/public/genetics, deliberately separate from the authenticated api_router mount above it \u2014 the platform's first unauthenticated route. Manifest also declares two new permission tiers: genetics.delete.cascade (T-809 cascade purge, one tier above genetics.delete) and genetics.maintenance (T-809 orphan sweep delete), both super_admin only."
     },
     {
       "node_id": "genetics.utils.responses",
@@ -304,10 +461,15 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "api",
-      "exports": ["SuccessResponse", "PaginatedResponse", "PaginationMeta", "ErrorResponse", "paginate"],
+      "exports": [
+        "SuccessResponse",
+        "PaginatedResponse",
+        "PaginationMeta",
+        "ErrorResponse",
+        "paginate"
+      ],
       "description": "T-800 Standard A64Core response envelopes for the genetics module."
     },
-
     {
       "node_id": "collection_genetic_lines",
       "node_type": "db_model",
@@ -374,7 +536,6 @@
       "exports": [],
       "description": "MongoDB collection: genetic_observations - dated notes per accession with metrics, novel-trait flag and promotedToLineId back-reference."
     },
-
     {
       "node_id": "type::genetics",
       "node_type": "type",
@@ -383,8 +544,33 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["GeneticLine", "Accession", "PropagationEvent", "MediumRecipe", "MediumBatch", "Observation", "LineageGraph", "AncestryChain", "GeneticsDashboard", "MethodInfo", "KIND_LABELS", "VESSEL_LABELS", "METHOD_LABELS", "ROLE_LABELS", "SENESCENCE_WATCH_GENERATION"],
-      "description": "T-800 TypeScript mirror of the genetics Pydantic models plus display-label maps. SENESCENCE_WATCH_GENERATION mirrors the backend dashboard constant."
+      "exports": [
+        "GeneticLine",
+        "Accession",
+        "PropagationEvent",
+        "MediumRecipe",
+        "MediumBatch",
+        "Observation",
+        "LineageGraph",
+        "AncestryChain",
+        "GeneticsDashboard",
+        "MethodInfo",
+        "KIND_LABELS",
+        "VESSEL_LABELS",
+        "METHOD_LABELS",
+        "ROLE_LABELS",
+        "SENESCENCE_WATCH_GENERATION",
+        "LineDependents",
+        "PlainPurgeResult",
+        "CascadePurgeResult",
+        "PurgeLineParams",
+        "OrphanAccession",
+        "OrphanObservation",
+        "OrphanPropagationEvent",
+        "OrphanCounts",
+        "OrphanRecords"
+      ],
+      "description": "T-800 TypeScript mirror of the genetics Pydantic models plus display-label maps. SENESCENCE_WATCH_GENERATION mirrors the backend dashboard constant. T-807/T-809 additions: LineDependents/PlainPurgeResult/CascadePurgeResult/PurgeLineParams mirror LineService's three removal paths; OrphanAccession/OrphanObservation/OrphanPropagationEvent/OrphanCounts/OrphanRecords mirror MaintenanceService.find_orphans()/delete_orphans()."
     },
     {
       "node_id": "service::geneticsApi",
@@ -394,8 +580,45 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["listLines", "getLine", "createLine", "updateLine", "listAccessions", "getAccessionByCode", "createAccession", "splitAccession", "createPropagation", "listPropagationMethods", "listRecipes", "createBatch", "getAccessionsByAdditive", "createObservation", "promoteTrait", "getLineageGraph", "getAncestry", "getGeneticsDashboard"],
-      "description": "T-800 Axios wrappers over /api/v1/genetics."
+      "exports": [
+        "listLines",
+        "getLinkedProfileCounts",
+        "getLine",
+        "createLine",
+        "updateLine",
+        "deactivateLine",
+        "getLineDependents",
+        "purgeLine",
+        "listAccessions",
+        "getRoomOccupancy",
+        "getAccession",
+        "getAccessionByCode",
+        "getAccessionChildren",
+        "createAccession",
+        "updateAccession",
+        "splitAccession",
+        "getLabelsPdf",
+        "listPropagationMethods",
+        "createPropagation",
+        "listPropagations",
+        "listRecipes",
+        "getRecipe",
+        "createRecipe",
+        "updateRecipe",
+        "listBatches",
+        "createBatch",
+        "updateBatch",
+        "getAccessionsByAdditive",
+        "listObservations",
+        "createObservation",
+        "promoteTrait",
+        "getLineageGraph",
+        "getAncestry",
+        "getOrphans",
+        "deleteOrphans",
+        "getGeneticsDashboard"
+      ],
+      "description": "T-800 Axios wrappers over /api/v1/genetics. T-807/T-809: getLineDependents/purgeLine (plain + cascade, via PurgeLineParams) and getOrphans/deleteOrphans against genetics.api.maintenance. T-804: getLabelsPdf against genetics.api.labels \u2014 blob download with the auth header (a plain href can't carry one), filename read from Content-Disposition. NOTE: no by-token wrapper exists yet \u2014 T-806 part 2 ('act on scan') is not started; LabelInfoPage.tsx (the public/anonymous consumer of that data) uses a plain fetch on a relative path instead of this service, deliberately, so the authenticated axios instance never attaches a token and redirects an anonymous scan to /login."
     },
     {
       "node_id": "hook::useGenetics",
@@ -405,10 +628,44 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["useGeneticLines", "useGeneticLine", "useCreateLine", "useAccessions", "useAccession", "useCreateAccession", "useSplitAccession", "usePropagationMethods", "useCreatePropagation", "useMediumRecipes", "useMediumBatches", "useCreateBatch", "useAccessionsByAdditive", "useObservations", "useCreateObservation", "usePromoteTrait", "useLineageGraph", "useAncestry", "useGeneticsDashboard"],
-      "description": "T-800 TanStack Query hooks. Mutations invalidate the whole ['genetics'] root because a propagation touches lines, accessions, lineage and dashboard at once."
+      "exports": [
+        "useGeneticLines",
+        "useGeneticLine",
+        "useLinkedProfileCounts",
+        "useCreateLine",
+        "useUpdateLine",
+        "useDeactivateLine",
+        "useLineDependents",
+        "usePurgeLine",
+        "useAccessions",
+        "useRoomOccupancy",
+        "useAccession",
+        "useAccessionChildren",
+        "useCreateAccession",
+        "useUpdateAccession",
+        "useSplitAccession",
+        "useGetLabelsPdf",
+        "usePropagationMethods",
+        "usePropagations",
+        "useCreatePropagation",
+        "useMediumRecipes",
+        "useCreateRecipe",
+        "useUpdateRecipe",
+        "useMediumBatches",
+        "useCreateBatch",
+        "useUpdateBatch",
+        "useAccessionsByAdditive",
+        "useObservations",
+        "useCreateObservation",
+        "usePromoteTrait",
+        "useLineageGraph",
+        "useAncestry",
+        "useOrphans",
+        "useDeleteOrphans",
+        "useGeneticsDashboard"
+      ],
+      "description": "T-800 TanStack Query hooks. Mutations invalidate the whole ['genetics'] root because a propagation touches lines, accessions, lineage and dashboard at once. T-807/T-809: useLineDependents/usePurgeLine (RemoveLineModal is documented as the sole intended consumer of usePurgeLine's cascade path) and useOrphans/useDeleteOrphans."
     },
-
     {
       "node_id": "component::GeneticsRepoPage",
       "node_type": "component",
@@ -417,8 +674,10 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["GeneticsRepoPage"],
-      "description": "T-800 Repo home at /genetics — dashboard counters and line cards with accession rollups, filterable by biological kind."
+      "exports": [
+        "GeneticsRepoPage"
+      ],
+      "description": "T-800 Repo home at /genetics \u2014 dashboard counters and line cards with accession rollups, filterable by biological kind."
     },
     {
       "node_id": "component::LineDetailPage",
@@ -428,8 +687,10 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["LineDetailPage"],
-      "description": "T-800 /genetics/lines/:lineId — lineage tree as the hero, accession table, recent propagations, and a senescence warning past G5."
+      "exports": [
+        "LineDetailPage"
+      ],
+      "description": "T-800 /genetics/lines/:lineId \u2014 lineage tree as the hero, accession table, recent propagations, and a senescence warning past G5."
     },
     {
       "node_id": "component::AccessionDetailPage",
@@ -439,8 +700,10 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["AccessionDetailPage"],
-      "description": "T-800 /genetics/accessions/:accessionId — ancestry breadcrumb, material facts, the 'Grown on' medium panel (recipe version, sterilisation, ingredients, additives), observation timeline and local lineage graph."
+      "exports": [
+        "AccessionDetailPage"
+      ],
+      "description": "T-800 /genetics/accessions/:accessionId \u2014 ancestry breadcrumb, material facts, the 'Grown on' medium panel (recipe version, sterilisation, ingredients, additives), observation timeline and local lineage graph."
     },
     {
       "node_id": "component::MediaLibraryPage",
@@ -450,8 +713,10 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["MediaLibraryPage"],
-      "description": "T-800 /genetics/media — recipes, prepared batches, and the clickable additive chips that run the exposed-material readout."
+      "exports": [
+        "MediaLibraryPage"
+      ],
+      "description": "T-800 /genetics/media \u2014 recipes, prepared batches, and the clickable additive chips that run the exposed-material readout."
     },
     {
       "node_id": "component::LineageTree",
@@ -461,7 +726,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["LineageTree"],
+      "exports": [
+        "LineageTree"
+      ],
       "description": "T-800 Renders the lineage DAG as generation rows joined by SVG curves. Layout is computed deterministically from fixed node dimensions, so no measurement pass is needed. Edge colour encodes reproduction mode; unidentified parents render as dashed stubs."
     },
     {
@@ -472,7 +739,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["PropagateModal"],
+      "exports": [
+        "PropagateModal"
+      ],
       "description": "T-800 One form for clones and crosses. Method choice drives parent-slot count, default roles and a live preview that mirrors derive_generations so the G/F numbering is never a black box. Supports an 'exists but unidentified' second parent."
     },
     {
@@ -483,7 +752,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["LineFormModal"],
+      "exports": [
+        "LineFormModal"
+      ],
       "description": "T-800 Create/edit a genetic line, including parent line, derivation and provenance."
     },
     {
@@ -494,7 +765,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["RegisterAccessionModal"],
+      "exports": [
+        "RegisterAccessionModal"
+      ],
       "description": "T-800 Registers founding material by hand with a live accession-code preview."
     },
     {
@@ -505,7 +778,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["SplitAccessionModal"],
+      "exports": [
+        "SplitAccessionModal"
+      ],
       "description": "T-800 Splits vessels out of a batch record; mirrors the server rule that the whole batch cannot be split."
     },
     {
@@ -516,7 +791,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["ObservationModal"],
+      "exports": [
+        "ObservationModal"
+      ],
       "description": "T-800 Records observations with optional metrics; the novel-trait flag is surfaced prominently since it gates promotion."
     },
     {
@@ -527,7 +804,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["PromoteTraitModal"],
+      "exports": [
+        "PromoteTraitModal"
+      ],
       "description": "T-800 Promotes a flagged observation into a new parent-linked line, optionally minting the founding accession."
     },
     {
@@ -538,7 +817,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["RecipeFormModal"],
+      "exports": [
+        "RecipeFormModal"
+      ],
       "description": "T-800 Dynamic ingredient and additive lists; warns that editing a formulation bumps the recipe version."
     },
     {
@@ -549,7 +830,9 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["BatchFormModal"],
+      "exports": [
+        "BatchFormModal"
+      ],
       "description": "T-800 Records one pour, previewing which additives will be snapshotted onto the batch."
     },
     {
@@ -560,8 +843,10 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["Modal"],
-      "description": "T-800 Shared modal shell for the genetics screens. Deliberately does not close on backdrop click — the X button or Cancel are the only exits, so half-filled propagation forms survive a stray click. NOTE: node_id is scoped to avoid a generic `component::Modal` collision; the actual export is `Modal`."
+      "exports": [
+        "Modal"
+      ],
+      "description": "T-800 Shared modal shell for the genetics screens. Deliberately does not close on backdrop click \u2014 the X button or Cancel are the only exits, so half-filled propagation forms survive a stray click. NOTE: node_id is scoped to avoid a generic `component::Modal` collision; the actual export is `Modal`."
     },
     {
       "node_id": "component::GeneticsStyled",
@@ -571,81 +856,1063 @@
       "line_number": 1,
       "module": "genetics",
       "layer": "frontend",
-      "exports": ["PageWrap", "Card", "Button", "Input", "Select", "GenerationBadge", "StatusBadge", "KindBadge", "ModeBadge", "CodeChip", "Table", "Banner"],
+      "exports": [
+        "PageWrap",
+        "Card",
+        "Button",
+        "Input",
+        "Select",
+        "GenerationBadge",
+        "StatusBadge",
+        "KindBadge",
+        "ModeBadge",
+        "CodeChip",
+        "Table",
+        "Banner"
+      ],
       "description": "T-800 Shared styled-components for the genetics screens. GenerationBadge shades warmer as clone depth rises, making senescence a standing visual cue."
+    },
+    {
+      "node_id": "genetics.api.public",
+      "node_type": "api_endpoint",
+      "name": "GET /public/genetics/i/{token}[/{vesselNo}]",
+      "file_path": "src/modules/genetics/api/v1/public.py",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "api",
+      "exports": [
+        "router",
+        "PublicAccessionInfo",
+        "AuthenticatedAccessionInfo",
+        "PublicLineageGraph",
+        "AuthenticatedLineageGraph"
+      ],
+      "description": "T-804/T-806 part 3. The platform's FIRST unauthenticated route, mounted on its own router (see genetics.register) so no route can become public by accident. Optional auth (_optional_current_user, fails closed on any error to anonymous, never raises) selects between two hand-built response shapes \u2014 PublicAccessionInfo (anonymous, respects the organization's PublicInfoPageConfig show* flags) and AuthenticatedAccessionInfo (adds accessionId + per-node tokens, ignores the show* flags entirely) \u2014 response_model is deliberately unset; the two explicit allowlists ARE the leakage guard, never response filtering. enabled=false on PublicInfoPageConfig 404s anonymous callers only (a public-exposure switch, not an access-control gate). Byte-identical 404 for every failure mode so an unknown token can't be distinguished from a disabled page. Rate-limited via src.middleware.rate_limit."
+    },
+    {
+      "node_id": "genetics.api.labels",
+      "node_type": "api_endpoint",
+      "name": "GET /genetics/accessions/{id}/labels",
+      "file_path": "src/modules/genetics/api/v1/labels.py",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "api",
+      "exports": [
+        "router",
+        "compute_qr_geometry",
+        "build_label_payload"
+      ],
+      "description": "T-804. Renders a print-ready label PDF for a Brother QL-800, one page per vessel in [from, to]. Tape sizes: 29x90 and 17x87 fixed die-cut, or 62xN continuous (N = feed length mm, 12-100, parsed/validated by _parse_tape_spec/_tape_dimensions, 400 on anything malformed or out of range, never a 500). Line 1 (accession code/vessel) draws in Space Mono Bold, lines 2-4 in Hanken Grotesk \u2014 both vendored TTFs under src/modules/genetics/assets/fonts/, embedded via reportlab with a Helvetica fallback that has never actually fired. A small brand mark (src/modules/genetics/assets/brand/mark-mono-1bit.png) draws only when real measured spare space exists (below the text block, or horizontally right of lines 2/3 as a fallback), 5-8mm, never a fixed corner guess. Printing raises labelledVesselCount to max(current, to) \u2014 read-only in permission (require_view) but not in effect."
+    },
+    {
+      "node_id": "genetics.api.maintenance",
+      "node_type": "api_endpoint",
+      "name": "GET/DELETE /genetics/maintenance/orphans",
+      "file_path": "src/modules/genetics/api/v1/maintenance.py",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "T-809. Org-wide database hygiene, distinct from the line-scoped cascade purge on lines.py. GET /orphans (genetics.delete tier) is read-only, finds accessions/propagation events/observations whose lineId (every referenced lineId, for propagation events) matches no existing line \u2014 a null/absent lineId is explicitly NOT an orphan. DELETE /orphans (super_admin, genetics.maintenance) removes exactly what GET reported, by explicit id list; ?dryRun=true previews without deleting. Real deletes audit-logged to admin_audit_log with the full pre-deletion snapshot."
+    },
+    {
+      "node_id": "genetics.service.maintenance_service",
+      "node_type": "class",
+      "name": "MaintenanceService",
+      "file_path": "src/modules/genetics/services/maintenance/maintenance_service.py",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "service",
+      "exports": [
+        "find_orphans",
+        "delete_orphans"
+      ],
+      "description": "T-809. find_orphans() diffs accessions/propagation-event lineIds/observations against the current set of existing line ids (_existing_line_ids) and reports the leftovers \u2014 found live: accession T808-TEST-G1-002 whose line no longer existed. delete_orphans() removes exactly that reported set by explicit id list, never a broad filter; dry_run=True computes the same result without writing."
+    },
+    {
+      "node_id": "genetics.service.vessel_resolver",
+      "node_type": "function",
+      "name": "resolve_vessel",
+      "file_path": "src/modules/genetics/services/accession/vessel_resolver.py",
+      "line_number": 36,
+      "module": "genetics",
+      "layer": "service",
+      "exports": [
+        "resolve_vessel"
+      ],
+      "description": "T-804/T-805. Walks split() chains forward (capped) so a scan of a split-off physical vessel resolves to the CHILD accession record that currently holds it, without the printed label ever needing to be reprinted \u2014 labelledVesselCount is a high-water mark on the parent, never decremented, so the ordinal on the sticker stays meaningful across splits. Shared verbatim by the public route, the authenticated by-token route (genetics.api.accessions), and labels.py's lineage/parentage rendering."
+    },
+    {
+      "node_id": "core.api.organizations",
+      "node_type": "api_endpoint",
+      "name": "PATCH /organizations/{organizationId}/modules",
+      "file_path": "src/api/v1/organizations.py",
+      "line_number": 1,
+      "module": "core",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Tenant module-toggle surface. Two fields as of T-804's follow-up: financeEnabled (Wave 0) and publicInfoPage (T-804 \u2014 the show*/enabled flags on PublicInfoPageConfig that gate the genetics public label-info page). publicInfoPage is a PARTIAL update (PublicInfoPageConfigUpdate) \u2014 unset fields are left unchanged rather than reset to their model defaults. Toggling publicInfoPage.enabled=false immediately 404s the anonymous public route (see genetics.api.public) but not the authenticated tier \u2014 a public-exposure switch, not an access-control gate. super_admin only, audit-logged with before/after modules snapshots. NOTE: only this one endpoint is mapped here; the rest of organizations.py is unmapped pending map_core_api."
+    },
+    {
+      "node_id": "core.model.organization",
+      "node_type": "pydantic_model",
+      "name": "Organization / module config models",
+      "file_path": "src/models/organization.py",
+      "line_number": 1,
+      "module": "core",
+      "layer": "model",
+      "exports": [
+        "PublicInfoPageConfig",
+        "PublicInfoPageConfigUpdate",
+        "OrganizationModules",
+        "OrganizationModulesUpdate"
+      ],
+      "description": "T-804: PublicInfoPageConfig \u2014 what a scanned genetics label may reveal to the public internet. Every show* flag (showMediumIngredients/showProtocolSteps/showOperatorName/showFacilityName) defaults to False, a deliberate privacy/trade-secret decision. Read directly by genetics.api.public to gate the anonymous response shape; ignored entirely by the authenticated shape. NOTE: only these module-config models are mapped here; the rest of organization.py is unmapped pending map_core_api."
+    },
+    {
+      "node_id": "component::LabelInfoPage",
+      "node_type": "component",
+      "name": "LabelInfoPage",
+      "file_path": "frontend/user-portal/src/pages/public/LabelInfoPage.tsx",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "LabelInfoPage"
+      ],
+      "description": "T-804/T-805/T-806 part 3. The public page a scanned QR opens \u2014 registered at both /i/:token and /I/:token (plus /:vesselNo variants), outside ProtectedRoute and MainLayout entirely. Plain fetch on a relative path rather than the shared axios instance/geneticsApi, deliberately: the authenticated client would attach a token and redirect an anonymous scan to /login. Renders lineageGraph as a lightweight local generation-row tree (not an adapter onto components/genetics/LineageTree.tsx, which is sized for the much larger authenticated graph and keyed by internal UUID the public payload never carries) with the scanned node highlighted at a measured 14.08:1 contrast."
+    },
+    {
+      "node_id": "component::PrintLabelsModal",
+      "node_type": "component",
+      "name": "PrintLabelsModal",
+      "file_path": "frontend/user-portal/src/components/genetics/PrintLabelsModal.tsx",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "PrintLabelsModal"
+      ],
+      "description": "T-804 step 5. Range + tape-size picker for genetics.api.labels, page count shown before commit, and an 'Actual size / 100%' print-dialog warning since fit-to-page rescales the QR (the most likely reason a batch fails to scan). Handles the inverted default range that arises once quantity drops below labelledVesselCount after a split."
+    },
+    {
+      "node_id": "component::EditAccessionModal",
+      "node_type": "component",
+      "name": "EditAccessionModal",
+      "file_path": "frontend/user-portal/src/components/genetics/EditAccessionModal.tsx",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "EditAccessionModal"
+      ],
+      "description": "Edits an existing accession's editable fields (storage location via LocationPicker, status, notes, etc.) via useUpdateAccession. Companion to RegisterAccessionModal (create) rather than a replacement."
+    },
+    {
+      "node_id": "component::LocationPicker",
+      "node_type": "component",
+      "name": "LocationPicker",
+      "file_path": "frontend/user-portal/src/components/genetics/LocationPicker.tsx",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "LocationPicker"
+      ],
+      "description": "Shared storage-location picker (facility/room/tape-style position field) used by both RegisterAccessionModal (create) and EditAccessionModal (edit) so the two forms can't drift on how a StorageLocation is captured."
+    },
+    {
+      "node_id": "component::GeneticsKindIcons",
+      "node_type": "component",
+      "name": "KIND_ICON_COMPONENTS",
+      "file_path": "frontend/user-portal/src/components/genetics/kindIcons.ts",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "KIND_ICON_COMPONENTS"
+      ],
+      "description": "Night Observatory-era per-domain icon map: OrganismKind -> lucide-react icon component, used anywhere a line's biological kind (plant/fungus/animal/other) needs a consistent glyph."
+    },
+    {
+      "node_id": "component::GrowingProfilePanel",
+      "node_type": "component",
+      "name": "GrowingProfilePanel",
+      "file_path": "frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "GrowingProfilePanel"
+      ],
+      "description": "Renders a genetic line's growing-profile parameters on LineDetailPage."
+    },
+    {
+      "node_id": "component::LineYieldPanel",
+      "node_type": "component",
+      "name": "LineYieldPanel",
+      "file_path": "frontend/user-portal/src/components/genetics/LineYieldPanel.tsx",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "LineYieldPanel"
+      ],
+      "description": "Renders yield history/rollups for a genetic line on LineDetailPage."
+    },
+    {
+      "node_id": "component::RemoveLineModal",
+      "node_type": "component",
+      "name": "RemoveLineModal",
+      "file_path": "frontend/user-portal/src/components/genetics/RemoveLineModal.tsx",
+      "line_number": 97,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "RemoveLineModal"
+      ],
+      "description": "T-807/T-809 frontend. Sole intended consumer of usePurgeLine's cascade path (see hook::useGenetics). Surfaces LineService's three removal tiers distinctly: deactivate (soft), zero-dependents purge, and the confirmed super_admin-only ?cascade=true escalation requiring the line's exact code as confirmation, mirroring the backend's GitHub repo-deletion pattern. Gated in LineDetailPage by canDeleteLines(user?.role)."
+    },
+    {
+      "node_id": "component::GeneticsPermissions",
+      "node_type": "function",
+      "name": "genetics frontend permission helpers",
+      "file_path": "frontend/user-portal/src/components/genetics/permissions.ts",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "canDeleteLines",
+        "canCascadePurge"
+      ],
+      "description": "T-807/T-809. Role gates mirroring the backend's genetics.delete / genetics.delete.cascade permission tiers, so LineDetailPage and RemoveLineModal can hide/disable the destructive actions client-side (the backend remains the actual enforcement point)."
+    },
+    {
+      "node_id": "component::OrphanSweepCard",
+      "node_type": "component",
+      "name": "OrphanSweepCard",
+      "file_path": "frontend/user-portal/src/components/settings/OrphanSweepCard.tsx",
+      "line_number": 38,
+      "module": "genetics",
+      "layer": "frontend",
+      "exports": [
+        "OrphanSweepCard"
+      ],
+      "description": "T-809. Settings-page card wrapping useOrphans/useDeleteOrphans \u2014 the org-wide orphan sweep UI. Self-gates to super_admin (same pattern as the existing ModulesSettingsCard), rendered alongside it in Settings.tsx."
     }
   ],
   "edges": [
-    { "edge_type": "calls", "source_id": "genetics.api.lines", "target_id": "genetics.service.line_service", "context": "Line routes delegate all CRUD and rollups to LineService.", "source_file": "src/modules/genetics/api/v1/lines.py", "target_file": "src/modules/genetics/services/line/line_service.py" },
-    { "edge_type": "calls", "source_id": "genetics.api.accessions", "target_id": "genetics.service.accession_service", "context": "Accession routes delegate to AccessionService, including split and by-code lookup.", "source_file": "src/modules/genetics/api/v1/accessions.py", "target_file": "src/modules/genetics/services/accession/accession_service.py" },
-    { "edge_type": "calls", "source_id": "genetics.api.propagations", "target_id": "genetics.service.propagation_service", "context": "Propagation routes delegate to PropagationService.propagate; GET /methods reads PropagationMethod properties.", "source_file": "src/modules/genetics/api/v1/propagations.py", "target_file": "src/modules/genetics/services/propagation/propagation_service.py" },
-    { "edge_type": "calls", "source_id": "genetics.api.media", "target_id": "genetics.service.medium_service", "context": "Media routes delegate recipe/batch CRUD and the additive readout to MediumService.", "source_file": "src/modules/genetics/api/v1/media.py", "target_file": "src/modules/genetics/services/medium/medium_service.py" },
-    { "edge_type": "calls", "source_id": "genetics.api.observations", "target_id": "genetics.service.observation_service", "context": "Observation routes delegate to ObservationService including promote_trait.", "source_file": "src/modules/genetics/api/v1/observations.py", "target_file": "src/modules/genetics/services/observation/observation_service.py" },
-    { "edge_type": "calls", "source_id": "genetics.api.lineage", "target_id": "genetics.service.lineage_service", "context": "Lineage routes delegate to LineageService.build_graph / get_ancestry.", "source_file": "src/modules/genetics/api/v1/lineage.py", "target_file": "src/modules/genetics/services/lineage/lineage_service.py" },
-    { "edge_type": "calls", "source_id": "genetics.api.dashboard", "target_id": "genetics.service.dashboard_service", "context": "Dashboard route delegates to DashboardService.get_dashboard.", "source_file": "src/modules/genetics/api/v1/dashboard.py", "target_file": "src/modules/genetics/services/dashboard_service.py" },
-
-    { "edge_type": "depends_on", "source_id": "genetics.service.propagation_service", "target_id": "genetics.service.accession_service", "context": "Resolves parent accessions and mints child accession codes.", "source_file": "src/modules/genetics/services/propagation/propagation_service.py", "target_file": "src/modules/genetics/services/accession/accession_service.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.service.propagation_service", "target_id": "genetics.service.line_service", "context": "Resolves the target line's code in order to build accession codes.", "source_file": "src/modules/genetics/services/propagation/propagation_service.py", "target_file": "src/modules/genetics/services/line/line_service.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.service.propagation_service", "target_id": "genetics.model.enums", "context": "derive_generations branches on PropagationMethod.reproduction_mode, which is backed by _SEXUAL_METHODS.", "source_file": "src/modules/genetics/services/propagation/propagation_service.py", "target_file": "src/modules/genetics/models/enums.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.service.accession_service", "target_id": "genetics.service.line_service", "context": "Needs the line code to mint accession codes.", "source_file": "src/modules/genetics/services/accession/accession_service.py", "target_file": "src/modules/genetics/services/line/line_service.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.service.observation_service", "target_id": "genetics.service.line_service", "context": "promote_trait creates the child line via LineService.create_line.", "source_file": "src/modules/genetics/services/observation/observation_service.py", "target_file": "src/modules/genetics/services/line/line_service.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.service.observation_service", "target_id": "genetics.service.accession_service", "context": "promote_trait mints the founding accession parented to the observed material.", "source_file": "src/modules/genetics/services/observation/observation_service.py", "target_file": "src/modules/genetics/services/accession/accession_service.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.service.lineage_service", "target_id": "genetics.service.propagation_service", "context": "Annotates graph edges with the propagation method and date.", "source_file": "src/modules/genetics/services/lineage/lineage_service.py", "target_file": "src/modules/genetics/services/propagation/propagation_service.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.service.lineage_service", "target_id": "genetics.service.medium_service", "context": "Resolves medium batch codes for display on lineage nodes and edges.", "source_file": "src/modules/genetics/services/lineage/lineage_service.py", "target_file": "src/modules/genetics/services/medium/medium_service.py" },
-    { "edge_type": "uses", "source_id": "genetics.service.accession_service", "target_id": "genetics.service.common", "context": "Uses build_accession_code, generation_label and doc/model mapping helpers.", "source_file": "src/modules/genetics/services/accession/accession_service.py", "target_file": "src/modules/genetics/services/common.py" },
-
-    { "edge_type": "stores_in", "source_id": "genetics.service.line_service", "target_id": "collection_genetic_lines", "context": "CRUD against genetic_lines.", "source_file": "src/modules/genetics/services/line/line_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "reads_from", "source_id": "genetics.service.line_service", "target_id": "collection_genetic_accessions", "context": "_bulk_stats aggregates accession rollups per line.", "source_file": "src/modules/genetics/services/line/line_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "stores_in", "source_id": "genetics.service.accession_service", "target_id": "collection_genetic_accessions", "context": "CRUD and split against genetic_accessions.", "source_file": "src/modules/genetics/services/accession/accession_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "stores_in", "source_id": "genetics.service.propagation_service", "target_id": "collection_propagation_events", "context": "Writes the propagation event after its child accessions.", "source_file": "src/modules/genetics/services/propagation/propagation_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "stores_in", "source_id": "genetics.service.propagation_service", "target_id": "collection_genetic_accessions", "context": "Bulk-inserts the child accessions produced by a propagation.", "source_file": "src/modules/genetics/services/propagation/propagation_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "stores_in", "source_id": "genetics.service.medium_service", "target_id": "collection_medium_recipes", "context": "Recipe CRUD with version bumping on formulation change.", "source_file": "src/modules/genetics/services/medium/medium_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "stores_in", "source_id": "genetics.service.medium_service", "target_id": "collection_medium_batches", "context": "Batch creation snapshots the recipe formulation.", "source_file": "src/modules/genetics/services/medium/medium_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "reads_from", "source_id": "genetics.service.medium_service", "target_id": "collection_genetic_accessions", "context": "find_accessions_by_additive walks additive -> batches -> accessions.", "source_file": "src/modules/genetics/services/medium/medium_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "stores_in", "source_id": "genetics.service.observation_service", "target_id": "collection_genetic_observations", "context": "CRUD against genetic_observations plus promotedToLineId back-reference.", "source_file": "src/modules/genetics/services/observation/observation_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "reads_from", "source_id": "genetics.service.lineage_service", "target_id": "collection_genetic_accessions", "context": "Breadth-first traversal over parents.accessionId, one query per depth level.", "source_file": "src/modules/genetics/services/lineage/lineage_service.py", "target_file": "src/modules/genetics/services/database.py" },
-    { "edge_type": "reads_from", "source_id": "genetics.service.dashboard_service", "target_id": "collection_genetic_accessions", "context": "Counts live material, vessels and the senescence watch list.", "source_file": "src/modules/genetics/services/dashboard_service.py", "target_file": "src/modules/genetics/services/database.py" },
-
-    { "edge_type": "imports", "source_id": "genetics.api.accessions", "target_id": "genetics.model.accession", "context": "Request/response schemas for accession routes.", "source_file": "src/modules/genetics/api/v1/accessions.py", "target_file": "src/modules/genetics/models/accession.py" },
-    { "edge_type": "imports", "source_id": "genetics.api.propagations", "target_id": "genetics.model.propagation", "context": "Request/response schemas for propagation routes.", "source_file": "src/modules/genetics/api/v1/propagations.py", "target_file": "src/modules/genetics/models/propagation.py" },
-    { "edge_type": "imports", "source_id": "genetics.model.accession", "target_id": "genetics.model.enums", "context": "VesselForm, AccessionStatus and ParentRole.", "source_file": "src/modules/genetics/models/accession.py", "target_file": "src/modules/genetics/models/enums.py" },
-    { "edge_type": "depends_on", "source_id": "genetics.register", "target_id": "core.middleware.auth", "context": "Genetics routes reuse farm_manager's auth dependencies (get_current_active_user, require_permission).", "source_file": "src/modules/genetics/register.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
-    { "edge_type": "uses", "source_id": "genetics.service.database", "target_id": "core.services.database", "context": "Delegates connection pooling and health checks to the core MongoDB manager.", "source_file": "src/modules/genetics/services/database.py", "target_file": "src/services/database.py" },
-
-    { "edge_type": "calls", "source_id": "service::geneticsApi", "target_id": "genetics.api.lines", "context": "listLines/getLine/createLine/updateLine hit /api/v1/genetics/lines.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "src/modules/genetics/api/v1/lines.py" },
-    { "edge_type": "calls", "source_id": "service::geneticsApi", "target_id": "genetics.api.accessions", "context": "listAccessions/getAccessionByCode/createAccession/splitAccession hit /api/v1/genetics/accessions.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "src/modules/genetics/api/v1/accessions.py" },
-    { "edge_type": "calls", "source_id": "service::geneticsApi", "target_id": "genetics.api.propagations", "context": "createPropagation and listPropagationMethods hit /api/v1/genetics/propagations.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "src/modules/genetics/api/v1/propagations.py" },
-    { "edge_type": "calls", "source_id": "service::geneticsApi", "target_id": "genetics.api.media", "context": "Recipe/batch CRUD and getAccessionsByAdditive hit /api/v1/genetics/media.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "src/modules/genetics/api/v1/media.py" },
-    { "edge_type": "calls", "source_id": "service::geneticsApi", "target_id": "genetics.api.observations", "context": "createObservation and promoteTrait hit /api/v1/genetics/observations.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "src/modules/genetics/api/v1/observations.py" },
-    { "edge_type": "calls", "source_id": "service::geneticsApi", "target_id": "genetics.api.lineage", "context": "getLineageGraph and getAncestry hit /api/v1/genetics/lineage.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "src/modules/genetics/api/v1/lineage.py" },
-    { "edge_type": "calls", "source_id": "service::geneticsApi", "target_id": "genetics.api.dashboard", "context": "getGeneticsDashboard hits /api/v1/genetics/dashboard.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "src/modules/genetics/api/v1/dashboard.py" },
-    { "edge_type": "uses", "source_id": "service::geneticsApi", "target_id": "service::apiClient", "context": "All genetics calls go through the shared axios instance.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "frontend/user-portal/src/services/api.ts" },
-    { "edge_type": "uses", "source_id": "service::geneticsApi", "target_id": "type::genetics", "context": "Request and response typings.", "source_file": "frontend/user-portal/src/services/geneticsApi.ts", "target_file": "frontend/user-portal/src/types/genetics.ts" },
-
-    { "edge_type": "uses", "source_id": "hook::useGenetics", "target_id": "service::geneticsApi", "context": "All query and mutation functions wrap geneticsApi.", "source_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts", "target_file": "frontend/user-portal/src/services/geneticsApi.ts" },
-
-    { "edge_type": "uses", "source_id": "component::GeneticsRepoPage", "target_id": "hook::useGenetics", "context": "useGeneticLines and useGeneticsDashboard.", "source_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx", "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts" },
-    { "edge_type": "uses", "source_id": "component::LineDetailPage", "target_id": "hook::useGenetics", "context": "useGeneticLine, useAccessions, useLineageGraph, usePropagations, useMediumBatches.", "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx", "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts" },
-    { "edge_type": "uses", "source_id": "component::AccessionDetailPage", "target_id": "hook::useGenetics", "context": "useAccession, useAncestry, useLineageGraph, useObservations, useUpdateAccession.", "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx", "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts" },
-    { "edge_type": "uses", "source_id": "component::MediaLibraryPage", "target_id": "hook::useGenetics", "context": "useMediumRecipes, useMediumBatches, useAccessionsByAdditive.", "source_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx", "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts" },
-    { "edge_type": "renders", "source_id": "component::LineDetailPage", "target_id": "component::LineageTree", "context": "Lineage tree for every accession on the line.", "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/LineageTree.tsx" },
-    { "edge_type": "renders", "source_id": "component::AccessionDetailPage", "target_id": "component::LineageTree", "context": "Local lineage graph centred on the accession.", "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/LineageTree.tsx" },
-    { "edge_type": "renders", "source_id": "component::LineDetailPage", "target_id": "component::PropagateModal", "context": "Propagate action from the line detail header.", "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/PropagateModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::LineDetailPage", "target_id": "component::RegisterAccessionModal", "context": "Register founding material.", "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/RegisterAccessionModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::LineDetailPage", "target_id": "component::LineFormModal", "context": "Edit the line.", "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/LineFormModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::GeneticsRepoPage", "target_id": "component::LineFormModal", "context": "Create a new line from the repo home.", "source_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/LineFormModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::AccessionDetailPage", "target_id": "component::ObservationModal", "context": "Observe action.", "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/ObservationModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::AccessionDetailPage", "target_id": "component::SplitAccessionModal", "context": "Split action.", "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/SplitAccessionModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::AccessionDetailPage", "target_id": "component::PromoteTraitModal", "context": "Promote a flagged novel-trait observation.", "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/PromoteTraitModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::AccessionDetailPage", "target_id": "component::PropagateModal", "context": "Propagate from this accession.", "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/PropagateModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::MediaLibraryPage", "target_id": "component::RecipeFormModal", "context": "Create/edit recipes.", "source_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/RecipeFormModal.tsx" },
-    { "edge_type": "renders", "source_id": "component::MediaLibraryPage", "target_id": "component::BatchFormModal", "context": "Record a prepared batch.", "source_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx", "target_file": "frontend/user-portal/src/components/genetics/BatchFormModal.tsx" },
-    { "edge_type": "uses", "source_id": "component::PropagateModal", "target_id": "component::GeneticsModal", "context": "All genetics modals share the no-backdrop-close shell.", "source_file": "frontend/user-portal/src/components/genetics/PropagateModal.tsx", "target_file": "frontend/user-portal/src/components/genetics/Modal.tsx" },
-    { "edge_type": "uses", "source_id": "component::LineageTree", "target_id": "type::genetics", "context": "LineageGraph / LineageNode typings and label maps.", "source_file": "frontend/user-portal/src/components/genetics/LineageTree.tsx", "target_file": "frontend/user-portal/src/types/genetics.ts" },
-    { "edge_type": "renders", "source_id": "file::App", "target_id": "component::GeneticsRepoPage", "context": "Lazy route /genetics.", "source_file": "frontend/user-portal/src/App.tsx", "target_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx" },
-    { "edge_type": "renders", "source_id": "file::App", "target_id": "component::LineDetailPage", "context": "Lazy route /genetics/lines/:lineId.", "source_file": "frontend/user-portal/src/App.tsx", "target_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx" },
-    { "edge_type": "renders", "source_id": "file::App", "target_id": "component::AccessionDetailPage", "context": "Lazy route /genetics/accessions/:accessionId.", "source_file": "frontend/user-portal/src/App.tsx", "target_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx" },
-    { "edge_type": "renders", "source_id": "file::App", "target_id": "component::MediaLibraryPage", "context": "Lazy route /genetics/media.", "source_file": "frontend/user-portal/src/App.tsx", "target_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx" },
-    { "edge_type": "uses", "source_id": "component::MainLayout", "target_id": "component::GeneticsRepoPage", "context": "GENETICS_NAV_GROUP is a shared sidebar group rendered for every industry type, not gated by currentDivision.industryType.", "source_file": "frontend/user-portal/src/components/layout/MainLayout.tsx", "target_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx" }
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.lines",
+      "target_id": "genetics.service.line_service",
+      "context": "Line routes delegate all CRUD and rollups to LineService.",
+      "source_file": "src/modules/genetics/api/v1/lines.py",
+      "target_file": "src/modules/genetics/services/line/line_service.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.accessions",
+      "target_id": "genetics.service.accession_service",
+      "context": "Accession routes delegate to AccessionService, including split and by-code lookup.",
+      "source_file": "src/modules/genetics/api/v1/accessions.py",
+      "target_file": "src/modules/genetics/services/accession/accession_service.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.propagations",
+      "target_id": "genetics.service.propagation_service",
+      "context": "Propagation routes delegate to PropagationService.propagate; GET /methods reads PropagationMethod properties.",
+      "source_file": "src/modules/genetics/api/v1/propagations.py",
+      "target_file": "src/modules/genetics/services/propagation/propagation_service.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.media",
+      "target_id": "genetics.service.medium_service",
+      "context": "Media routes delegate recipe/batch CRUD and the additive readout to MediumService.",
+      "source_file": "src/modules/genetics/api/v1/media.py",
+      "target_file": "src/modules/genetics/services/medium/medium_service.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.observations",
+      "target_id": "genetics.service.observation_service",
+      "context": "Observation routes delegate to ObservationService including promote_trait.",
+      "source_file": "src/modules/genetics/api/v1/observations.py",
+      "target_file": "src/modules/genetics/services/observation/observation_service.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.lineage",
+      "target_id": "genetics.service.lineage_service",
+      "context": "Lineage routes delegate to LineageService.build_graph / get_ancestry.",
+      "source_file": "src/modules/genetics/api/v1/lineage.py",
+      "target_file": "src/modules/genetics/services/lineage/lineage_service.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.dashboard",
+      "target_id": "genetics.service.dashboard_service",
+      "context": "Dashboard route delegates to DashboardService.get_dashboard.",
+      "source_file": "src/modules/genetics/api/v1/dashboard.py",
+      "target_file": "src/modules/genetics/services/dashboard_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.service.accession_service",
+      "context": "Resolves parent accessions and mints child accession codes.",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/accession/accession_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.service.line_service",
+      "context": "Resolves the target line's code in order to build accession codes.",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/line/line_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.model.enums",
+      "context": "derive_generations branches on PropagationMethod.reproduction_mode, which is backed by _SEXUAL_METHODS.",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/models/enums.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.accession_service",
+      "target_id": "genetics.service.line_service",
+      "context": "Needs the line code to mint accession codes.",
+      "source_file": "src/modules/genetics/services/accession/accession_service.py",
+      "target_file": "src/modules/genetics/services/line/line_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.service.line_service",
+      "context": "promote_trait creates the child line via LineService.create_line.",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/services/line/line_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.service.accession_service",
+      "context": "promote_trait mints the founding accession parented to the observed material.",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/services/accession/accession_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.service.propagation_service",
+      "context": "Annotates graph edges with the propagation method and date.",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/services/propagation/propagation_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.service.medium_service",
+      "context": "Resolves medium batch codes for display on lineage nodes and edges.",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/services/medium/medium_service.py"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "genetics.service.accession_service",
+      "target_id": "genetics.service.common",
+      "context": "Uses build_accession_code, generation_label and doc/model mapping helpers.",
+      "source_file": "src/modules/genetics/services/accession/accession_service.py",
+      "target_file": "src/modules/genetics/services/common.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.line_service",
+      "target_id": "collection_genetic_lines",
+      "context": "CRUD against genetic_lines.",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "reads_from",
+      "source_id": "genetics.service.line_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "_bulk_stats aggregates accession rollups per line.",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.accession_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "CRUD and split against genetic_accessions.",
+      "source_file": "src/modules/genetics/services/accession/accession_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "collection_propagation_events",
+      "context": "Writes the propagation event after its child accessions.",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "Bulk-inserts the child accessions produced by a propagation.",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.medium_service",
+      "target_id": "collection_medium_recipes",
+      "context": "Recipe CRUD with version bumping on formulation change.",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.medium_service",
+      "target_id": "collection_medium_batches",
+      "context": "Batch creation snapshots the recipe formulation.",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "reads_from",
+      "source_id": "genetics.service.medium_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "find_accessions_by_additive walks additive -> batches -> accessions.",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.observation_service",
+      "target_id": "collection_genetic_observations",
+      "context": "CRUD against genetic_observations plus promotedToLineId back-reference.",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "reads_from",
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "Breadth-first traversal over parents.accessionId, one query per depth level.",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "reads_from",
+      "source_id": "genetics.service.dashboard_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "Counts live material, vessels and the senescence watch list.",
+      "source_file": "src/modules/genetics/services/dashboard_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "imports",
+      "source_id": "genetics.api.accessions",
+      "target_id": "genetics.model.accession",
+      "context": "Request/response schemas for accession routes.",
+      "source_file": "src/modules/genetics/api/v1/accessions.py",
+      "target_file": "src/modules/genetics/models/accession.py"
+    },
+    {
+      "edge_type": "imports",
+      "source_id": "genetics.api.propagations",
+      "target_id": "genetics.model.propagation",
+      "context": "Request/response schemas for propagation routes.",
+      "source_file": "src/modules/genetics/api/v1/propagations.py",
+      "target_file": "src/modules/genetics/models/propagation.py"
+    },
+    {
+      "edge_type": "imports",
+      "source_id": "genetics.model.accession",
+      "target_id": "genetics.model.enums",
+      "context": "VesselForm, AccessionStatus and ParentRole.",
+      "source_file": "src/modules/genetics/models/accession.py",
+      "target_file": "src/modules/genetics/models/enums.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.register",
+      "target_id": "core.middleware.auth",
+      "context": "Genetics routes reuse farm_manager's auth dependencies (get_current_active_user, require_permission).",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/farm_manager/middleware/auth.py"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "genetics.service.database",
+      "target_id": "core.services.database",
+      "context": "Delegates connection pooling and health checks to the core MongoDB manager.",
+      "source_file": "src/modules/genetics/services/database.py",
+      "target_file": "src/services/database.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.lines",
+      "context": "listLines/getLine/createLine/updateLine hit /api/v1/genetics/lines.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/lines.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.accessions",
+      "context": "listAccessions/getAccessionByCode/createAccession/splitAccession hit /api/v1/genetics/accessions.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/accessions.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.propagations",
+      "context": "createPropagation and listPropagationMethods hit /api/v1/genetics/propagations.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/propagations.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.media",
+      "context": "Recipe/batch CRUD and getAccessionsByAdditive hit /api/v1/genetics/media.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/media.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.observations",
+      "context": "createObservation and promoteTrait hit /api/v1/genetics/observations.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/observations.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.lineage",
+      "context": "getLineageGraph and getAncestry hit /api/v1/genetics/lineage.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/lineage.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.dashboard",
+      "context": "getGeneticsDashboard hits /api/v1/genetics/dashboard.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/dashboard.py"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "service::geneticsApi",
+      "target_id": "service::apiClient",
+      "context": "All genetics calls go through the shared axios instance.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "service::geneticsApi",
+      "target_id": "type::genetics",
+      "context": "Request and response typings.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "frontend/user-portal/src/types/genetics.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "hook::useGenetics",
+      "target_id": "service::geneticsApi",
+      "context": "All query and mutation functions wrap geneticsApi.",
+      "source_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts",
+      "target_file": "frontend/user-portal/src/services/geneticsApi.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::GeneticsRepoPage",
+      "target_id": "hook::useGenetics",
+      "context": "useGeneticLines and useGeneticsDashboard.",
+      "source_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::LineDetailPage",
+      "target_id": "hook::useGenetics",
+      "context": "useGeneticLine, useAccessions, useLineageGraph, usePropagations, useMediumBatches.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "hook::useGenetics",
+      "context": "useAccession, useAncestry, useLineageGraph, useObservations, useUpdateAccession.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::MediaLibraryPage",
+      "target_id": "hook::useGenetics",
+      "context": "useMediumRecipes, useMediumBatches, useAccessionsByAdditive.",
+      "source_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::LineageTree",
+      "context": "Lineage tree for every accession on the line.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/LineageTree.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "component::LineageTree",
+      "context": "Local lineage graph centred on the accession.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/LineageTree.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::PropagateModal",
+      "context": "Propagate action from the line detail header.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/PropagateModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::RegisterAccessionModal",
+      "context": "Register founding material.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/RegisterAccessionModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::LineFormModal",
+      "context": "Edit the line.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/LineFormModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::GeneticsRepoPage",
+      "target_id": "component::LineFormModal",
+      "context": "Create a new line from the repo home.",
+      "source_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/LineFormModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "component::ObservationModal",
+      "context": "Observe action.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/ObservationModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "component::SplitAccessionModal",
+      "context": "Split action.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/SplitAccessionModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "component::PromoteTraitModal",
+      "context": "Promote a flagged novel-trait observation.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/PromoteTraitModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "component::PropagateModal",
+      "context": "Propagate from this accession.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/PropagateModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::MediaLibraryPage",
+      "target_id": "component::RecipeFormModal",
+      "context": "Create/edit recipes.",
+      "source_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/RecipeFormModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::MediaLibraryPage",
+      "target_id": "component::BatchFormModal",
+      "context": "Record a prepared batch.",
+      "source_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/BatchFormModal.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::PropagateModal",
+      "target_id": "component::GeneticsModal",
+      "context": "All genetics modals share the no-backdrop-close shell.",
+      "source_file": "frontend/user-portal/src/components/genetics/PropagateModal.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/Modal.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::LineageTree",
+      "target_id": "type::genetics",
+      "context": "LineageGraph / LineageNode typings and label maps.",
+      "source_file": "frontend/user-portal/src/components/genetics/LineageTree.tsx",
+      "target_file": "frontend/user-portal/src/types/genetics.ts"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "file::App",
+      "target_id": "component::GeneticsRepoPage",
+      "context": "Lazy route /genetics.",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "file::App",
+      "target_id": "component::LineDetailPage",
+      "context": "Lazy route /genetics/lines/:lineId.",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "file::App",
+      "target_id": "component::AccessionDetailPage",
+      "context": "Lazy route /genetics/accessions/:accessionId.",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "file::App",
+      "target_id": "component::MediaLibraryPage",
+      "context": "Lazy route /genetics/media.",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::MainLayout",
+      "target_id": "component::GeneticsRepoPage",
+      "context": "GENETICS_NAV_GROUP is a shared sidebar group rendered for every industry type, not gated by currentDivision.industryType.",
+      "source_file": "frontend/user-portal/src/components/layout/MainLayout.tsx",
+      "target_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "genetics.api.maintenance",
+      "target_id": "genetics.service.maintenance_service",
+      "context": "Maintenance routes delegate to MaintenanceService.find_orphans / delete_orphans.",
+      "source_file": "src/modules/genetics/api/v1/maintenance.py",
+      "target_file": "src/modules/genetics/services/maintenance/maintenance_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.api.accessions",
+      "target_id": "genetics.api.public",
+      "context": "by-token route reuses public.py's _load_accession_by_token verbatim rather than reimplementing token lookup.",
+      "source_file": "src/modules/genetics/api/v1/accessions.py",
+      "target_file": "src/modules/genetics/api/v1/public.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.api.accessions",
+      "target_id": "genetics.service.vessel_resolver",
+      "context": "by-token route resolves ?vesselNo through resolve_vessel, same as the public route.",
+      "source_file": "src/modules/genetics/api/v1/accessions.py",
+      "target_file": "src/modules/genetics/services/accession/vessel_resolver.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.vessel_resolver",
+      "context": "Resolves a scanned vesselNo to the accession that currently holds that physical vessel.",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/accession/vessel_resolver.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.accession_service",
+      "context": "Loads the scanned accession and its lineage neighbours.",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/accession/accession_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.line_service",
+      "context": "Resolves line display info for the public/authenticated payload.",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/line/line_service.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.api.public",
+      "target_id": "core.model.organization",
+      "context": "Loads PublicInfoPageConfig to gate the anonymous response shape and the enabled=false 404.",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/models/organization.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "genetics.api.public",
+      "target_id": "core.middleware.auth",
+      "context": "_optional_current_user calls get_current_user as a plain function, catching its HTTPExceptions locally to degrade to anonymous instead of raising.",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/middleware/auth.py"
+    },
+    {
+      "edge_type": "depends_on",
+      "source_id": "core.api.organizations",
+      "target_id": "core.model.organization",
+      "context": "PATCH /modules request/response schemas (OrganizationModulesUpdate, PublicInfoPageConfigUpdate).",
+      "source_file": "src/api/v1/organizations.py",
+      "target_file": "src/models/organization.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.maintenance_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "Diffs accession lineIds against existing lines; deletes the orphaned subset by explicit id list.",
+      "source_file": "src/modules/genetics/services/maintenance/maintenance_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.maintenance_service",
+      "target_id": "collection_propagation_events",
+      "context": "Diffs every referenced lineId on each propagation event; deletes the orphaned subset.",
+      "source_file": "src/modules/genetics/services/maintenance/maintenance_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.maintenance_service",
+      "target_id": "collection_genetic_observations",
+      "context": "Diffs observation lineIds against existing lines; deletes the orphaned subset.",
+      "source_file": "src/modules/genetics/services/maintenance/maintenance_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "reads_from",
+      "source_id": "genetics.service.maintenance_service",
+      "target_id": "collection_genetic_lines",
+      "context": "_existing_line_ids builds the reference set every other collection's lineId is diffed against.",
+      "source_file": "src/modules/genetics/services/maintenance/maintenance_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.line_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "cascade_purge_line removes gathered accession ids under a purged line.",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.line_service",
+      "target_id": "collection_propagation_events",
+      "context": "cascade_purge_line removes gathered propagation-event ids under a purged line.",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.line_service",
+      "target_id": "collection_genetic_observations",
+      "context": "cascade_purge_line removes gathered observation ids under a purged line.",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "stores_in",
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "collection_genetic_accessions",
+      "context": "amend_event cascades a corrected performedAt to child accessions' acquiredAt where unmodified.",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/database.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.labels",
+      "context": "getLabelsPdf hits GET /genetics/accessions/{id}/labels.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/labels.py"
+    },
+    {
+      "edge_type": "calls",
+      "source_id": "service::geneticsApi",
+      "target_id": "genetics.api.maintenance",
+      "context": "getOrphans/deleteOrphans hit /genetics/maintenance/orphans.",
+      "source_file": "frontend/user-portal/src/services/geneticsApi.ts",
+      "target_file": "src/modules/genetics/api/v1/maintenance.py"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "component::EditAccessionModal",
+      "context": "Edit action on the accession detail page.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/EditAccessionModal.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::AccessionDetailPage",
+      "target_id": "component::PrintLabelsModal",
+      "context": "Print Labels action on the accession detail page.",
+      "source_file": "frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/PrintLabelsModal.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::EditAccessionModal",
+      "target_id": "component::LocationPicker",
+      "context": "Storage location field.",
+      "source_file": "frontend/user-portal/src/components/genetics/EditAccessionModal.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/LocationPicker.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::RegisterAccessionModal",
+      "target_id": "component::LocationPicker",
+      "context": "Storage location field, shared with EditAccessionModal.",
+      "source_file": "frontend/user-portal/src/components/genetics/RegisterAccessionModal.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/LocationPicker.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::GeneticsRepoPage",
+      "target_id": "component::GeneticsKindIcons",
+      "context": "Kind icon per line card.",
+      "source_file": "frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/kindIcons.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::GeneticsKindIcons",
+      "context": "Kind icon in the line header.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/kindIcons.ts"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::GrowingProfilePanel",
+      "context": "Growing-profile section.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::LineYieldPanel",
+      "context": "Yield history section.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/LineYieldPanel.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::PrintLabelsModal",
+      "target_id": "hook::useGenetics",
+      "context": "useGetLabelsPdf.",
+      "source_file": "frontend/user-portal/src/components/genetics/PrintLabelsModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::EditAccessionModal",
+      "target_id": "hook::useGenetics",
+      "context": "useUpdateAccession.",
+      "source_file": "frontend/user-portal/src/components/genetics/EditAccessionModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "file::App",
+      "target_id": "component::LabelInfoPage",
+      "context": "Public routes /i/:token, /i/:token/:vesselNo, /I/:token, /I/:token/:vesselNo \u2014 registered outside ProtectedRoute (both cases needed: 17x87 labels print their URL uppercase for QR alphanumeric mode, and React Router paths are case-sensitive).",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/public/LabelInfoPage.tsx"
+    },
+    {
+      "edge_type": "renders",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::RemoveLineModal",
+      "context": "Remove line action, gated by canDeleteLines(user?.role).",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/RemoveLineModal.tsx"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::LineDetailPage",
+      "target_id": "component::GeneticsPermissions",
+      "context": "canDeleteLines gates the Remove line button.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/permissions.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::RemoveLineModal",
+      "target_id": "component::GeneticsPermissions",
+      "context": "canCascadePurge gates the cascade escalation UI within the modal.",
+      "source_file": "frontend/user-portal/src/components/genetics/RemoveLineModal.tsx",
+      "target_file": "frontend/user-portal/src/components/genetics/permissions.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::RemoveLineModal",
+      "target_id": "hook::useGenetics",
+      "context": "useLineDependents, usePurgeLine.",
+      "source_file": "frontend/user-portal/src/components/genetics/RemoveLineModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::OrphanSweepCard",
+      "target_id": "hook::useGenetics",
+      "context": "useOrphans, useDeleteOrphans.",
+      "source_file": "frontend/user-portal/src/components/settings/OrphanSweepCard.tsx",
+      "target_file": "frontend/user-portal/src/hooks/genetics/useGenetics.ts"
+    },
+    {
+      "edge_type": "uses",
+      "source_id": "component::LineDetailPage",
+      "target_id": "store::useAuthStore",
+      "context": "Reads user.role for canDeleteLines gating.",
+      "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
+      "target_file": "frontend/user-portal/src/stores/auth.store.ts"
+    }
   ]
 }

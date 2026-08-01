@@ -98,6 +98,33 @@ def gen_api_map(db) -> str:
         f"",
         f"**Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md) | [frontend-map.md](frontend-map.md)",
         f"",
+        # Emitted by the generator, deliberately. This warning first existed as a
+        # hand-written block in api-map.md and would have been silently wiped by
+        # the next `map_generator.py all` — losing the single most consequential
+        # fact on the page. The table below is `| Endpoint | File | Description |`
+        # with no Auth column, so the one route that needs no authentication
+        # renders identically to every route that does. Until this generator can
+        # read auth from the nodes themselves, the warning is hardcoded here so
+        # regeneration cannot drop it.
+        f"> ### ⚠️ Auth is NOT shown in these tables",
+        f">",
+        f"> Every row below looks the same whether the route requires authentication",
+        f"> or not. As of T-804 exactly **one** endpoint in the platform is public:",
+        f">",
+        f"> ```",
+        f"> GET /api/v1/public/genetics/i/{{token}}[/{{vesselNo}}]",
+        f"> ```",
+        f">",
+        f"> It is mounted as a SEPARATE router with its own prefix in",
+        f"> `src/modules/genetics/register.py` — never on the authenticated",
+        f"> `api_router` — so an unauthenticated route cannot be added to the",
+        f"> authenticated surface by accident. It serves two tiers: a limited",
+        f"> anonymous payload, and a fuller one when a valid bearer token is",
+        f"> present, resolved by an optional dependency that fails CLOSED.",
+        f">",
+        f"> Before treating any other row as public, read the route's own",
+        f"> `Depends(...)`. Do not infer auth from this map.",
+        f"",
     ]
 
     # Group by module

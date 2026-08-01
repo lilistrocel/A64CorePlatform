@@ -1,6 +1,6 @@
 # API Map
 
-> Generated: 2026-07-29 10:20 UTC  
+> Generated: 2026-08-01 08:10 UTC  
 > Source: MongoDB `mapper_nodes` (layer=api, node_type=api_endpoint)
 
 ## Quick Reference
@@ -10,7 +10,26 @@ and their connections to frontend service calls.
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md) | [frontend-map.md](frontend-map.md)
 
-## API Endpoints (86 total)
+> ### ⚠️ Auth is NOT shown in these tables
+>
+> Every row below looks the same whether the route requires authentication
+> or not. As of T-804 exactly **one** endpoint in the platform is public:
+>
+> ```
+> GET /api/v1/public/genetics/i/{token}[/{vesselNo}]
+> ```
+>
+> It is mounted as a SEPARATE router with its own prefix in
+> `src/modules/genetics/register.py` — never on the authenticated
+> `api_router` — so an unauthenticated route cannot be added to the
+> authenticated surface by accident. It serves two tiers: a limited
+> anonymous payload, and a fuller one when a valid bearer token is
+> present, resolved by an optional dependency that fails CLOSED.
+>
+> Before treating any other row as public, read the route's own
+> `Depends(...)`. Do not infer auth from this map.
+
+## API Endpoints (90 total)
 
 ### Module: `ai_analytics`
 
@@ -25,6 +44,12 @@ and their connections to frontend service calls.
 | `admin router` | `src/api/v1/admin.py:30` | Admin-only endpoints: list/get/update users, change role/status, delete user, reset MFA. | router |
 | `auth router` | `src/api/v1/auth.py:38` | Authentication endpoints: /register, /login, /logout, /refresh, /me, email verification, password reset, MFA (verify/setup/enable/disable/backup-codes). | router |
 | `users router` | `src/api/v1/users.py` | User profile management endpoints under /users. | router |
+
+### Module: `core`
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `PATCH /organizations/{organizationId}/modules` | `src/api/v1/organizations.py:1` | Tenant module-toggle surface. Two fields as of T-804's follow-up: financeEnabled (Wave 0) and publicInfoPage (T-804 — the show*/enabled flags on PublicInfoPageConfig that gate the genetics public label-info page). publicInfoPage is a PARTIAL update (PublicInfoPageConfigUpdate) — unset fields are left unchanged rather than reset to their model defaults. Toggling publicInfoPage.enabled=false immediately 404s the anonymous public route (see genetics.api.public) but not the authenticated tier — a public-exposure switch, not an access-control gate. super_admin only, audit-logged with before/after modules snapshots. NOTE: only this one endpoint is mapped here; the rest of organizations.py is unmapped pending map_core_api. | router |
 
 ### Module: `crm`
 
@@ -93,13 +118,16 @@ and their connections to frontend service calls.
 
 | Endpoint | File | Description |
 |----------|------|-------------|
-| `CRUD /genetics/accessions` | `src/modules/genetics/api/v1/accessions.py:1` | T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations. | router, SplitResult |
-| `CRUD /genetics/lines` | `src/modules/genetics/api/v1/lines.py:1` | T-800 Genetic line CRUD — the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line. | router |
+| `CRUD /genetics/accessions` | `src/modules/genetics/api/v1/accessions.py:1` | T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations. T-806: GET /by-token/{token}?vesselNo=N — authenticated counterpart to the public label-info page, turns a scanned {token, vesselNo} into the full internal Accession (UUIDs included). Reuses public.py's _load_accession_by_token and vessel_resolver.resolve_vessel verbatim. Declared before /{accession_id} (route-ordering guard, verified live, not just structurally safe). | router, SplitResult |
+| `CRUD /genetics/lines` | `src/modules/genetics/api/v1/lines.py:1` | T-800 Genetic line CRUD — the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line. T-807: GET /{id}/dependents (counts accessions/propagations/observations/child lines/harvests) + DELETE /{id}/purge, hard-delete only at zero dependents (409 otherwise), genetics.delete tier. T-809: same purge route's ?cascade=true escalation — super_admin-only (genetics.delete.cascade), body {"confirm": "<exact line code>"} (GitHub repo-deletion pattern, mismatch is 400), hard-refuses even with a correct confirm when the line has harvests or child lines, ?dryRun=true previews without requiring confirm. Real cascade deletes are audit-logged to admin_audit_log with a full pre-deletion snapshot. | router, CascadePurgeConfirm |
 | `CRUD /genetics/media` | `src/modules/genetics/api/v1/media.py:1` | T-800 Medium recipes and prepared batches, plus GET /additives/{name}/accessions — the experiment readout returning every accession ever grown on a medium containing an additive. | router, AdditiveReadout |
 | `CRUD /genetics/observations` | `src/modules/genetics/api/v1/observations.py:1` | T-800 Dated observations against accessions, plus POST /{id}/promote which turns a flagged novel trait into its own genetic line with a founding accession. | router, PromotionResult |
-| `CRUD /genetics/propagations` | `src/modules/genetics/api/v1/propagations.py:1` | T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview. | router, PropagationOutcome, MethodInfo |
+| `CRUD /genetics/propagations` | `src/modules/genetics/api/v1/propagations.py:1` | T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview. T-808: PATCH /{event_id} amends ONLY performedAt (a factual date correction, e.g. logged late) — attribution and every structural field stay immutable through this or any route. Cascades to each result accession's acquiredAt, but only where it still equals the event's OLD performedAt (an already-hand-corrected accession is skipped, not overwritten). amendedAt/amendedBy always stamped — the correction is recorded, never made invisible. Rejects a future performedAt with 400. Permission: genetics.edit (bench tier). | router, PropagationOutcome, MethodInfo |
+| `GET /genetics/accessions/{id}/labels` | `src/modules/genetics/api/v1/labels.py:1` | T-804. Renders a print-ready label PDF for a Brother QL-800, one page per vessel in [from, to]. Tape sizes: 29x90 and 17x87 fixed die-cut, or 62xN continuous (N = feed length mm, 12-100, parsed/validated by _parse_tape_spec/_tape_dimensions, 400 on anything malformed or out of range, never a 500). Line 1 (accession code/vessel) draws in Space Mono Bold, lines 2-4 in Hanken Grotesk — both vendored TTFs under src/modules/genetics/assets/fonts/, embedded via reportlab with a Helvetica fallback that has never actually fired. A small brand mark (src/modules/genetics/assets/brand/mark-mono-1bit.png) draws only when real measured spare space exists (below the text block, or horizontally right of lines 2/3 as a fallback), 5-8mm, never a fixed corner guess. Printing raises labelledVesselCount to max(current, to) — read-only in permission (require_view) but not in effect. | router, compute_qr_geometry, build_label_payload |
 | `GET /genetics/dashboard` | `src/modules/genetics/api/v1/dashboard.py:1` | T-800 Repo-wide counters: lines by biological domain, live material, 30-day activity, novel traits awaiting promotion, and the senescence watch list. | router |
 | `GET /genetics/lineage` | `src/modules/genetics/api/v1/lineage.py:1` | T-800 Lineage DAG (/graph) and flattened ancestry breadcrumb (/ancestry/{id}). Returns flat nodes+edges rather than a nested tree because a cross gives a node two parents. | router |
+| `GET /public/genetics/i/{token}[/{vesselNo}]` | `src/modules/genetics/api/v1/public.py:1` | T-804/T-806 part 3. The platform's FIRST unauthenticated route, mounted on its own router (see genetics.register) so no route can become public by accident. Optional auth (_optional_current_user, fails closed on any error to anonymous, never raises) selects between two hand-built response shapes — PublicAccessionInfo (anonymous, respects the organization's PublicInfoPageConfig show* flags) and AuthenticatedAccessionInfo (adds accessionId + per-node tokens, ignores the show* flags entirely) — response_model is deliberately unset; the two explicit allowlists ARE the leakage guard, never response filtering. enabled=false on PublicInfoPageConfig 404s anonymous callers only (a public-exposure switch, not an access-control gate). Byte-identical 404 for every failure mode so an unknown token can't be distinguished from a disabled page. Rate-limited via src.middleware.rate_limit. | router, PublicAccessionInfo, AuthenticatedAccessionInfo, PublicLineageGraph, Aut |
+| `GET/DELETE /genetics/maintenance/orphans` | `src/modules/genetics/api/v1/maintenance.py:1` | T-809. Org-wide database hygiene, distinct from the line-scoped cascade purge on lines.py. GET /orphans (genetics.delete tier) is read-only, finds accessions/propagation events/observations whose lineId (every referenced lineId, for propagation events) matches no existing line — a null/absent lineId is explicitly NOT an orphan. DELETE /orphans (super_admin, genetics.maintenance) removes exactly what GET reported, by explicit id list; ?dryRun=true previews without deleting. Real deletes audit-logged to admin_audit_log with the full pre-deletion snapshot. | router |
 
 ### Module: `hr`
 
@@ -148,7 +176,7 @@ and their connections to frontend service calls.
 | `CRUD /sales/returns (legacy)` | `src/modules/sales/api/v1/returns.py:1` | Legacy Return Order CRUD with inventory restoration on process. | router |
 | `CRUD /sales/returns-v2` | `src/modules/sales/api/v1/returns_v2.py:1` | T-100.11 Return Note (RTN) CRUD + from-request copy + status transitions. Physical goods return. Emits return_posted to finance outbox. | router |
 
-## API Router Files (87 total)
+## API Router Files (91 total)
 
 | Name | File | Description |
 |------|------|-------------|
@@ -156,6 +184,7 @@ and their connections to frontend service calls.
 | `admin router` | `src/api/v1/admin.py:30` | Admin-only endpoints: list/get/update users, change role/status, delete user, reset MFA. | router |
 | `auth router` | `src/api/v1/auth.py:38` | Authentication endpoints: /register, /login, /logout, /refresh, /me, email verification, password reset, MFA (verify/setup/enable/disable/backup-codes). | router |
 | `users router` | `src/api/v1/users.py` | User profile management endpoints under /users. | router |
+| `PATCH /organizations/{organizationId}/modules` | `src/api/v1/organizations.py:1` | Tenant module-toggle surface. Two fields as of T-804's follow-up: financeEnabled (Wave 0) and publicInfoPage (T-804 — the show*/enabled flags on PublicInfoPageConfig that gate the genetics public label-info page). publicInfoPage is a PARTIAL update (PublicInfoPageConfigUpdate) — unset fields are left unchanged rather than reset to their model defaults. Toggling publicInfoPage.enabled=false immediately 404s the anonymous public route (see genetics.api.public) but not the authenticated tier — a public-exposure switch, not an access-control gate. super_admin only, audit-logged with before/after modules snapshots. NOTE: only this one endpoint is mapped here; the rest of organizations.py is unmapped pending map_core_api. | router |
 | `CRUD /crm/customers` | `src/modules/crm/api/v1/customers.py:1` | Customer CRUD with address management and type/status filtering. | router |
 | `dashboard router` | `src/api/v1/dashboard.py:22` | Dashboard summary, widget data, bulk widget, refresh, and health endpoints. | router |
 | `CRUD /config` | `src/modules/farm_manager/api/v1/config.py:1` | Spacing standards CRUD, plant calculator, farming year configuration. | router |
@@ -204,13 +233,16 @@ and their connections to frontend service calls.
 | `POST /tasks/{task_id}/harvest` | `src/modules/farm_manager/api/v1/tasks.py:299` | Append harvest entry to a daily_harvest task. | add_harvest_entry |
 | `PUT /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:221` | Update task scheduling/status/priority (requires farm.manage). | update_task |
 | `tasks router` | `src/modules/farm_manager/api/v1/tasks.py:21` | Operations Task Manager endpoints under /tasks. v1.11.0: list/detail endpoints now return FarmTaskWithDetails (block + farm + crop context). | router |
-| `CRUD /genetics/accessions` | `src/modules/genetics/api/v1/accessions.py:1` | T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations. | router, SplitResult |
-| `CRUD /genetics/lines` | `src/modules/genetics/api/v1/lines.py:1` | T-800 Genetic line CRUD — the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line. | router |
+| `CRUD /genetics/accessions` | `src/modules/genetics/api/v1/accessions.py:1` | T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations. T-806: GET /by-token/{token}?vesselNo=N — authenticated counterpart to the public label-info page, turns a scanned {token, vesselNo} into the full internal Accession (UUIDs included). Reuses public.py's _load_accession_by_token and vessel_resolver.resolve_vessel verbatim. Declared before /{accession_id} (route-ordering guard, verified live, not just structurally safe). | router, SplitResult |
+| `CRUD /genetics/lines` | `src/modules/genetics/api/v1/lines.py:1` | T-800 Genetic line CRUD — the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line. T-807: GET /{id}/dependents (counts accessions/propagations/observations/child lines/harvests) + DELETE /{id}/purge, hard-delete only at zero dependents (409 otherwise), genetics.delete tier. T-809: same purge route's ?cascade=true escalation — super_admin-only (genetics.delete.cascade), body {"confirm": "<exact line code>"} (GitHub repo-deletion pattern, mismatch is 400), hard-refuses even with a correct confirm when the line has harvests or child lines, ?dryRun=true previews without requiring confirm. Real cascade deletes are audit-logged to admin_audit_log with a full pre-deletion snapshot. | router, CascadePurgeConfirm |
 | `CRUD /genetics/media` | `src/modules/genetics/api/v1/media.py:1` | T-800 Medium recipes and prepared batches, plus GET /additives/{name}/accessions — the experiment readout returning every accession ever grown on a medium containing an additive. | router, AdditiveReadout |
 | `CRUD /genetics/observations` | `src/modules/genetics/api/v1/observations.py:1` | T-800 Dated observations against accessions, plus POST /{id}/promote which turns a flagged novel trait into its own genetic line with a founding accession. | router, PromotionResult |
-| `CRUD /genetics/propagations` | `src/modules/genetics/api/v1/propagations.py:1` | T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview. | router, PropagationOutcome, MethodInfo |
+| `CRUD /genetics/propagations` | `src/modules/genetics/api/v1/propagations.py:1` | T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview. T-808: PATCH /{event_id} amends ONLY performedAt (a factual date correction, e.g. logged late) — attribution and every structural field stay immutable through this or any route. Cascades to each result accession's acquiredAt, but only where it still equals the event's OLD performedAt (an already-hand-corrected accession is skipped, not overwritten). amendedAt/amendedBy always stamped — the correction is recorded, never made invisible. Rejects a future performedAt with 400. Permission: genetics.edit (bench tier). | router, PropagationOutcome, MethodInfo |
+| `GET /genetics/accessions/{id}/labels` | `src/modules/genetics/api/v1/labels.py:1` | T-804. Renders a print-ready label PDF for a Brother QL-800, one page per vessel in [from, to]. Tape sizes: 29x90 and 17x87 fixed die-cut, or 62xN continuous (N = feed length mm, 12-100, parsed/validated by _parse_tape_spec/_tape_dimensions, 400 on anything malformed or out of range, never a 500). Line 1 (accession code/vessel) draws in Space Mono Bold, lines 2-4 in Hanken Grotesk — both vendored TTFs under src/modules/genetics/assets/fonts/, embedded via reportlab with a Helvetica fallback that has never actually fired. A small brand mark (src/modules/genetics/assets/brand/mark-mono-1bit.png) draws only when real measured spare space exists (below the text block, or horizontally right of lines 2/3 as a fallback), 5-8mm, never a fixed corner guess. Printing raises labelledVesselCount to max(current, to) — read-only in permission (require_view) but not in effect. | router, compute_qr_geometry, build_label_payload |
 | `GET /genetics/dashboard` | `src/modules/genetics/api/v1/dashboard.py:1` | T-800 Repo-wide counters: lines by biological domain, live material, 30-day activity, novel traits awaiting promotion, and the senescence watch list. | router |
 | `GET /genetics/lineage` | `src/modules/genetics/api/v1/lineage.py:1` | T-800 Lineage DAG (/graph) and flattened ancestry breadcrumb (/ancestry/{id}). Returns flat nodes+edges rather than a nested tree because a cross gives a node two parents. | router |
+| `GET /public/genetics/i/{token}[/{vesselNo}]` | `src/modules/genetics/api/v1/public.py:1` | T-804/T-806 part 3. The platform's FIRST unauthenticated route, mounted on its own router (see genetics.register) so no route can become public by accident. Optional auth (_optional_current_user, fails closed on any error to anonymous, never raises) selects between two hand-built response shapes — PublicAccessionInfo (anonymous, respects the organization's PublicInfoPageConfig show* flags) and AuthenticatedAccessionInfo (adds accessionId + per-node tokens, ignores the show* flags entirely) — response_model is deliberately unset; the two explicit allowlists ARE the leakage guard, never response filtering. enabled=false on PublicInfoPageConfig 404s anonymous callers only (a public-exposure switch, not an access-control gate). Byte-identical 404 for every failure mode so an unknown token can't be distinguished from a disabled page. Rate-limited via src.middleware.rate_limit. | router, PublicAccessionInfo, AuthenticatedAccessionInfo, PublicLineageGraph, Aut |
+| `GET/DELETE /genetics/maintenance/orphans` | `src/modules/genetics/api/v1/maintenance.py:1` | T-809. Org-wide database hygiene, distinct from the line-scoped cascade purge on lines.py. GET /orphans (genetics.delete tier) is read-only, finds accessions/propagation events/observations whose lineId (every referenced lineId, for propagation events) matches no existing line — a null/absent lineId is explicitly NOT an orphan. DELETE /orphans (super_admin, genetics.maintenance) removes exactly what GET reported, by explicit id list; ?dryRun=true previews without deleting. Real deletes audit-logged to admin_audit_log with the full pre-deletion snapshot. | router |
 | `genetics response envelopes` | `src/modules/genetics/utils/responses.py:1` | T-800 Standard A64Core response envelopes for the genetics module. | SuccessResponse, PaginatedResponse, PaginationMeta, ErrorResponse, paginate |
 | `CRUD /hr/contracts` | `src/modules/hr/api/v1/contracts.py:1` | Employment contract management CRUD. | router |
 | `CRUD /hr/employees` | `src/modules/hr/api/v1/employees.py:1` | Employee CRUD with Arabic name support, Emirates ID handling, pagination. | router |

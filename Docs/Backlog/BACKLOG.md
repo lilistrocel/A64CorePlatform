@@ -987,6 +987,53 @@
   - Not moving T-804 to ARCHIVE — same open sub-items as noted throughout
     this entry (`PrintLabelsModal` 62xN gap, testing-backend-specialist
     pass, physical-scan step, change-guardian docs pass).
+- **Change-guardian docs pass — DONE 2026-08-01 (`change-guardian`):**
+  Covers T-804 step 9 and the recurring "change-guardian docs pass" open
+  item threaded through this entry and T-805/T-806/T-807/T-808/T-809.
+  - **CodeMaps regenerated:** 663 → 679 nodes, 667 → 701 edges
+    (`scripts/codebase_mapper/batch_genetics.json` extended with the new
+    public route, `labels.py`, `maintenance.py`, `maintenance_service.py`,
+    `vessel_resolver.py`, the two new `core.api.organizations` /
+    `core.model.organization` nodes for the `publicInfoPage` extension, and
+    9 new/updated frontend nodes including `LabelInfoPage.tsx`,
+    `PrintLabelsModal.tsx`, `EditAccessionModal.tsx`, `LocationPicker.tsx`,
+    `RemoveLineModal.tsx`, `permissions.ts`, `OrphanSweepCard.tsx` — the
+    last three landed from a concurrent frontend session during this pass
+    and were re-checked via `git status` until stable before the final
+    `map_generator.py all` run, per the dispatch's explicit instruction to
+    run the mapper last). `Docs/CodeMaps/api-map.md` gained a hand-written
+    blockquote callout identifying the public route as the platform's only
+    unauthenticated one — the generator's endpoint table has no Auth
+    column, so the route otherwise reads identically to every authenticated
+    one; **that callout is not generator output and will be silently
+    overwritten on the next full `map_generator.py all` run** unless
+    re-added or the generator is extended with a real Auth column (not
+    done). NOT regenerated: `map_core_api`, `map_core_services`,
+    `map_farm_services`, `map_frontend_farm/components/hooks_services/types`,
+    `map_config_env`, `map_database_collections` (18/26 tasks now pending,
+    down from 8/26 completed pre-pass to 8/26 completed post-pass at the
+    task-tracker level) — `rerun.sh --since d0c7dcb` correctly flagged
+    these as stale because unrelated collateral changes (mushroom_manager,
+    protocols module, farm block-card edits, `organization_service.py`)
+    touched their file prefixes since the last full regen, but auditing
+    those modules was out of scope for this pass; flagged for a dedicated
+    follow-up rather than rushed here. (Task tracker: 16/26 completed
+    before `rerun.sh --since d0c7dcb` correctly reset those 8 collateral
+    tasks to pending; 8/26 completed after.)
+  - **CHANGELOG.md / Versioning.md:** new `## [Unreleased] — Genetics:
+    label/QR traceability, safe line removal, public info page` section in
+    both, classified **MINOR** (additive only, no breaking changes).
+    Deliberately left unnumbered (no `vX.Y.0` assigned) rather than
+    guessing an ordering against the separate, also-still-`Unreleased`
+    Wave 3 Phase 2 Sales AR entry already in `CHANGELOG.md` — assigning the
+    real version number is a release-manager decision. Flagged (not fixed,
+    out of scope — no source files touched): `src/main.py`'s version
+    constant (`1.17.0`) and `Versioning.md`'s "Current Versions" table
+    (`1.15.0`) both already trail released `v1.20.0`; noted as a known
+    drift rather than silently left unremarked.
+  - Still open on T-804 (unaffected by this pass): `PrintLabelsModal` 62xN
+    gap, testing-backend-specialist leakage/coverage pass, physical-scan
+    verification step.
 
 ---
 
