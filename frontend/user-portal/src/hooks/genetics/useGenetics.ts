@@ -33,6 +33,8 @@ import type {
   PlainPurgeResult,
   PromoteTraitPayload,
   PromotionResult,
+  PropagationAmendPayload,
+  PropagationAmendResult,
   PropagationEvent,
   PropagationOutcome,
   PurgeLineParams,
@@ -259,6 +261,16 @@ export function useCreatePropagation() {
   const invalidate = useInvalidateGenetics();
   return useMutation<PropagationOutcome, Error, CreatePropagationPayload>({
     mutationFn: api.createPropagation,
+    onSuccess: invalidate,
+  });
+}
+
+/** Correct a propagation event's `performedAt`. See `api.amendPropagation`'s
+ * docstring for the cascade semantics. */
+export function useAmendPropagation(eventId: string) {
+  const invalidate = useInvalidateGenetics();
+  return useMutation<PropagationAmendResult, Error, PropagationAmendPayload>({
+    mutationFn: (payload) => api.amendPropagation(eventId, payload),
     onSuccess: invalidate,
   });
 }

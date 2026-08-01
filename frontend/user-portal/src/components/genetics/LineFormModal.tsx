@@ -41,6 +41,19 @@ const KINDS = Object.keys(KIND_LABELS) as OrganismKind[];
 const DERIVATIONS = Object.keys(DERIVATION_LABELS) as DerivationType[];
 const PROVENANCES = Object.keys(PROVENANCE_LABELS) as ProvenanceType[];
 
+/**
+ * Today's date as `YYYY-MM-DD`, built from local date parts (never
+ * `toISOString()`, which reads UTC and can land on the wrong day for
+ * negative-offset zones near midnight).
+ */
+function getToday(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 interface LineFormModalProps {
   line?: GeneticLine;
   onClose: () => void;
@@ -64,6 +77,12 @@ export function LineFormModal({ line, onClose, onDone }: LineFormModalProps) {
     line?.provenance?.type ?? 'unknown'
   );
   const [sourceNote, setSourceNote] = useState(line?.provenance?.sourceNote ?? '');
+  // Unknown is a legitimate, first-class state here (unlike
+  // RegisterAccessionModal, where acquiredAt is required) — a fresh line does
+  // NOT default this to today, it stays blank until the user sets it.
+  const [acquiredAt, setAcquiredAt] = useState(
+    line?.provenance?.acquiredAt ? line.provenance.acquiredAt.slice(0, 10) : ''
+  );
   const [description, setDescription] = useState(line?.description ?? '');
   const [tags, setTags] = useState((line?.tags ?? []).join(', '));
   const [linkedStrainId, setLinkedStrainId] = useState(line?.linkedStrainId ?? '');
@@ -103,8 +122,11 @@ export function LineFormModal({ line, onClose, onDone }: LineFormModalProps) {
     }
   };
 
+  const today = getToday();
+  const acquiredAtValid = acquiredAt === '' || acquiredAt <= today;
+
   const mutation = isEdit ? updateLine : createLine;
-  const canSubmit = code.trim() && commonName.trim() && !mutation.isPending;
+  const canSubmit = code.trim() && commonName.trim() && acquiredAtValid && !mutation.isPending;
 
   const otherLines = (linePage?.data ?? []).filter((l) => l.id !== line?.id);
 
@@ -120,6 +142,7 @@ export function LineFormModal({ line, onClose, onDone }: LineFormModalProps) {
       provenance: {
         type: provenanceType,
         sourceNote: sourceNote.trim() || undefined,
+        acquiredAt: acquiredAt || undefined,
       },
       description: description.trim() || undefined,
       tags: tags
@@ -266,7 +289,7 @@ export function LineFormModal({ line, onClose, onDone }: LineFormModalProps) {
         </Field>
       </FormRow>
 
-      <FormRow $cols={2}>
+      <FormRow $cols={3}>
         <Field>
           <Label>Origin</Label>
           <Select
@@ -288,11 +311,25 @@ export function LineFormModal({ line, onClose, onDone }: LineFormModalProps) {
             placeholder="Vendor, collector, location, donor"
           />
         </Field>
+        <Field>
+          <Label>Acquired on</Label>
+          <Input
+            type="date"
+            value={acquiredAt}
+            max={today}
+            onChange={(e) => setAcquiredAt(e.target.value)}
+            placeholder="optional"
+          />
+        </Field>
       </FormRow>
       <Hint>
         Unknown origin is a valid answer — recording it as “Unknown” with whatever partial
-        detail you have beats leaving it blank.
+        detail you have beats leaving it blank. Same for the date: leave it blank rather than
+        guessing.
       </Hint>
+      {!acquiredAtValid && (
+        <Banner $tone="warning">Acquired on cannot be in the future.</Banner>
+      )}
 
       <Field>
         <Label>Description</Label>

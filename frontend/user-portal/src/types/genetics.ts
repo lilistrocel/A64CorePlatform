@@ -487,6 +487,21 @@ export interface PropagationOutcome {
   accessions: Accession[];
 }
 
+/** Amend a propagation event's `performedAt` — the only field this endpoint
+ * accepts. `operatorName`/`performedBy` are permanently immutable. */
+export interface PropagationAmendPayload {
+  performedAt: string; // bare YYYY-MM-DD
+}
+
+/** Mirrors PropagationService.amend_propagation's return shape. The cascade
+ * only touches child accessions whose `acquiredAt` still equals the event's
+ * OLD `performedAt` — hand-corrected accessions are skipped, not overwritten. */
+export interface PropagationAmendResult {
+  event: PropagationEvent;
+  accessionsUpdated: number;
+  accessionsSkipped: number;
+}
+
 /** Describes how a method affects the generation counters — drives the form. */
 export interface MethodInfo {
   value: PropagationMethodValue;

@@ -208,7 +208,7 @@ interface PropagateModalProps {
    * `sourceAccession`, same as the vessel field it seeds. */
   initialVesselNo?: number;
   onClose: () => void;
-  onDone?: (createdIds: string[]) => void;
+  onDone?: (accessions: Accession[]) => void;
 }
 
 export function PropagateModal({
@@ -378,7 +378,7 @@ export function PropagateModal({
       ],
     });
 
-    onDone?.(result.accessions.map((a) => a.id));
+    onDone?.(result.accessions);
     onClose();
   };
 

@@ -9,12 +9,14 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
+import { AmendPropagationModal } from '../../components/genetics/AmendPropagationModal';
 import { GrowingProfilePanel } from '../../components/genetics/GrowingProfilePanel';
 import { KIND_ICON_COMPONENTS } from '../../components/genetics/kindIcons';
 import { LineYieldPanel } from '../../components/genetics/LineYieldPanel';
 import { LineageTree } from '../../components/genetics/LineageTree';
 import { LineFormModal } from '../../components/genetics/LineFormModal';
-import { canDeleteLines } from '../../components/genetics/permissions';
+import { canDeleteLines, canEditGenetics } from '../../components/genetics/permissions';
+import { PrintLabelsModal } from '../../components/genetics/PrintLabelsModal';
 import { PropagateModal } from '../../components/genetics/PropagateModal';
 import { RegisterAccessionModal } from '../../components/genetics/RegisterAccessionModal';
 import { RemoveLineModal } from '../../components/genetics/RemoveLineModal';
@@ -48,6 +50,7 @@ import {
   usePropagations,
 } from '../../hooks/genetics/useGenetics';
 import { useAuthStore } from '../../stores/auth.store';
+import type { Accession, PropagationEvent } from '../../types/genetics';
 import {
   DERIVATION_LABELS,
   KIND_LABELS,
@@ -135,6 +138,8 @@ export function LineDetailPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [showPropagate, setShowPropagate] = useState(false);
   const [showRemove, setShowRemove] = useState(false);
+  const [amendingEvent, setAmendingEvent] = useState<PropagationEvent | null>(null);
+  const [justPropagated, setJustPropagated] = useState<Accession[] | null>(null);
 
   const { data: line, isLoading } = useGeneticLine(lineId);
   const { data: accessionPage } = useAccessions({ lineId, perPage: 100 });
@@ -342,6 +347,17 @@ export function LineDetailPage() {
                   {new Date(e.performedAt).toLocaleDateString()} · {e.vesselCount} vessel(s)
                   {e.operatorName ? ` · ${e.operatorName}` : ''}
                 </Muted>
+                {canEditGenetics(user?.role) && (
+                  <Button
+                    type="button"
+                    $variant="ghost"
+                    style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 12 }}
+                    onClick={() => setAmendingEvent(e)}
+                    aria-label="Correct performed-on date"
+                  >
+                    Correct date
+                  </Button>
+                )}
               </EventRow>
             ))}
           </EventList>
@@ -361,6 +377,7 @@ export function LineDetailPage() {
           lineId={line.id}
           sourceAccession={accessions.find((a) => a.status === 'active') ?? accessions[0]}
           onClose={() => setShowPropagate(false)}
+          onDone={(created) => setJustPropagated(created.length > 0 ? created : null)}
         />
       )}
       {showRemove && (
@@ -369,6 +386,22 @@ export function LineDetailPage() {
           onClose={() => setShowRemove(false)}
           onPurged={() => navigate('/genetics')}
         />
+      )}
+      {amendingEvent && (
+        <AmendPropagationModal event={amendingEvent} onClose={() => setAmendingEvent(null)} />
+      )}
+      {justPropagated?.length === 1 && (
+        <PrintLabelsModal
+          accession={justPropagated[0]}
+          onClose={() => setJustPropagated(null)}
+        />
+      )}
+      {justPropagated && justPropagated.length > 1 && (
+        <Banner $tone="info" style={{ marginTop: 16 }}>
+          Created: {justPropagated.map((a) => a.accessionCode).join(', ')}. Open each from the
+          accessions table above to print its labels.{' '}
+          <BackLink onClick={() => setJustPropagated(null)}>Dismiss</BackLink>
+        </Banner>
       )}
     </PageWrap>
   );

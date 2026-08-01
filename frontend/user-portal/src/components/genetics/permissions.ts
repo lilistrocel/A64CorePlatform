@@ -20,3 +20,11 @@ export function canDeleteLines(role: string | undefined | null): boolean {
 export function canCascadePurge(role: string | undefined | null): boolean {
   return role === 'super_admin';
 }
+
+// _BENCH in auth.py: user and above (everyone except guest).
+const BENCH_ROLES = new Set(['user', 'moderator', 'admin', 'super_admin']);
+
+/** genetics.edit — update/split an accession, or amend a propagation event's date. */
+export function canEditGenetics(role: string | undefined | null): boolean {
+  return !!role && BENCH_ROLES.has(role);
+}

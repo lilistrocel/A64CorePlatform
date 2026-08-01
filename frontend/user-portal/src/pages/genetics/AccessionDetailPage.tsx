@@ -223,22 +223,32 @@ export function AccessionDetailPage() {
 
   // Scan-to-act deep link: LabelInfoPage's "Propagate from this vessel"
   // navigates here as `?propagate=1&vesselNo=N` (this accession and vessel
-  // are already known from the scan, no picker needed). Query params are
-  // stripped immediately after being consumed so a refresh or the browser
-  // back button doesn't reopen the modal.
+  // are already known from the scan, no picker needed). The post-propagate
+  // print step reuses the same pattern as `?print=1`, set by this page's own
+  // PropagateModal.onDone below after navigating to the newly-created
+  // accession. Query params are stripped immediately after being consumed so
+  // a refresh or the browser back button doesn't reopen a modal.
   useEffect(() => {
     if (!accession) return;
-    if (searchParams.get('propagate') !== '1') return;
 
-    const vesselNoParam = searchParams.get('vesselNo');
-    const parsed = vesselNoParam ? Number(vesselNoParam) : NaN;
-    setPropagateVesselNo(Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined);
-    setShowPropagate(true);
+    if (searchParams.get('propagate') === '1') {
+      const vesselNoParam = searchParams.get('vesselNo');
+      const parsed = vesselNoParam ? Number(vesselNoParam) : NaN;
+      setPropagateVesselNo(Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined);
+      setShowPropagate(true);
+    }
 
-    const next = new URLSearchParams(searchParams);
-    next.delete('propagate');
-    next.delete('vesselNo');
-    setSearchParams(next, { replace: true });
+    if (searchParams.get('print') === '1') {
+      setShowPrintLabels(true);
+    }
+
+    if (searchParams.has('propagate') || searchParams.has('vesselNo') || searchParams.has('print')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('propagate');
+      next.delete('vesselNo');
+      next.delete('print');
+      setSearchParams(next, { replace: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accession]);
   const { data: line } = useGeneticLine(accession?.lineId);
@@ -610,7 +620,19 @@ export function AccessionDetailPage() {
           sourceAccession={accession}
           initialVesselNo={propagateVesselNo}
           onClose={() => setShowPropagate(false)}
-          onDone={(ids) => ids[0] && navigate(`/genetics/accessions/${ids[0]}`)}
+          onDone={(accessions) => {
+            // Single-target propagation (the only shape today's form
+            // produces) — jump straight to the new accession and open the
+            // print dialog on load. Multiple accessions is a shape the type
+            // allows for a future multi-target UI, not something this form
+            // triggers yet; fall back to the first one with no auto-print
+            // rather than trying to print N labels unattended.
+            if (accessions.length === 1) {
+              navigate(`/genetics/accessions/${accessions[0].id}?print=1`);
+            } else if (accessions.length > 0) {
+              navigate(`/genetics/accessions/${accessions[0].id}`);
+            }
+          }}
         />
       )}
       {showPrintLabels && (

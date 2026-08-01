@@ -32,6 +32,8 @@ import type {
   PlainPurgeResult,
   PromoteTraitPayload,
   PromotionResult,
+  PropagationAmendPayload,
+  PropagationAmendResult,
   PropagationEvent,
   PropagationOutcome,
   PurgeLineParams,
@@ -297,6 +299,20 @@ export async function listPropagations(
 ): Promise<Paginated<PropagationEvent>> {
   const { data } = await apiClient.get(`${BASE}/propagations`, { params });
   return data;
+}
+
+/**
+ * Correct a propagation event's `performedAt` after the fact. Cascades to
+ * every child accession's `acquiredAt`, but only where it still equals the
+ * event's OLD `performedAt` — accessions someone already hand-corrected are
+ * left alone and reported back as skipped, not silently overwritten.
+ */
+export async function amendPropagation(
+  eventId: string,
+  payload: PropagationAmendPayload
+): Promise<PropagationAmendResult> {
+  const { data } = await apiClient.patch(`${BASE}/propagations/${eventId}`, payload);
+  return data.data;
 }
 
 // ============================================================================
