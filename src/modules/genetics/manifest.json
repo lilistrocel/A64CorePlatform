@@ -25,7 +25,9 @@
     "genetics.media.manage",
     "genetics.line.manage",
     "genetics.promote",
-    "genetics.delete"
+    "genetics.delete",
+    "genetics.delete.cascade",
+    "genetics.maintenance"
   ],
   "license_required": true,
   "enabled_by_default": true,

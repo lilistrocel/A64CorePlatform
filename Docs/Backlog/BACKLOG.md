@@ -98,6 +98,49 @@
 
 ---
 
+### T-809 | Genetics line cascade purge + org-wide orphan sweep
+- **Category:** Backend · **Priority:** P2
+- **Assigned:** backend-dev-expert · **Started:** 2026-07-31
+- **Depends on:** T-807 ✅
+- **Blocks:** —
+- **Description:** T-807's `LineService.purge_line()` is correct and stays
+  the safe default (refuse rather than cascade at any nonzero dependent
+  count). Missing: a deliberate, explicit, audited path for the case the
+  user actually has — "sometimes i have demo lines or test lines which
+  shouldn't clutter when the test or demo is cancelled" — where the whole
+  line WAS the test, plus an org-wide sweep for orphans already left behind
+  by earlier line removals (found live: accession `T808-TEST-G1-002` whose
+  line no longer exists).
+- **Steps:**
+  1. `DELETE /api/v1/genetics/lines/{id}/purge?cascade=true`, body
+     `{"confirm": "<exact line code>"}` — GitHub repo-deletion pattern,
+     mismatch is 400. super_admin only (`genetics.delete.cascade`, one tier
+     above `genetics.delete`). Cascade-removes accessions, propagation
+     events and observations by explicit gathered id lists, never a broad
+     filter. Hard-refuses (409, unconditionally, even with a correct
+     confirm) when the line has harvests (real production yield) or child
+     lines (real downstream work).
+  2. `?dryRun=true` on the same route — exact preview (counts + accession
+     codes), deletes nothing, does not require `confirm`; still enforces the
+     harvest/child-line hard-refuse so a preview never promises an
+     impossible cascade.
+  3. `GET /api/v1/genetics/maintenance/orphans` (read-only,
+     `genetics.delete`) + `DELETE /api/v1/genetics/maintenance/orphans`
+     (super_admin, `genetics.maintenance`, audited, `?dryRun=true`
+     supported) — accessions/propagation events/observations whose lineId
+     (or, for propagation events, every referenced lineId) matches no
+     existing line. Null/absent lineId is explicitly NOT an orphan.
+  4. Audit log (`admin_audit_log`) on both real deletes, full pre-deletion
+     snapshot, matching the `PATCH /organizations/{id}/modules` precedent.
+  5. `deactivate_line`/`purge_line` left behaviourally unchanged; all three
+     removal paths' docstrings cross-reference which is which.
+  6. Tests: `tests/unit/test_genetics/test_line_cascade_purge.py`,
+     `tests/unit/test_genetics/test_maintenance_orphans.py`
+  7. Verify with mongosh + full `pytest tests/unit/test_genetics`, live
+     against a throwaway line only — never `PO-BLU`/`HE-LM`/`HE-LMUS`.
+
+---
+
 ### T-808 | Genetics propagation date amendment — correct `performedAt` only, cascaded
 - **Category:** Backend · **Priority:** P2
 - **Assigned:** backend-dev-expert · **Started:** 2026-07-31

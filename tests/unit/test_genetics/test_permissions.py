@@ -15,6 +15,14 @@ These tests pin three things:
      are if/elif chains with no ``else``, so an unrecognised string authorises
      everyone; the genetics resolver must raise instead.
 
+T-809 note: ``genetics.delete.cascade`` and ``genetics.maintenance`` are
+deliberately *narrower* than every other permission in this module —
+``super_admin`` only, not ``admin``. Test case 7 below (previously "admin and
+super_admin can do everything declared") is split accordingly: super_admin
+still holds everything; admin holds everything EXCEPT that pair. Widening
+either of those two back to ``admin`` defeats the reason they exist — see
+``middleware/auth.py``'s ``_SUPER_ADMIN_ONLY`` comment.
+
 Test cases:
    1.  Manifest permissions == enforced permissions (both directions)
    2.  Every enforced permission maps to a non-empty role set
@@ -22,7 +30,8 @@ Test cases:
    4.  Bench roles can record work
    5.  Bench roles cannot curate the library
    6.  Moderator can curate
-   7.  Admin and super_admin can do everything declared
+   7.  super_admin holds every permission; admin holds every permission
+       except the super_admin-only pair
    8.  Unknown permission raises 500 rather than authorising
    9.  Permission checker allows a permitted role
   10.  Permission checker rejects a forbidden role with 403
@@ -62,6 +71,12 @@ CURATION_PERMISSIONS = {
     "genetics.line.manage",
     "genetics.promote",
     "genetics.delete",
+}
+
+# T-809 — strictly narrower than every other permission: super_admin only.
+SUPER_ADMIN_ONLY_PERMISSIONS = {
+    "genetics.delete.cascade",
+    "genetics.maintenance",
 }
 
 
@@ -115,10 +130,22 @@ def test_moderator_can_curate():
         assert "moderator" in PERMISSION_ROLES[permission], permission
 
 
-@pytest.mark.parametrize("role", ["admin", "super_admin"])
-def test_admin_roles_hold_every_permission(role: str):
+def test_super_admin_holds_every_permission():
     for permission, roles in PERMISSION_ROLES.items():
-        assert role in roles, f"{role} should hold {permission}"
+        assert "super_admin" in roles, f"super_admin should hold {permission}"
+
+
+def test_admin_holds_every_permission_except_the_super_admin_only_pair():
+    """T-809: cascade purge and the orphan sweep are deliberately out of
+    reach for a plain admin — only super_admin. Every other permission in
+    the namespace remains admin-accessible, unchanged."""
+    for permission, roles in PERMISSION_ROLES.items():
+        if permission in SUPER_ADMIN_ONLY_PERMISSIONS:
+            assert "admin" not in roles, (
+                f"{permission} must stay super_admin-only, not admin"
+            )
+        else:
+            assert "admin" in roles, f"admin should hold {permission}"
 
 
 # ---------------------------------------------------------------------------

@@ -254,18 +254,35 @@ class LineService:
 
     @staticmethod
     async def deactivate_line(line_id: str) -> Line:
-        """Soft-delete a line that HAS material on it.
+        """Soft-delete a line that HAS material on it — keep its history.
 
         Sets ``isActive: false`` and keeps the document — the normal
         retirement path for a line carrying accessions, propagation history,
         observations or anything else, because hard-deleting it would break
         traceability chains that may span years. This is unchanged by, and
-        deliberately kept separate from, ``purge_line`` below: that method is
-        for the opposite case — a line that never accumulated any material at
-        all (a typo, a duplicate, a test) — and it refuses outright rather
-        than falling back to this soft path when something IS attached. Do
-        not merge the two; they answer different questions ("retire" vs.
-        "this should never have existed").
+        deliberately kept separate from, ``purge_line`` and
+        ``cascade_purge_line`` below. Three distinct operations answer three
+        different questions — use whichever matches what actually happened:
+
+        * ``deactivate_line`` (this method) — "retire a REAL line, keep its
+          history." The line produced real material and that material's
+          traceability must survive. Never deletes anything.
+        * ``purge_line`` — "remove an EMPTY line" (a typo, a duplicate, a
+          mis-click before anything was recorded against it). Hard-deletes
+          the line document itself, but only ever at zero dependents;
+          refuses otherwise rather than cascading.
+        * ``cascade_purge_line`` — "remove a CANCELLED TEST/DEMO and
+          everything it made." The explicit, confirmed, audited escalation
+          for when the whole line — and every accession, propagation event
+          and observation recorded against it — was never real production
+          work to begin with. Requires the operator to type the line's exact
+          code back and hard-refuses regardless of confirmation if the line
+          has harvests or child lines, because either one means real
+          downstream work exists.
+
+        Do not merge these three; picking the wrong one either destroys
+        history that should have survived or leaves clutter that should have
+        been removed.
         """
         await LineService.get_line(line_id)
         db = genetics_db.get_database()
@@ -325,6 +342,14 @@ class LineService:
         line that HAS material must go through ``deactivate_line`` instead —
         purge will refuse it, never cascade through it.
 
+        For a line that DOES have material but that material was itself
+        never real (a whole cancelled test/demo run, not a typo), see
+        ``cascade_purge_line`` below — a separate, explicitly-confirmed,
+        super_admin-only operation. This method never cascades and never
+        will; do not loosen its zero-dependents gate to partially bridge the
+        two (see the reasoning below for why that specifically breaks
+        accession-code safety).
+
         Why the zero-dependents gate must never be relaxed: ``code`` is
         globally unique (enforced in ``create_line``) and is baked into every
         accession code minted from this line, e.g. ``PO-BLU-G3-001``, which is
@@ -365,6 +390,200 @@ class LineService:
             f"by user {getattr(current_user, 'userId', None)}"
         )
         return {"code": line.code, "lineId": line_id}
+
+    # -----------------------------------------------------------------------
+    # Cascade purge (T-809) — explicit, confirmed, audited escalation
+    #
+    # Distinct from purge_line above, which refuses outright the moment any
+    # dependent exists. This method is for the deliberate case the user
+    # described: "sometimes i have demo lines or test lines which shouldn't
+    # clutter when the test or demo is cancelled" — the whole line, and
+    # everything recorded against it, was never real work. It is reached
+    # only through DELETE /{line_id}/purge?cascade=true, gated at
+    # super_admin (one tier above purge_line's genetics.delete — see
+    # middleware/auth.py) and requires the operator to type the line's exact
+    # code as `confirm`, mirroring the GitHub repo-deletion pattern: a
+    # cascade reachable by a single click on the wrong row is how someone
+    # loses a month of work.
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    async def _gather_cascade_preview(line_id: str) -> Dict[str, Any]:
+        """Gather exactly what a cascade purge would touch, as explicit id lists.
+
+        The single source of truth for three different consumers —
+        ``cascade_purge_line``'s dry-run response, its pre-delete
+        audit-log snapshot, and the actual delete's ``$in`` filters — so
+        what dry run showed the operator, what gets logged as "destroyed",
+        and what actually gets deleted can never drift apart from one
+        another. Deliberately returns ids gathered up front rather than a
+        filter expression: every delete this feeds is by explicit id list,
+        never a broad `{"lineId": line_id}` re-evaluated at delete time,
+        per the same "gather first, delete by id list" rule the cascade
+        purge as a whole must follow.
+        """
+        line = await LineService.get_line(line_id)
+        db = genetics_db.get_database()
+
+        accession_ids: List[str] = []
+        accession_codes: List[str] = []
+        async for doc in db[ACCESSIONS].find({"lineId": line_id}):
+            accession_ids.append(doc["accessionId"])
+            accession_codes.append(doc.get("accessionCode", ""))
+
+        event_ids: List[str] = []
+        async for doc in db[PROPAGATIONS].find(
+            {"$or": [{"sourceLineIds": line_id}, {"resultLineIds": line_id}]}
+        ):
+            event_ids.append(doc["eventId"])
+
+        observation_ids: List[str] = []
+        async for doc in db[OBSERVATIONS].find({"lineId": line_id}):
+            observation_ids.append(doc["observationId"])
+
+        harvests = await db.mushroom_harvests.count_documents({"lineId": line_id})
+        child_lines = await db[LINES].count_documents({"parentLineId": line_id})
+
+        return {
+            "line": line,
+            "accessionIds": accession_ids,
+            "accessionCodes": accession_codes,
+            "propagationEventIds": event_ids,
+            "observationIds": observation_ids,
+            "harvests": harvests,
+            "childLines": child_lines,
+        }
+
+    @staticmethod
+    async def cascade_purge_line(
+        line_id: str,
+        confirm: Optional[str],
+        current_user: Any,
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """Remove a cancelled test/demo line AND everything it made.
+
+        The deliberate cascade counterpart to ``purge_line``'s
+        refuse-rather-than-cascade default, which stays the safe default for
+        every other case. This method exists for exactly one situation: the
+        whole line was a test, a demo, or otherwise never real work, and the
+        operator wants it — and every accession, propagation event and
+        observation recorded against it — gone.
+
+        Two categories HARD-REFUSE unconditionally, before ``confirm`` is
+        even checked, and cannot be bypassed by ``cascade=true``:
+
+        * **Harvests.** A ``mushroom_harvests`` row carrying this ``lineId``
+          is real production yield. A line with harvests is not a test line,
+          whatever it is named.
+        * **Child lines.** Another line derived via ``parentLineId`` means
+          real downstream work exists — a novel trait was promoted, a cross
+          was named. The operator must deal with the child line first.
+
+        This is the line between "cleaning up a cancelled test" and
+        "destroying production history" — do not add a bypass for either
+        category, and do not let the zero-dependents gate on ``purge_line``
+        drift toward permitting this same reach by a different route.
+
+        Args:
+            line_id: The line to cascade-purge.
+            confirm: Must exactly equal the line's ``code``. Required only
+                when actually deleting (``dry_run=False``) — a dry run is
+                precisely the tool for finding out what the code even is
+                before typing it back, so it does not itself require
+                ``confirm``.
+            current_user: The authenticated (super_admin) caller.
+            dry_run: When true, returns exactly what WOULD be deleted
+                (counts, accession codes, and id lists) and deletes nothing.
+                The two hard-refuse checks above still apply — a dry run
+                that hides an inevitable refusal would be worse than useless
+                to a UI trying to populate a confirmation dialog.
+
+        Returns:
+            A summary dict: ``lineId``, ``code``, ``dryRun``,
+            ``accessionsRemoved``/``accessionCodesRemoved``,
+            ``propagationEventsRemoved``/``propagationEventIds``,
+            ``observationsRemoved``/``observationIds``.
+
+        Raises:
+            HTTPException: 404 unknown line; 409 harvests or child lines
+            present (either category, regardless of ``confirm`` or
+            ``dry_run``); 400 ``confirm`` missing or not an exact match
+            (only checked when ``dry_run`` is false).
+        """
+        preview = await LineService._gather_cascade_preview(line_id)
+        line: Line = preview["line"]
+
+        if preview["harvests"]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Line '{line.code}' has {preview['harvests']} harvest(s) "
+                    f"recorded against it — real production yield, not a test "
+                    f"line, whatever it is named. Cascade purge refuses "
+                    f"unconditionally; deactivate the line instead."
+                ),
+            )
+
+        if preview["childLines"]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Line '{line.code}' has {preview['childLines']} child "
+                    f"line(s) derived from it — real downstream work exists. "
+                    f"Cascade purge refuses unconditionally; remove or "
+                    f"reassign the child lines first."
+                ),
+            )
+
+        result: Dict[str, Any] = {
+            "lineId": line.id,
+            "code": line.code,
+            "dryRun": dry_run,
+            "accessionsRemoved": len(preview["accessionIds"]),
+            "accessionCodesRemoved": preview["accessionCodes"],
+            "propagationEventsRemoved": len(preview["propagationEventIds"]),
+            "propagationEventIds": preview["propagationEventIds"],
+            "observationsRemoved": len(preview["observationIds"]),
+            "observationIds": preview["observationIds"],
+        }
+
+        if dry_run:
+            return result
+
+        if not confirm or confirm != line.code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Confirmation required: to cascade-purge line "
+                    f"'{line.code}', pass confirm='{line.code}' exactly. "
+                    f"This is deliberate friction — a cascade that can be "
+                    f"triggered by a single click on the wrong row can lose "
+                    f"real work."
+                ),
+            )
+
+        db = genetics_db.get_database()
+        if preview["accessionIds"]:
+            await db[ACCESSIONS].delete_many({"accessionId": {"$in": preview["accessionIds"]}})
+        if preview["propagationEventIds"]:
+            await db[PROPAGATIONS].delete_many(
+                {"eventId": {"$in": preview["propagationEventIds"]}}
+            )
+        if preview["observationIds"]:
+            await db[OBSERVATIONS].delete_many(
+                {"observationId": {"$in": preview["observationIds"]}}
+            )
+        await db[LINES].delete_one({_ID_KEY: line_id})
+
+        logger.warning(
+            f"[LineService] CASCADE PURGED line {line.code} ({line_id}) — "
+            f"{result['accessionsRemoved']} accessions, "
+            f"{result['propagationEventsRemoved']} propagation events, "
+            f"{result['observationsRemoved']} observations — "
+            f"by user {getattr(current_user, 'userId', None)}"
+        )
+        return result
 
     # -----------------------------------------------------------------------
     # Growing-profile links

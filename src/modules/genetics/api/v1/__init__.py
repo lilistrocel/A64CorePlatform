@@ -11,6 +11,7 @@ from .dashboard import router as dashboard_router
 from .labels import router as labels_router
 from .lineage import router as lineage_router
 from .lines import router as lines_router
+from .maintenance import router as maintenance_router
 from .media import router as media_router
 from .observations import router as observations_router
 from .propagations import router as propagations_router
@@ -87,6 +88,15 @@ api_router.include_router(
     dashboard_router,
     prefix="/dashboard",
     tags=["genetics-dashboard"],
+)
+
+# -------------------------------------------------------------------------
+# Maintenance — org-wide orphan detection/sweep (T-809)
+# -------------------------------------------------------------------------
+api_router.include_router(
+    maintenance_router,
+    prefix="/maintenance",
+    tags=["genetics-maintenance"],
 )
 
 __all__ = ["api_router"]

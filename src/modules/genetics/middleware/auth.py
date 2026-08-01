@@ -49,6 +49,14 @@ _ADMIN: FrozenSet[str] = frozenset({"admin", "super_admin"})
 _CURATION: FrozenSet[str] = _ADMIN | {"moderator"}
 _BENCH: FrozenSet[str] = _CURATION | {"user"}
 
+# T-809 — strictly narrower than _ADMIN: cascade-delete and org-wide
+# maintenance sweeps must not be reachable by a plain `admin`, only
+# `super_admin`. Matches the precedent set by
+# `PATCH /organizations/{id}/modules` (src/api/v1/organizations.py,
+# `_require_super_admin`), which reserves tenant-wide destructive/
+# irreversible operations for the single strictest role in the system.
+_SUPER_ADMIN_ONLY: FrozenSet[str] = frozenset({"super_admin"})
+
 
 # --- Permission → allowed roles --------------------------------------------
 #
@@ -70,7 +78,17 @@ PERMISSION_ROLES: Dict[str, FrozenSet[str]] = {
     # Curation — defining the library rather than recording activity.
     "genetics.line.manage": _CURATION,  # create / edit a genetic line
     "genetics.promote": _CURATION,      # promote a trait into a new line
-    "genetics.delete": _CURATION,       # deactivate a line
+    "genetics.delete": _CURATION,       # deactivate a line / zero-dependent purge
+
+    # T-809 — one tier above curation. `genetics.delete` alone is only ever
+    # enough to deactivate a line or hard-delete one with zero dependents
+    # (LineService.purge_line's own gate refuses otherwise) — it was never
+    # enough, by itself, to destroy referenced material. Cascade purge and
+    # the org-wide orphan sweep both do exactly that, deliberately, so they
+    # sit at the strictest tier in the namespace rather than piggybacking on
+    # `genetics.delete`.
+    "genetics.delete.cascade": _SUPER_ADMIN_ONLY,  # purge?cascade=true
+    "genetics.maintenance": _SUPER_ADMIN_ONLY,     # orphan sweep (GET is genetics.delete, DELETE is this)
 }
 
 
@@ -133,3 +151,33 @@ def require_permission(permission: str):
 # routes must not fall back to bare `get_current_active_user`, which would
 # admit `guest`.
 require_view = require_permission("genetics.view")
+
+
+def require_super_admin_for(permission: str, current_user: CurrentUser) -> None:
+    """Enforce a stricter tier from inside a route body rather than via `Depends`.
+
+    `DELETE /lines/{id}/purge` is one route serving two operations gated at
+    two different tiers, selected by the `cascade` query parameter: the
+    plain zero-dependents purge (`genetics.delete`, curation tier) and the
+    cascade purge (`genetics.delete.cascade`, super_admin only). FastAPI's
+    `Depends()` resolves once per request before the query parameters are
+    available to make that branch, so it cannot itself vary the required
+    permission by `cascade`'s value — this is called explicitly inside the
+    handler instead, only on the `cascade=true` path. Raises the same 403
+    shape `require_permission`'s dependency would.
+
+    Args:
+        permission: One of the keys in :data:`PERMISSION_ROLES`.
+        current_user: The already-authenticated caller.
+
+    Raises:
+        HTTPException: 403 when the user's role is not permitted, 500 when
+        the permission string is not registered.
+    """
+    allowed = _resolve(permission)
+    if current_user.role not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Permission denied: {permission} requires one of "
+                   f"{sorted(allowed)}",
+        )
