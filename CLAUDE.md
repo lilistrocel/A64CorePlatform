@@ -68,7 +68,8 @@ Post-Implementation:
 
 ### MongoDB Verification
 - MongoDB MCP is broken (connection doesn't persist) — use `mongosh` via Bash as workaround
-- Pattern: `mongosh --eval "db.collection.find()" mongodb://localhost:27017/a64core_db --quiet`
+- Pattern: `docker exec a64coreplatform-mongodb-1 mongosh --quiet mongodb://localhost:27017/a64core_db --eval "db.collection.find()"`
+- `mongosh` is NOT on the host — it only exists inside the mongo container
 
 ### UI Testing is Ultimate Truth
 - **API working + UI broken = Feature is BROKEN**
@@ -149,7 +150,7 @@ python3 scripts/codebase_mapper/task_manager.py stats    # Verify
 **Full endpoint listing:** See `Docs/CodeMaps/api-map.md`
 
 **Base URLs:**
-- Local: `http://localhost/api/v1` | Production: `https://a64core.com/api/v1` | Health: `http://localhost/api/health`
+- Local: `http://localhost/api/v1` | Live: `https://dev.a20core.com/api/v1` (same machine) | Health: `http://localhost/api/health`
 
 **Critical gotchas:**
 - Login is `POST /api/v1/auth/login` (NOT `/users/login`)
@@ -178,26 +179,66 @@ Neither raises. The symptom is always a field that is present in the database,
 present in the service return value, and absent on the client. This has cost
 debugging time twice — check it early when a field "isn't saving".
 
-## Remote Server & Git
+## Server & Git
 
-### Local-First Rule
-All code changes happen locally first. Never edit code on remote servers. Git is the single source of truth.
+### THE DEV MACHINE IS THE SERVER
+**This host runs the live instance.** There is no separate box to SSH into — you
+are already on it. Verified 2026-07-31:
 
-**Workflow:** Edit locally -> Commit -> Push -> SSH to server -> Pull -> Rebuild Docker -> Test
+| Host | Reaches | Notes |
+|------|---------|-------|
+| `dev.a20core.com` | **this machine**, via Cloudflare | serves the app *and* `/api/v1` |
+| `a20core.com` / `www.a20core.com` | a different site | marketing/landing, NOT this app |
+| ~~`a64core.com`~~ | **dead** — no response | pre-rebrand, decommissioned |
+| ~~`51.112.224.227`~~ | **dead** | old AWS box; do NOT try to SSH here |
 
-### Production Server
-- **Domain:** `a64core.com` (NOT a64platform.com)
-- **IP:** `51.112.224.227`
-- **SSH:** `ssh -i a64-platform-key.pem ubuntu@51.112.224.227`
-- **Dynamic IP:** `bash update-ssh-access.sh` (updates AWS Security Group)
+This machine: hostname `noobai`, public IP `5.194.221.100`, stack started with
+`docker-compose.yml` + `docker-compose.finance.yml`.
 
-### Deploy Commands
+**Consequence: the database on this machine holds REAL data**, not disposable
+seed. Treat every write as production. Never `deleteMany`/`updateMany` with an
+empty `{}` filter, and never mutate a record you did not just create.
+
+### Deploying a change
+No SSH, no pull step — `src/` is bind-mounted into the api container, so edits
+are visible immediately. But **the api container has no `--reload`**:
+
 ```bash
-ssh -i a64-platform-key.pem ubuntu@51.112.224.227
-cd ~/A64CorePlatform && git pull origin main
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build <service>
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d <service>
+docker restart a64coreplatform-api-1     # REQUIRED after any Python change
 ```
 
+Restart *immediately before verifying*, not merely after editing — a stale
+process serves old code while the files on disk look correct, which has produced
+false "verified" results.
+
+Frontend is Vite with hot reload; no restart needed. If Vite throws an import
+error for an export that demonstrably exists, its module graph is stale:
+`docker restart a64coreplatform-user-portal-1`.
+
+### Verifying the database
+MongoDB MCP is broken. `mongosh` is **not installed on the host** — run it inside
+the container:
+
+```bash
+docker exec a64coreplatform-mongodb-1 mongosh --quiet \
+  mongodb://localhost:27017/a64core_db --eval 'db.genetic_lines.find({}, {_id:0, code:1})'
+```
+
+### Running backend tests
+`/app/tests` is **not** bind-mounted — copy it in, and note a restart wipes it.
+Stale `__pycache__` in the container has caused phantom failures:
+
+```bash
+docker exec a64coreplatform-api-1 sh -c 'rm -rf /app/tests'
+docker cp tests a64coreplatform-api-1:/app/tests
+docker exec a64coreplatform-api-1 python -m pytest tests/unit/test_genetics -q
+```
+
+### Assets and `.gitignore`
+`.gitignore` carries a blanket `*.png`. Any image that genuinely belongs in the
+repo — a brand mark, an icon shipped to a backend service — needs `git add -f`,
+or it will be silently absent from a fresh checkout while the code still runs.
+
 ### Server-Only Files (never commit)
-`.env.production`, `.env.local`, SSL certificates, server-specific config — must be in `.gitignore`.
+`.env`, `.env.production`, `.env.local`, SSL certificates, server-specific
+config — must be in `.gitignore`.
