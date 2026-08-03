@@ -93,34 +93,52 @@ deployment):**
 
 All of the following happens in **Zero Trust → Access → Applications**.
 
-### 1. Create the application
+> **Path scoping lives on the APPLICATION, not on the policy.** An Access policy
+> carries only identity rules (Include / Require / Exclude) — there is no "Paths"
+> field inside a policy. To exempt specific URL paths you create a *separate,
+> more specific application* for those paths and give it a Bypass policy.
+> Cloudflare matches the most specific application path first, so the narrow
+> public apps win over the domain-wide one.
 
-**Add an application → Self-hosted.** Set the domain to `<APP_HOSTNAME>`. Give it a
-recognizable name (e.g. "A64 Core Platform — `<APP_HOSTNAME>`").
+You will create **three** applications, all **Self-hosted**:
 
-### 2. Add the Bypass policy FIRST
+| # | Application path | Policy | Who |
+|---|---|---|---|
+| 1 | `<APP_HOSTNAME>/i` | Bypass | Everyone |
+| 2 | `<APP_HOSTNAME>/api/v1/public` | Bypass | Everyone |
+| 3 | `<APP_HOSTNAME>` (no path) | Allow | your team |
 
-> **⚠️ Do this before the Allow policy, and make sure it is ordered ABOVE it.**
-> Cloudflare Access evaluates policies top-down and stops at the first match. If the
-> Allow policy is evaluated first, or the Bypass policy doesn't exist at all, **every
-> QR label on every vessel stops resolving for anyone outside the Access team** —
-> including the people this feature exists for, who scan a label and are never going
-> to be in your organization's Zero Trust team.
+### 1. Create the two public Bypass applications FIRST
 
-Create a policy:
+> **⚠️ Create these before the domain-wide application.**
+> These are the QR-label routes: the frontend `GET /i/:token` label-info page and
+> the backend `GET /api/v1/public/genetics/i/{token}` API behind it. They are
+> intentionally unauthenticated — the people scanning a vessel label are never going
+> to be in your organization's Zero Trust team. Without these Bypass applications,
+> **every printed QR label stops resolving for anyone outside the team**, and it
+> presents as a labelling bug rather than an auth one.
+
+For each of the two paths (`/i` and `/api/v1/public`):
+
+**Add an application → Self-hosted.** Set the domain to `<APP_HOSTNAME>` and enter the
+path in the application's **Path** field. Name it recognizably (e.g. "A64 — public label
+scan"). Then add a single policy to it:
 - **Action:** `Bypass`
 - **Include:** `Everyone`
-- **Paths:** `/i/*` and `/api/v1/public/*`
 
-These correspond to the frontend `GET /i/:token` label-info page and the backend
-`GET /api/v1/public/genetics/i/{token}` API it calls. Both are intentionally
-unauthenticated in the application itself — this policy is what keeps them that way once
-Access is in front of the origin. Drag or reorder this policy so it sits **above** the
-Allow policy in the list.
+A Bypass policy takes no identity provider — it is what makes the path public.
+
+### 2. Create the main application
+
+**Add an application → Self-hosted.** Set the domain to `<APP_HOSTNAME>` with **no path**,
+so it covers everything else. Name it e.g. "A64 Core Platform — `<APP_HOSTNAME>`".
+This is the application whose **AUD tag** you will copy in step 5 — the Bypass
+applications' AUD tags are not used by the backend.
 
 ### 3. Add the Allow policy
 
-Create a second policy below the Bypass policy:
+Add this policy to the **main application** from step 2 (not to the Bypass
+applications, which stay Everyone/Bypass):
 - **Action:** `Allow`
 - **Include:** whichever combination fits your organization — specific emails, an email
   domain (e.g. `@yourcompany.com`), or an IdP group.
@@ -276,7 +294,7 @@ in place harmlessly while you investigate.
 |---|---|---|
 | Every sign-in attempt fails with a 401 from the exchange endpoint | `CF_ACCESS_AUD` doesn't match the application's actual Audience tag (wrong app, typo, or copied from a different Access application) | Re-copy the AUD tag from the application's Overview tab in Zero Trust; confirm no leading/trailing whitespace |
 | JWKS verification errors / "unknown issuer" | `CF_ACCESS_TEAM_DOMAIN` is wrong, includes a scheme (`https://`), or has a typo | Set it to the bare host, e.g. `myteam.cloudflareaccess.com` — no `https://` prefix |
-| QR labels (`/i/<token>`) redirect to a Cloudflare login page instead of rendering | The Bypass policy is missing, misconfigured, or ordered **below** the Allow policy | Re-check [step 2](#2-add-the-bypass-policy-first) — Bypass must exist for `/i/*` and `/api/v1/public/*`, and must be first in the policy list |
+| QR labels (`/i/<token>`) redirect to a Cloudflare login page instead of rendering | The path-scoped Bypass **applications** are missing, or their path doesn't match | Re-check [step 1](#1-create-the-two-public-bypass-applications-first). Path scoping is a property of the *application*, not the policy — a policy has no Paths field. You need separate self-hosted apps on `<APP_HOSTNAME>/i` and `<APP_HOSTNAME>/api/v1/public`, each with an Everyone/Bypass policy |
 | User logs out but is immediately signed back in | The `CF_Authorization` cookie wasn't cleared — the app's logout flow must redirect through `/cdn-cgi/access/logout`, which it does automatically when the session originated from Access | Confirm the frontend build includes the CF-aware logout path; check the browser's cookies for a lingering `CF_Authorization` after logout |
 | Password login stopped working everywhere, including from the server itself | `CF_ACCESS_EXCLUSIVE=true` was set, but the request used for testing still carried `Cf-Ray`/`Cf-Connecting-Ip` (e.g. testing through the tunnel instead of directly against the origin) | Test break-glass from a request that genuinely bypasses the tunnel (e.g. `curl http://localhost/api/v1/auth/login` on the origin host) |
 | New Access identity never reaches "pending activation" — outright rejected | `CF_ACCESS_JIT_PROVISION=false` | Set to `true` if you want unknown Access-verified emails to auto-provision as pending; otherwise this is expected and the account must be created manually first |
