@@ -1,8 +1,182 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 106 tasks
+> **Total completed:** 112 tasks
 
 ## 2026-08
+
+### T-909 | Cloudflare Access runbook correction
+- **Category:** Docs · **Priority:** P2
+- **Completed:** 2026-08-03 · **Assigned:** change-guardian (Viet Anh)
+- **Depends on:** T-903 ✅
+- **Blocks:** —
+- **Summary:** The runbook (`Docs/1-Main-Documentation/Cloudflare-Access-Setup.md`,
+  shipped as part of T-903) instructed adding a Bypass **policy** with a
+  "Paths" field. No such field exists — Access policies carry only identity
+  rules; path scoping is a property of the *application*, not the policy.
+  Corrected to three self-hosted applications — the two narrow Bypass apps
+  created first, then the domain-wide Allow app — since Cloudflare matches
+  the most specific application path first.
+- **Found by:** following the team's own runbook against the real Cloudflare
+  dashboard, not by inspection.
+- **Commit:** `a9f3b65`
+
+### T-908 | Operations pages missing page padding
+- **Category:** Frontend · **Priority:** P3
+- **Completed:** 2026-08-03 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-901 ✅
+- **Blocks:** —
+- **Summary:** The app has two coexisting container conventions since Night
+  Observatory: legacy (`padding: 32px; max-width: 1440px; margin: 0 auto` —
+  HR, CRM, Sales, Finance, Logistics) and Night Observatory (`padding: 34px
+  40px 60px; max-width: 100%`, transparent — all four Mushroom pages).
+  Operations belongs to the second family and was missing its padding line.
+- **Also fixed on `BlockTaskList`:** a stray `min-height: 100vh` (latent
+  double scrollbar — `MainContent` already owns the scroll container) and a
+  hardcoded `background: neutral[50]`, which violated
+  `MainLayout.tsx:631`'s explicit no-opaque-background rule that lets the
+  fixed sky layer show through.
+- **Scope note:** styled-components only. **T-700 (Task Manager redesign,
+  Ready, not started) is unaffected** — different component tree.
+- **Commit:** `c561034`
+
+### T-907 | Brand asset and logo fixes
+- **Category:** Frontend · **Priority:** P2
+- **Completed:** 2026-08-03 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-900 ✅
+- **Blocks:** —
+- **Gap 1 — 13 PNG masters missing from every fresh checkout:**
+  `Brand_Engineering/Brand/Logo/*.png` masters were absent because
+  `.gitignore`'s blanket `*.png` has negation exceptions for `Logo/*.png` and
+  `frontend/user-portal/public/*.png` that neither matched that exact path —
+  and the SVG masters sitting right beside them *were* tracked, which hid the
+  gap until it mattered. Added with `git add -f`.
+- **Gap 2 — opaque-canvas lockups rendering as broken boxes:**
+  `lockup_cosmos.svg`/`lockup_cream.svg` each bake in a full-canvas
+  background rect, so they rendered as an opaque box inside the app's
+  translucent glass cards. Repointed six call sites to
+  `lockup_transparent.svg`.
+- **The actual root cause of the reported "broken image", separately:**
+  infrastructure, not either of the above — the user-portal container's
+  `/app/user-portal/public/` bind mount had gone stale and empty, so Vite's
+  catch-all served `index.html` (HTTP 200, `text/html`) for every asset
+  requested under `public/` — brand SVGs, fonts, manifest, and favicons
+  alike, all silently. Fixed by `docker restart`. Worth recording as a
+  recurrence risk since it presents identically to a genuinely missing or
+  broken asset.
+- **Commits:** `5654e45`, `aaa934f`
+
+### T-906 | Auth UX: inactive accounts and auto-derived names
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Completed:** 2026-08-03 · **Assigned:** backend-dev-expert + frontend-dev-expert (Viet Anh)
+- **Depends on:** T-903 ✅
+- **Blocks:** —
+- **Gap 1 — inconsistent inactive-account handling:** an inactive account
+  was treated completely differently depending on which button was pressed
+  — Cloudflare sign-in routed to a pending screen, password login showed a
+  flat "Account is inactive". Both paths now raise one shared
+  `pending_activation` exception, and the message changed on **both** paths
+  to "Your account is not active. An administrator needs to enable it
+  before you can sign in." The old "awaiting administrator approval"
+  wording was already wrong on the Cloudflare path (which also fires for
+  admin-deactivated accounts, not just never-activated ones). Never-activated
+  and deactivated are deliberately not distinguished in the message.
+- **Gap 2 — a successful Cloudflare login displaying "Unable to sign in"
+  (fixed in `1ef34af`):** FastAPI wraps a dict `detail`, so the 403 body for
+  a pending account arrives as `{"detail": {"detail": ..., "status": ...}}`
+  — one level deeper than the client expected, so a genuinely successful
+  Cloudflare authentication that hit the pending-activation branch displayed
+  as a generic failure. Fixed with a single shared `extractPendingActivation()`
+  helper used by both login paths' error handling, replacing two separate
+  ad-hoc unwraps. **Recording this response shape prominently as a gotcha
+  for future work on either login path.**
+- **`nameAutoDerived` flag:** set at JIT provisioning time, because
+  Cloudflare's JWT supplies only an email — names were coming out as
+  "Lilistrocel Lilistrocel" (the email local-part duplicated into both first
+  and last name). Cleared server-side the moment `firstName`/`lastName` is
+  actually updated. Surfaced in the UI as a dismissible, non-blocking banner
+  linking to `/profile?focus=name`. No nickname field was added — the fix is
+  "let the user fix their real name," not a workaround field.
+- **Commits:** `1ef34af`, `4d6e193`
+
+### T-905 | Deployment identity + Cloudflare Access configurable from the UI
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-08-03 · **Assigned:** backend-dev-expert + frontend-dev-expert (Viet Anh)
+- **Depends on:** T-903 ✅, T-904 ✅
+- **Blocks:** —
+- **Summary:** A new deployment can now be set up entirely in the browser —
+  sign in with the seeded super_admin password account, configure under
+  Settings — instead of hand-editing `.env` and restarting containers.
+- **Why the UI can't just write `.env`:** it cannot, structurally — `.env`
+  is not mounted into the api container, `settings.py` sets `env_file =
+  None`, and env vars freeze at process start (Compose interpolates
+  `${VAR}` at container-create time, not at request time). So configuration
+  has to be DB-backed and resolved per request, in order **env -> db ->
+  unset**, where a value already set via env var acts as a lock (`source:
+  env, editable: false` in the API response) rather than being silently
+  overridden.
+- **Storage:** singleton `platform_settings` document — deployment-wide, not
+  per-tenant, since Cloudflare Access fronts the whole hostname, not one
+  organization. 30-second in-process cache, invalidated on write.
+- **Security — four mandatory guardrails**, because whoever can write
+  `CF_ACCESS_TEAM_DOMAIN`/`CF_ACCESS_AUD` can point authentication at an
+  Access application they control and mint a token for any email, including
+  super_admin:
+  1. Team domain validated against the real `/cdn-cgi/access/certs`
+     endpoint before saving — rejects a domain that doesn't actually serve
+     JWKS.
+  2. Exclusive mode blocked until a Cloudflare sign-in has actually
+     succeeded once — prevents locking everyone out with an unverified
+     config.
+  3. Password re-authentication required on every change.
+  4. Before/after audit log entry, with both sensitive values masked in the
+     audit record itself, not just in the API response.
+- **Both `CF_ACCESS_TEAM_DOMAIN`/`CF_ACCESS_AUD` are never returned in
+  full** — only `isSet` + last-4 characters. Deliberately no reveal endpoint
+  and no test-connection call that echoes them back.
+- **Known consequence:** a mismatched AUD cannot be diagnosed from the UI
+  alone — the Zero Trust dashboard remains the reference for verifying it.
+- **Commit:** `19d5be6`
+
+### T-904 | Deployment identity: no deployment may inherit another's config
+- **Category:** DevOps · **Priority:** P1
+- **Completed:** 2026-08-03 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** —
+- **Blocks:** —
+- **Discovered:** A sibling deployment (hostname `noobcity-Z690M-ITX-ax`)
+  found `docker-compose.yml` defaulted `PUBLIC_BASE_URL` to
+  `https://dev.a20core.com` — this box. On their machine, printed genetics
+  label QR codes would have encoded a URL pointing at our server. Caught
+  before rebuild, by them, not us.
+- **Why this one is unforgiving:** `PUBLIC_BASE_URL` is baked into printed
+  physical labels, so a wrong value ships on vessels and requires
+  reprinting — unlike most misconfiguration, it isn't fixable with a
+  restart once labels are already in hand.
+- **Delivered:**
+  1. Default removed from both `docker-compose.yml` and `settings.py` — no
+     fallback to any one deployment's hostname.
+  2. `_require_public_base_url()` in
+     `src/modules/genetics/api/v1/labels.py` fails loudly at point of use
+     (label generation), not at boot — so ops-only deployments that never
+     print labels aren't blocked by a value they don't need — when the
+     value is empty or loopback.
+  3. Grouped DEPLOYMENT IDENTITY block in `.env.example`.
+  4. New `scripts/preflight.sh` — derives the container prefix from `docker
+     ps` rather than assuming `a64coreplatform-`, so preflight checks work
+     on any deployment's compose project name.
+  5. `CLAUDE.md` rewritten to teach discovery instead of asserting one
+     machine's hostname/IP/container names — reference values are now
+     fenced explicitly as an example, not stated as fact.
+  6. New `Docs/1-Main-Documentation/Deployment-Identity.md`.
+- **Also in this commit — two healthchecks that had never once passed:**
+  - The api container ran `curl -f`, but curl is not installed in that
+    image — failing streak 201, always reporting unhealthy while serving
+    fine.
+  - user-portal probed `http://localhost:5173`, but `/etc/hosts` maps
+    `localhost` to `::1` and Vite binds IPv4 only — same silent-fail
+    pattern.
+  - **Note:** healthchecks are baked in at container-create time, so fixing
+    them needs `docker compose up -d`, not a restart.
+- **Commit:** `75820b2`
 
 ### T-903 | Cloudflare Access authentication — backend, dual-mode (Phase 1)
 - **Category:** Backend · **Priority:** P1
@@ -116,14 +290,37 @@
   router) all clean; boot-time validator confirmed to reject
   `CF_ACCESS_ENABLED=true` with an empty team domain/AUD, and to reject an
   invalid `CF_ACCESS_DEFAULT_ROLE`.
-- **Explicitly NOT done here (other agents own these per the dispatch):**
-  frontend wiring (`auth.service.ts`, `auth.store.ts`, `ProtectedRoute.tsx`,
-  `Login.tsx`, new `PendingActivation.tsx` page, `UserManagementPage.tsx`
-  badge/filter — see the plan doc); backend unit tests
-  (`tests/unit/test_auth/test_cf_access.py`); the domain-agnostic Cloudflare
-  runbook doc (`Docs/1-Main-Documentation/Cloudflare-Access-Setup.md`);
-  `User-Structure.md` update. **CodeMaps need regeneration** — two new
-  endpoints, one new service module, one new middleware module.
+- **Same-day follow-on — frontend, tests, runbook — DONE 2026-08-03 (commit
+  `804e2fa`):** the three items originally listed above as "other agents own
+  these" all shipped later the same day, not as separate follow-on work:
+  - **Frontend dual-mode UI:** Cloudflare sign-in button on the login
+    screen; silent token exchange from `ProtectedRoute` (calls `POST
+    /cf-access/session` before falling back to the normal auth flow); a new
+    `PendingActivation` screen for the shared `pending_activation` response;
+    a pending-activation queue + auth-provider badge in User Management; and
+    Cloudflare-aware logout that also hits `/cdn-cgi/access/logout` — a
+    plain app-side token clear alone would leave the Cloudflare edge session
+    live, so the next silent visit would just log the user back in.
+  - **Backend unit tests:** `tests/unit/test_auth/test_cf_access.py` — 27
+    cases covering algorithm-confusion attacks, JWKS refresh rate-limiting
+    (the 1/60s forced-refresh cap), JIT provisioning, and the break-glass
+    gate (`CF_ACCESS_EXCLUSIVE` + `is_local_request`).
+  - **Runbook:** `Docs/1-Main-Documentation/Cloudflare-Access-Setup.md` —
+    written domain-agnostic (no hardcoded `dev.a20core.com`/team name) so any
+    deployment can follow it. See T-909 for a correction made to it the same
+    day.
+  - **CodeMaps** — still not regenerated (two new endpoints, one new service
+    module, one new middleware module, as already flagged above); blocked on
+    Mongo auth for the mapper — see "Known Open Items" in BACKLOG.md.
+- **Cloudflare Access is now LIVE on `dev.a20core.com`** (team
+  `noobcity.cloudflareaccess.com`), configured entirely through the
+  Cloudflare dashboard UI (not this repo): three Zero Trust applications —
+  two narrow, path-scoped Bypass apps (`/i`, the public label-info route;
+  `/api/v1/public`, the rest of the unauthenticated public API surface) plus
+  one domain-wide Allow app, in that order so Cloudflare's
+  most-specific-path matching resolves correctly (see T-909).
+  `CF_ACCESS_EXCLUSIVE` remains **off** — password login stays available
+  alongside Cloudflare sign-in.
 
 ## 2026-07
 

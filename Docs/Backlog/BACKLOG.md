@@ -3,13 +3,35 @@
 > **Updated:** 2026-08-03
 > **Tasks:** 32 active · 14 ready · 1 blocked (counts as of this update; the
 > narrative below predates several waves and is kept for history — see
-> ARCHIVE.md for what has actually shipped). This update: **T-903**
-> (Cloudflare Access authentication — backend, dual-mode) completed and
-> moved to ARCHIVE.md — password login stays fully intact
-> (`CF_ACCESS_ENABLED` defaults false); frontend wiring, backend unit tests,
-> and the Cloudflare-side runbook doc are separate follow-on work, not done
-> in this pass. CodeMaps regeneration flagged (two new endpoints, one new
-> service, one new middleware module).
+> ARCHIVE.md for what has actually shipped). This update covers a full day's
+> work, all committed and pushed to `main`. **Correction to this note's
+> previous wording:** it previously said T-903's frontend wiring, backend
+> unit tests, and the Cloudflare-side runbook doc were "separate follow-on
+> work, not done in this pass" — that was wrong. All three shipped the same
+> day, in commit `804e2fa`: the frontend dual-mode UI (Cloudflare sign-in
+> button, silent exchange from `ProtectedRoute`, `PendingActivation` screen,
+> pending-activation queue + auth-provider badge in User Management,
+> Cloudflare-aware logout via `/cdn-cgi/access/logout`), 27 backend unit
+> tests (`tests/unit/test_auth/test_cf_access.py`), and the domain-agnostic
+> runbook (`Docs/1-Main-Documentation/Cloudflare-Access-Setup.md`). T-903's
+> ARCHIVE.md entry has been extended accordingly. **Cloudflare Access is now
+> LIVE on `dev.a20core.com`** (team `noobcity.cloudflareaccess.com`),
+> configured via the Cloudflare dashboard UI, with three Zero Trust
+> applications: two path-scoped Bypass apps (`/i`, `/api/v1/public`) and the
+> domain-wide Allow app. `CF_ACCESS_EXCLUSIVE` remains **off**. Six more
+> tasks shipped the same day and were moved straight to ARCHIVE.md: **T-904**
+> (deployment identity — `PUBLIC_BASE_URL` can no longer default to another
+> deployment's hostname, plus two healthchecks that had never once passed),
+> **T-905** (deployment identity + Cloudflare Access configurable from the
+> UI, DB-backed with env-var lock precedence), **T-906** (shared
+> `pending_activation` handling across both login paths, plus an
+> auto-derived-name banner), **T-907** (brand asset/logo fixes — missing PNG
+> masters, opaque-background lockups, a stale bind-mount), **T-908**
+> (Operations pages missing Night-Observatory page padding), **T-909**
+> (Cloudflare Access runbook correction — Bypass scoping is an application
+> property, not a policy field). CodeMaps regeneration is still flagged (two
+> new endpoints, one new service, one new middleware module from T-903) but
+> **blocked** — see "Known Open Items" below.
 >
 > Prior note (2026-07-30): **T-901** (Night Observatory redesign —
 > dark-first glass-panel visual system) completed and moved to ARCHIVE.md,
@@ -17,6 +39,35 @@
 > gold audit).
 >
 > Prior note (2026-06-10): Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — that session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc` — remaining Active then: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic), T-200.25 (BLA stubs — implementation complete, awaiting commit); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
+
+---
+
+## Known Open Items (as of 2026-08-03)
+
+- **CodeMaps are stale** and could not be regenerated this session.
+  `rerun.sh` diffs `HEAD~1..HEAD` (so it needs the commit to already exist),
+  and the mapper connects to Mongo unauthenticated — neither `MONGODB_URL`'s
+  app user nor `MONGO_ROOT_*` from `.env` authenticate against the running
+  instance (`AuthenticationFailed`, code 18). Mongo also runs as a replica
+  set advertising the internal hostname `mongodb`, so host-side connections
+  additionally need `directConnection=true`. Blocked on working credentials.
+- **6 pre-existing unit-test failures on `main`**, unrelated to this day's
+  work: 2 in `test_ai_assistant/test_context_composer.py`, 1 in
+  `test_tool_executor.py`, 1 in `test_sensehub_crop_sync.py`, and 2 in
+  `test_finance_bridge/test_outbox_reconciler.py` (the latter from the
+  uncommitted-then-committed `905bf43` WIP, which is **not our work** — it
+  belongs to whoever owns the finance outbox reconciler).
+- **Deployment-specific defaults still hardcoded**, despite T-904/T-905's
+  deployment-identity work: `GOOGLE_CLOUD_PROJECT=a64core` in
+  `docker-compose.yml` with no `${VAR:-}` indirection; `FROM_EMAIL:
+  noreply@a64core.com` and `nginx/*.conf` `server_name a64core.com` + Let's
+  Encrypt paths, all referencing a domain `CLAUDE.md` itself calls
+  decommissioned; `ADMIN_EMAIL` still `admin@a64platform.com` though the
+  super_admin account was renamed to `lilistrocel@gmail.com`.
+- **Before enabling `CF_ACCESS_EXCLUSIVE`**: the origin must be reachable
+  only through the Cloudflare tunnel. This box currently binds nginx on
+  `0.0.0.0:80` and Mongo on `0.0.0.0:27017`; direct routing to the public IP
+  would make exclusive mode bypassable.
 
 ---
 
