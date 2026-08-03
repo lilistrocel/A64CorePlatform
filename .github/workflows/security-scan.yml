@@ -69,7 +69,10 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend/user-portal
+        # frontend/ is the npm workspace ROOT (workspaces: shared, user-portal).
+        # Only the root has a package-lock.json; installing from the member
+        # directory does not work.
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -78,7 +81,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/user-portal/package-lock.json
+          # Was frontend/user-portal/package-lock.json — a path that has never
+          # existed. setup-node's cache step failed and killed the job, so the
+          # audit below has not actually run since at least 2026-05.
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci

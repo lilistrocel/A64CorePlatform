@@ -42,7 +42,11 @@ jobs:
           # Reason: NO finance overlay → finance, mysql, finance_consumer
           # never start. nginx serves 503 for /api/v1/finance/* via the
           # @finance_unavailable named location.
-          docker compose -f docker-compose.yml up -d mongo redis api nginx user-portal
+          #
+          # The service is `mongodb`, not `mongo` — this said `mongo` and so
+          # every run failed here with "no such service", which is why this
+          # workflow has never once passed.
+          docker compose -f docker-compose.yml up -d mongodb redis api nginx user-portal
 
       - name: Wait for backend health
         run: |
@@ -78,7 +82,9 @@ jobs:
           }
 
       - name: Install Playwright
-        working-directory: frontend/user-portal
+        # frontend/ is the npm workspace root; only it has a package-lock.json,
+        # so `npm ci` has to run there rather than in the user-portal member.
+        working-directory: frontend
         run: |
           npm ci
           npx playwright install --with-deps chromium
