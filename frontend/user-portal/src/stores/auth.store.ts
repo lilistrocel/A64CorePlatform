@@ -161,14 +161,26 @@ export const useAuthStore = create<AuthState>()(
             pendingActivationEmail: null,
           });
         } catch (error: any) {
-          if (error?.response?.status === 403 && error?.response?.data?.status === 'pending_activation') {
+          // FastAPI wraps whatever a route passes as `detail`, so a dict detail
+          // arrives as {detail: {detail, status}} — one level deeper than a
+          // plain-string detail. Read both shapes: the nested one is what the
+          // backend actually sends today, the flat one guards against the
+          // wrapper changing. Getting this wrong made a successful Cloudflare
+          // sign-in show "Unable to sign in" instead of the pending screen.
+          const body = error?.response?.data;
+          const payload =
+            body && typeof body.detail === 'object' && body.detail !== null
+              ? body.detail
+              : body;
+
+          if (error?.response?.status === 403 && payload?.status === 'pending_activation') {
             set({
               isLoading: false,
               error: null,
               pendingActivation: true,
               // Best-effort — only set if the backend actually included it.
-              pendingActivationEmail: typeof error.response.data?.email === 'string'
-                ? error.response.data.email
+              pendingActivationEmail: typeof payload?.email === 'string'
+                ? payload.email
                 : null,
             });
             return;
