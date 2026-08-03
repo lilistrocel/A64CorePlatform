@@ -54,12 +54,23 @@ class Settings(BaseSettings):
     # SENDGRID_API_KEY: str = ""  # Add in production
 
     # Genetics module — public label/QR resolution (T-804)
-    # Host only, no scheme: the QR-payload builder prepends "https://". Kept
-    # here rather than in the genetics module's own config/settings.py
+    # Scheme + host that printed label QR codes encode, e.g.
+    # "https://your-deployment.example.com" (see labels.build_label_payload).
+    # Kept here rather than in the genetics module's own config/settings.py
     # because it mirrors FRONTEND_URL — a public-facing host value, not a
-    # module-internal setting like MAX_LINEAGE_DEPTH. Mid-rebrand default:
-    # dev.a20core.com, NOT a64core.com (see commit 229324a).
-    PUBLIC_BASE_URL: str = "https://dev.a20core.com"  # scheme included; see labels.build_label_payload
+    # module-internal setting like MAX_LINEAGE_DEPTH.
+    #
+    # NO real-hostname default on purpose. Every deployment must declare its
+    # own value in .env (see .env.example's "Deployment Identity" block) —
+    # defaulting this to any specific live deployment's URL is exactly the
+    # bug this empty default exists to prevent: a QR code printed by one
+    # deployment that silently encoded ANOTHER deployment's host, sending
+    # scans to the wrong server. Left empty, genetics label printing fails
+    # loudly at the point of use (src/modules/genetics/api/v1/labels.py)
+    # instead of silently inheriting someone else's identity. Deployments
+    # that never print genetics labels (ops-only) are unaffected — nothing
+    # validates this at boot.
+    PUBLIC_BASE_URL: str = ""
 
     # Logging
     LOG_LEVEL: str = "INFO"

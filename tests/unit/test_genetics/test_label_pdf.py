@@ -70,6 +70,20 @@ hardcoded ``62x20`` entry):
       here — see test case 21 below, round 2 pushed ``62x14`` just over the
       threshold.)
 
+Additional test cases (config-identity follow-up, 2026-08 — PUBLIC_BASE_URL
+must never silently fall back to a foreign or unreachable value; see
+docker-compose.yml / src/config/settings.py / _require_public_base_url):
+  23. Empty PUBLIC_BASE_URL -> _require_public_base_url raises HTTPException
+      500 naming the variable, and GET .../labels 500s the same way.
+  24. Loopback/localhost PUBLIC_BASE_URL (several forms) -> same 500,
+      mentioning "loopback" in the detail.
+  25. A normal https host -> _require_public_base_url returns it unchanged
+      and GET .../labels succeeds (200) exactly as before this guard existed.
+  26. build_label_payload itself is untouched by the guard: every existing
+      call in this file that passes a bare hostname string directly (not
+      through settings.PUBLIC_BASE_URL) is unaffected, since the guard only
+      runs inside get_labels(), not inside build_label_payload().
+
 Additional test cases (label PDF tuning round 2, 2026-07-31, same day —
 real QL-800 hardware feedback on a printed 62x15 label: "still a large space
 between the date and the species", "make the text a bit bigger and the QR a
@@ -106,7 +120,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from reportlab.pdfbase.pdfmetrics import getAscentDescent, stringWidth
 
@@ -1409,3 +1423,80 @@ def test_brand_mark_never_overlaps_text_or_exceeds_page_bounds(client, accession
             f"(left={text_left:.2f}, right={text_right:.2f}, "
             f"bottom={text_bottom:.2f}, top={text_top:.2f})"
         )
+
+
+# ---------------------------------------------------------------------------
+# PUBLIC_BASE_URL guard (config-identity follow-up) — a deployment must never
+# silently print QR codes that are unscannable (empty) or that could not
+# possibly resolve off this machine (loopback/localhost). Deliberately NOT
+# validated at app boot (see _require_public_base_url's own docstring): an
+# ops-only deployment that never prints genetics labels must not be blocked
+# from starting by a genetics-only setting — the failure must surface at the
+# point of use instead.
+# ---------------------------------------------------------------------------
+
+def test_require_public_base_url_rejects_empty_string():
+    with pytest.raises(HTTPException) as exc_info:
+        labels_module._require_public_base_url("")
+    assert exc_info.value.status_code == 500
+    assert "PUBLIC_BASE_URL" in exc_info.value.detail
+
+
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "http://localhost",
+        "http://localhost:8000",
+        "https://127.0.0.1",
+        "http://0.0.0.0:8000",
+        "http://[::1]:8000",
+    ],
+)
+def test_require_public_base_url_rejects_loopback_hosts(bad_url):
+    with pytest.raises(HTTPException) as exc_info:
+        labels_module._require_public_base_url(bad_url)
+    assert exc_info.value.status_code == 500
+    assert "PUBLIC_BASE_URL" in exc_info.value.detail
+    assert "loopback" in exc_info.value.detail.lower()
+
+
+def test_require_public_base_url_accepts_a_normal_https_host():
+    # Returns the value unchanged — build_label_payload still owns the
+    # scheme/host formatting, this guard only vetoes the unusable cases.
+    result = labels_module._require_public_base_url("https://dev.a20core.com")
+    assert result == "https://dev.a20core.com"
+
+
+def test_get_labels_500s_when_public_base_url_is_empty(client, accession_holder, monkeypatch):
+    monkeypatch.setattr(labels_module.settings, "PUBLIC_BASE_URL", "")
+    resp = client.get("/accessions/acc-1/labels", params={"from": 1, "to": 1})
+    assert resp.status_code == 500
+    assert "PUBLIC_BASE_URL" in resp.json()["detail"]
+
+
+def test_get_labels_500s_when_public_base_url_is_loopback(client, accession_holder, monkeypatch):
+    monkeypatch.setattr(labels_module.settings, "PUBLIC_BASE_URL", "http://localhost:8000")
+    resp = client.get("/accessions/acc-1/labels", params={"from": 1, "to": 1})
+    assert resp.status_code == 500
+    assert "loopback" in resp.json()["detail"].lower()
+
+
+def test_get_labels_succeeds_with_a_normal_public_base_url(client, accession_holder, monkeypatch):
+    # Same value this box's real .env sets today (dev.a20core.com) — this is
+    # also the regression guard that the guard is a no-op for a correctly
+    # configured deployment.
+    monkeypatch.setattr(labels_module.settings, "PUBLIC_BASE_URL", "https://dev.a20core.com")
+    resp = client.get("/accessions/acc-1/labels", params={"from": 1, "to": 1})
+    assert resp.status_code == 200
+    assert _pdf_page_count(resp.content) == 1
+
+
+def test_build_label_payload_direct_calls_are_unaffected_by_the_guard():
+    """Every other test in this file calls build_label_payload directly with
+    a bare hostname string (e.g. "dev.a20core.com"), never through
+    settings.PUBLIC_BASE_URL. The guard lives in get_labels(), not in
+    build_label_payload() itself, so those calls — including ones that would
+    fail the guard's own rules, like a bare non-URL string — must keep
+    working exactly as before."""
+    payload = labels_module.build_label_payload("dev.a20core.com", "K7M2Q9XR4T", 7, uppercase=False)
+    assert payload == "dev.a20core.com/i/K7M2Q9XR4T/7"

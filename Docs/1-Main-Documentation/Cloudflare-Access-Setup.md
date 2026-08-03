@@ -66,6 +66,14 @@ below depends on matching it.
 Fill this in before touching the dashboard. Every later step in this document refers back
 to these placeholders instead of a hardcoded value.
 
+This table is scoped to Access setup specifically. For the broader set of values that
+distinguish one A64 deployment from another — including `PUBLIC_BASE_URL`, which is the
+same public hostname as `<APP_HOSTNAME>` below but also gets baked into printed genetics
+labels — see
+[Deployment-Identity.md](./Deployment-Identity.md). Keep `<APP_HOSTNAME>` here and the
+"public base URL" / "Cloudflare tunnel hostname" rows there in agreement; they describe
+the same hostname from two angles, not two independent values.
+
 | Placeholder | What it is | This deployment's value |
 |---|---|---|
 | `<APP_HOSTNAME>` | The public hostname the tunnel publishes for this app | |
@@ -154,10 +162,12 @@ Set these environment variables for the API service, using the values gathered a
 > your Cloudflare account, not just this one. The app refuses to boot in that state by
 > design — this is a fail-fast validator, not a warning you can ignore.
 
-After setting these, restart the API container:
+After setting these, restart the API container. Substitute your own compose
+project prefix — find it with `docker ps --format '{{.Names}}'`:
 
 ```bash
-docker restart a64coreplatform-api-1
+docker restart <prefix>-api-1
+# reference deployment (noobai): docker restart a64coreplatform-api-1
 ```
 
 The API container runs without `--reload`, so a settings or code change is invisible
@@ -251,7 +261,8 @@ CF_ACCESS_ENABLED=false
 ```
 
 ```bash
-docker restart a64coreplatform-api-1
+docker restart <prefix>-api-1
+# reference deployment (noobai): docker restart a64coreplatform-api-1
 ```
 
 This immediately 404s the exchange endpoint and returns the application to
@@ -272,6 +283,10 @@ in place harmlessly while you investigate.
 
 ## See Also
 
+- [Deployment-Identity.md](./Deployment-Identity.md) — the full set of values that
+  distinguish one A64 deployment from another (hostname, `PUBLIC_BASE_URL`, container
+  prefix, admin contact), of which the Zero Trust team domain and AUD tag tracked here
+  are one part.
 - [User-Structure.md](./User-Structure.md) — authentication flows, roles, and the full
   user lifecycle this feature plugs into.
 - [Versioning.md](./Versioning.md) — version history.

@@ -16,7 +16,11 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379
       # Host that printed label QR codes point at (T-804). Must be reachable
       # from a phone camera, so LAN testing sets this to http://<lan-ip>.
-      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://dev.a20core.com}
+      # NO fallback default here on purpose: every deployment must declare
+      # its own value in .env, or genetics label printing fails loudly at
+      # the point of use (src/modules/genetics/api/v1/labels.py) rather than
+      # silently inheriting some other deployment's host. See .env.example.
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000
@@ -64,7 +68,13 @@ services:
     networks:
       - a64core-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      # NOT curl — it is not installed in this image, so the old
+      # `curl -f http://localhost:8000/api/health` check could never pass
+      # (it failed 201 times in a row, reporting the container unhealthy
+      # while the API was serving fine). Python is guaranteed present here.
+      # 127.0.0.1, not localhost: /etc/hosts maps localhost to ::1 as well,
+      # and uvicorn binds IPv4 only.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5).status == 200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -268,7 +278,11 @@ services:
     networks:
       - a64core-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5173"]
+      # 127.0.0.1, not localhost: /etc/hosts maps localhost to both 127.0.0.1
+      # and ::1, BusyBox wget tries the IPv6 address first, and Vite binds
+      # IPv4 only (0.0.0.0:5173) — so `localhost` returned "Connection
+      # refused" and the container reported unhealthy while serving fine.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:5173"]
       interval: 30s
       timeout: 10s
       retries: 3

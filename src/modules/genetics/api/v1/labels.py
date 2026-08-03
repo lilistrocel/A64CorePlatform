@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import urlparse
 
 import qrcode
 from qrcode.constants import ERROR_CORRECT_M
@@ -382,6 +383,65 @@ def build_label_payload(public_base_url: str, token: str, vessel_no: int, upperc
     """
     url = f"{public_base_url.rstrip('/')}/i/{token}/{vessel_no}"
     return url.upper() if uppercase else url
+
+
+# Hosts a phone camera scanning a printed label can never reach, no matter
+# what deployment printed it. Not an exhaustive security allowlist — just the
+# unambiguous "this cannot possibly work" cases.
+_UNSCANNABLE_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+
+def _require_public_base_url(public_base_url: str) -> str:
+    """Validate ``PUBLIC_BASE_URL`` at the point a label is actually printed.
+
+    Deliberately NOT validated at app boot (T-804 config-identity follow-up):
+    an ops-only deployment that never prints genetics labels must not be
+    blocked from starting by a genetics-only setting. This guard runs only
+    when ``GET /{accession_id}/labels`` is actually called, so the failure
+    surfaces exactly where it matters instead of at every deployment's boot.
+
+    Two failure modes, both caught here so neither call site has to
+    duplicate the check:
+
+    1. Empty — the setting was never declared for this deployment. Left
+       unguarded, ``build_label_payload`` would happily emit a QR that
+       encodes ``/i/<token>/<n>`` with no scheme or host at all.
+    2. Loopback/localhost — resolves only on the machine that printed it,
+       never on the phone doing the scanning.
+
+    No fallback default is applied in either case: a silent fallback to a
+    hardcoded host is the exact bug this guard exists to prevent — it is
+    what sent one deployment's printed QR codes to a different, unrelated
+    deployment's server (docker-compose.yml previously defaulted
+    ``PUBLIC_BASE_URL`` to this project's own dev host).
+    """
+    if not public_base_url:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "PUBLIC_BASE_URL is not set for this deployment. Printed "
+                "label QR codes encode this URL, so leaving it empty "
+                "produces unscannable labels. Set PUBLIC_BASE_URL in this "
+                "deployment's .env (see .env.example) to the scheme+host a "
+                "phone camera can actually reach, e.g. "
+                "https://your-deployment.example.com."
+            ),
+        )
+    hostname = urlparse(public_base_url).hostname
+    if hostname is None or hostname.lower() in _UNSCANNABLE_HOSTS:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                f"PUBLIC_BASE_URL is set to '{public_base_url}', which is a "
+                "loopback/localhost address a phone camera cannot reach off "
+                "this machine. Printed label QR codes would be unscannable. "
+                "Set PUBLIC_BASE_URL in this deployment's .env (see "
+                ".env.example) to this box's real, externally-reachable "
+                "scheme+host — e.g. http://<lan-ip> for LAN testing, or "
+                "https://<your-domain> in production."
+            ),
+        )
+    return public_base_url
 
 
 def _draw_qr(c: canvas.Canvas, geometry: QRGeometry, x_mm: float, y_mm: float) -> None:
@@ -993,13 +1053,18 @@ async def get_labels(
     # vessel was never noted — the line then renders exactly as before.
     source_vessel_no: Optional[int] = accession.parents[0].vesselNo if accession.parents else None
 
+    # Fail loudly here, not at boot (see _require_public_base_url) — an
+    # empty or loopback PUBLIC_BASE_URL means every QR below would be
+    # unscannable or would point at the wrong deployment.
+    public_base_url = _require_public_base_url(settings.PUBLIC_BASE_URL)
+
     # Representative geometry for the log line (spec §6.2 requires logging
     # the resulting version/module size once per call, not per page). Drawn
     # per-page below using each page's own payload — the vessel-number digit
     # count can in principle push a payload across a version boundary near
     # the byte/character capacity edge, and each page must stay correct even
     # if that happens rather than reuse a possibly-stale geometry.
-    sample_payload = build_label_payload(settings.PUBLIC_BASE_URL, accession.publicToken, from_n, tape["uppercase"])
+    sample_payload = build_label_payload(public_base_url, accession.publicToken, from_n, tape["uppercase"])
     sample_geometry = compute_qr_geometry(sample_payload, tape["qr_mm"])
     logger.info(
         "Label PDF: size=%s tape, QR version=%d, modules=%d, module_size=%.3fmm",
@@ -1020,7 +1085,7 @@ async def get_labels(
     c = canvas.Canvas(buffer, pagesize=(tape["width_mm"] * mm, tape["height_mm"] * mm))
 
     for vessel_no in range(from_n, to_n + 1):
-        payload = build_label_payload(settings.PUBLIC_BASE_URL, accession.publicToken, vessel_no, tape["uppercase"])
+        payload = build_label_payload(public_base_url, accession.publicToken, vessel_no, tape["uppercase"])
         geometry = compute_qr_geometry(payload, tape["qr_mm"])
         _draw_label_page(
             c,

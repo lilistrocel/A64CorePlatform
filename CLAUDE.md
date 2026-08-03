@@ -67,8 +67,8 @@ Post-Implementation:
 - Navigate directly via URL, don't click through pages
 
 ### MongoDB Verification
-- MongoDB MCP is broken (connection doesn't persist) — use `mongosh` via Bash as workaround
-- Pattern: `docker exec a64coreplatform-mongodb-1 mongosh --quiet mongodb://localhost:27017/a64core_db --eval "db.collection.find()"`
+- MongoDB MCP is broken (connection doesn't persist), on every deployment — use `mongosh` via Bash as workaround
+- Pattern: `docker exec <prefix>-mongodb-1 mongosh --quiet mongodb://localhost:27017/a64core_db --eval "db.collection.find()"` — find `<prefix>` via `docker ps` (see "Server & Git" below); reference deployment example: `docker exec a64coreplatform-mongodb-1 mongosh --quiet mongodb://localhost:27017/a64core_db --eval "db.collection.find()"`
 - `mongosh` is NOT on the host — it only exists inside the mongo container
 
 ### UI Testing is Ultimate Truth
@@ -150,7 +150,7 @@ python3 scripts/codebase_mapper/task_manager.py stats    # Verify
 **Full endpoint listing:** See `Docs/CodeMaps/api-map.md`
 
 **Base URLs:**
-- Local: `http://localhost/api/v1` | Live: `https://dev.a20core.com/api/v1` (same machine) | Health: `http://localhost/api/health`
+- Local: `http://localhost/api/v1` | Health: `http://localhost/api/health` | Live: this deployment's own `PUBLIC_BASE_URL` + `/api/v1` — see `Docs/1-Main-Documentation/Deployment-Identity.md` (reference deployment example: `https://dev.a20core.com/api/v1`, reached via Cloudflare on the `noobai` box, not necessarily "this machine")
 
 **Critical gotchas:**
 - Login is `POST /api/v1/auth/login` (NOT `/users/login`)
@@ -168,7 +168,9 @@ distinct ways this bites, both of which look like "the data was never saved":
    restarted. The field is written to MongoDB correctly and is missing from
    every API response. Verify with `mongosh` before assuming a write failed —
    if the document has it and the response does not, you need a restart:
-   `docker restart a64coreplatform-api-1` (that container has no `--reload`).
+   `docker restart <prefix>-api-1` — that container has no `--reload`, on any
+   deployment (see "Server & Git" below for finding `<prefix>`;
+   `a64coreplatform-api-1` on the reference deployment).
 
 2. **Declaring a narrower model than the service returns.** A route declared
    `response_model=PaginatedResponse[Line]` will strip the rollups off a
@@ -181,30 +183,65 @@ debugging time twice — check it early when a field "isn't saving".
 
 ## Server & Git
 
-### THE DEV MACHINE IS THE SERVER
-**This host runs the live instance.** There is no separate box to SSH into — you
-are already on it. Verified 2026-07-31:
+### Determine THIS deployment's identity before doing anything below
+
+Every A64 deployment is its own machine, with its own hostname, its own
+container name prefix, and its own public URL. Nothing about those values
+carries over from one deployment to another — a sibling install on a
+different box can (and has) had none of the container names this file used
+to assert. Work out the following for the box you're actually on before
+running any command in this section:
+
+1. **Hostname** — run `hostname`.
+2. **Container name prefix** — run `docker ps --format '{{.Names}}'`. The
+   prefix is whatever precedes `-api-1`, `-mongodb-1`, `-user-portal-1`, etc.
+   in the actual output. **Do not assume any specific prefix** — infer it
+   from `docker ps`, every time, on every box.
+3. **Public base URL** — the hostname baked into this deployment's printed
+   genetics QR labels (`PUBLIC_BASE_URL` in the API's environment). Getting
+   this wrong is not a config fix later — it ships on physical labels. See
+   `Docs/1-Main-Documentation/Deployment-Identity.md` before touching it.
+4. **Is this box actually the server**, or a dev/staging box that sits behind
+   a different tunnel/domain than production?
+
+`scripts/preflight.sh` automates steps 1–3 and prints what the current box
+resolved to — run it first on any box you haven't worked on before, rather
+than trusting a doc's example values.
+
+Every command below follows the pattern `docker <verb> <prefix>-<service>-1`.
+Substitute the prefix you found in step 2 — do not copy the reference
+deployment's prefix onto a different box.
+
+**Reference deployment (`noobai`) — a worked example, not a fact about your
+machine.** Verified 2026-07-31 for that one box only:
 
 | Host | Reaches | Notes |
 |------|---------|-------|
-| `dev.a20core.com` | **this machine**, via Cloudflare | serves the app *and* `/api/v1` |
+| `dev.a20core.com` | `noobai`, via Cloudflare | serves the app *and* `/api/v1` |
 | `a20core.com` / `www.a20core.com` | a different site | marketing/landing, NOT this app |
 | ~~`a64core.com`~~ | **dead** — no response | pre-rebrand, decommissioned |
 | ~~`51.112.224.227`~~ | **dead** | old AWS box; do NOT try to SSH here |
 
-This machine: hostname `noobai`, public IP `5.194.221.100`, stack started with
-`docker-compose.yml` + `docker-compose.finance.yml`.
+That reference box: hostname `noobai`, public IP `5.194.221.100`, container
+prefix `a64coreplatform-`, stack started with `docker-compose.yml` +
+`docker-compose.finance.yml`. If your `hostname` and `docker ps` output don't
+match this, only the *patterns* in this section apply to you, not these
+concrete values.
 
-**Consequence: the database on this machine holds REAL data**, not disposable
-seed. Treat every write as production. Never `deleteMany`/`updateMany` with an
-empty `{}` filter, and never mutate a record you did not just create.
+**Consequence for any deployment that IS a live instance:** its database
+holds REAL data, not disposable seed. Treat every write as production. Never
+`deleteMany`/`updateMany` with an empty `{}` filter, and never mutate a
+record you did not just create. Confirm liveness before assuming otherwise —
+don't assume a box is disposable just because it's unfamiliar.
 
 ### Deploying a change
 No SSH, no pull step — `src/` is bind-mounted into the api container, so edits
-are visible immediately. But **the api container has no `--reload`**:
+are visible immediately. But **the api container has no `--reload`, on any
+deployment**:
 
 ```bash
-docker restart a64coreplatform-api-1     # REQUIRED after any Python change
+docker restart <prefix>-api-1            # REQUIRED after any Python change
+docker restart a64coreplatform-api-1     # reference deployment example
 ```
 
 Restart *immediately before verifying*, not merely after editing — a stale
@@ -213,25 +250,31 @@ false "verified" results.
 
 Frontend is Vite with hot reload; no restart needed. If Vite throws an import
 error for an export that demonstrably exists, its module graph is stale:
-`docker restart a64coreplatform-user-portal-1`.
+`docker restart <prefix>-user-portal-1` (`a64coreplatform-user-portal-1` on
+the reference deployment).
 
 ### Verifying the database
-MongoDB MCP is broken. `mongosh` is **not installed on the host** — run it inside
-the container:
+MongoDB MCP is broken, on every deployment. `mongosh` is **not installed on
+the host** — run it inside the container, using this deployment's prefix:
 
 ```bash
+docker exec <prefix>-mongodb-1 mongosh --quiet \
+  mongodb://localhost:27017/a64core_db --eval 'db.genetic_lines.find({}, {_id:0, code:1})'
+
+# reference deployment example:
 docker exec a64coreplatform-mongodb-1 mongosh --quiet \
   mongodb://localhost:27017/a64core_db --eval 'db.genetic_lines.find({}, {_id:0, code:1})'
 ```
 
 ### Running backend tests
 `/app/tests` is **not** bind-mounted — copy it in, and note a restart wipes it.
-Stale `__pycache__` in the container has caused phantom failures:
+Stale `__pycache__` in the container has caused phantom failures, on any
+deployment:
 
 ```bash
-docker exec a64coreplatform-api-1 sh -c 'rm -rf /app/tests'
-docker cp tests a64coreplatform-api-1:/app/tests
-docker exec a64coreplatform-api-1 python -m pytest tests/unit/test_genetics -q
+docker exec <prefix>-api-1 sh -c 'rm -rf /app/tests'
+docker cp tests <prefix>-api-1:/app/tests
+docker exec <prefix>-api-1 python -m pytest tests/unit/test_genetics -q
 ```
 
 ### Assets and `.gitignore`
