@@ -24,7 +24,12 @@ import { useAuthStore } from '../../stores/auth.store';
 export function PendingActivation() {
   const navigate = useNavigate();
   const { pendingActivation, pendingActivationEmail, logout, isLoading } = useAuthStore();
-  const logoSrc = '/brand/lockup_cosmos.svg';
+  // Night Observatory is dark-only (T-901) — the cream-on-transparent lockup
+  // is correct unconditionally. Use the `transparent` variant, not
+  // `lockup_cosmos.svg` — that one bakes in its own opaque `#0E1330`
+  // background rect, which shows as a visible box seam against this card's
+  // glassPanel gradient.
+  const logoSrc = '/brand/lockup_transparent.svg';
 
   // Guard against landing here directly (bookmark, back-button, stale link)
   // without an actual pending-activation outcome in the store.

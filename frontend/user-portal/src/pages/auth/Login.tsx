@@ -131,11 +131,16 @@ export function Login() {
     cfAccessLogin,
     pendingActivation,
   } = useAuthStore();
-  // The lockup ships as separate cream/cosmos-text SVGs (not a single
-  // currentColor asset). Night Observatory is dark-only (T-901) — the cosmos
-  // (cream-text) variant is now correct unconditionally; the theme-mode
-  // branch that used to pick between the two is gone with light mode.
-  const logoSrc = '/brand/lockup_cosmos.svg';
+  // The lockup ships as separate cream/cosmos-text SVGs plus a `transparent`
+  // variant (cream-coloured content, no background rect). `lockup_cosmos.svg`
+  // is NOT transparent — it bakes in its own opaque `#0E1330` background
+  // rectangle, which shows as a visible box seam against this card's
+  // glassPanel gradient / the Night Observatory Sky layer behind it. Use the
+  // transparent lockup so the logo composites onto the glass card instead of
+  // sitting in its own tile. Night Observatory is dark-only (T-901), so the
+  // cream-on-transparent lockup is correct unconditionally; the theme-mode
+  // branch that used to pick between cosmos/cream is gone with light mode.
+  const logoSrc = '/brand/lockup_transparent.svg';
   const [localError, setLocalError] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState<string | null>(null);
 

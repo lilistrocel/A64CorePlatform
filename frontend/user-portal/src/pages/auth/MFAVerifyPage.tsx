@@ -39,9 +39,12 @@ export function MFAVerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyMfa, mfaPendingToken, mfaPendingUserId, mfaRequired, clearMfaState, isLoading, error: storeError, loadUser } = useAuthStore();
-  // Night Observatory is dark-only (T-901) — the cosmos (cream-text) lockup
-  // variant is now correct unconditionally; no more per-theme branch.
-  const logoSrc = '/brand/lockup_cosmos.svg';
+  // Night Observatory is dark-only (T-901) — the cream-on-transparent lockup
+  // is now correct unconditionally; no more per-theme branch. Use the
+  // `transparent` variant, not `lockup_cosmos.svg` — that one bakes in its
+  // own opaque `#0E1330` background rect, which shows as a visible box seam
+  // against this card's glassPanel gradient.
+  const logoSrc = '/brand/lockup_transparent.svg';
 
   // Get MFA token from location state (legacy) OR from auth store OR from sessionStorage cache
   const state = location.state as LocationState | null;

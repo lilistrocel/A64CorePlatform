@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { AlertTriangle, Building2, Leaf, Sprout } from 'lucide-react';
 import { useDivisionStore, type Division } from '../../stores/division.store';
-import { useThemeStore } from '../../stores/theme.store';
 import { Spinner, glassPanel, glassPanelHover, monoLabel } from '@a64core/shared';
 
 // Industry type display helpers — Night Observatory (T-901 GAP-FILL, spec
@@ -29,9 +28,16 @@ export function DivisionSelector() {
     loadDivisions,
     setCurrentDivision,
   } = useDivisionStore();
-  // Lockup ships as separate cream/cosmos-text SVGs — pick per theme (spec §5).
-  const { mode } = useThemeStore();
-  const logoSrc = mode === 'dark' ? '/brand/lockup_cosmos.svg' : '/brand/lockup_cream.svg';
+  // Night Observatory is dark-only (T-901) — mode is hard-forced to 'dark'
+  // (see theme.store.ts), so the per-theme branch this used to have is dead
+  // code; the cream-on-transparent lockup is correct unconditionally. Use
+  // the `transparent` variant, not `lockup_cosmos.svg` — that one bakes in
+  // its own opaque `#0E1330` background rect, which shows as a visible box
+  // seam against this page's glassPanel cards. If light mode ever returns,
+  // this needs a dark-content transparent SVG re-sourced from the brand
+  // pack (only a PNG render, `lockup_trans-light.png`, exists today) and the
+  // per-theme branch restored.
+  const logoSrc = '/brand/lockup_transparent.svg';
 
   // Load available divisions on mount, exactly once.
   // Gated on hasFetchedOnce (not length === 0) so a legitimate [] response
