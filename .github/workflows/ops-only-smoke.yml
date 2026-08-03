@@ -119,6 +119,13 @@ jobs:
         # so `npm ci` has to run there rather than in the user-portal member.
         working-directory: frontend
         run: |
+          # The user-portal service declares anonymous volumes at
+          # /app/shared/node_modules and /app/user-portal/node_modules over
+          # bind-mounted host dirs, so booting the stack above leaves those
+          # directories on the host owned by root. npm ci then dies with
+          # EACCES mkdir .../frontend/shared/node_modules/@emotion.
+          # Reclaim them for the runner before installing.
+          sudo chown -R "$(id -u):$(id -g)" .
           npm ci
           npx playwright install --with-deps chromium
 
