@@ -33,7 +33,7 @@ import pytest
 
 def _make_pr_header(
     doc_id: Optional[str] = None,
-    status: str = "Approved",
+    status: str = "open",
 ) -> Dict[str, Any]:
     """Return a minimal document_headers document for a PR."""
     doc_id = doc_id or str(uuid.uuid4())
@@ -60,7 +60,7 @@ def _make_pr_header(
 
 def _make_po_header(
     doc_id: Optional[str] = None,
-    status: str = "Open",
+    status: str = "open",
 ) -> Dict[str, Any]:
     """Return a minimal document_headers document for a PO."""
     doc_id = doc_id or str(uuid.uuid4())
@@ -270,8 +270,9 @@ class TestRunSweep:
 
     @pytest.mark.asyncio
     async def test_scenario_a_missing_event_emitted(self) -> None:
-        """PR Approved with no outbox row → sweeper emits pr_state_changed."""
-        header = _make_pr_header(status="Approved")
+        """PR stored status "open" (displays "Approved") with no outbox row →
+        sweeper emits pr_state_changed."""
+        header = _make_pr_header(status="open")
         mock_db = self._make_mock_db(headers=[header], outbox_docs=[])
 
         with patch.dict(os.environ, {"FINANCE_OUTBOX_ENABLED": "true"}):
@@ -289,8 +290,10 @@ class TestRunSweep:
 
     @pytest.mark.asyncio
     async def test_scenario_b_existing_event_skipped(self) -> None:
-        """PR Approved with matching outbox row → sweeper skips (no duplicate)."""
-        header = _make_pr_header(status="Approved")
+        """PR stored status "open" with a matching outbox row (payload.state
+        holds the mapped DISPLAY value "Approved", as build_pr_event_payload
+        writes it) → sweeper skips (no duplicate)."""
+        header = _make_pr_header(status="open")
         existing_outbox = {
             "sourceDocumentId": header["docId"],
             "payload": {"state": "Approved"},
@@ -335,8 +338,9 @@ class TestRunSweep:
 
     @pytest.mark.asyncio
     async def test_scenario_d_po_open_emits_po_event(self) -> None:
-        """PO Open with no outbox row → sweeper emits po_state_changed."""
-        header = _make_po_header(status="Open")
+        """PO stored status "open" (displays "Open") with no outbox row →
+        sweeper emits po_state_changed."""
+        header = _make_po_header(status="open")
         mock_db = self._make_mock_db(headers=[header], outbox_docs=[])
 
         with patch.dict(os.environ, {"FINANCE_OUTBOX_ENABLED": "true"}):
@@ -375,10 +379,15 @@ class TestRunSweep:
 
     @pytest.mark.asyncio
     async def test_deterministic_event_id_used_on_emit(self) -> None:
-        """Sweeper passes a deterministic event_id to OutboxWriter.publish."""
+        """Sweeper passes a deterministic event_id to OutboxWriter.publish.
+
+        The event_id is derived from the RAW stored status ("open"), not the
+        mapped display value ("Approved") — the ID scheme is an internal
+        dedup key, independent of the payload's finance-event vocabulary.
+        """
         from cron.scripts.outbox_reconciler import make_sweeper_event_id
 
-        header = _make_pr_header(status="Approved")
+        header = _make_pr_header(status="open")
         mock_db = self._make_mock_db(headers=[header], outbox_docs=[])
 
         published_event_ids: List[str] = []
@@ -399,7 +408,7 @@ class TestRunSweep:
                 importlib.reload(outbox_reconciler)
                 stats = await outbox_reconciler.run_sweep(mock_db)
 
-        expected_id = make_sweeper_event_id(header["docId"], "Approved")
+        expected_id = make_sweeper_event_id(header["docId"], "open")
         assert len(published_event_ids) == 1
         assert published_event_ids[0] == expected_id
         assert stats["re_emitted"] == 1

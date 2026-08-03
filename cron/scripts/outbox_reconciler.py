@@ -66,8 +66,21 @@ logger = logging.getLogger("outbox_reconciler")
 
 # Finance-relevant terminal statuses that MUST have a matching outbox row.
 # Draft and Pending Approval are excluded — they do not produce outbox events.
-_PR_FINANCE_STATUSES: List[str] = ["Approved", "Closed"]
-_PO_FINANCE_STATUSES: List[str] = ["Open", "Sent", "Cancelled"]
+#
+# Reason (Wave 4 regression fix): these MUST match the STORED vocabulary in
+# document_headers.status, not the finance-event DISPLAY vocabulary. Before
+# wave4_purchasing_status_migration.py (T-200.21), the two were identical
+# (both TitleCase), so this list silently doubled as both. The migration
+# rewrote stored values to the shared DocumentStatus lowercase_snake form
+# ("Approved"/"Open"/"Closed"/"Cancelled" -> "open"/"open"/"closed"/
+# "cancelled"), while "Sent" was deliberately left as-is (no shared
+# equivalent). Leaving this list in the old display vocabulary made the
+# Mongo $in query below silently stop matching any migrated document —
+# the sweeper would scan almost nothing. See map_pr_state_for_event /
+# map_po_state_for_event in document_service.py for the corresponding
+# stored -> display mapping applied to the emitted payload itself.
+_PR_FINANCE_STATUSES: List[str] = ["open", "closed"]
+_PO_FINANCE_STATUSES: List[str] = ["open", "Sent", "cancelled"]
 
 # Deterministic UUID namespace for sweeper-generated event IDs.
 # Changing this namespace would invalidate all existing sweeper event IDs —
@@ -112,7 +125,7 @@ def make_sweeper_event_id(doc_id: str, current_status: str) -> str:
 async def outbox_event_exists(
     db: motor.motor_asyncio.AsyncIOMotorDatabase,
     doc_id: str,
-    current_status: str,
+    display_status: str,
 ) -> bool:
     """
     Check whether finance_outbox already contains an event for this doc + status.
@@ -120,7 +133,13 @@ async def outbox_event_exists(
     Args:
         db: Motor async database instance.
         doc_id: The document's docId (used as sourceDocumentId in outbox rows).
-        current_status: The status value that should appear in payload.state.
+        display_status: The value that should appear in payload.state — the
+            finance-event DISPLAY vocabulary (e.g. "Approved", "Open"), NOT
+            the raw stored document_headers.status. Callers must map the
+            stored status first via map_pr_state_for_event /
+            map_po_state_for_event before calling this, since
+            build_pr_event_payload / build_po_event_payload write the
+            mapped display value into payload.state.
 
     Returns:
         True if a matching row exists, False if missing.
@@ -130,7 +149,7 @@ async def outbox_event_exists(
     existing = await db[_OUTBOX_COL].find_one(
         {
             "sourceDocumentId": doc_id,
-            "payload.state": current_status,
+            "payload.state": display_status,
         }
     )
     return existing is not None
@@ -238,7 +257,25 @@ async def run_sweep(db: motor.motor_asyncio.AsyncIOMotorDatabase) -> Dict[str, i
             continue
 
         try:
-            already_emitted = await outbox_event_exists(db, doc_id, current_status)
+            # Reason: payload.state on real outbox rows holds the mapped
+            # finance-event DISPLAY value (see build_pr_event_payload /
+            # build_po_event_payload), not the raw stored current_status —
+            # map before checking existence or every check false-negatives
+            # and the sweeper re-emits duplicates on every run.
+            if doc_type == "PR":
+                from src.modules.purchasing.services.document_service import (
+                    map_pr_state_for_event,
+                )
+
+                display_status = map_pr_state_for_event(current_status)
+            else:
+                from src.modules.purchasing.services.document_service import (
+                    map_po_state_for_event,
+                )
+
+                display_status = map_po_state_for_event(current_status)
+
+            already_emitted = await outbox_event_exists(db, doc_id, display_status)
             if already_emitted:
                 continue
 

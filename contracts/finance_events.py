@@ -568,6 +568,7 @@ class PurchaseOrderStateChangedPayload(BaseModel):
         "Received",
         "Closed",
         "Cancelled",
+        "Rejected",
     ]
     previousState: Optional[str] = None
     organizationId: UUID

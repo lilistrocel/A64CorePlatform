@@ -37,6 +37,18 @@ Legacy → enum mapping:
   "Sent"    (PO)   → kept as raw string; no shared enum equivalent yet (Wave 4)
   "Rejected" (PR/PO/AP) → kept as raw string; no shared enum equivalent yet
 
+Finance event `state` display mapping (Wave 4 regression fix)
+----------------------------------------------------------------
+The migration above changed what is STORED on the header, but the finance
+event contracts (contracts/finance_events.py) still declare `state` as a
+Literal in the pre-migration TitleCase DISPLAY vocabulary — they were not
+updated alongside the migration. ``build_pr_event_payload`` /
+``build_po_event_payload`` therefore run ``header["status"]`` through
+``map_pr_state_for_event`` / ``map_po_state_for_event`` before placing it on
+the payload, translating the stored value back to its display form (e.g.
+stored "draft" → "Draft") instead of passing it through raw, which crashed
+Pydantic validation on every PO/PR create once the migration had run.
+
 Transactional outbox (Phase 2)
 -------------------------------
 Every state-mutating method wraps its Mongo writes inside a single Motor
@@ -176,6 +188,124 @@ _LEGACY_STATUS_MAP: Dict[str, DocumentStatus] = {
 _LEGACY_NO_ENUM_STATES = frozenset({"Rejected", "Sent", "Partially Received", "Received"})
 
 
+# ---------------------------------------------------------------------------
+# Stored-status -> finance-event display-status mapping (Wave 4 regression)
+#
+# wave4_purchasing_status_migration.py (T-200.21) rewrote the STORED `status`
+# field on document_headers from legacy TitleCase to the shared DocumentStatus
+# lowercase_snake vocabulary, but purchasing-internal states with no shared
+# equivalent ("Rejected", "Sent", "Partially Received", "Received") were
+# deliberately left untouched (see _LEGACY_NO_ENUM_STATES above).
+#
+# The finance event contracts (contracts/finance_events.py) were NOT updated
+# alongside the migration — PurchaseRequestStateChangedPayload.state and
+# PurchaseOrderStateChangedPayload.state still declare a Literal in the
+# legacy TitleCase DISPLAY vocabulary.  Passing the raw stored value straight
+# through (the pre-fix behaviour) fails Pydantic validation the moment a
+# document is stored with the new lowercase_snake vocabulary — e.g. creating
+# a PO stores "draft" and PurchaseOrderStateChangedPayload rejects it.
+#
+# These two maps translate stored -> display so build_pr_event_payload /
+# build_po_event_payload always emit a value the contract Literal accepts.
+# Doc-type-specific because the same stored "open" means different things:
+# PR "open" displays as "Approved" (approval outcome); PO "open" displays as
+# "Open" (sent-ready/active order) — collapsing them into one shared map
+# would be wrong for one of the two doc types.
+#
+# Also accepts the pre-migration legacy TitleCase inputs as identity
+# mappings (they already ARE the display form the contract expects) — this
+# mirrors _parse_status's own tolerance above and is required for the same
+# reason: document_service.py is explicitly designed to keep working during
+# the migration window, before wave4_purchasing_status_migration.py has run
+# against a given database, so header["status"]/previous_state can still be
+# "Open"/"Draft"/etc. rather than "open"/"draft"/etc.
+# ---------------------------------------------------------------------------
+
+_PR_STATE_EVENT_DISPLAY: Dict[str, str] = {
+    "draft": "Draft",
+    "pending_approval": "Pending Approval",
+    "open": "Approved",
+    "closed": "Closed",
+    "cancelled": "Cancelled",
+    "Rejected": "Rejected",
+    # Reason: pre-migration legacy TitleCase — already valid display form.
+    "Draft": "Draft",
+    "Pending Approval": "Pending Approval",
+    "Approved": "Approved",
+    "Closed": "Closed",
+    "Cancelled": "Cancelled",
+}
+
+_PO_STATE_EVENT_DISPLAY: Dict[str, str] = {
+    "draft": "Draft",
+    "pending_approval": "Pending Approval",
+    "open": "Open",
+    "partly_closed": "Partially Received",
+    "closed": "Closed",
+    "cancelled": "Cancelled",
+    "Sent": "Sent",
+    "Partially Received": "Partially Received",
+    "Received": "Received",
+    "Rejected": "Rejected",
+    # Reason: pre-migration legacy TitleCase — already valid display form.
+    "Draft": "Draft",
+    "Pending Approval": "Pending Approval",
+    "Open": "Open",
+    "Closed": "Closed",
+    "Cancelled": "Cancelled",
+}
+
+
+def map_pr_state_for_event(stored: str) -> str:
+    """
+    Map a stored PR status to the display vocabulary the finance event
+    contract's `state` Literal expects.
+
+    Args:
+        stored: Raw status string from document_headers — either the shared
+            lowercase_snake vocabulary or a PR-internal literal ("Rejected").
+
+    Returns:
+        Display-form status matching PurchaseRequestStateChangedPayload.state.
+
+    Raises:
+        ValueError: If stored has no known display mapping — raised rather
+            than passed through, so an unmapped value fails loudly here
+            instead of reintroducing the Pydantic validation crash this
+            mapping exists to fix.
+    """
+    try:
+        return _PR_STATE_EVENT_DISPLAY[stored]
+    except KeyError:
+        raise ValueError(
+            f"PR: stored status '{stored}' has no finance event display mapping"
+        )
+
+
+def map_po_state_for_event(stored: str) -> str:
+    """
+    Map a stored PO status to the display vocabulary the finance event
+    contract's `state` Literal expects.
+
+    Args:
+        stored: Raw status string from document_headers — either the shared
+            lowercase_snake vocabulary or a PO-internal literal ("Sent",
+            "Partially Received", "Received", "Rejected").
+
+    Returns:
+        Display-form status matching PurchaseOrderStateChangedPayload.state.
+
+    Raises:
+        ValueError: If stored has no known display mapping.
+    """
+    try:
+        return _PO_STATE_EVENT_DISPLAY[stored]
+    except KeyError:
+        raise ValueError(
+            f"PO: stored status '{stored}' has no finance event display mapping"
+        )
+
+
 def _parse_status(raw: Optional[str]) -> DocumentStatus:
     """
     Tolerant parser: accepts both legacy TitleCase purchasing vocabulary and
@@ -274,8 +404,13 @@ def build_pr_event_payload(
     return {
         "docId": header["docId"],
         "docNumber": header["docNumber"],
-        "state": header["status"],
-        "previousState": previous_state,
+        # Reason: header["status"] is the STORED lowercase_snake vocabulary
+        # (or a PR-internal literal); the contract's `state` Literal expects
+        # the legacy TitleCase DISPLAY vocabulary. See map_pr_state_for_event.
+        "state": map_pr_state_for_event(header["status"]),
+        "previousState": (
+            map_pr_state_for_event(previous_state) if previous_state else previous_state
+        ),
         "organizationId": header["organizationId"],
         "companyCode": header.get("companyCode", company_code),
         "requestedBy": header.get("requestedBy") or header.get("createdBy"),
@@ -317,8 +452,13 @@ def build_po_event_payload(
     return {
         "docId": header["docId"],
         "docNumber": header["docNumber"],
-        "state": header["status"],
-        "previousState": previous_state,
+        # Reason: header["status"] is the STORED lowercase_snake vocabulary
+        # (or a PO-internal literal); the contract's `state` Literal expects
+        # the legacy TitleCase DISPLAY vocabulary. See map_po_state_for_event.
+        "state": map_po_state_for_event(header["status"]),
+        "previousState": (
+            map_po_state_for_event(previous_state) if previous_state else previous_state
+        ),
         "organizationId": header["organizationId"],
         "companyCode": header.get("companyCode", company_code),
         "vendorId": header.get("vendorId"),
