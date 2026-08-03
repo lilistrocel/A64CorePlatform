@@ -205,10 +205,16 @@ export function OperationsDashboard() {
 // cards, phase-map badges. Visual idiom: MushroomRoomMonitor.tsx.
 // ============================================================================
 
+// Transparent page container — the fixed sky shows through (spec §7).
+// Padding matches MushroomRoomMonitor/MushroomFacilityManager's Container
+// (both live under the same Operations section) — this page was previously
+// missing it entirely, which read as "no margins" against every other page.
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  padding: 34px 40px 60px;
+  max-width: 100%;
 `;
 
 const StateBox = styled.div`

@@ -286,10 +286,20 @@ export function BlockTaskList() {
 // STYLED COMPONENTS
 // ============================================================================
 
+// Transparent page container — the fixed sky (mounted once at the app
+// shell) shows through every page (spec §7); no opaque background here.
+// Padding matches OperationsDashboard/FarmBlocksView (the other two pages in
+// this same farm -> blocks -> tasks flow) and MushroomRoomMonitor/
+// MushroomFacilityManager (same Operations section) — this page was
+// previously the only one of the three with no page-level padding at all,
+// plus a `min-height: 100vh` and a solid background that painted over the
+// sky layer every other routed page leaves transparent. Removing the fixed
+// viewport height also avoids a double scrollbar: MainContent/LayoutContainer
+// already establish the page's real scroll container (see MainLayout.tsx).
 const Container = styled.div`
-  min-height: 100vh;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  padding-bottom: ${({ theme }) => theme.spacing.xl};
+  min-height: 100%;
+  padding: 34px 40px 60px;
+  max-width: 100%;
 `;
 
 const Header = styled.div`
@@ -411,7 +421,10 @@ const BlockState = styled.span<{ $state: string }>`
 const FilterBar = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.lg};
+  /* Horizontal padding intentionally omitted — Container now supplies the
+     page-level horizontal inset. Keeping it here as well would double up and
+     misalign the filter pills against Header's card edge. */
+  padding: ${({ theme }) => theme.spacing.lg} 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 
@@ -441,7 +454,8 @@ const FilterButton = styled.button<{ $active: boolean }>`
 `;
 
 const TaskList = styled.div`
-  padding: 0 ${({ theme }) => theme.spacing.lg};
+  /* Horizontal padding intentionally omitted — Container now supplies the
+     page-level horizontal inset (see FilterBar comment above). */
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.md};
