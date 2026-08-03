@@ -1,6 +1,6 @@
 # Database Map
 
-> Generated: 2026-08-01 08:10 UTC  
+> Generated: 2026-08-03 12:15 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=db_model, layer=model)
 
 ## Overview
@@ -10,7 +10,7 @@ This map covers all collections, document schemas, and inter-collection relation
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md)
 
-## Collections by Module (56 models)
+## Collections by Module (57 models)
 
 ### Module: `ai_analytics`
 
@@ -23,7 +23,14 @@ This map covers all collections, document schemas, and inter-collection relation
 
 | Collection/Model | File | Description |
 |------------------|------|-------------|
-| `Organization / module config models` | `src/models/organization.py:1` | T-804: PublicInfoPageConfig — what a scanned genetics label may reveal to the public internet. Every show* flag (showMediumIngredients/showProtocolSteps/showOperatorName/showFacilityName) defaults to False, a deliberate privacy/trade-secret decision. Read directly by genetics.api.public to gate the anonymous response shape; ignored entirely by the authenticated shape. NOTE: only these module-config models are mapped here; the rest of organization.py is unmapped pending map_core_api. | PublicInfoPageConfig, PublicInfoPageConfigUpdate, OrganizationModules, Organizat |
+| `ChartWidgetData / StatWidgetData / WidgetDataResponse` | `src/models/dashboard.py:17` | CCM Dashboard widget data shapes: chart widgets (line/bar/pie with multi-series support) and stat widgets (value + trend), plus data-source descriptors (module vs. system-metric origin) and the bulk-fetch request/response envelope used by POST /dashboard/widgets/bulk. | ChartSeries, ChartWidgetData, StatWidgetData, ModuleDataSource, SystemDataSource |
+| `DeploymentSettingItem / DeploymentSettingsResponse` | `src/models/deployment_settings.py:15` | NEW TODAY. Request/response schemas for GET/PATCH /api/v1/admin/deployment-settings. DeploymentSettingItem carries `value` for ordinary keys but only `isSet`/`maskedHint` (last 4 chars) for the two Cloudflare secrets (CF_ACCESS_TEAM_DOMAIN, CF_ACCESS_AUD) — there is deliberately no field or endpoint that returns them in full. DeploymentSettingsPatchRequest requires `currentPassword` (guardrail c in deployment_settings_service.update) alongside the `changes` dict of only the keys being modified. | DeploymentSettingItem, DeploymentSettingsResponse, DeploymentSettingsPatchReques |
+| `IndustryType / Division / DivisionResponse` | `src/models/division.py:15` | IndustryType enum (vegetable_fruits, mushroom) plus the full Division CRUD schema family. Division is scoped to an organizationId and carries a unique-per-org divisionCode. DivisionSelectResponse is returned by POST /divisions/{id}/select confirming the new active division. | IndustryType, DivisionBase, DivisionCreate, DivisionUpdate, Division, DivisionRe |
+| `ModuleConfig / ModuleStatusResponse / PortAllocation` | `src/models/module.py:46` | Docker Compose module-management schema family backing core.api.modules and core.service.module_manager/port_manager: install config (image, license key, resource limits, security profile), runtime status/health enums, audit log entries, and the port-allocation range/registry types used by PortManager. | ModuleStatus, ModuleHealth, ModuleConfig, ModuleInDB, ModuleResponse, ModuleList |
+| `Organization / OrganizationModules / PublicInfoPageConfig` | `src/models/organization.py:14` | Top-level tenancy model. OrganizationModules (Wave 0 T-059) holds per-tenant module toggles: financeEnabled (hides finance UI + gates the outbox writer) and publicInfoPage (T-804 — PublicInfoPageConfig: what a scanned genetics label may reveal publicly; every show* flag — showOperatorName/showMediumIngredients/showProtocolSteps/showFacilityName — defaults False as a deliberate privacy/trade-secret decision, while `enabled` defaults True so the page works out of the box). PublicInfoPageConfigUpdate is a fully-optional partial-update twin of PublicInfoPageConfig specifically so OrganizationService.update_modules can merge one changed flag (e.g. {"enabled": false}) onto the stored config without resetting sibling privacy flags to their model defaults. Read directly by genetics.api.public to gate the anonymous public label-info response shape; ignored entirely by the authenticated shape. | PublicInfoPageConfig, PublicInfoPageConfigUpdate, OrganizationModules, Organizat |
+| `UserMFA / MFABackupCode / MFAAuditLog` | `src/models/mfa.py:13` | Database-schema models for the user_mfa / mfa_backup_codes / mfa_audit_log collections that core.service.database indexes but core.service.mfa_service does not currently use (that service keeps all MFA state inline on the users document instead) — this file appears to be a parallel/legacy schema design for a separate-collection MFA store. MFALoginRequired (imported by core.api.auth as the response type for a pending MFA challenge) is the one type from this file actually wired into the live auth flow today. | MFAMethod, MFAStatus, MFASetupResponse, MFAVerifyRequest, MFAEnableRequest, MFAD |
+| `UserRole / UserCreate / UserResponse / TokenResponse / MFA* models` | `src/models/user.py:15` | Core user/auth Pydantic models. UserRole enum includes finance (accountant/finance_admin/auditor) and purchasing (procurement_officer/procurement_manager) roles alongside the base hierarchy. UserCreate/PasswordResetConfirm enforce password complexity (upper/lower/digit/special, 8-128 chars) via validators. UserResponse carries two fields added TODAY: authProvider ('password' | 'cloudflare_access', defaults 'password' for pre-existing accounts) and nameAutoDerived (True for Cloudflare-JIT-provisioned users whose name was guessed from the email local-part, cleared the moment the user edits either name field). TokenResponse/MFA* models back every auth.py and admin.py endpoint response shape. | UserRole, UserBase, UserCreate, UserUpdate, UserOrganizationAssignment, UserResp |
+| `platform_settings` | `src/services/deployment_settings_service.py` | MongoDB collection: platform_settings - singleton document (_id: 'deployment') holding deployment-wide config: PUBLIC_BASE_URL/FRONTEND_URL identity and CF_ACCESS_* Cloudflare Access settings. Written only via deployment_settings_service.update(); resolution order for any managed key is env var -> this document -> unset (env acts as a lock making the DB value non-editable). |
 
 ### Module: `crm`
 
@@ -198,6 +205,23 @@ This map covers all collections, document schemas, and inter-collection relation
 | `genetics.service.lineage_service` | reads_from | `collection_genetic_accessions` | Breadth-first traversal over parents.accessionId, one query per depth level. |
 | `genetics.service.dashboard_service` | reads_from | `collection_genetic_accessions` | Counts live material, vessels and the senescence watch list. |
 | `genetics.service.maintenance_service` | reads_from | `collection_genetic_lines` | _existing_line_ids builds the reference set every other collection's lineId is d |
+| `core.api.health` | reads_from | `core.service.database` | mongodb.health_check() for /health and /ready |
+| `core.api.dashboard` | reads_from | `collection_farms` | farm count/active aggregation |
+| `core.api.dashboard` | reads_from | `collection_blocks` | block count + state breakdown aggregation |
+| `core.api.dashboard` | reads_from | `collection_employees` | employee count/active aggregation |
+| `core.api.dashboard` | reads_from | `collection_customers` | customer count/active aggregation |
+| `core.api.dashboard` | reads_from | `collection_sales_orders` | order count + status breakdown aggregation |
+| `core.api.dashboard` | reads_from | `collection_vehicles` | vehicle count + status breakdown aggregation |
+| `core.api.dashboard` | reads_from | `collection_shipments` | shipment count + status breakdown aggregation |
+| `core.api.dashboard` | reads_from | `collection_campaigns` | campaign count/active aggregation |
+| `core.api.dashboard` | reads_from | `collection_users` | user count/active aggregation |
+| `core.api.modules` | reads_from | `collection_module_audit_log` | GET /modules/audit-log paginated + filtered query |
+| `core.api.organizations` | reads_from | `collection_organizations` | get_organization / list_organizations |
+| `core.service.deployment_settings_service` | reads_from | `collection_users` | verify actor's current password before applying changes |
+| `core.service.division_service` | reads_from | `collection_organizations` | create_division validates the parent org exists |
+| `finance_bridge.tenant_flag` | reads_from | `collection_organizations` | modules.financeEnabled projection on cache miss |
+| `finance_bridge.outbox_repository` | reads_from | `collection_finance_outbox` | consumer worker status-transition queries via atomic findOneAndUpdate |
+| `core.service.deployment_settings_service` | reads_from | `collection_platform_settings` | db.platform_settings.find_one/update_one({'_id': 'deployment'}) |
 | `farm_manager.service.FarmRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | FarmRepository reads/writes 'farms' collection via farm_db. |
 | `farm_manager.service.BlockRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | BlockRepository reads/writes 'blocks' collection via farm_db. |
 | `farm_manager.service.HarvestRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | HarvestRepository reads/writes 'block_harvests' collection via farm_db. |
@@ -225,3 +249,16 @@ This map covers all collections, document schemas, and inter-collection relation
 | `genetics.service.line_service` | stores_in | `collection_genetic_accessions` | cascade_purge_line removes gathered accession ids under a purged line. |
 | `genetics.service.line_service` | stores_in | `collection_propagation_events` | cascade_purge_line removes gathered propagation-event ids under a purged line. |
 | `genetics.service.line_service` | stores_in | `collection_genetic_observations` | cascade_purge_line removes gathered observation ids under a purged line. |
+| `core.api.main` | stores_in | `collection_users` | seed_admin() inserts/promotes the default super_admin user |
+| `core.api.main` | stores_in | `collection_organizations` | seed_admin() inserts the default organization if none exists |
+| `core.api.admin` | stores_in | `collection_users` | role/status/organization updates, soft delete, MFA reset |
+| `core.api.admin` | stores_in | `collection_admin_audit_log` | mfa_reset audit entry |
+| `core.api.users` | stores_in | `collection_users` | metadata.tutorialsSeen via $addToSet / $set |
+| `core.api.organizations` | stores_in | `collection_admin_audit_log` | organization.modules.updated audit entry with before/after snapshot |
+| `core.service.auth_service` | stores_in | `collection_users` | insert on register, lastLoginAt/passwordHash/isEmailVerified updates, JIT-provis |
+| `core.service.auth_service` | stores_in | `collection_refresh_tokens` | insert on every login/refresh, revoke on logout/reset-password |
+| `core.service.auth_service` | stores_in | `collection_verification_tokens` | email verification + password reset tokens |
+| `core.service.auth_service` | stores_in | `collection_mfa_pending_tokens` | short-lived MFA challenge tokens issued by _issue_mfa_challenge |
+| `core.service.deployment_settings_service` | stores_in | `collection_platform_settings` | singleton doc _id='deployment' — new today |
+| `core.service.deployment_settings_service` | stores_in | `collection_admin_audit_log` | deployment_settings.updated audit entry with masked before/after |
+| `core.service.mfa_service` | stores_in | `collection_users` | mfaSecret, mfaBackupCodes, mfaPendingSecret, mfaLastUsedCounter fields |

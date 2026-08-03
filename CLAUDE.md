@@ -121,7 +121,9 @@ The per-tenant `organizations.modules.financeEnabled` flag hides the Finance sid
 ## Documentation & CodeMaps
 
 ### Key Documentation Paths
-- **CodeMaps (read FIRST):** `Docs/CodeMaps/INDEX.md` — 446 nodes, 285 edges across 7 modules
+- **CodeMaps (read FIRST):** `Docs/CodeMaps/INDEX.md` — the graph size is stated in
+  that file's header, which is regenerated with the maps; don't duplicate the count
+  here, it only goes stale (it read "446 nodes, 285 edges" while the graph held 812/995)
 - **Main Docs:** `Docs/1-Main-Documentation/` (System-Architecture, API-Structure, User-Structure, Versioning)
 - **Working Progress:** `Docs/2-Working-Progress/`
 - **DevLog:** `Docs/3-DevLog/`
