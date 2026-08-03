@@ -136,3 +136,92 @@ export async function updateOrganizationModules(
   );
   return data;
 }
+
+// ─── Deployment Settings (super_admin only) ────────────────────────────────
+// Mirrors src/models/deployment_settings.py — GET/PATCH
+// /api/v1/admin/deployment-settings. Lets a super_admin configure deployment
+// identity (PUBLIC_BASE_URL, FRONTEND_URL) and Cloudflare Access
+// (CF_ACCESS_*) from the browser instead of editing .env + recreating the
+// container. See DeploymentSettingsCard.tsx for the UI.
+
+/** Where a managed key's effective value came from. 'env' means it is
+ * pinned by an environment variable on this deployment and cannot be
+ * edited through this API (`editable` is false in that case). */
+export type DeploymentSettingSource = 'env' | 'db' | 'unset';
+
+/**
+ * One resolved managed key. `value` is populated for every key EXCEPT
+ * `CF_ACCESS_TEAM_DOMAIN` / `CF_ACCESS_AUD` — those two never return their
+ * full value (see module docstring in deployment_settings_service.py for
+ * why). For those two, `isSet` + `maskedHint` (last 4 characters, e.g.
+ * "...ab12") are populated instead. There is deliberately no reveal
+ * endpoint — never build a UI affordance that expects one.
+ */
+export interface DeploymentSettingItem {
+  source: DeploymentSettingSource;
+  editable: boolean;
+  value?: string | boolean | null;
+  isSet?: boolean | null;
+  maskedHint?: string | null;
+}
+
+export type DeploymentSettingsMap = Record<string, DeploymentSettingItem>;
+
+export interface DeploymentSettingsResponse {
+  settings: DeploymentSettingsMap;
+}
+
+export type DeploymentSettingValue = string | boolean;
+
+/**
+ * PATCH request body. `currentPassword` re-authenticates the acting
+ * super_admin — mandatory on every call, not just when "convenient".
+ * `changes` must carry only the keys actually being modified; sending an
+ * env-pinned key is a 409, an unknown key or wrong value type is a 422.
+ */
+export interface DeploymentSettingsPatchRequest {
+  currentPassword: string;
+  changes: Record<string, DeploymentSettingValue>;
+}
+
+export const DEPLOYMENT_SETTINGS_QUERY_KEY = ['deployment-settings'] as const;
+
+/**
+ * Fetch every managed deployment/Cloudflare Access key's effective value.
+ *
+ * Maps to GET /api/v1/admin/deployment-settings. Super_admin only — the
+ * backend returns 403 for anyone else; callers should self-gate on
+ * `user.role === 'super_admin'` before firing this query (see
+ * DeploymentSettingsCard's `enabled` flag).
+ */
+export async function getDeploymentSettings(): Promise<DeploymentSettingsResponse> {
+  const { data } = await apiClient.get<DeploymentSettingsResponse>(
+    '/v1/admin/deployment-settings'
+  );
+  return data;
+}
+
+/**
+ * Apply a validated set of deployment/Cloudflare Access setting changes.
+ *
+ * Maps to PATCH /api/v1/admin/deployment-settings. Returns the freshly
+ * resolved settings (same shape as `getDeploymentSettings`).
+ *
+ * Distinct error cases callers must handle (see
+ * services/deployment_settings_service.py `update()` docstring):
+ * - 401: `currentPassword` did not match the actor's stored hash.
+ * - 409: a changed key is pinned by an environment variable, OR
+ *   `CF_ACCESS_EXCLUSIVE` was requested without a previously recorded
+ *   successful Cloudflare Access sign-in on this deployment.
+ * - 422: unknown key, wrong value type, or `CF_ACCESS_TEAM_DOMAIN` failed
+ *   Cloudflare JWKS validation.
+ */
+export async function updateDeploymentSettings(
+  patch: DeploymentSettingsPatchRequest
+): Promise<DeploymentSettingsResponse> {
+  const { data } = await apiClient.patch<DeploymentSettingsResponse>(
+    '/v1/admin/deployment-settings',
+    patch
+  );
+  return data;
+}

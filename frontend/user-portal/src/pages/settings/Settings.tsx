@@ -10,6 +10,7 @@ import { useToastStore } from '../../stores/toast.store';
 import { TelegramBotSettings } from '../../components/settings/TelegramBotSettings';
 import { ModulesSettingsCard } from '../../components/settings/ModulesSettingsCard';
 import { OrphanSweepCard } from '../../components/settings/OrphanSweepCard';
+import { DeploymentSettingsCard } from '../../components/settings/DeploymentSettingsCard';
 
 // Month names for farming year configuration
 const MONTH_NAMES = [
@@ -873,6 +874,9 @@ export function Settings() {
 
       {/* T-809 — Genetics Repo orphan sweep, super_admin only; component self-gates */}
       <OrphanSweepCard />
+
+      {/* Deployment identity + Cloudflare Access, super_admin only; component self-gates */}
+      <DeploymentSettingsCard />
 
       {isAdmin && <TelegramBotSettings />}
     </SettingsContainer>

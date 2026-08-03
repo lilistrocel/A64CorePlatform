@@ -15,6 +15,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from ...models.deployment_settings import (
+    DeploymentSettingItem,
+    DeploymentSettingsPatchRequest,
+    DeploymentSettingsResponse,
+)
 from ...models.user import (
     UserResponse,
     UserRoleUpdate,
@@ -23,13 +28,125 @@ from ...models.user import (
     UserRole,
     UserOrganizationAssignment,
 )
+from ...services import deployment_settings_service
 from ...services.database import mongodb
 from ...services.user_service import user_service
 from ...middleware.auth import get_current_user
 from ...middleware.permissions import require_role
+from .organizations import _require_super_admin
 
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+# Secrets that must never be returned in full — see
+# deployment_settings_service.py's module docstring for why.
+_SECRET_DEPLOYMENT_KEYS = {"CF_ACCESS_TEAM_DOMAIN", "CF_ACCESS_AUD"}
+
+
+def _build_deployment_settings_response(
+    resolved: "dict[str, deployment_settings_service.ResolvedSetting]",
+) -> DeploymentSettingsResponse:
+    """Convert resolved settings into the masked API response shape.
+
+    The two Cloudflare Access secrets never populate `value` — only
+    `isSet` + a last-4-characters `maskedHint`. Every other key returns its
+    effective value directly.
+    """
+    items: dict[str, DeploymentSettingItem] = {}
+    for key, resolved_setting in resolved.items():
+        if key in _SECRET_DEPLOYMENT_KEYS:
+            value = resolved_setting.value
+            is_set = bool(value)
+            items[key] = DeploymentSettingItem(
+                source=resolved_setting.source,
+                editable=resolved_setting.editable,
+                isSet=is_set,
+                maskedHint=deployment_settings_service.mask_value(value) if is_set else None,
+            )
+        else:
+            items[key] = DeploymentSettingItem(
+                source=resolved_setting.source,
+                editable=resolved_setting.editable,
+                value=resolved_setting.value,
+            )
+    return DeploymentSettingsResponse(settings=items)
+
+
+@router.get(
+    "/deployment-settings",
+    response_model=DeploymentSettingsResponse,
+    summary="Get deployment identity + Cloudflare Access settings",
+    description=(
+        "Super admin only. Reports the effective value of each managed key "
+        "plus where it came from ('env' | 'db' | 'unset') and whether it can "
+        "be edited through this API. CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD "
+        "are never returned in full — only isSet + a last-4-character hint."
+    ),
+)
+async def get_deployment_settings(
+    current_user: UserResponse = Depends(get_current_user),
+) -> DeploymentSettingsResponse:
+    """
+    GET /api/v1/admin/deployment-settings
+
+    **Authorization:** SUPER_ADMIN role required.
+
+    **Returns:**
+    - 200: One entry per managed key (PUBLIC_BASE_URL, FRONTEND_URL,
+      CF_ACCESS_ENABLED, CF_ACCESS_TEAM_DOMAIN, CF_ACCESS_AUD,
+      CF_ACCESS_EXCLUSIVE, CF_ACCESS_JIT_PROVISION, CF_ACCESS_DEFAULT_ROLE).
+    - 403: Not a super_admin.
+    """
+    _require_super_admin(current_user)
+    resolved = await deployment_settings_service.get_resolved()
+    return _build_deployment_settings_response(resolved)
+
+
+@router.patch(
+    "/deployment-settings",
+    response_model=DeploymentSettingsResponse,
+    summary="Update deployment identity + Cloudflare Access settings",
+    description=(
+        "Super admin only. Requires the actor's current password. Rejects "
+        "any key currently pinned by an environment variable (409), "
+        "validates CF_ACCESS_TEAM_DOMAIN against Cloudflare's JWKS endpoint "
+        "before saving, and refuses to enable CF_ACCESS_EXCLUSIVE unless a "
+        "Cloudflare Access sign-in has already been recorded on this "
+        "deployment. Writes an audit log entry with masked before/after "
+        "values."
+    ),
+)
+async def update_deployment_settings(
+    data: DeploymentSettingsPatchRequest,
+    current_user: UserResponse = Depends(get_current_user),
+) -> DeploymentSettingsResponse:
+    """
+    PATCH /api/v1/admin/deployment-settings
+
+    **Authorization:** SUPER_ADMIN role required.
+
+    **Request Body:**
+    - currentPassword: The acting super_admin's current password.
+    - changes: Managed key -> new value; only the keys being changed.
+
+    **Returns:**
+    - 200: Full resolved settings after the update (same shape as GET).
+    - 401: currentPassword does not match the actor's stored hash.
+    - 403: Not a super_admin.
+    - 409: A changed key is pinned by an environment variable, or
+      CF_ACCESS_EXCLUSIVE was requested without a previously recorded
+      Cloudflare Access sign-in.
+    - 422: Unknown key, wrong value type, or CF_ACCESS_TEAM_DOMAIN failed
+      JWKS validation.
+    """
+    _require_super_admin(current_user)
+    resolved = await deployment_settings_service.update(
+        changes=data.changes,
+        actor_user_id=current_user.userId,
+        actor_email=current_user.email,
+        current_password=data.currentPassword,
+    )
+    return _build_deployment_settings_response(resolved)
 
 
 @router.get("/users", response_model=UserListResponse)

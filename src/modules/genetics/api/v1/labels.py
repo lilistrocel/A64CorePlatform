@@ -32,7 +32,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-from src.config.settings import settings
+from src.services.deployment_settings_service import get_value as get_deployment_setting_value
 from src.services.user_service import UserService
 
 from ...middleware.auth import CurrentUser, require_view
@@ -1055,8 +1055,15 @@ async def get_labels(
 
     # Fail loudly here, not at boot (see _require_public_base_url) — an
     # empty or loopback PUBLIC_BASE_URL means every QR below would be
-    # unscannable or would point at the wrong deployment.
-    public_base_url = _require_public_base_url(settings.PUBLIC_BASE_URL)
+    # unscannable or would point at the wrong deployment. Resolved through
+    # deployment_settings_service (env -> db -> unset) rather than read off
+    # `settings` directly, so a super_admin can configure it from
+    # Settings -> Deployment without a .env edit + container restart; on a
+    # deployment where it's pinned via the environment, resolution is a
+    # pass-through to the exact same settings.PUBLIC_BASE_URL value as before.
+    public_base_url = _require_public_base_url(
+        await get_deployment_setting_value("PUBLIC_BASE_URL")
+    )
 
     # Representative geometry for the log line (spec §6.2 requires logging
     # the resulting version/module size once per call, not per page). Drawn

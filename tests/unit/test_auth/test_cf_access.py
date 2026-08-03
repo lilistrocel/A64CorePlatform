@@ -60,7 +60,8 @@ from starlette.requests import Request
 import src.api.v1.auth as auth_module
 import src.middleware.cf_access as cf_access_middleware
 import src.services.cf_access_service as cf_access_service
-from src.config.settings import Settings, settings
+import src.services.deployment_settings_service as deployment_settings_service
+from src.config.settings import Settings
 from src.models.user import MFALoginResponse, TokenResponse, UserResponse, UserRole
 from src.services.auth_service import AuthService
 from src.services.cf_access_service import CFAccessIdentity, verify_cf_access_token
@@ -144,11 +145,42 @@ def _manual_hs256_token(header: Dict[str, Any], payload: Dict[str, Any], secret:
 # globals that would otherwise leak between tests.
 # ---------------------------------------------------------------------------
 
+# Deployment-settings-service-backed config used by cf_access_service.py,
+# api/v1/auth.py, and services/auth_service.py — all three now resolve
+# CF_ACCESS_* through `deployment_settings_service.get_value` instead of
+# reading `settings.CF_ACCESS_*` directly (T-9xx deployment-settings
+# runtime-configurability work). All three hold a reference to the SAME
+# `src.services.deployment_settings_service` module object, so patching
+# `deployment_settings_service.get_value` once here affects every consumer.
+_DEFAULT_DEPLOYMENT_VALUES: Dict[str, Any] = {
+    "CF_ACCESS_ENABLED": False,
+    "CF_ACCESS_EXCLUSIVE": False,
+    "CF_ACCESS_TEAM_DOMAIN": TEAM_DOMAIN,
+    "CF_ACCESS_AUD": AUD,
+    "CF_ACCESS_JIT_PROVISION": True,
+    "CF_ACCESS_DEFAULT_ROLE": "user",
+}
+
 
 @pytest.fixture(autouse=True)
-def _cf_settings(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cf_access_service.settings, "CF_ACCESS_TEAM_DOMAIN", TEAM_DOMAIN)
-    monkeypatch.setattr(cf_access_service.settings, "CF_ACCESS_AUD", AUD)
+def _deployment_settings_stub(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
+    """
+    Stubs `deployment_settings_service.get_value` so every consumer resolves
+    against this in-memory dict instead of hitting Mongo. Tests that need a
+    non-default value (e.g. CF_ACCESS_EXCLUSIVE=True) mutate the returned
+    dict directly. `record_cf_access_login` is stubbed to a no-op AsyncMock
+    so tests exercising the full-token-issuance branch of
+    `AuthService.login_via_cf_access` don't need a `db.platform_settings`
+    mock on top of the existing `db.users` / `db.refresh_tokens` fakes.
+    """
+    values = dict(_DEFAULT_DEPLOYMENT_VALUES)
+
+    async def _fake_get_value(key: str) -> Any:
+        return values[key]
+
+    monkeypatch.setattr(deployment_settings_service, "get_value", _fake_get_value)
+    monkeypatch.setattr(deployment_settings_service, "record_cf_access_login", AsyncMock())
+    return values
 
 
 @pytest.fixture(autouse=True)
@@ -416,11 +448,12 @@ def _active_user_doc(**overrides: Any) -> Dict[str, Any]:
 @pytest.mark.asyncio
 async def test_unknown_email_with_jit_on_creates_pending_inactive_user(
     monkeypatch: pytest.MonkeyPatch,
+    _deployment_settings_stub: Dict[str, Any],
 ) -> None:
     db = _make_fake_db(None)
     _patch_db(monkeypatch, db)
-    monkeypatch.setattr(settings, "CF_ACCESS_JIT_PROVISION", True)
-    monkeypatch.setattr(settings, "CF_ACCESS_DEFAULT_ROLE", "user")
+    _deployment_settings_stub["CF_ACCESS_JIT_PROVISION"] = True
+    _deployment_settings_stub["CF_ACCESS_DEFAULT_ROLE"] = "user"
 
     identity = CFAccessIdentity(email="New.User@Example.com", sub="sub-x", exp=int(time.time()) + 3600)
 
@@ -446,10 +479,11 @@ async def test_unknown_email_with_jit_on_creates_pending_inactive_user(
 @pytest.mark.asyncio
 async def test_unknown_email_with_jit_off_returns_pending_without_creating_anything(
     monkeypatch: pytest.MonkeyPatch,
+    _deployment_settings_stub: Dict[str, Any],
 ) -> None:
     db = _make_fake_db(None)
     _patch_db(monkeypatch, db)
-    monkeypatch.setattr(settings, "CF_ACCESS_JIT_PROVISION", False)
+    _deployment_settings_stub["CF_ACCESS_JIT_PROVISION"] = False
 
     identity = CFAccessIdentity(email="ghost@example.com", sub="sub-y", exp=int(time.time()) + 3600)
 
@@ -523,14 +557,18 @@ def auth_client() -> TestClient:
         yield c
 
 
-def test_cf_access_session_404s_when_disabled(auth_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(auth_module.settings, "CF_ACCESS_ENABLED", False)
+def test_cf_access_session_404s_when_disabled(
+    auth_client: TestClient, _deployment_settings_stub: Dict[str, Any]
+) -> None:
+    _deployment_settings_stub["CF_ACCESS_ENABLED"] = False
     resp = auth_client.post("/cf-access/session")
     assert resp.status_code == 404
 
 
-def test_cf_access_session_401s_with_no_token(auth_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(auth_module.settings, "CF_ACCESS_ENABLED", True)
+def test_cf_access_session_401s_with_no_token(
+    auth_client: TestClient, _deployment_settings_stub: Dict[str, Any]
+) -> None:
+    _deployment_settings_stub["CF_ACCESS_ENABLED"] = True
     resp = auth_client.post("/cf-access/session")
     assert resp.status_code == 401
 
@@ -558,9 +596,11 @@ def _dummy_token_response() -> TokenResponse:
 
 
 def test_login_succeeds_when_exclusive_and_no_cloudflare_headers(
-    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    _deployment_settings_stub: Dict[str, Any],
 ) -> None:
-    monkeypatch.setattr(auth_module.settings, "CF_ACCESS_EXCLUSIVE", True)
+    _deployment_settings_stub["CF_ACCESS_EXCLUSIVE"] = True
     monkeypatch.setattr(
         auth_module.auth_service,
         "login_user_with_mfa_check",
@@ -575,9 +615,11 @@ def test_login_succeeds_when_exclusive_and_no_cloudflare_headers(
 
 
 def test_login_rejected_when_exclusive_and_cf_ray_present(
-    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    _deployment_settings_stub: Dict[str, Any],
 ) -> None:
-    monkeypatch.setattr(auth_module.settings, "CF_ACCESS_EXCLUSIVE", True)
+    _deployment_settings_stub["CF_ACCESS_EXCLUSIVE"] = True
     login_mock = AsyncMock(return_value=_dummy_token_response())
     monkeypatch.setattr(auth_module.auth_service, "login_user_with_mfa_check", login_mock)
 

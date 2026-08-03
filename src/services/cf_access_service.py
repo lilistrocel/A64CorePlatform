@@ -24,7 +24,7 @@ from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-from ..config.settings import settings
+from . import deployment_settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,8 @@ async def _fetch_jwks() -> List[Dict[str, Any]]:
             token is not trusted", never as a 500 that could be mistaken for
             an unrelated outage.
     """
-    url = f"https://{settings.CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs"
+    team_domain = await deployment_settings_service.get_value("CF_ACCESS_TEAM_DOMAIN")
+    url = f"https://{team_domain}/cdn-cgi/access/certs"
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -181,14 +182,16 @@ async def verify_cf_access_token(token: str) -> CFAccessIdentity:
             detail="Invalid Cloudflare Access token",
         )
 
-    issuer = f"https://{settings.CF_ACCESS_TEAM_DOMAIN}"
+    team_domain = await deployment_settings_service.get_value("CF_ACCESS_TEAM_DOMAIN")
+    aud = await deployment_settings_service.get_value("CF_ACCESS_AUD")
+    issuer = f"https://{team_domain}"
 
     try:
         claims = jwt.decode(
             token,
             signing_key,
             algorithms=["RS256"],
-            audience=settings.CF_ACCESS_AUD,
+            audience=aud,
             issuer=issuer,
         )
     except JWTError as exc:

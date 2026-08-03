@@ -30,7 +30,7 @@ from ...models.user import (
     MFARegenerateBackupCodesRequest
 )
 from ...models.mfa import MFALoginRequired
-from ...config.settings import settings
+from ...services import deployment_settings_service
 from ...services.auth_service import auth_service
 from ...services.user_service import user_service
 from ...services.mfa_service import mfa_service
@@ -100,7 +100,8 @@ async def register(user_data: UserCreate, request: Request) -> TokenResponse:
     # that did not arrive through the Cloudflare tunnel (see
     # middleware.cf_access.is_local_request for why headers, not source IP,
     # are the discriminator).
-    if settings.CF_ACCESS_EXCLUSIVE and not is_local_request(request):
+    cf_access_exclusive = await deployment_settings_service.get_value("CF_ACCESS_EXCLUSIVE")
+    if cf_access_exclusive and not is_local_request(request):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Password registration is disabled. Please sign in with Cloudflare Access.",
@@ -164,7 +165,8 @@ async def login(credentials: UserLogin, request: Request) -> Union[TokenResponse
     """
     # Break-glass gate (Phase 2 of the Cloudflare Access rollout) — see
     # register() above for the identical rationale.
-    if settings.CF_ACCESS_EXCLUSIVE and not is_local_request(request):
+    cf_access_exclusive = await deployment_settings_service.get_value("CF_ACCESS_EXCLUSIVE")
+    if cf_access_exclusive and not is_local_request(request):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Password login is disabled. Please sign in with Cloudflare Access.",
@@ -214,9 +216,10 @@ async def cf_access_status() -> CFAccessStatusResponse:
     {"enabled": true, "exclusive": false}
     ```
     """
+    resolved = await deployment_settings_service.get_resolved()
     return CFAccessStatusResponse(
-        enabled=settings.CF_ACCESS_ENABLED,
-        exclusive=settings.CF_ACCESS_EXCLUSIVE,
+        enabled=resolved["CF_ACCESS_ENABLED"].value,
+        exclusive=resolved["CF_ACCESS_EXCLUSIVE"].value,
     )
 
 
@@ -264,7 +267,8 @@ async def cf_access_session(request: Request) -> Union[TokenResponse, MFALoginRe
     }
     ```
     """
-    if not settings.CF_ACCESS_ENABLED:
+    cf_access_enabled = await deployment_settings_service.get_value("CF_ACCESS_ENABLED")
+    if not cf_access_enabled:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Not found",

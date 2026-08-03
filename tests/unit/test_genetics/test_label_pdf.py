@@ -456,6 +456,25 @@ def accession_holder(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _default_public_base_url(monkeypatch):
+    """
+    Stubs `get_deployment_setting_value` (the resolver `get_labels` now
+    calls instead of reading `settings.PUBLIC_BASE_URL` directly — see
+    deployment_settings_service.py) to the same value this box's real
+    `.env` sets today. Tests in this file overwhelmingly don't care about
+    PUBLIC_BASE_URL at all and never mocked Mongo (nothing here needed a DB
+    before deployment settings became resolver-backed); this keeps them
+    working without one. The three tests immediately below that DO exercise
+    the guard override this stub per-test instead.
+    """
+    async def _fake_get_value(key: str) -> str:
+        assert key == "PUBLIC_BASE_URL"
+        return "https://dev.a20core.com"
+
+    monkeypatch.setattr(labels_module, "get_deployment_setting_value", _fake_get_value)
+
+
+@pytest.fixture(autouse=True)
 def _mock_metadata_lookups(monkeypatch):
     """Line / medium / user lookups — stubbed to their happy-path values so
     tests not specifically exercising the fallback paths don't have to."""
@@ -1468,14 +1487,16 @@ def test_require_public_base_url_accepts_a_normal_https_host():
 
 
 def test_get_labels_500s_when_public_base_url_is_empty(client, accession_holder, monkeypatch):
-    monkeypatch.setattr(labels_module.settings, "PUBLIC_BASE_URL", "")
+    monkeypatch.setattr(labels_module, "get_deployment_setting_value", AsyncMock(return_value=""))
     resp = client.get("/accessions/acc-1/labels", params={"from": 1, "to": 1})
     assert resp.status_code == 500
     assert "PUBLIC_BASE_URL" in resp.json()["detail"]
 
 
 def test_get_labels_500s_when_public_base_url_is_loopback(client, accession_holder, monkeypatch):
-    monkeypatch.setattr(labels_module.settings, "PUBLIC_BASE_URL", "http://localhost:8000")
+    monkeypatch.setattr(
+        labels_module, "get_deployment_setting_value", AsyncMock(return_value="http://localhost:8000")
+    )
     resp = client.get("/accessions/acc-1/labels", params={"from": 1, "to": 1})
     assert resp.status_code == 500
     assert "loopback" in resp.json()["detail"].lower()
@@ -1484,8 +1505,13 @@ def test_get_labels_500s_when_public_base_url_is_loopback(client, accession_hold
 def test_get_labels_succeeds_with_a_normal_public_base_url(client, accession_holder, monkeypatch):
     # Same value this box's real .env sets today (dev.a20core.com) — this is
     # also the regression guard that the guard is a no-op for a correctly
-    # configured deployment.
-    monkeypatch.setattr(labels_module.settings, "PUBLIC_BASE_URL", "https://dev.a20core.com")
+    # configured deployment. Overriding the autouse stub here is redundant
+    # with its default but keeps the intent of this test explicit.
+    monkeypatch.setattr(
+        labels_module,
+        "get_deployment_setting_value",
+        AsyncMock(return_value="https://dev.a20core.com"),
+    )
     resp = client.get("/accessions/acc-1/labels", params={"from": 1, "to": 1})
     assert resp.status_code == 200
     assert _pdf_page_count(resp.content) == 1

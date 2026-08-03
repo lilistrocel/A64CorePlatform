@@ -39,9 +39,9 @@ from ..utils.email import (
     send_password_reset,
     send_welcome_email
 )
-from ..config.settings import settings
 from .database import mongodb
 from .cf_access_service import CFAccessIdentity
+from . import deployment_settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -1017,12 +1017,14 @@ class AuthService:
         )
 
         if user_doc is None:
-            if settings.CF_ACCESS_JIT_PROVISION:
+            jit_provision = await deployment_settings_service.get_value("CF_ACCESS_JIT_PROVISION")
+            if jit_provision:
                 local_part = email.split("@", 1)[0]
                 name_first, _, name_last = local_part.partition(".")
                 first_name = (name_first or local_part).capitalize()
                 last_name = name_last.capitalize() if name_last else first_name
 
+                default_role = await deployment_settings_service.get_value("CF_ACCESS_DEFAULT_ROLE")
                 now = datetime.utcnow()
                 new_user_doc = {
                     "userId": str(uuid.uuid4()),
@@ -1030,7 +1032,7 @@ class AuthService:
                     "passwordHash": None,
                     "firstName": first_name,
                     "lastName": last_name,
-                    "role": settings.CF_ACCESS_DEFAULT_ROLE,
+                    "role": default_role,
                     "isActive": False,
                     "isEmailVerified": True,  # the IdP already verified it
                     "mfaEnabled": False,
@@ -1066,7 +1068,17 @@ class AuthService:
 
         logger.info(f"User logged in successfully via Cloudflare Access: {email}")
 
-        return await AuthService._issue_tokens_for_user(user_doc)
+        tokens = await AuthService._issue_tokens_for_user(user_doc)
+
+        # Reason: guardrail (b) for CF_ACCESS_EXCLUSIVE (see
+        # deployment_settings_service.update) — a super_admin must not be
+        # able to lock out password login before Cloudflare Access is proven
+        # to actually work end-to-end on this deployment. Recorded only on
+        # this full-token-issuance branch, not the MFA-challenge branch
+        # above, since that login has not yet completed.
+        await deployment_settings_service.record_cf_access_login()
+
+        return tokens
 
     @staticmethod
     async def verify_mfa_and_login(mfa_token: str, code: str) -> TokenResponse:
