@@ -53,6 +53,13 @@ services:
       - ./public:/app/public  # Admin panel static files
       - ./modules:/app/modules  # Farm management and other modules
       - ./config:/app/config
+      # Migrations are executed with `docker compose exec api python
+      # scripts/migrations/...` (see .github/workflows/ops-only-smoke.yml and
+      # Docs/1-Main-Documentation/Deployment-Modes.md), but the Dockerfile only
+      # COPYs src/ and public/ — so without this mount that command fails with
+      # "No such file or directory" and the Wave 0 migration can never run.
+      # Read-only: nothing should write into scripts/ at runtime.
+      - ./scripts:/app/scripts:ro
       - ./logs:/app/logs  # Centralized logging
       - ./.credentials:/app/.credentials  # Google Cloud credentials for Vertex AI
       - ./data/sensehub_images:/app/data/sensehub_images  # Camera snapshot storage
