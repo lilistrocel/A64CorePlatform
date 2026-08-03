@@ -37,22 +37,55 @@ jobs:
         run: |
           docker compose -f docker-compose.yml build api user-portal
 
-      - name: Boot ops-only stack
+      - name: Boot datastores and initiate the replica set
         run: |
           # Reason: NO finance overlay → finance, mysql, finance_consumer
           # never start. nginx serves 503 for /api/v1/finance/* via the
           # @finance_unavailable named location.
           #
           # The service is `mongodb`, not `mongo` — this said `mongo` and so
-          # every run failed here with "no such service", which is why this
-          # workflow has never once passed.
-          docker compose -f docker-compose.yml up -d mongodb redis api nginx user-portal
+          # every run failed here with "no such service".
+          docker compose -f docker-compose.yml up -d mongodb redis
+
+          # mongod runs with --replSet rs0, so a fresh container comes up as an
+          # RSGhost with no primary until rs.initiate() is called. Every write
+          # then fails with "No replica set members match selector Primary()".
+          # docker-compose.yml documents this as a manual one-time step, which
+          # CI has no way to have performed — so it must do it here.
+          # The single-node member host MUST be `mongodb:27017` (the compose
+          # service name), because that is how the api container reaches it.
+          for i in $(seq 1 30); do
+            docker compose exec -T mongodb mongosh --quiet --eval 'db.runCommand({ping:1})' >/dev/null 2>&1 && break
+            sleep 2
+          done
+          docker compose exec -T mongodb mongosh --quiet --eval '
+            try {
+              rs.status();
+              print("replica set already initiated");
+            } catch (e) {
+              printjson(rs.initiate({_id:"rs0", members:[{_id:0, host:"mongodb:27017"}]}));
+            }'
+
+          # Wait for an actual PRIMARY before anything tries to write.
+          for i in $(seq 1 30); do
+            if docker compose exec -T mongodb mongosh --quiet --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null 2>&1; then
+              echo "replica set has a primary"; break
+            fi
+            sleep 2
+          done
+
+      - name: Boot application services
+        run: docker compose -f docker-compose.yml up -d api nginx user-portal
 
       - name: Wait for backend health
         run: |
           for i in {1..30}; do
-            if curl -sf http://localhost/api/health > /dev/null; then
-              echo "API is up"
+            # NOTE: /api/health does NOT check MongoDB — it returned healthy in
+            # a previous run while every module logged "MongoDB not connected".
+            # So we probe an endpoint that actually touches the database.
+            if curl -sf http://localhost/api/health > /dev/null \
+               && curl -sf -o /dev/null -w '%{http_code}' http://localhost/api/v1/auth/cf-access/status | grep -q 200; then
+              echo "API is up and serving"
               exit 0
             fi
             sleep 2
