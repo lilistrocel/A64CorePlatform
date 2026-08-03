@@ -3,6 +3,46 @@ import { persist } from 'zustand/middleware';
 import { authService, isMfaRequired, type User, type LoginCredentials, type RegisterData } from '../services/auth.service';
 import { useDivisionStore } from './division.store';
 
+/**
+ * Shape of the pending_activation payload once unwrapped from whichever
+ * level FastAPI nested it at (see extractPendingActivation below).
+ */
+interface PendingActivationPayload {
+  status: 'pending_activation';
+  email?: string;
+}
+
+/**
+ * Tolerant detector for the 403 pending_activation outcome, shared by every
+ * login path (password and Cloudflare Access) so there is exactly one place
+ * that knows this shape.
+ *
+ * FastAPI wraps whatever a route passes as `detail`. Because both routes
+ * pass a dict (`{"detail": "...", "status": "pending_activation"}`), the
+ * response body arrives ONE LEVEL DEEPER than a plain-string detail:
+ * `{detail: {detail, status}}`, not `{detail, status}`. Reading both shapes
+ * — the nested one is what the backend actually sends today, the flat one
+ * guards against the wrapper ever changing — is what fixed a real bug where
+ * a successful Cloudflare sign-in showed "Unable to sign in" instead of the
+ * pending screen; every caller must reuse this exact function rather than
+ * re-deriving the unwrap.
+ *
+ * Returns null for any other status/shape (invalid credentials, network
+ * error, etc.) so callers can fall through to their normal error handling.
+ */
+function extractPendingActivation(error: any): PendingActivationPayload | null {
+  const body = error?.response?.data;
+  const payload =
+    body && typeof body.detail === 'object' && body.detail !== null
+      ? body.detail
+      : body;
+
+  if (error?.response?.status === 403 && payload?.status === 'pending_activation') {
+    return payload as PendingActivationPayload;
+  }
+  return null;
+}
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -113,6 +153,28 @@ export const useAuthStore = create<AuthState>()(
             mfaPendingUserId: null,
           });
         } catch (error: any) {
+          // An inactive account (freshly deactivated by an admin, or never
+          // activated) surfaces via the same 403 pending_activation shape
+          // Cloudflare Access uses — same person, same state, so it must
+          // land on the same screen rather than a flat "Account is
+          // inactive" error. Do NOT throw here: like cfAccessLogin's own
+          // pending branch, resolving silently lets Login.tsx's existing
+          // `pendingActivation` effect perform the redirect without a
+          // parallel error path fighting it.
+          const pending = extractPendingActivation(error);
+          if (pending) {
+            set({
+              isLoading: false,
+              error: null,
+              pendingActivation: true,
+              pendingActivationEmail: typeof pending.email === 'string' ? pending.email : null,
+              mfaRequired: false,
+              mfaPendingToken: null,
+              mfaPendingUserId: null,
+            });
+            return;
+          }
+
           const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Invalid email or password. Please try again.';
           set({
             isLoading: false,
@@ -161,26 +223,20 @@ export const useAuthStore = create<AuthState>()(
             pendingActivationEmail: null,
           });
         } catch (error: any) {
-          // FastAPI wraps whatever a route passes as `detail`, so a dict detail
-          // arrives as {detail: {detail, status}} — one level deeper than a
-          // plain-string detail. Read both shapes: the nested one is what the
-          // backend actually sends today, the flat one guards against the
-          // wrapper changing. Getting this wrong made a successful Cloudflare
-          // sign-in show "Unable to sign in" instead of the pending screen.
-          const body = error?.response?.data;
-          const payload =
-            body && typeof body.detail === 'object' && body.detail !== null
-              ? body.detail
-              : body;
+          // See extractPendingActivation's own doc comment for why this
+          // unwrap is one level deeper than a plain-string detail — shared
+          // with login()'s inactive-account branch so both paths land on
+          // the exact same pending-activation handling.
+          const pending = extractPendingActivation(error);
 
-          if (error?.response?.status === 403 && payload?.status === 'pending_activation') {
+          if (pending) {
             set({
               isLoading: false,
               error: null,
               pendingActivation: true,
               // Best-effort — only set if the backend actually included it.
-              pendingActivationEmail: typeof payload?.email === 'string'
-                ? payload.email
+              pendingActivationEmail: typeof pending.email === 'string'
+                ? pending.email
                 : null,
             });
             return;

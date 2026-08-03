@@ -60,6 +60,7 @@ import { getPendingTaskCount } from '../../services/tasksApi';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
 import { DivisionSwitcher } from './DivisionSwitcher';
 import { AIAssistantPanel, AIAssistantFAB } from '../ai-assistant';
+import { AutoNameBanner } from '../common/AutoNameBanner';
 
 // ─── Navigation item definitions ────────────────────────────────────────────
 // Night Observatory (T-901, spec §6): every nav icon is a lucide-react line
@@ -596,6 +597,7 @@ export function MainLayout() {
 
       {/* Main Content */}
       <MainContent ref={mainContentRef}>
+        <AutoNameBanner />
         <Outlet />
       </MainContent>
 

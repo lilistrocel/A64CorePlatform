@@ -57,6 +57,7 @@ class UserService:
             createdAt=user_doc["createdAt"],
             updatedAt=user_doc["updatedAt"],
             authProvider=user_doc.get("authProvider", "password"),
+            nameAutoDerived=user_doc.get("nameAutoDerived", False),
         )
 
     @staticmethod
@@ -92,6 +93,7 @@ class UserService:
             createdAt=user_doc["createdAt"],
             updatedAt=user_doc["updatedAt"],
             authProvider=user_doc.get("authProvider", "password"),
+            nameAutoDerived=user_doc.get("nameAutoDerived", False),
         )
 
     @staticmethod
@@ -169,6 +171,7 @@ class UserService:
                 createdAt=user_doc["createdAt"],
                 updatedAt=user_doc["updatedAt"],
                 authProvider=user_doc.get("authProvider", "password"),
+                nameAutoDerived=user_doc.get("nameAutoDerived", False),
             ))
 
         # Calculate pagination metadata
@@ -223,6 +226,15 @@ class UserService:
         if not update_dict:
             # No fields to update
             return await UserService.get_user_by_id(user_id)
+
+        # Reason: once the user actually sets a name, the "auto-derived from
+        # email local-part" flag set at Cloudflare Access JIT provisioning
+        # no longer applies — clear it here so the frontend's "set a real
+        # name" prompt stops appearing. Deliberately not conditioned on
+        # authProvider: any user editing either name field has chosen one,
+        # auto-derived or not.
+        if "firstName" in update_dict or "lastName" in update_dict:
+            update_dict["nameAutoDerived"] = False
 
         # Add updatedAt timestamp
         update_dict["updatedAt"] = datetime.utcnow()

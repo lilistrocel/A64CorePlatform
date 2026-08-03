@@ -1,5 +1,6 @@
 import styled from 'styled-components';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, Button, Input, PageHeader } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { authService } from '../../services/auth.service';
@@ -8,6 +9,7 @@ import { useToastStore } from '../../stores/toast.store';
 export function Profile() {
   const { user, loadUser } = useAuthStore();
   const { addToast } = useToastStore();
+  const [searchParams] = useSearchParams();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -16,6 +18,32 @@ export function Profile() {
     lastName: '',
     phone: '',
   });
+
+  // Arriving from AutoNameBanner's "Set your real name" link (?focus=name):
+  // jump straight into edit mode and focus First Name, so the fields the
+  // banner is nudging toward don't require hunting for "Edit Profile" first.
+  // Guarded by a ref (not just the query param) so a later loadUser()
+  // refresh — e.g. right after Save — doesn't re-open edit mode; this should
+  // fire exactly once, on arrival.
+  const autoOpenedForNameFocus = useRef(false);
+  const firstNameInputRef = useRef<HTMLInputElement>(null);
+  const shouldFocusName = searchParams.get('focus') === 'name';
+
+  useEffect(() => {
+    if (shouldFocusName && user && !autoOpenedForNameFocus.current) {
+      autoOpenedForNameFocus.current = true;
+      // formData itself is kept in sync by the "Sync form data" effect
+      // below, which already reruns on every `user` change — no need to
+      // duplicate that assignment here.
+      setIsEditing(true);
+    }
+  }, [shouldFocusName, user]);
+
+  useEffect(() => {
+    if (shouldFocusName && isEditing) {
+      firstNameInputRef.current?.focus();
+    }
+  }, [shouldFocusName, isEditing]);
 
   // Sync form data when user changes or edit mode is entered
   useEffect(() => {
@@ -105,6 +133,7 @@ export function Profile() {
           <EditForm>
             <FormGrid>
               <Input
+                ref={firstNameInputRef}
                 label="First Name"
                 value={formData.firstName}
                 onChange={handleChange('firstName')}

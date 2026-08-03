@@ -98,6 +98,15 @@ export interface User {
   mfaSetupRequired?: boolean;
   /** Which credential flow provisioned/authenticates this account. */
   authProvider?: 'password' | 'cloudflare_access';
+  /**
+   * True when firstName/lastName were auto-derived from the email
+   * local-part at provisioning time (e.g. a Cloudflare Access JIT-provisioned
+   * account) rather than entered by a human. Backend clears this the moment
+   * the user edits either name field via PATCH /api/v1/auth/me. Optional
+   * because accounts created before this field existed, and any backend
+   * response predating it, simply omit it — treated as `false`/undetermined.
+   */
+  nameAutoDerived?: boolean;
   lastLoginAt?: string | null;
   createdAt?: string;
   updatedAt?: string;

@@ -1,13 +1,20 @@
 /**
- * Pending Activation — Cloudflare Access dual-mode login
+ * Pending Activation — shared "account is not active" screen
  *
- * Shown when a Cloudflare Access exchange (see cfAccessLogin() in
- * auth.store.ts) recognizes the visitor's identity but the corresponding
- * app account is not active yet — either it was just JIT-provisioned by the
- * backend (login_via_cf_access) and awaits admin approval, or it already
- * existed but was deactivated. Either way there is nothing actionable here
- * beyond signing back out; an administrator must activate the account from
- * User Management before the user can proceed.
+ * Shown whenever a login attempt resolves to the 403 pending_activation
+ * outcome, set on the `pendingActivation` store flag by either login path
+ * in auth.store.ts:
+ *  - cfAccessLogin(): a Cloudflare Access identity was recognized but the
+ *    account was just JIT-provisioned (login_via_cf_access) and awaits
+ *    admin approval, or already existed and isn't active.
+ *  - login() (password path): the account exists and the password was
+ *    correct, but isActive is false — most commonly an admin deactivated it.
+ *
+ * Both cases render identically and deliberately avoid guessing which one
+ * applies (the backend doesn't distinguish them either, so this UI would be
+ * lying if it did). There is nothing actionable here beyond signing back
+ * out; an administrator must enable the account from User Management
+ * before the user can proceed.
  *
  * This is a PUBLIC route (registered in App.tsx alongside /login and
  * /register) — the visitor is, by definition, not authenticated with our
@@ -40,9 +47,11 @@ export function PendingActivation() {
   }, [pendingActivation, navigate]);
 
   const handleSignOut = async () => {
-    // logout() is Cloudflare-aware: because this session originated from
-    // cfAccessSession(), it navigates to /cdn-cgi/access/logout afterward so
-    // the visitor doesn't silently land right back here on the next visit.
+    // logout() is Cloudflare-aware: when this outcome came from cfAccessLogin(),
+    // it navigates to /cdn-cgi/access/logout afterward so the visitor doesn't
+    // silently land right back here on the next visit. When it came from a
+    // rejected password login instead, no app tokens were ever issued, so
+    // logout() is a no-op beyond clearing local flags — safe either way.
     await logout();
   };
 
@@ -60,11 +69,11 @@ export function PendingActivation() {
             <Clock size={28} strokeWidth={1.6} />
           </IconWrap>
 
-          <Title>Awaiting Approval</Title>
+          <Title>Account Not Active</Title>
 
           <Message role="status" aria-live="polite">
-            Your account has been recognized, but it is not active yet.
-            An administrator needs to approve access before you can continue.
+            This account isn&rsquo;t active right now. An administrator
+            needs to enable it before you can sign in.
           </Message>
 
           {pendingActivationEmail && (
@@ -73,8 +82,8 @@ export function PendingActivation() {
 
           <Hint>
             Contact your organization&rsquo;s administrator and ask them to
-            activate your account from User Management. Once approved, sign
-            in again to continue.
+            enable your account from User Management. Once enabled, sign in
+            again to continue.
           </Hint>
 
           <Button

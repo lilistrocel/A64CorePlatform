@@ -239,6 +239,7 @@ async def list_users(
             createdAt=user.get("createdAt"),
             updatedAt=user.get("updatedAt"),
             authProvider=user.get("authProvider", "password"),
+            nameAutoDerived=user.get("nameAutoDerived", False),
         ))
 
     return UserListResponse(
@@ -294,6 +295,7 @@ async def get_user_by_id(
         createdAt=user.get("createdAt"),
         updatedAt=user.get("updatedAt"),
         authProvider=user.get("authProvider", "password"),
+        nameAutoDerived=user.get("nameAutoDerived", False),
     )
 
 
@@ -393,6 +395,7 @@ async def update_user_role(
         createdAt=updated_user.get("createdAt"),
         updatedAt=updated_user.get("updatedAt"),
         authProvider=updated_user.get("authProvider", "password"),
+        nameAutoDerived=updated_user.get("nameAutoDerived", False),
     )
 
 
@@ -479,6 +482,7 @@ async def update_user_status(
         createdAt=updated_user.get("createdAt"),
         updatedAt=updated_user.get("updatedAt"),
         authProvider=updated_user.get("authProvider", "password"),
+        nameAutoDerived=updated_user.get("nameAutoDerived", False),
     )
 
 

@@ -137,9 +137,15 @@ async def login(credentials: UserLogin, request: Request) -> Union[TokenResponse
     - 200: Login successful, returns access token, refresh token, and user info
     - 200 (MFA): If MFA enabled, returns mfaRequired=true with temporary mfaToken
     - 401: Invalid credentials
-    - 403: Account is inactive, OR password login is disabled
-      (CF_ACCESS_EXCLUSIVE=true and this request arrived through Cloudflare —
-      use Cloudflare Access instead)
+    - 403: `{"detail": "Your account is not active. An administrator needs
+      to enable it before you can sign in.", "status": "pending_activation"}`
+      if the account exists but isn't active — the identical shape and
+      wording `POST /cf-access/session` returns for the same condition, so
+      the frontend's "awaiting administrator approval" screen is reached
+      regardless of which login path was used. OR password login is
+      disabled (CF_ACCESS_EXCLUSIVE=true and this request arrived through
+      Cloudflare — use Cloudflare Access instead), which returns a plain
+      string `detail`, not this shape.
     - 429: Too many failed login attempts (5 max, 15 minute lockout)
 
     **Response (if MFA NOT enabled):**
@@ -262,7 +268,7 @@ async def cf_access_session(request: Request) -> Union[TokenResponse, MFALoginRe
     **Example (pending activation):**
     ```json
     {
-      "detail": "Your account is awaiting administrator approval.",
+      "detail": "Your account is not active. An administrator needs to enable it before you can sign in.",
       "status": "pending_activation"
     }
     ```

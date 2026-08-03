@@ -87,6 +87,7 @@ async def get_current_user(
         divisionAccess=user_doc.get("divisionAccess"),
         defaultDivisionId=user_doc.get("defaultDivisionId"),
         authProvider=user_doc.get("authProvider", "password"),
+        nameAutoDerived=user_doc.get("nameAutoDerived", False),
     )
 
     return user

@@ -45,6 +45,42 @@ from . import deployment_settings_service
 
 logger = logging.getLogger(__name__)
 
+# Reason: shared 403 shape for "this login attempt cannot proceed because
+# the account is not active" — used by password login (login_user,
+# login_user_with_mfa_check) and Cloudflare Access login
+# (login_via_cf_access) alike, so the SAME frontend "awaiting administrator
+# approval" screen is reached no matter which credential path the user
+# took. The wording is deliberately non-specific: this app does not track
+# WHY an account is inactive (never activated after JIT provisioning vs.
+# deactivated later by an admin), so the message must be true for both
+# instead of guessing — it must never claim "awaiting approval" as though
+# every inactive account were a brand-new signup.
+PENDING_ACTIVATION_MESSAGE = (
+    "Your account is not active. An administrator needs to enable it "
+    "before you can sign in."
+)
+
+
+def pending_activation_exception() -> HTTPException:
+    """
+    Build the 403 raised for any login attempt against an inactive account.
+
+    A fresh HTTPException is returned on every call (rather than a single
+    module-level instance being re-raised) so nothing shared gets mutated
+    across requests; the shape and wording are identical every time.
+
+    Returns:
+        HTTPException(403) with
+        detail={"detail": PENDING_ACTIVATION_MESSAGE, "status": "pending_activation"}
+    """
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "detail": PENDING_ACTIVATION_MESSAGE,
+            "status": "pending_activation",
+        },
+    )
+
 
 class AuthService:
     """Authentication service for user registration, login, and token management"""
@@ -218,6 +254,10 @@ class AuthService:
 
         Raises:
             HTTPException: 401 if credentials invalid
+            HTTPException: 403 with the shared pending_activation shape
+                (see `pending_activation_exception`) if the account exists
+                but isn't active — identical to what `login_via_cf_access`
+                returns for the same condition.
 
         Flow (User-Structure.md):
         1. Find user by email
@@ -243,10 +283,7 @@ class AuthService:
 
         # Check if user is active
         if not user_doc.get("isActive", False):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Account is inactive"
-            )
+            raise pending_activation_exception()
 
         # Verify password
         if not verify_password(credentials.password, user_doc["passwordHash"]):
@@ -385,6 +422,7 @@ class AuthService:
             divisionAccess=user_doc.get("divisionAccess"),
             defaultDivisionId=user_doc.get("defaultDivisionId"),
             authProvider=user_doc.get("authProvider", "password"),
+            nameAutoDerived=user_doc.get("nameAutoDerived", False),
         )
 
         return TokenResponse(
@@ -606,6 +644,7 @@ class AuthService:
             divisionAccess=user_doc.get("divisionAccess"),
             defaultDivisionId=user_doc.get("defaultDivisionId"),
             authProvider=user_doc.get("authProvider", "password"),
+            nameAutoDerived=user_doc.get("nameAutoDerived", False),
         )
 
     @staticmethod
@@ -773,7 +812,11 @@ class AuthService:
             TokenResponse if no MFA, MFALoginResponse if MFA required
 
         Raises:
-            HTTPException: 401 if credentials invalid, 403 if account inactive
+            HTTPException: 401 if credentials invalid
+            HTTPException: 403 with the shared pending_activation shape
+                (see `pending_activation_exception`) if the account exists
+                but isn't active — identical to what `login_via_cf_access`
+                returns for the same condition.
         """
         db = mongodb.get_database()
 
@@ -788,10 +831,7 @@ class AuthService:
 
         # Check if user is active
         if not user_doc.get("isActive", False):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Account is inactive"
-            )
+            raise pending_activation_exception()
 
         # Verify password
         if not verify_password(credentials.password, user_doc["passwordHash"]):
@@ -945,6 +985,7 @@ class AuthService:
             divisionAccess=user_doc.get("divisionAccess"),
             defaultDivisionId=user_doc.get("defaultDivisionId"),
             authProvider=user_doc.get("authProvider", "password"),
+            nameAutoDerived=user_doc.get("nameAutoDerived", False),
         )
 
         return TokenResponse(
@@ -985,24 +1026,18 @@ class AuthService:
             CF-provisioned accounts).
 
         Raises:
-            HTTPException: 403 with
-                detail={"detail": "...", "status": "pending_activation"}
-                when the account doesn't exist yet (and gets JIT-provisioned
-                as inactive) or exists but isn't active. Both cases return
-                the identical response shape so this endpoint never reveals
-                whether a given email is already known to the system.
+            HTTPException: 403 with the shared pending_activation shape
+                (see `pending_activation_exception`) when the account
+                doesn't exist yet (and gets JIT-provisioned as inactive) or
+                exists but isn't active. Both cases return the identical
+                response shape so this endpoint never reveals whether a
+                given email is already known to the system — and it's the
+                same shape password login now raises for an inactive
+                account, via the same helper.
         """
         db = mongodb.get_database()
 
         email = identity.email.strip().lower()
-
-        pending_activation = HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "detail": "Your account is awaiting administrator approval.",
-                "status": "pending_activation",
-            },
-        )
 
         # Reason: case-insensitive lookup via a MongoDB collation rather than
         # a hand-built regex — collation lets Mongo's own comparison do the
@@ -1038,6 +1073,14 @@ class AuthService:
                     "mfaEnabled": False,
                     "mfaSetupRequired": False,  # CF-provisioned users never require app MFA
                     "authProvider": "cloudflare_access",
+                    # Reason: Cloudflare's JWT only reliably gives us an
+                    # email, so first/last name here are guessed from the
+                    # local-part (see split/partition above) and are very
+                    # often wrong (e.g. "lilistrocel" -> "Lilistrocel
+                    # Lilistrocel"). Flag it so the frontend can prompt the
+                    # user to set a real name; cleared in
+                    # UserService.update_user the moment they do.
+                    "nameAutoDerived": True,
                     "phone": None,
                     "avatar": None,
                     "timezone": None,
@@ -1058,10 +1101,10 @@ class AuthService:
             # Reason: identical response whether the account was just
             # created or JIT provisioning is disabled entirely — never leak
             # which case it was.
-            raise pending_activation
+            raise pending_activation_exception()
 
         if not user_doc.get("isActive", False):
-            raise pending_activation
+            raise pending_activation_exception()
 
         if user_doc.get("mfaEnabled", False):
             return await AuthService._issue_mfa_challenge(user_doc)

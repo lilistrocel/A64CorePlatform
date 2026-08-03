@@ -128,6 +128,16 @@ class UserResponse(UserBase):
         "password", description="How this account authenticates: 'password' or 'cloudflare_access'"
     )
 
+    # JIT-provisioned via Cloudflare Access: the IdP's JWT only reliably
+    # gives us an email, so firstName/lastName are guessed from the
+    # local-part (e.g. "lilistrocel" -> "Lilistrocel Lilistrocel") rather
+    # than chosen by the user. True until the user edits either name field
+    # via PATCH /api/v1/auth/me (see UserService.update_user), which is the
+    # signal the frontend should use to stop prompting for a real name.
+    nameAutoDerived: bool = Field(
+        False, description="True if firstName/lastName were auto-derived (e.g. from email) rather than chosen by the user"
+    )
+
     class Config:
         """Pydantic config"""
         from_attributes = True

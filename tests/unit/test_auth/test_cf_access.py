@@ -474,6 +474,14 @@ async def test_unknown_email_with_jit_on_creates_pending_inactive_user(
     assert inserted["mfaSetupRequired"] is False
     assert inserted["role"] == "user"
     assert inserted["passwordHash"] is None
+    # Cloudflare's JWT only reliably gives us an email, so firstName/
+    # lastName are guessed from the local-part and are very often wrong
+    # (e.g. "new.user" -> "New User" is fine, but "lilistrocel" would come
+    # out "Lilistrocel Lilistrocel"). This flag is what lets the frontend
+    # prompt the user to set a real name.
+    assert inserted["nameAutoDerived"] is True
+    assert inserted["firstName"] == "New"
+    assert inserted["lastName"] == "User"
 
 
 @pytest.mark.asyncio
