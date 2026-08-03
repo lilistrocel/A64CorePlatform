@@ -1,6 +1,129 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 105 tasks
+> **Total completed:** 106 tasks
+
+## 2026-08
+
+### T-903 | Cloudflare Access authentication — backend, dual-mode (Phase 1)
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-08-03 · **Assigned:** backend-dev-expert
+- **Depends on:** —
+- **Blocks:** —
+- **Summary:** Backend half of the approved plan
+  (`~/.claude/plans/jolly-splashing-hennessy.md`, not in this repo) to let
+  Cloudflare Access authenticate users at the edge, running ALONGSIDE
+  existing email/password login, with a flag (`CF_ACCESS_EXCLUSIVE`) that
+  later makes it exclusive with no further code change. Cloudflare replaces the credential check only — `get_current_user`,
+  roles, `organizationId`, `divisionAccess`, permissions are all completely
+  unchanged; a verified Access identity is exchanged for the exact same app
+  JWT every other login path issues.
+  1. **`src/config/settings.py`** — 6 new settings
+     (`CF_ACCESS_ENABLED`/`CF_ACCESS_TEAM_DOMAIN`/`CF_ACCESS_AUD`/
+     `CF_ACCESS_EXCLUSIVE`/`CF_ACCESS_JIT_PROVISION`/`CF_ACCESS_DEFAULT_ROLE`)
+     + a new `@model_validator` (`validate_cf_access_settings`, alongside the
+     existing `validate_production_settings`) that fails fast at boot if
+     `CF_ACCESS_ENABLED=true` without a non-empty team domain or AUD — an
+     empty AUD would make `jose.jwt.decode` skip audience checking entirely
+     and accept a token minted for ANY Access application — and additionally
+     validates `CF_ACCESS_DEFAULT_ROLE` against the real `UserRole` enum.
+     Mirrored, commented, into `.env.example`. `.env` itself untouched.
+  2. **`src/services/cf_access_service.py`** (new) — module-level JWKS cache
+     (`https://{team}/cdn-cgi/access/certs}`, 1h TTL via `time.monotonic()`,
+     not wall clock), a rate-limited (max 1/60s) forced refresh on an
+     unrecognized `kid` (key rotation), and `verify_cf_access_token()` using
+     `jose.jwt.decode(algorithms=["RS256"], audience=CF_ACCESS_AUD,
+     issuer=f"https://{team}")`. Raises 401 on any failure — no dev bypass,
+     no "skip verification" flag anywhere, per the project's no-quick-hacks
+     rule.
+  3. **`src/middleware/cf_access.py`** (new) — `get_cf_access_token(request)`
+     (header `Cf-Access-Jwt-Assertion`, falling back to the `CF_Authorization`
+     cookie) and `is_local_request(request)` (True iff neither `cf-ray` nor
+     `cf-connecting-ip` is present — documented rationale: `cloudflared`
+     connects to nginx from the Docker bridge, so source IP is always
+     private and useless as a discriminator; Cloudflare stamps those two
+     headers on every tunnel request and a client cannot strip them, so
+     their absence reliably means the request did not arrive from the
+     internet).
+  4. **`src/services/auth_service.py`** — extracted the token-minting tail
+     shared by `login_user`, `login_user_with_mfa_check`, and
+     `verify_mfa_and_login` into `_issue_tokens_for_user(user_doc, warning=,
+     backup_codes_remaining=)`, and the MFA-challenge-issuing tail into
+     `_issue_mfa_challenge(user_doc)` (the latter wasn't explicitly asked
+     for but was a straight copy-paste otherwise — DRY). All three original
+     callers now call the shared helpers; behaviour verified unchanged live
+     (see below). Added `login_via_cf_access(identity: CFAccessIdentity)`:
+     case-insensitive email lookup via a MongoDB collation
+     (`{"locale": "en", "strength": 2}`, chosen over a hand-built regex to
+     avoid re-implementing metacharacter escaping; no new index needed since
+     this only runs on the CF Access login path, not a hot path) excluding
+     soft-deleted users; unknown email + JIT enabled → creates an
+     inactive/pending user (`authProvider="cloudflare_access"`,
+     `mfaSetupRequired=False` always — this is what keeps app MFA optional
+     for these accounts, `isEmailVerified=True` since the IdP already
+     verified it, `passwordHash=None`); unknown email + JIT disabled →
+     identical pending response, never revealing which case it was; found
+     but inactive → same pending response; found+active+`mfaEnabled=True` →
+     `_issue_mfa_challenge` (a CF-provisioned user who separately opted into
+     TOTP via Settings > Security is honoured); otherwise →
+     `_issue_tokens_for_user`. Pending signalled as
+     `HTTPException(403, detail={"detail": "...", "status":
+     "pending_activation"})` for the frontend to branch on.
+  5. **`src/models/user.py`** — `authProvider: Optional[str] = "password"` on
+     `UserResponse` (inherited by `UserInDB`/`UserMeResponse`). Populated at
+     every mongo-doc-backed construction site (grepped `UserResponse(`
+     across the codebase, not just the two named in the dispatch): both
+     `_issue_tokens_for_user` and `register_user`/`verify_email` in
+     `auth_service.py`; all three sites in `user_service.py`
+     (`get_user_by_id`/`get_user_by_email`/`list_users`); `get_current_user`
+     in `middleware/auth.py`; all four sites in `api/v1/admin.py`
+     (`list_users`, `get_user_by_id`, `update_user_role`,
+     `update_user_status`). Every pre-existing account defaults to
+     `"password"` — restart required for the field to stop being silently
+     stripped by `response_model` (documented trap in `CLAUDE.md`); done,
+     see verification below.
+  6. **`src/api/v1/auth.py`** — `GET /cf-access/status` (no auth, returns
+     `{"enabled": bool, "exclusive": bool}`, nothing secret) and
+     `POST /cf-access/session` (`response_model=None` +
+     `Union[TokenResponse, MFALoginResponse]` return annotation, mirroring
+     exactly how the existing `POST /login` avoids the `response_model`
+     field-stripping trap; 404 when `CF_ACCESS_ENABLED=false`; 401 if no
+     token on the request; delegates verify → `login_via_cf_access`).
+     Break-glass gate added to `POST /login` and `POST /register` (both
+     gained a `request: Request` parameter): when `CF_ACCESS_EXCLUSIVE=true`,
+     403 unless `is_local_request(request)`. Full house-style docstrings
+     (Authentication/Returns/Example) on both new endpoints.
+- **API contract for the frontend agent:**
+  - `GET /api/v1/auth/cf-access/status` → `{"enabled": bool, "exclusive":
+    bool}`, no auth, safe to call before any session exists.
+  - `POST /api/v1/auth/cf-access/session` → no body (token read from the
+    `Cf-Access-Jwt-Assertion` header or `CF_Authorization` cookie
+    automatically); 200 with `TokenResponse` (same shape as `POST /login`'s
+    success case) or `MFALoginResponse`; 401 no/invalid CF token; 403
+    `{"detail": "...", "status": "pending_activation"}` (branch on
+    `error.response.data.status === "pending_activation"`); 404 when
+    Cloudflare Access is disabled on this deployment.
+- **Verification (live, this session):** `docker restart
+  a64coreplatform-api-1` — clean startup, no import/validation errors.
+  `curl localhost/api/v1/auth/cf-access/status` → `{"enabled":false,
+  "exclusive":false}`. `POST /login` with `admin@a64platform.com` /
+  `SuperAdmin123!` still returns full tokens (regression check — flag stays
+  off, nothing should change) and the user object now carries
+  `"authProvider":"password"`. `GET /me` and `GET /admin/users` both surface
+  `authProvider` correctly post-restart. `POST /cf-access/session` with
+  `CF_ACCESS_ENABLED=false` → 404 as designed. Local Python import checks
+  (`ast.parse` + actual module imports of `settings`, `cf_access_service`,
+  `middleware.cf_access`, the refactored `auth_service`, and the `auth`
+  router) all clean; boot-time validator confirmed to reject
+  `CF_ACCESS_ENABLED=true` with an empty team domain/AUD, and to reject an
+  invalid `CF_ACCESS_DEFAULT_ROLE`.
+- **Explicitly NOT done here (other agents own these per the dispatch):**
+  frontend wiring (`auth.service.ts`, `auth.store.ts`, `ProtectedRoute.tsx`,
+  `Login.tsx`, new `PendingActivation.tsx` page, `UserManagementPage.tsx`
+  badge/filter — see the plan doc); backend unit tests
+  (`tests/unit/test_auth/test_cf_access.py`); the domain-agnostic Cloudflare
+  runbook doc (`Docs/1-Main-Documentation/Cloudflare-Access-Setup.md`);
+  `User-Structure.md` update. **CodeMaps need regeneration** — two new
+  endpoints, one new service module, one new middleware module.
 
 ## 2026-07
 

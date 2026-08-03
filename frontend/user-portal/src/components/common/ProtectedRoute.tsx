@@ -1,10 +1,11 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
 import { useDivisionStore } from '../../stores/division.store';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { ShieldAlert } from 'lucide-react';
 import { Spinner } from '@a64core/shared';
+import { authService } from '../../services/auth.service';
 
 // Routes allowed during MFA setup period (without full access)
 const MFA_SETUP_ALLOWED_ROUTES = ['/mfa/setup', '/logout'];
@@ -32,7 +33,14 @@ function isDivisionExempt(pathname: string): boolean {
 }
 
 export function ProtectedRoute() {
-  const { isAuthenticated, isLoading: authLoading, loadUser, user } = useAuthStore();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    loadUser,
+    user,
+    pendingActivation,
+    cfAccessLogin,
+  } = useAuthStore();
   const {
     currentDivision,
     availableDivisions,
@@ -44,6 +52,41 @@ export function ProtectedRoute() {
   } = useDivisionStore();
   const location = useLocation();
   const [showMfaBanner, setShowMfaBanner] = useState(false);
+
+  // ── Cloudflare Access exchange (T-attempted once per mount) ─────────────
+  // Guarded by a ref so a 401/404 (no CF session / CF Access disabled) can
+  // never loop: the ref flips true right before the single attempt fires,
+  // so re-renders (including the isAuthenticated flip on success) never
+  // re-trigger it. Leaving the protected area (unmounting this route) and
+  // coming back allows exactly one fresh attempt on the new mount.
+  const cfAttemptedRef = useRef(false);
+  const [cfAttempting, setCfAttempting] = useState(false);
+
+  useEffect(() => {
+    if (cfAttemptedRef.current || isAuthenticated) return;
+    cfAttemptedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await authService.cfAccessStatus();
+        if (cancelled || !status.enabled) return;
+        setCfAttempting(true);
+        await cfAccessLogin();
+      } catch {
+        // Expected: no CF session (401), CF Access disabled (404), or the
+        // account is pending activation (surfaced via the pendingActivation
+        // store flag, handled below) — fall through to the normal /login
+        // redirect.
+      } finally {
+        if (!cancelled) setCfAttempting(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, cfAccessLogin]);
 
   // Load user data if authenticated but user not yet loaded
   useEffect(() => {
@@ -99,6 +142,7 @@ export function ProtectedRoute() {
   // toggles this flag.
   const isBootstrapping =
     authLoading ||
+    cfAttempting ||
     (isAuthenticated && user && divisionsLoading && !divisionsFetched);
 
   if (isBootstrapping) {
@@ -111,6 +155,13 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
+    // The CF exchange recognized the identity but the account is awaiting
+    // admin approval — send them to the informational screen instead of the
+    // normal login form.
+    if (pendingActivation) {
+      return <Navigate to="/pending-activation" replace />;
+    }
+
     const redirectTo = location.pathname + location.search;
     const loginUrl =
       redirectTo && redirectTo !== '/' && redirectTo !== '/dashboard'

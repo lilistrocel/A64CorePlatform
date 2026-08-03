@@ -9,6 +9,8 @@ from pydantic import model_validator
 from typing import List
 import os
 
+from ..models.user import UserRole
+
 
 class Settings(BaseSettings):
     """
@@ -112,6 +114,18 @@ class Settings(BaseSettings):
     # load but slow down toggle-uptake.
     FINANCE_CAPABILITY_CACHE_TTL_S: int = 60
 
+    # Cloudflare Access (dual-mode SSO — see
+    # Docs/1-Main-Documentation/Cloudflare-Access-Setup.md). Phase 1 ships
+    # this alongside password login; CF_ACCESS_EXCLUSIVE is the Phase 2 flag
+    # that later makes it the only way in (password login survives only for
+    # local/break-glass requests — see middleware/cf_access.is_local_request).
+    CF_ACCESS_ENABLED: bool = False
+    CF_ACCESS_TEAM_DOMAIN: str = ""  # host only, no scheme, e.g. "myteam.cloudflareaccess.com"
+    CF_ACCESS_AUD: str = ""  # Access application Audience (AUD) tag
+    CF_ACCESS_EXCLUSIVE: bool = False
+    CF_ACCESS_JIT_PROVISION: bool = True
+    CF_ACCESS_DEFAULT_ROLE: str = "user"
+
     @model_validator(mode='after')
     def validate_production_settings(self):
         if self.ENVIRONMENT != "development":
@@ -122,6 +136,40 @@ class Settings(BaseSettings):
                 )
             if self.DEBUG:
                 raise ValueError("DEBUG must be False in production!")
+        return self
+
+    @model_validator(mode='after')
+    def validate_cf_access_settings(self):
+        """
+        Fail fast at boot if Cloudflare Access is enabled without the two
+        fields that make verification meaningful.
+
+        Reason: `jose.jwt.decode(..., audience="")` treats an empty audience
+        as "skip audience validation" rather than "reject everything" — a
+        blank CF_ACCESS_AUD would silently accept a token minted for ANY
+        Cloudflare Access application on ANY Cloudflare account, not just
+        this deployment's. An empty team domain is just as unsafe: it would
+        point JWKS fetch and issuer validation at a bare, unreachable host.
+        Refusing to start is strictly better than running with either gap.
+        """
+        if self.CF_ACCESS_ENABLED:
+            if not self.CF_ACCESS_TEAM_DOMAIN:
+                raise ValueError(
+                    "CF_ACCESS_TEAM_DOMAIN must be set when CF_ACCESS_ENABLED is true "
+                    "(e.g. 'myteam.cloudflareaccess.com', host only, no scheme)."
+                )
+            if not self.CF_ACCESS_AUD:
+                raise ValueError(
+                    "CF_ACCESS_AUD must be set when CF_ACCESS_ENABLED is true — an "
+                    "empty audience would make token verification accept tokens "
+                    "minted for ANY Cloudflare Access application."
+                )
+            valid_roles = {role.value for role in UserRole}
+            if self.CF_ACCESS_DEFAULT_ROLE not in valid_roles:
+                raise ValueError(
+                    f"CF_ACCESS_DEFAULT_ROLE={self.CF_ACCESS_DEFAULT_ROLE!r} is not a "
+                    f"valid role. Valid roles: {sorted(valid_roles)}"
+                )
         return self
 
     class Config:

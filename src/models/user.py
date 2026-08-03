@@ -121,6 +121,13 @@ class UserResponse(UserBase):
     divisionAccess: Optional[List[str]] = Field(None, description="Division IDs the user can access")
     defaultDivisionId: Optional[str] = Field(None, description="Last-used division ID")
 
+    # Cloudflare Access (dual-mode SSO) — lets the admin UI badge
+    # Access-provisioned accounts. Defaults to "password" for every account
+    # created before this field existed.
+    authProvider: Optional[str] = Field(
+        "password", description="How this account authenticates: 'password' or 'cloudflare_access'"
+    )
+
     class Config:
         """Pydantic config"""
         from_attributes = True

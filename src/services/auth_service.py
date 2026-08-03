@@ -39,7 +39,9 @@ from ..utils.email import (
     send_password_reset,
     send_welcome_email
 )
+from ..config.settings import settings
 from .database import mongodb
+from .cf_access_service import CFAccessIdentity
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +100,7 @@ class AuthService:
             "isEmailVerified": False,  # Requires email verification
             "mfaEnabled": False,
             "mfaSetupRequired": True,  # Require MFA setup on first login
+            "authProvider": "password",
             "phone": user_data.phone,
             "avatar": user_data.avatar,
             "timezone": user_data.timezone,
@@ -135,6 +138,7 @@ class AuthService:
                 organizationId=user_doc.get("organizationId"),
                 divisionAccess=user_doc.get("divisionAccess"),
                 defaultDivisionId=user_doc.get("defaultDivisionId"),
+                authProvider="password",
             )
 
         except DuplicateKeyError:
@@ -252,72 +256,9 @@ class AuthService:
                 detail="Invalid credentials"
             )
 
-        # Generate tokens
-        user_id = user_doc["userId"]
-        email = user_doc["email"]
-        role = UserRole(user_doc["role"])
+        logger.info(f"User logged in successfully: {user_doc['email']}")
 
-        # Create access token (1 hour expiry)
-        access_token = create_access_token(
-            user_id=user_id,
-            email=email,
-            role=role
-        )
-
-        # Create refresh token (7 days expiry)
-        refresh_token, token_id = create_refresh_token(user_id=user_id)
-
-        # Store refresh token in database
-        refresh_token_doc = {
-            "tokenId": token_id,
-            "userId": user_id,
-            "token": refresh_token,
-            "expiresAt": datetime.utcnow() + timedelta(days=7),
-            "isRevoked": False,
-            "createdAt": datetime.utcnow(),
-            "lastUsedAt": None
-        }
-
-        await db.refresh_tokens.insert_one(refresh_token_doc)
-
-        # Update user's lastLoginAt
-        await db.users.update_one(
-            {"userId": user_id},
-            {"$set": {"lastLoginAt": datetime.utcnow()}}
-        )
-
-        logger.info(f"User logged in successfully: {email}")
-
-        # Return token response
-        user_response = UserResponse(
-            userId=user_id,
-            email=email,
-            firstName=user_doc["firstName"],
-            lastName=user_doc["lastName"],
-            role=role,
-            isActive=user_doc["isActive"],
-            isEmailVerified=user_doc["isEmailVerified"],
-            mfaEnabled=user_doc.get("mfaEnabled", False),
-            mfaSetupRequired=user_doc.get("mfaSetupRequired", False),
-            phone=user_doc.get("phone"),
-            avatar=user_doc.get("avatar"),
-            timezone=user_doc.get("timezone"),
-            locale=user_doc.get("locale"),
-            lastLoginAt=datetime.utcnow(),
-            createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"],
-            organizationId=user_doc.get("organizationId"),
-            divisionAccess=user_doc.get("divisionAccess"),
-            defaultDivisionId=user_doc.get("defaultDivisionId"),
-        )
-
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=3600,  # 1 hour in seconds
-            user=user_response
-        )
+        return await AuthService._issue_tokens_for_user(user_doc)
 
     @staticmethod
     async def refresh_access_token(refresh_token: str) -> TokenResponse:
@@ -443,6 +384,7 @@ class AuthService:
             organizationId=user_doc.get("organizationId"),
             divisionAccess=user_doc.get("divisionAccess"),
             defaultDivisionId=user_doc.get("defaultDivisionId"),
+            authProvider=user_doc.get("authProvider", "password"),
         )
 
         return TokenResponse(
@@ -663,6 +605,7 @@ class AuthService:
             organizationId=user_doc.get("organizationId"),
             divisionAccess=user_doc.get("divisionAccess"),
             defaultDivisionId=user_doc.get("defaultDivisionId"),
+            authProvider=user_doc.get("authProvider", "password"),
         )
 
     @staticmethod
@@ -858,44 +801,97 @@ class AuthService:
                 detail="Invalid credentials"
             )
 
+        # Check if MFA is enabled
+        if user_doc.get("mfaEnabled", False):
+            return await AuthService._issue_mfa_challenge(user_doc)
+
+        # No MFA - proceed with normal login
+        logger.info(f"User logged in successfully (no MFA): {user_doc['email']}")
+
+        return await AuthService._issue_tokens_for_user(user_doc)
+
+    @staticmethod
+    async def _issue_mfa_challenge(user_doc: Dict[str, Any]) -> MFALoginResponse:
+        """
+        Issue a temporary MFA challenge for a user who has TOTP enabled.
+
+        Shared by the password-login MFA branch and the Cloudflare Access
+        login path (login_via_cf_access): a CF-provisioned user MAY have
+        opted into app MFA independently via Settings > Security, and that
+        choice is honoured identically no matter which credential check got
+        them here.
+
+        Args:
+            user_doc: Full user document from MongoDB, already known to have
+                mfaEnabled=True.
+
+        Returns:
+            MFALoginResponse carrying a short-lived mfaToken for
+            POST /auth/mfa/verify to complete the login.
+        """
+        db = mongodb.get_database()
         user_id = user_doc["userId"]
         email = user_doc["email"]
 
-        # Check if MFA is enabled
-        if user_doc.get("mfaEnabled", False):
-            # MFA is enabled - return partial auth response with temporary token
-            mfa_token, token_id = create_mfa_token(
-                user_id=user_id,
-                email=email
-            )
+        mfa_token, token_id = create_mfa_token(user_id=user_id, email=email)
 
-            # Store MFA token in database for validation
-            mfa_token_doc = {
-                "tokenId": token_id,
-                "userId": user_id,
-                "email": email,
-                "type": "mfa_pending",
-                "expiresAt": datetime.utcnow() + timedelta(minutes=5),
-                "isUsed": False,
-                "failedAttempts": 0,
-                "createdAt": datetime.utcnow()
-            }
+        mfa_token_doc = {
+            "tokenId": token_id,
+            "userId": user_id,
+            "email": email,
+            "type": "mfa_pending",
+            "expiresAt": datetime.utcnow() + timedelta(minutes=5),
+            "isUsed": False,
+            "failedAttempts": 0,
+            "createdAt": datetime.utcnow()
+        }
 
-            await db.mfa_pending_tokens.insert_one(mfa_token_doc)
+        await db.mfa_pending_tokens.insert_one(mfa_token_doc)
 
-            logger.info(f"MFA required for user: {email}")
+        logger.info(f"MFA required for user: {email}")
 
-            # Return masked userId (first 4 and last 4 chars only)
-            masked_user_id = f"{user_id[:4]}...{user_id[-4:]}"
+        # Return masked userId (first 4 and last 4 chars only)
+        masked_user_id = f"{user_id[:4]}...{user_id[-4:]}"
 
-            return MFALoginResponse(
-                mfaRequired=True,
-                mfaToken=mfa_token,
-                userId=masked_user_id,
-                message="MFA verification required. Please enter your authenticator code."
-            )
+        return MFALoginResponse(
+            mfaRequired=True,
+            mfaToken=mfa_token,
+            userId=masked_user_id,
+            message="MFA verification required. Please enter your authenticator code."
+        )
 
-        # No MFA - proceed with normal login
+    @staticmethod
+    async def _issue_tokens_for_user(
+        user_doc: Dict[str, Any],
+        warning: Optional[str] = None,
+        backup_codes_remaining: Optional[int] = None,
+    ) -> TokenResponse:
+        """
+        Mint access + refresh tokens for an already-authenticated, active user.
+
+        This is the shared tail of every login path that ends in a full
+        session — password login with no MFA, MFA-verified login, and
+        Cloudflare Access login for an active non-MFA user — extracted so
+        the lastLoginAt update and refresh-token persistence stay
+        byte-identical across all of them instead of three copies that can
+        quietly drift apart.
+
+        Args:
+            user_doc: Full user document from MongoDB. Must already be known
+                active; this helper does not re-check isActive.
+            warning: Optional warning message to surface on the token
+                response (used by the MFA backup-code path).
+            backup_codes_remaining: Optional backup-code count to surface
+                alongside `warning`.
+
+        Returns:
+            TokenResponse with fresh access/refresh tokens and the user's
+            profile (lastLoginAt reflecting this login, not the prior one).
+        """
+        db = mongodb.get_database()
+
+        user_id = user_doc["userId"]
+        email = user_doc["email"]
         role = UserRole(user_doc["role"])
 
         # Create access token (1 hour expiry)
@@ -922,14 +918,12 @@ class AuthService:
         await db.refresh_tokens.insert_one(refresh_token_doc)
 
         # Update user's lastLoginAt
+        now = datetime.utcnow()
         await db.users.update_one(
             {"userId": user_id},
-            {"$set": {"lastLoginAt": datetime.utcnow()}}
+            {"$set": {"lastLoginAt": now}}
         )
 
-        logger.info(f"User logged in successfully (no MFA): {email}")
-
-        # Return token response
         user_response = UserResponse(
             userId=user_id,
             email=email,
@@ -944,12 +938,13 @@ class AuthService:
             avatar=user_doc.get("avatar"),
             timezone=user_doc.get("timezone"),
             locale=user_doc.get("locale"),
-            lastLoginAt=datetime.utcnow(),
+            lastLoginAt=now,
             createdAt=user_doc["createdAt"],
             updatedAt=user_doc["updatedAt"],
             organizationId=user_doc.get("organizationId"),
             divisionAccess=user_doc.get("divisionAccess"),
             defaultDivisionId=user_doc.get("defaultDivisionId"),
+            authProvider=user_doc.get("authProvider", "password"),
         )
 
         return TokenResponse(
@@ -957,8 +952,121 @@ class AuthService:
             refresh_token=refresh_token,
             token_type="bearer",
             expires_in=3600,
-            user=user_response
+            user=user_response,
+            warning=warning,
+            backup_codes_remaining=backup_codes_remaining,
         )
+
+    @staticmethod
+    async def login_via_cf_access(
+        identity: CFAccessIdentity,
+    ) -> Union[TokenResponse, MFALoginResponse]:
+        """
+        Authenticate a user via a verified Cloudflare Access identity.
+
+        Cloudflare Access has already established WHO this is — see
+        services.cf_access_service.verify_cf_access_token, which is the only
+        thing that validated the token before this method is ever called.
+        This method only decides what OUR session looks like for that email.
+        Everything downstream (get_current_user, roles, organizationId,
+        divisionAccess, permissions) is the exact same app JWT every other
+        login path issues; Cloudflare replaces the credential check, not the
+        session.
+
+        Args:
+            identity: Verified identity asserted by the Cloudflare Access
+                token (email, sub, exp, ...).
+
+        Returns:
+            TokenResponse for an active, non-MFA user.
+            MFALoginResponse if the user has voluntarily enabled app MFA
+            (Cloudflare/the IdP owns the primary factor; TOTP here is an
+            opt-in second factor layered on top, never mandatory for
+            CF-provisioned accounts).
+
+        Raises:
+            HTTPException: 403 with
+                detail={"detail": "...", "status": "pending_activation"}
+                when the account doesn't exist yet (and gets JIT-provisioned
+                as inactive) or exists but isn't active. Both cases return
+                the identical response shape so this endpoint never reveals
+                whether a given email is already known to the system.
+        """
+        db = mongodb.get_database()
+
+        email = identity.email.strip().lower()
+
+        pending_activation = HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "detail": "Your account is awaiting administrator approval.",
+                "status": "pending_activation",
+            },
+        )
+
+        # Reason: case-insensitive lookup via a MongoDB collation rather than
+        # a hand-built regex — collation lets Mongo's own comparison do the
+        # case-folding instead of re-implementing regex-metacharacter
+        # escaping for arbitrary email strings. No new index is needed: this
+        # lookup only runs on the CF Access login path (not a hot path), so
+        # the resulting collection scan is acceptable at users-collection
+        # scale.
+        user_doc = await db.users.find_one(
+            {"email": email, "deletedAt": None},
+            collation={"locale": "en", "strength": 2},
+        )
+
+        if user_doc is None:
+            if settings.CF_ACCESS_JIT_PROVISION:
+                local_part = email.split("@", 1)[0]
+                name_first, _, name_last = local_part.partition(".")
+                first_name = (name_first or local_part).capitalize()
+                last_name = name_last.capitalize() if name_last else first_name
+
+                now = datetime.utcnow()
+                new_user_doc = {
+                    "userId": str(uuid.uuid4()),
+                    "email": email,
+                    "passwordHash": None,
+                    "firstName": first_name,
+                    "lastName": last_name,
+                    "role": settings.CF_ACCESS_DEFAULT_ROLE,
+                    "isActive": False,
+                    "isEmailVerified": True,  # the IdP already verified it
+                    "mfaEnabled": False,
+                    "mfaSetupRequired": False,  # CF-provisioned users never require app MFA
+                    "authProvider": "cloudflare_access",
+                    "phone": None,
+                    "avatar": None,
+                    "timezone": None,
+                    "locale": None,
+                    "lastLoginAt": None,
+                    "createdAt": now,
+                    "updatedAt": now,
+                    "deletedAt": None,
+                    "metadata": {},
+                }
+                await db.users.insert_one(new_user_doc)
+                logger.info(f"JIT-provisioned pending Cloudflare Access user: {email}")
+            else:
+                logger.info(
+                    f"Cloudflare Access login for unknown email (JIT provisioning disabled): {email}"
+                )
+
+            # Reason: identical response whether the account was just
+            # created or JIT provisioning is disabled entirely — never leak
+            # which case it was.
+            raise pending_activation
+
+        if not user_doc.get("isActive", False):
+            raise pending_activation
+
+        if user_doc.get("mfaEnabled", False):
+            return await AuthService._issue_mfa_challenge(user_doc)
+
+        logger.info(f"User logged in successfully via Cloudflare Access: {email}")
+
+        return await AuthService._issue_tokens_for_user(user_doc)
 
     @staticmethod
     async def verify_mfa_and_login(mfa_token: str, code: str) -> TokenResponse:
@@ -1070,64 +1178,10 @@ class AuthService:
                 detail="User not found or inactive"
             )
 
-        # Generate full tokens
-        email = user_doc["email"]
-        role = UserRole(user_doc["role"])
-
-        access_token = create_access_token(
-            user_id=user_id,
-            email=email,
-            role=role
-        )
-
-        refresh_token, new_token_id = create_refresh_token(user_id=user_id)
-
-        # Store refresh token
-        refresh_token_doc = {
-            "tokenId": new_token_id,
-            "userId": user_id,
-            "token": refresh_token,
-            "expiresAt": datetime.utcnow() + timedelta(days=7),
-            "isRevoked": False,
-            "createdAt": datetime.utcnow(),
-            "lastUsedAt": None
-        }
-
-        await db.refresh_tokens.insert_one(refresh_token_doc)
-
-        # Update user's lastLoginAt
-        await db.users.update_one(
-            {"userId": user_id},
-            {"$set": {"lastLoginAt": datetime.utcnow()}}
-        )
-
         if used_backup_code:
-            logger.info(f"User logged in with MFA backup code: {email}")
+            logger.info(f"User logged in with MFA backup code: {user_doc['email']}")
         else:
-            logger.info(f"User logged in with MFA TOTP code: {email}")
-
-        # Return token response
-        user_response = UserResponse(
-            userId=user_id,
-            email=email,
-            firstName=user_doc["firstName"],
-            lastName=user_doc["lastName"],
-            role=role,
-            isActive=user_doc["isActive"],
-            isEmailVerified=user_doc["isEmailVerified"],
-            mfaEnabled=user_doc.get("mfaEnabled", False),
-            mfaSetupRequired=user_doc.get("mfaSetupRequired", False),
-            phone=user_doc.get("phone"),
-            avatar=user_doc.get("avatar"),
-            timezone=user_doc.get("timezone"),
-            locale=user_doc.get("locale"),
-            lastLoginAt=datetime.utcnow(),
-            createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"],
-            organizationId=user_doc.get("organizationId"),
-            divisionAccess=user_doc.get("divisionAccess"),
-            defaultDivisionId=user_doc.get("defaultDivisionId"),
-        )
+            logger.info(f"User logged in with MFA TOTP code: {user_doc['email']}")
 
         # Feature #335: Prepare success/warning message if backup code was used
         warning_message = None
@@ -1141,14 +1195,10 @@ class AuthService:
                 # Feature #335: Backup code accepted success message
                 warning_message = f"Backup code accepted. You have {remaining_backup_codes} code{'s' if remaining_backup_codes != 1 else ''} remaining."
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=3600,
-            user=user_response,
+        return await AuthService._issue_tokens_for_user(
+            user_doc,
             warning=warning_message,
-            backup_codes_remaining=backup_codes_remaining
+            backup_codes_remaining=backup_codes_remaining,
         )
 
 

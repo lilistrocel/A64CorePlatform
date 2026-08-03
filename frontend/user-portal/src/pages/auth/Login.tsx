@@ -4,10 +4,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled, { keyframes, css } from 'styled-components';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Check, Smartphone } from 'lucide-react';
+import { Check, Cloud, Smartphone } from 'lucide-react';
 import { Button, Input, glassPanel } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { usePageVisibility } from '../../hooks/usePageVisibility';
+import { authService, type CfAccessStatusResponse } from '../../services/auth.service';
+
+// Cloudflare Access is a tunnel/edge feature — the box itself always
+// bypasses it on plain http://localhost (this file's own break-glass path,
+// mirroring the backend's `_is_local_request` discriminator). Used only to
+// decide whether the password form should still render under
+// CF_ACCESS_EXCLUSIVE; never used as a security boundary client-side.
+const isLocalHost = () => {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+};
 
 // Login form sessionStorage caching constants
 const LOGIN_EMAIL_CACHE_KEY = 'a64_login_email_cache';
@@ -109,7 +120,17 @@ export function Login() {
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get('expired') === 'true';
   const redirectTo = searchParams.get('redirect');
-  const { login, isLoading, error, clearError, mfaRequired, mfaPendingToken, isAuthenticated } = useAuthStore();
+  const {
+    login,
+    isLoading,
+    error,
+    clearError,
+    mfaRequired,
+    mfaPendingToken,
+    isAuthenticated,
+    cfAccessLogin,
+    pendingActivation,
+  } = useAuthStore();
   // The lockup ships as separate cream/cosmos-text SVGs (not a single
   // currentColor asset). Night Observatory is dark-only (T-901) — the cosmos
   // (cream-text) variant is now correct unconditionally; the theme-mode
@@ -117,6 +138,12 @@ export function Login() {
   const logoSrc = '/brand/lockup_cosmos.svg';
   const [localError, setLocalError] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState<string | null>(null);
+
+  // Cloudflare Access — status is fetched once (authService memoizes the
+  // network call across every caller, including ProtectedRoute).
+  const [cfStatus, setCfStatus] = useState<CfAccessStatusResponse | null>(null);
+  const [cfLoading, setCfLoading] = useState(false);
+  const [cfError, setCfError] = useState<string | null>(null);
 
   // Feature #347: Session preservation UX state
   const [showSessionPreserved, setShowSessionPreserved] = useState(false);
@@ -250,6 +277,53 @@ export function Login() {
     }
   }, [isAuthenticated, mfaRequired, redirectTo, navigate]);
 
+  // Redirect to the pending-activation screen once a Cloudflare Access
+  // exchange recognizes the identity but the account awaits admin approval.
+  useEffect(() => {
+    if (pendingActivation) {
+      navigate('/pending-activation', { replace: true });
+    }
+  }, [pendingActivation, navigate]);
+
+  // Fetch Cloudflare Access status once on mount. Failure just leaves the
+  // button hidden (fail-closed) — password login remains fully usable.
+  useEffect(() => {
+    let cancelled = false;
+    authService
+      .cfAccessStatus()
+      .then((status) => {
+        if (!cancelled) setCfStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setCfStatus({ enabled: false, exclusive: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleCfAccessLogin = async () => {
+    setCfError(null);
+    setCfLoading(true);
+    try {
+      await cfAccessLogin();
+      // Success (including the MFA-challenge and pending-activation
+      // branches) is handled entirely by the effects above, watching
+      // isAuthenticated / mfaRequired / pendingActivation.
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401) {
+        setCfError('No active Cloudflare Access session was found. Sign in through Cloudflare first, then try again.');
+      } else if (status === 404) {
+        setCfError('Cloudflare Access is not enabled for this deployment.');
+      } else {
+        setCfError('Unable to sign in with Cloudflare Access. Please try again or use your password below.');
+      }
+    } finally {
+      setCfLoading(false);
+    }
+  };
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
@@ -277,6 +351,15 @@ export function Login() {
   const displayError = localError || error;
   const displayLoading = isLoading;
 
+  // Cloudflare Access rendering rules (spec: frontend scope):
+  //  - Button shows whenever the deployment has it enabled.
+  //  - The password form is hidden entirely only once BOTH exclusive mode is
+  //    on AND the page was actually served through Cloudflare — the local
+  //    break-glass form must keep working on http://localhost regardless of
+  //    the exclusive flag.
+  const showCfButton = cfStatus?.enabled === true;
+  const hidePasswordForm = cfStatus?.exclusive === true && !isLocalHost();
+
   return (
     <PageWrapper>
       <LoginContainer>
@@ -302,51 +385,80 @@ export function Login() {
             </SessionPreservedBanner>
           )}
 
-          <LoginForm onSubmit={handleSubmit(onSubmit)} $isRestoring={isRestoring}>
-            <Input
-              label="Email"
-              type="email"
-              placeholder="your.email@example.com"
-              error={errors.email?.message}
-              fullWidth
-              {...register('email')}
-            />
+          {showCfButton && (
+            <>
+              {cfError && <ErrorBanner role="alert" aria-live="assertive">{cfError}</ErrorBanner>}
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                disabled={displayLoading}
+                aria-label="Sign in with Cloudflare Access"
+                onClick={handleCfAccessLogin}
+              >
+                <Cloud size={18} strokeWidth={1.8} />
+                {cfLoading ? 'Connecting…' : 'Sign in with Cloudflare Access'}
+              </Button>
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="Enter your password"
-              error={errors.password?.message}
-              fullWidth
-              {...register('password')}
-            />
+              {!hidePasswordForm && (
+                <Divider role="separator" aria-orientation="horizontal">
+                  <DividerLine />
+                  <DividerText>or</DividerText>
+                  <DividerLine />
+                </Divider>
+              )}
+            </>
+          )}
 
-            {/* Feature #347: Mobile helper text for MFA flow */}
-            {isMobile && emailValue && (
-              <MobileHelperText>
-                <MobileHelperIcon><Smartphone size={14} strokeWidth={1.8} /></MobileHelperIcon>
-                You can safely switch to your authenticator app after signing in
-              </MobileHelperText>
-            )}
+          {!hidePasswordForm && (
+            <>
+              <LoginForm onSubmit={handleSubmit(onSubmit)} $isRestoring={isRestoring}>
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  error={errors.email?.message}
+                  fullWidth
+                  {...register('email')}
+                />
 
-            <ForgotPasswordLink to="/forgot-password">
-              Forgot password?
-            </ForgotPasswordLink>
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="Enter your password"
+                  error={errors.password?.message}
+                  fullWidth
+                  {...register('password')}
+                />
 
-            <Button
-              type="submit"
-              variant="primary"
-              fullWidth
-              disabled={displayLoading}
-            >
-              {displayLoading ? 'Signing in...' : 'Sign In'}
-            </Button>
-          </LoginForm>
+                {/* Feature #347: Mobile helper text for MFA flow */}
+                {isMobile && emailValue && (
+                  <MobileHelperText>
+                    <MobileHelperIcon><Smartphone size={14} strokeWidth={1.8} /></MobileHelperIcon>
+                    You can safely switch to your authenticator app after signing in
+                  </MobileHelperText>
+                )}
 
-          <RegisterPrompt>
-            Don't have an account?{' '}
-            <RegisterLink to="/register">Sign up</RegisterLink>
-          </RegisterPrompt>
+                <ForgotPasswordLink to="/forgot-password">
+                  Forgot password?
+                </ForgotPasswordLink>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  disabled={displayLoading}
+                >
+                  {displayLoading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </LoginForm>
+
+              <RegisterPrompt>
+                Don't have an account?{' '}
+                <RegisterLink to="/register">Sign up</RegisterLink>
+              </RegisterPrompt>
+            </>
+          )}
         </LoginCard>
       </LoginContainer>
     </PageWrapper>
@@ -495,6 +607,27 @@ const slideIn = keyframes`
     opacity: 1;
     transform: translateX(0);
   }
+`;
+
+// Divider between the Cloudflare Access button and the password form.
+const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+`;
+
+const DividerLine = styled.span`
+  flex: 1;
+  height: 1px;
+  background: ${({ theme }) => theme.colors.line};
+`;
+
+const DividerText = styled.span`
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.colors.muted};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 `;
 
 const LoginForm = styled.form<{ $isRestoring?: boolean }>`

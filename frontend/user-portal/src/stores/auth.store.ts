@@ -14,10 +14,27 @@ interface AuthState {
   mfaPendingToken: string | null;
   mfaPendingUserId: string | null;
 
+  // Cloudflare Access: set when a cfAccessLogin() attempt resolves to
+  // "account recognized by the IdP but awaiting admin approval" (403
+  // pending_activation). Not persisted — see partialize below.
+  pendingActivation: boolean;
+  /** Best-effort email surfaced by the pending_activation error payload, for display only. */
+  pendingActivationEmail: string | null;
+
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  /**
+   * Attempt to exchange the Cloudflare Access edge session for app tokens.
+   * Resolves silently on success (including the MFA-challenge branch, which
+   * reuses the same mfaRequired/mfaPendingToken state as password login).
+   * On the pending_activation outcome, sets pendingActivation instead of
+   * throwing. Any other failure (401 no CF session, 404 disabled, etc.) is
+   * re-thrown so callers can decide how to react — ProtectedRoute swallows
+   * it, Login's explicit button click surfaces a message.
+   */
+  cfAccessLogin: () => Promise<void>;
   loadUser: () => Promise<void>;
   /**
    * Refresh the authenticated user's data by calling GET /auth/me.
@@ -45,6 +62,10 @@ export const useAuthStore = create<AuthState>()(
       mfaPendingToken: null,
       mfaPendingUserId: null,
 
+      // Cloudflare Access state
+      pendingActivation: false,
+      pendingActivationEmail: null,
+
       initializeAuth: () => {
         // Check if tokens exist in localStorage
         const hasToken = authService.isAuthenticated();
@@ -55,7 +76,15 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: async (credentials) => {
-        set({ isLoading: true, error: null, mfaRequired: false, mfaPendingToken: null, mfaPendingUserId: null });
+        set({
+          isLoading: true,
+          error: null,
+          mfaRequired: false,
+          mfaPendingToken: null,
+          mfaPendingUserId: null,
+          pendingActivation: false,
+          pendingActivationEmail: null,
+        });
         try {
           const response = await authService.login(credentials);
 
@@ -96,6 +125,66 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      cfAccessLogin: async () => {
+        set({
+          isLoading: true,
+          error: null,
+          pendingActivation: false,
+          pendingActivationEmail: null,
+          mfaRequired: false,
+          mfaPendingToken: null,
+          mfaPendingUserId: null,
+        });
+        try {
+          const response = await authService.cfAccessSession();
+
+          if (isMfaRequired(response)) {
+            set({
+              isLoading: false,
+              mfaRequired: true,
+              mfaPendingToken: response.mfaToken,
+              mfaPendingUserId: response.userId,
+              error: null,
+            });
+            return;
+          }
+
+          set({
+            user: response.user,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+            mfaRequired: false,
+            mfaPendingToken: null,
+            mfaPendingUserId: null,
+            pendingActivation: false,
+            pendingActivationEmail: null,
+          });
+        } catch (error: any) {
+          if (error?.response?.status === 403 && error?.response?.data?.status === 'pending_activation') {
+            set({
+              isLoading: false,
+              error: null,
+              pendingActivation: true,
+              // Best-effort — only set if the backend actually included it.
+              pendingActivationEmail: typeof error.response.data?.email === 'string'
+                ? error.response.data.email
+                : null,
+            });
+            return;
+          }
+
+          // 401 (no CF session at the edge), 404 (CF Access disabled on this
+          // deployment), or any other failure. These are EXPECTED outcomes
+          // for password-only users and for ProtectedRoute's silent
+          // background attempt, so no global error banner is set here —
+          // callers that need to react (Login page's explicit button click)
+          // catch the re-thrown error themselves.
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
       register: async (data) => {
         set({ isLoading: true, error: null });
         try {
@@ -128,6 +217,8 @@ export const useAuthStore = create<AuthState>()(
             mfaRequired: false,
             mfaPendingToken: null,
             mfaPendingUserId: null,
+            pendingActivation: false,
+            pendingActivationEmail: null,
           });
         } catch (error: any) {
           set({ isLoading: false });
@@ -139,6 +230,8 @@ export const useAuthStore = create<AuthState>()(
             mfaRequired: false,
             mfaPendingToken: null,
             mfaPendingUserId: null,
+            pendingActivation: false,
+            pendingActivationEmail: null,
           });
         } finally {
           // Always clear division state on logout so the next user starts fresh

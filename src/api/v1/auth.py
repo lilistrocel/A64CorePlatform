@@ -5,8 +5,9 @@ Handles user registration, login, logout, and token refresh
 Following User-Structure.md and API-Structure.md specifications
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
 from typing import Dict, Any
+from pydantic import BaseModel, Field
 
 from typing import Union
 from ...models.user import (
@@ -29,14 +30,26 @@ from ...models.user import (
     MFARegenerateBackupCodesRequest
 )
 from ...models.mfa import MFALoginRequired
+from ...config.settings import settings
 from ...services.auth_service import auth_service
 from ...services.user_service import user_service
 from ...services.mfa_service import mfa_service
+from ...services.cf_access_service import verify_cf_access_token
 from ...middleware.auth import get_current_user
 from ...middleware.rate_limit import login_rate_limiter
+from ...middleware.cf_access import get_cf_access_token, is_local_request
 from .system import CapabilitiesResponse, build_capabilities_response
 
 router = APIRouter()
+
+
+class CFAccessStatusResponse(BaseModel):
+    """Response for GET /auth/cf-access/status — public, nothing secret."""
+
+    enabled: bool = Field(..., description="Whether Cloudflare Access login is available")
+    exclusive: bool = Field(
+        ..., description="Whether password login/registration are restricted to local requests"
+    )
 
 
 class UserMeResponse(UserResponse):
@@ -49,7 +62,7 @@ class UserMeResponse(UserResponse):
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate) -> TokenResponse:
+async def register(user_data: UserCreate, request: Request) -> TokenResponse:
     """
     Register a new user and return JWT tokens (auto-login)
 
@@ -67,6 +80,8 @@ async def register(user_data: UserCreate) -> TokenResponse:
 
     **Returns:**
     - 201: User created successfully with JWT tokens (verification email sent automatically)
+    - 403: Password registration is disabled (CF_ACCESS_EXCLUSIVE=true and this
+      request arrived through Cloudflare — use Cloudflare Access instead)
     - 409: Email already registered
     - 422: Validation error (password requirements not met)
 
@@ -80,6 +95,17 @@ async def register(user_data: UserCreate) -> TokenResponse:
     }
     ```
     """
+    # Break-glass gate (Phase 2 of the Cloudflare Access rollout): once
+    # exclusive mode is on, password registration only works for requests
+    # that did not arrive through the Cloudflare tunnel (see
+    # middleware.cf_access.is_local_request for why headers, not source IP,
+    # are the discriminator).
+    if settings.CF_ACCESS_EXCLUSIVE and not is_local_request(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password registration is disabled. Please sign in with Cloudflare Access.",
+        )
+
     token_response = await auth_service.register_user_with_tokens(user_data)
 
     # Automatically send verification email after registration
@@ -96,7 +122,7 @@ async def register(user_data: UserCreate) -> TokenResponse:
 
 
 @router.post("/login", response_model=None)
-async def login(credentials: UserLogin) -> Union[TokenResponse, MFALoginResponse]:
+async def login(credentials: UserLogin, request: Request) -> Union[TokenResponse, MFALoginResponse]:
     """
     Authenticate user and return JWT tokens (or MFA challenge if MFA enabled)
 
@@ -110,7 +136,9 @@ async def login(credentials: UserLogin) -> Union[TokenResponse, MFALoginResponse
     - 200: Login successful, returns access token, refresh token, and user info
     - 200 (MFA): If MFA enabled, returns mfaRequired=true with temporary mfaToken
     - 401: Invalid credentials
-    - 403: Account is inactive
+    - 403: Account is inactive, OR password login is disabled
+      (CF_ACCESS_EXCLUSIVE=true and this request arrived through Cloudflare —
+      use Cloudflare Access instead)
     - 429: Too many failed login attempts (5 max, 15 minute lockout)
 
     **Response (if MFA NOT enabled):**
@@ -134,6 +162,14 @@ async def login(credentials: UserLogin) -> Union[TokenResponse, MFALoginResponse
     }
     ```
     """
+    # Break-glass gate (Phase 2 of the Cloudflare Access rollout) — see
+    # register() above for the identical rationale.
+    if settings.CF_ACCESS_EXCLUSIVE and not is_local_request(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password login is disabled. Please sign in with Cloudflare Access.",
+        )
+
     # Check for too many failed login attempts
     await login_rate_limiter.check_login_attempts(credentials.email)
 
@@ -149,6 +185,100 @@ async def login(credentials: UserLogin) -> Union[TokenResponse, MFALoginResponse
         if e.status_code == status.HTTP_401_UNAUTHORIZED:
             await login_rate_limiter.record_failed_attempt(credentials.email)
         raise
+
+
+# ============= Cloudflare Access (dual-mode SSO) =============
+
+
+@router.get("/cf-access/status", response_model=CFAccessStatusResponse)
+async def cf_access_status() -> CFAccessStatusResponse:
+    """
+    Report whether Cloudflare Access login is available.
+
+    **Authentication:** None required — this is called before any session
+    exists, so the login page can decide what to render on first paint.
+
+    **Returns:**
+    - 200: `{"enabled": bool, "exclusive": bool}`. Nothing secret in the
+      payload — no team domain, no audience tag, no token.
+
+    **Response fields:**
+    - enabled: Whether `POST /auth/cf-access/session` is usable at all.
+    - exclusive: Whether password login/registration are currently
+      restricted to local (non-Cloudflare) requests. When true, the login
+      page should hide the email/password form for anyone reaching it
+      through Cloudflare.
+
+    **Example:**
+    ```json
+    {"enabled": true, "exclusive": false}
+    ```
+    """
+    return CFAccessStatusResponse(
+        enabled=settings.CF_ACCESS_ENABLED,
+        exclusive=settings.CF_ACCESS_EXCLUSIVE,
+    )
+
+
+@router.post("/cf-access/session", response_model=None)
+async def cf_access_session(request: Request) -> Union[TokenResponse, MFALoginResponse]:
+    """
+    Exchange a verified Cloudflare Access identity for our own app session.
+
+    Cloudflare Access has already authenticated the caller at the edge; this
+    endpoint reads the JWT Access stamped on the request, verifies it against
+    the team's JWKS, and — if that succeeds — mints exactly the same app JWT
+    every other login path issues (or an MFA challenge, if the matched user
+    voluntarily enabled app MFA). Cloudflare replaces the credential check,
+    not the session: `get_current_user`, roles, `organizationId`,
+    `divisionAccess`, and permissions are completely unchanged downstream.
+
+    **Authentication:** None required in the app-JWT sense — trust comes
+    entirely from the Cloudflare Access JWT this endpoint verifies itself.
+
+    **Request:** No body. Reads the Cloudflare Access token from the
+    `Cf-Access-Jwt-Assertion` header (falling back to the `CF_Authorization`
+    cookie).
+
+    **Returns:**
+    - 200: Login successful — same shape as `POST /login`'s success case
+      (`TokenResponse`), or an MFA challenge (`MFALoginResponse`) if the
+      matched user has TOTP enabled.
+    - 401: No Cloudflare Access token present on the request, or the token
+      failed verification (bad signature, wrong audience, wrong issuer,
+      expired, unknown key).
+    - 403: `{"detail": "...", "status": "pending_activation"}` — the email
+      has no account yet (one is JIT-provisioned as inactive, if enabled) or
+      the matched account exists but isn't active yet. Both cases return the
+      identical shape so this endpoint never reveals whether an email is
+      already known to the system. The frontend should branch on
+      `error.response.data.status === "pending_activation"`.
+    - 404: Cloudflare Access login is disabled on this deployment
+      (`CF_ACCESS_ENABLED=false`).
+
+    **Example (pending activation):**
+    ```json
+    {
+      "detail": "Your account is awaiting administrator approval.",
+      "status": "pending_activation"
+    }
+    ```
+    """
+    if not settings.CF_ACCESS_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found",
+        )
+
+    token = get_cf_access_token(request)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No Cloudflare Access token present on this request",
+        )
+
+    identity = await verify_cf_access_token(token)
+    return await auth_service.login_via_cf_access(identity)
 
 
 @router.post("/logout")

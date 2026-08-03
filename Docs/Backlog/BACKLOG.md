@@ -1,12 +1,20 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-07-30
+> **Updated:** 2026-08-03
 > **Tasks:** 32 active · 14 ready · 1 blocked (counts as of this update; the
 > narrative below predates several waves and is kept for history — see
-> ARCHIVE.md for what has actually shipped). This update: **T-901** (Night
-> Observatory redesign — dark-first glass-panel visual system) completed and
-> moved to ARCHIVE.md, closing out its 4-phase sequencing (foundation → shell
-> → screen sweep → gold audit).
+> ARCHIVE.md for what has actually shipped). This update: **T-903**
+> (Cloudflare Access authentication — backend, dual-mode) completed and
+> moved to ARCHIVE.md — password login stays fully intact
+> (`CF_ACCESS_ENABLED` defaults false); frontend wiring, backend unit tests,
+> and the Cloudflare-side runbook doc are separate follow-on work, not done
+> in this pass. CodeMaps regeneration flagged (two new endpoints, one new
+> service, one new middleware module).
+>
+> Prior note (2026-07-30): **T-901** (Night Observatory redesign —
+> dark-first glass-panel visual system) completed and moved to ARCHIVE.md,
+> closing out its 4-phase sequencing (foundation → shell → screen sweep →
+> gold audit).
 >
 > Prior note (2026-06-10): Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — that session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc` — remaining Active then: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic), T-200.25 (BLA stubs — implementation complete, awaiting commit); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
 
@@ -95,6 +103,89 @@
 ---
 
 ## 🔵 Active
+
+---
+
+### T-810 | Purchasing PO/PR create crash — Wave 4 status vocabulary vs finance event contracts
+- **Category:** Backend · **Priority:** P0
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-03
+- **Depends on:** T-200.21 ✅
+- **Blocks:** —
+- **Description:** Creating a PO crashed with `1 validation error for
+  PurchaseOrderStateChangedPayload: state ... [input_value='draft']`.
+  Root cause: `wave4_purchasing_status_migration.py` (T-200.21) rewrote the
+  STORED `document_headers.status` field from legacy TitleCase to the shared
+  `DocumentStatus` lowercase_snake vocabulary (draft, pending_approval, open,
+  partly_closed, closed, cancelled — plus unchanged purchasing-internal
+  "Rejected"/"Sent"/"Partially Received"/"Received"), but the finance event
+  contracts (`contracts/finance_events.py`) and the two payload builders in
+  `document_service.py` were never updated alongside it — they still
+  declare/pass the pre-migration TitleCase DISPLAY vocabulary.
+- **Fix:**
+  1. Added `map_pr_state_for_event` / `map_po_state_for_event` (doc-type
+     specific — stored "open" displays "Approved" for PR, "Open" for PO) in
+     `src/modules/purchasing/services/document_service.py`, applied to both
+     `state` and `previousState` (previousState mapped too, for vocabulary
+     consistency — the contract only requires `Optional[str]` there, so this
+     is a stylistic choice, not a validation requirement) in
+     `build_pr_event_payload` / `build_po_event_payload`. Both maps also
+     accept the pre-migration legacy TitleCase inputs as identity mappings —
+     required because `document_service.py` explicitly tolerates the
+     migration window (`_parse_status` does the same for business-logic
+     transitions); an unmapped value raises `ValueError` rather than passing
+     through silently.
+  2. Added `"Rejected"` to `PurchaseOrderStateChangedPayload.state` Literal
+     in `contracts/finance_events.py` — `reject_po` stores `"Rejected"` and
+     emits `po_state_changed`, but the PO contract (unlike the PR contract)
+     never had a `"Rejected"` literal. Additive, backward-compatible.
+  3. **Discovered while checking for bypasses (not in the original bug
+     report):** `cron/scripts/outbox_reconciler.py`'s
+     `_PR_FINANCE_STATUSES`/`_PO_FINANCE_STATUSES` still held the OLD
+     display-vocabulary strings (`"Approved"`, `"Open"`, `"Closed"`,
+     `"Cancelled"`) used directly as a MongoDB `status` `$in` filter — after
+     the Wave 4 migration these no longer match any migrated document
+     (`"open"`/`"closed"`/`"cancelled"` lowercase), so the sweeper was
+     silently scanning almost nothing. Updated both lists to the STORED
+     vocabulary. Separately, `outbox_event_exists`'s `payload.state` dedup
+     check compared against the RAW stored status; since the builders now
+     write the MAPPED display value into `payload.state`, the sweeper now
+     maps before checking existence — otherwise every check would
+     false-negative and re-emit duplicates on every run.
+- **Tests:** `tests/unit/test_purchasing/test_event_payload_state_mapping.py`
+  (NEW, 44 cases) — pins the full stored→display table for both doc types,
+  validates `previousState` mapping/None-passthrough, and instantiates the
+  REAL `PurchaseRequestStateChangedPayload`/`PurchaseOrderStateChangedPayload`
+  contract models against builder output for every stored status (fails on
+  drift between the mapping and the contract Literal, not just on this bug).
+  Includes a dedicated regression pin for the exact reported crash (stored
+  `"draft"` → PO create). Also updated `tests/unit/test_finance_bridge/
+  test_outbox_reconciler.py` fixtures/assertions from stale display-vocab
+  statuses (`"Approved"`/`"Open"`) to stored vocab (`"open"`) to match step 3's
+  fix. Full `tests/unit/test_purchasing/` suite: **98 passed, 0 failed**
+  (run locally with `redis` installed; the container has it by default).
+  `test_outbox_reconciler.py`: 2 of 13 fail
+  (`test_scenario_a_missing_event_emitted`, `test_scenario_d_po_open_emits_po_event`)
+  — confirmed via `git stash` to be **pre-existing on unmodified code**,
+  unrelated to this fix (`TypeError: object MagicMock can't be used in
+  'await' expression` — the mock DB in that test file has no async stub for
+  the `organizations` collection that `OutboxWriter.publish`'s tenant-flag
+  check queries; a gap in that test's mocking, not something this ticket's
+  scope covers). Flagging, not fixing — out of scope.
+- **Deploy note:** `docker restart a64coreplatform-api-1` required — the api
+  container has no `--reload`. `cron/scripts/outbox_reconciler.py` runs as a
+  separate one-shot cron job (not the long-running api process); confirm its
+  container/cron image also picks up the new code before its next scheduled
+  run.
+- **CodeMaps:** not regenerated — no new/removed endpoints, services,
+  components, or collections; this is a bugfix inside existing payload
+  builders + one existing contract's Literal + one existing cron script.
+- **Files changed:**
+  `src/modules/purchasing/services/document_service.py`,
+  `contracts/finance_events.py`, `cron/scripts/outbox_reconciler.py`,
+  `tests/unit/test_purchasing/test_event_payload_state_mapping.py` (new),
+  `tests/unit/test_finance_bridge/test_outbox_reconciler.py`.
+- **Not moving to ARCHIVE** — leaving for the parent session per this
+  ticket's process rules (parent verifies + commits).
 
 ---
 

@@ -86,6 +86,7 @@ async def get_current_user(
         organizationId=user_doc.get("organizationId"),
         divisionAccess=user_doc.get("divisionAccess"),
         defaultDivisionId=user_doc.get("defaultDivisionId"),
+        authProvider=user_doc.get("authProvider", "password"),
     )
 
     return user

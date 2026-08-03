@@ -120,7 +120,8 @@ async def list_users(
             locale=user.get("locale"),
             lastLoginAt=user.get("lastLoginAt"),
             createdAt=user.get("createdAt"),
-            updatedAt=user.get("updatedAt")
+            updatedAt=user.get("updatedAt"),
+            authProvider=user.get("authProvider", "password"),
         ))
 
     return UserListResponse(
@@ -174,7 +175,8 @@ async def get_user_by_id(
         locale=user.get("locale"),
         lastLoginAt=user.get("lastLoginAt"),
         createdAt=user.get("createdAt"),
-        updatedAt=user.get("updatedAt")
+        updatedAt=user.get("updatedAt"),
+        authProvider=user.get("authProvider", "password"),
     )
 
 
@@ -272,7 +274,8 @@ async def update_user_role(
         locale=updated_user.get("locale"),
         lastLoginAt=updated_user.get("lastLoginAt"),
         createdAt=updated_user.get("createdAt"),
-        updatedAt=updated_user.get("updatedAt")
+        updatedAt=updated_user.get("updatedAt"),
+        authProvider=updated_user.get("authProvider", "password"),
     )
 
 
@@ -357,7 +360,8 @@ async def update_user_status(
         locale=updated_user.get("locale"),
         lastLoginAt=updated_user.get("lastLoginAt"),
         createdAt=updated_user.get("createdAt"),
-        updatedAt=updated_user.get("updatedAt")
+        updatedAt=updated_user.get("updatedAt"),
+        authProvider=updated_user.get("authProvider", "password"),
     )
 
 

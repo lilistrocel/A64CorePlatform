@@ -55,7 +55,8 @@ class UserService:
             locale=user_doc.get("locale"),
             lastLoginAt=user_doc.get("lastLoginAt"),
             createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"]
+            updatedAt=user_doc["updatedAt"],
+            authProvider=user_doc.get("authProvider", "password"),
         )
 
     @staticmethod
@@ -89,7 +90,8 @@ class UserService:
             locale=user_doc.get("locale"),
             lastLoginAt=user_doc.get("lastLoginAt"),
             createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"]
+            updatedAt=user_doc["updatedAt"],
+            authProvider=user_doc.get("authProvider", "password"),
         )
 
     @staticmethod
@@ -165,7 +167,8 @@ class UserService:
                 locale=user_doc.get("locale"),
                 lastLoginAt=user_doc.get("lastLoginAt"),
                 createdAt=user_doc["createdAt"],
-                updatedAt=user_doc["updatedAt"]
+                updatedAt=user_doc["updatedAt"],
+                authProvider=user_doc.get("authProvider", "password"),
             ))
 
         # Calculate pagination metadata

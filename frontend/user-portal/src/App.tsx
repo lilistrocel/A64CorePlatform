@@ -48,6 +48,9 @@ const PageLoader = () => {
 // Auth pages (small, load immediately for login)
 const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
 const Register = lazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })));
+const PendingActivation = lazy(() =>
+  import('./pages/auth/PendingActivation').then(m => ({ default: m.PendingActivation }))
+);
 const MFASetupPage = lazy(() => import('./pages/auth/MFASetupPage').then(m => ({ default: m.MFASetupPage })));
 const MFAVerifyPage = lazy(() => import('./pages/auth/MFAVerifyPage').then(m => ({ default: m.MFAVerifyPage })));
 
@@ -373,6 +376,11 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            {/* Cloudflare Access dual-mode login: the exchange recognized the
+                identity but the account awaits admin approval. Public — the
+                visitor has no app JWT yet, so this cannot live behind
+                ProtectedRoute. */}
+            <Route path="/pending-activation" element={<PendingActivation />} />
 
             {/* Genetics label public info page (T-804 §7.1) — scanned off a
                 printed vessel label's QR code. Registered both lower- and

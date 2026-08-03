@@ -40,6 +40,7 @@ This document serves as the single source of truth for user management, roles, p
 | timezone | String | No | User's preferred timezone (IANA format) |
 | locale | String | No | Preferred language (ISO 639-1 code) |
 | metadata | JSON | No | Additional flexible user data |
+| authProvider | String | No | How the account authenticates: `"password"` (default) or `"cloudflare_access"`. See [Cloudflare Access Authentication Flow](#cloudflare-access-authentication-flow-optional) |
 
 ### User Model Example (MongoDB)
 ```json
@@ -293,6 +294,63 @@ ENUM('super_admin', 'admin', 'moderator', 'user', 'guest')
    ↓
 5. Client discards access token
 ```
+
+### Cloudflare Access Authentication Flow (Optional)
+
+An alternative to the password login flow above. When enabled (`CF_ACCESS_ENABLED=true`),
+Cloudflare Access authenticates the user at the edge — in front of the tunnel, before the
+request reaches the origin — and hands the backend a signed identity instead of a
+password. See `Cloudflare-Access-Setup.md` for the operator-facing Cloudflare dashboard
+walkthrough; this section documents what the app does with the result.
+
+```
+1. Cloudflare Access authenticates the user against the configured IdP
+   ↓
+2. Cloudflare injects a signed RS256 JWT into the request
+   - Header: Cf-Access-Jwt-Assertion (falls back to the CF_Authorization cookie)
+   ↓
+3. Backend verifies the JWT (POST /api/v1/auth/cf-access/session)
+   - Fetch/cache the team's JWKS, verify signature
+   - Check aud == CF_ACCESS_AUD, iss == team domain, exp
+   - Any failure → 401, no fallback and no "skip verification" path
+   ↓
+4. Backend maps the verified email to a users document (case-insensitive)
+   - Not found + CF_ACCESS_JIT_PROVISION=true → create as isActive=false,
+     authProvider="cloudflare_access", passwordHash=null, role=CF_ACCESS_DEFAULT_ROLE
+   - Found but isActive=false (including freshly JIT-provisioned) → return
+     "pending_activation"; same response shape whether the account is new or just
+     inactive, so this never reveals which case it was
+   - Found, active, mfaEnabled=true → issue an MFA challenge (existing TOTP flow)
+   - Found, active, mfaEnabled=false → issue tokens directly
+   ↓
+5. Issue the app's own Access/Refresh token pair (_issue_tokens_for_user)
+   - Identical token shape and lastLoginAt/refresh-token persistence as password login
+   ↓
+6. Downstream is unchanged — role, organizationId, divisionAccess, permission
+   middleware all key off the app JWT exactly as they do for password sessions
+```
+
+**JIT provisioning lands as inactive, not active.** Cloudflare can only vouch for an
+email address — it has no concept of this app's roles, organizations, or division
+access. A brand-new Access identity is created with `isActive=false` and must be
+activated by a super_admin from **Admin → User Management** (Pending activation filter),
+who assigns the organization and division access at the same time.
+
+**MFA is optional for Access sessions.** `mfaSetupRequired` is never set for
+CF-provisioned users — the second factor is expected to live in the Cloudflare Access
+policy (or the chosen IdP) instead of the app's own TOTP. A user can still opt into app
+TOTP voluntarily from Settings → Security; if they do, `mfaEnabled=true` routes them
+through the same MFA challenge password users get. The existing `require_mfa_setup_complete`
+gate and `ProtectedRoute` MFA redirect are untouched for password-authenticated users.
+
+**Break-glass carve-out.** Access only protects traffic that actually passes through the
+Cloudflare tunnel. A request reaching the origin any other way (e.g. directly against
+`http://localhost` on the server) never carries Cloudflare's `Cf-Ray` / `Cf-Connecting-Ip`
+headers, and the backend treats their absence as "not tunnel traffic." This is what keeps
+password login (`POST /auth/login`) working as a deliberate recovery path once
+`CF_ACCESS_EXCLUSIVE=true` blocks it for everyone else — see
+`Cloudflare-Access-Setup.md#break-glass-access` for the full rationale and its security
+precondition (the origin must not be reachable except through the tunnel).
 
 ## User Lifecycle
 
@@ -633,6 +691,7 @@ Payment terms seeded automatically: NET15, NET30, NET45, NET60, NET90, COD, EOM,
 ## References
 
 - [API-Structure.md](./API-Structure.md) - API endpoints and authentication
+- [Cloudflare-Access-Setup.md](./Cloudflare-Access-Setup.md) - Cloudflare Access dashboard runbook (edge auth)
 - [Versioning.md](./Versioning.md) - Version management
 - [CLAUDE.md](../../CLAUDE.md) - Development guidelines
 - [bcrypt documentation](https://github.com/kelektiv/node.bcrypt.js)
