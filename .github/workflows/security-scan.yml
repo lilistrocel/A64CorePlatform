@@ -63,12 +63,7 @@ jobs:
           # Deliberately still ENABLED: F821 (undefined name) and F811
           # (redefinition) — these catch genuine NameErrors and silent symbol
           # shadowing, which is exactly what this job should be for.
-          #
-          # block_repository_old.py is excluded because it is dead code: it is
-          # imported by nothing and its 5 F821s are unreachable. Deleting it is
-          # the real fix; excluding it is a holding action.
-          flake8 src/ --max-line-length=120 \
-            --exclude=__pycache__,migrations,src/modules/farm_manager/services/block/block_repository_old.py \
+          flake8 src/ --max-line-length=120 --exclude=__pycache__,migrations \
             --extend-ignore=E203,E501,F401,E402,E741,F541,F841 \
             --count --show-source --statistics
 
