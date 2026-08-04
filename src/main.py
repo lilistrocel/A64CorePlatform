@@ -258,6 +258,17 @@ async def startup_event() -> None:
         logger.warning(
             "SECURITY: DEBUG mode is enabled in production - this exposes sensitive error details!"
         )
+    if not settings.EMAIL_DELIVERY_CONFIGURED:
+        # Reason: src/utils/email.py only logs the link — no provider is wired
+        # up. Account verification and password reset therefore cannot complete
+        # for anyone who does not read the API log. This went unnoticed for as
+        # long as the feature has existed because the endpoints reported
+        # success regardless, so say it out loud on every boot.
+        logger.warning(
+            "EMAIL: no provider configured (EMAIL_PROVIDER is empty) - "
+            "verification and password-reset links are only written to this "
+            "log, never sent. Account recovery cannot complete unaided."
+        )
     if settings.ENVIRONMENT == "production" and "localhost" in str(
         settings.ALLOWED_ORIGINS
     ):

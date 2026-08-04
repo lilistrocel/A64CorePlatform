@@ -29,6 +29,7 @@ from ...models.user import (
     MFAVerifyLoginRequest,
     MFARegenerateBackupCodesRequest,
 )
+from ...config.settings import settings
 from ...models.mfa import MFALoginRequired
 from ...services import deployment_settings_service
 from ...services.auth_service import auth_service
@@ -434,7 +435,9 @@ async def send_verification_email(
     **Authentication:** Required (Bearer token)
 
     **Returns:**
-    - 200: Verification email sent
+    - 200: Verification link generated. Read `delivered` — on a deployment with
+      no email provider configured the link is only written to the API log and
+      no message is actually sent.
     - 400: Email already verified
     - 401: Not authenticated
     - 404: User not found
@@ -446,7 +449,26 @@ async def send_verification_email(
     ```
     """
     await auth_service.send_verification_email(current_user.userId)
-    return {"message": "Verification email sent successfully"}
+
+    # Reason: src/utils/email.py has never actually sent anything — it logs the
+    # link and returns, with a TODO where a provider integration should be. This
+    # endpoint previously answered "Verification email sent successfully"
+    # regardless, which is why nobody noticed account recovery was inert: the
+    # API reported success and no email ever arrived. Report the real state.
+    # This endpoint requires auth, so saying so leaks nothing to anonymous
+    # callers (POST /request-password-reset deliberately stays vague for that
+    # reason).
+    if not settings.EMAIL_DELIVERY_CONFIGURED:
+        return {
+            "message": (
+                "Verification link generated, but this deployment has no email "
+                "provider configured, so nothing was sent. The link was written "
+                "to the API log. See EMAIL_PROVIDER in .env.example."
+            ),
+            "delivered": "false",
+        }
+
+    return {"message": "Verification email sent successfully", "delivered": "true"}
 
 
 @router.post("/verify-email", response_model=UserResponse)

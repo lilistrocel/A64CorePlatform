@@ -451,9 +451,19 @@ export function Login() {
                   </MobileHelperText>
                 )}
 
-                <ForgotPasswordLink to="/forgot-password">
-                  Forgot password?
-                </ForgotPasswordLink>
+                {/*
+                  Hidden when Cloudflare Access fronts this deployment. Access
+                  gates every path except the QR-label bypasses, so
+                  /forgot-password 302s to the Access login — the link would
+                  advertise a recovery route the user cannot reach. Where Access
+                  is the credential, recovery belongs to the IdP, not to us.
+                  Deployments without Access still show it and still work.
+                */}
+                {!showCfButton && (
+                  <ForgotPasswordLink to="/forgot-password">
+                    Forgot password?
+                  </ForgotPasswordLink>
+                )}
 
                 <Button
                   type="submit"

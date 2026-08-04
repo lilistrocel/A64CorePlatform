@@ -51,7 +51,22 @@ class Settings(BaseSettings):
     # Email Settings
     FRONTEND_URL: str = "http://localhost:3000"
     FROM_EMAIL: str = "noreply@a64core.com"
-    # SENDGRID_API_KEY: str = ""  # Add in production
+
+    # Name of the outbound email provider, e.g. "sendgrid" or "smtp".
+    # EMPTY IS THE HONEST DEFAULT AND CURRENTLY THE ONLY REAL VALUE:
+    # src/utils/email.py does not send anything. It formats the verification /
+    # password-reset link, writes it to the API log, and returns — the provider
+    # integration is still a TODO there. Account recovery is therefore inert on
+    # every deployment, which went unnoticed for as long as the feature has
+    # existed because the API answered "sent successfully" either way.
+    # Setting this does NOT enable delivery on its own; whoever implements a
+    # provider in email.py should branch on it.
+    EMAIL_PROVIDER: str = ""
+
+    @property
+    def EMAIL_DELIVERY_CONFIGURED(self) -> bool:
+        """True only when an outbound email provider is actually configured."""
+        return bool(self.EMAIL_PROVIDER.strip())
 
     # Genetics module — public label/QR resolution (T-804)
     # Scheme + host that printed label QR codes encode, e.g.
