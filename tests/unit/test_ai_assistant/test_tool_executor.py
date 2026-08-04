@@ -51,24 +51,29 @@ async def test_query_mongodb_routes_to_engine():
     mock_engine = AsyncMock()
     mock_engine.execute_ai_query = AsyncMock(return_value=mock_result)
 
+    # `get_query_engine` is never a module attribute of `tool_executor` — it
+    # is imported LOCALLY inside `_execute_query_mongodb` at call time:
+    #   from src.modules.ai_analytics.services.query_engine import get_query_engine
+    # Patching "tool_executor.get_query_engine" is a silent no-op (the name
+    # doesn't exist there, so the patch has nothing to replace and the real
+    # function runs instead). Patch the definition site instead. This exact
+    # mistake — patching a lazily-imported symbol on the wrong module — has
+    # now bitten this codebase twice, including the Cloudflare Access test
+    # work; when a symbol is imported inside a function body rather than at
+    # module scope, always patch where it's defined, not where it's used.
     with patch(
-        "src.modules.ai_assistant.services.tool_executor.get_query_engine",
-        new=AsyncMock(return_value=mock_engine),
+        "src.modules.ai_analytics.services.query_engine.get_query_engine",
+        return_value=mock_engine,
     ):
-        # Import inside patch context to pick up the mock
-        import importlib
-        import src.modules.ai_assistant.services.tool_executor as te
-        importlib.reload(te)
-
-        result = await te.execute_tool(
+        result = await execute_tool(
             tool_name="query_mongodb",
             tool_input={"question": "How many harvests last month?"},
             user_id="u1",
             user_role="user",
         )
 
-    # Basic smoke check — real routing is tested in integration tests
-    assert isinstance(result, dict)
+    mock_engine.execute_ai_query.assert_awaited_once()
+    assert result == mock_result
 
 
 @pytest.mark.asyncio
