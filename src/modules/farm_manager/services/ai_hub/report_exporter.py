@@ -362,10 +362,17 @@ class ReportExporter:
 
             # Ordered list
             elif re.match(r"^\d+\.\s", line):
+                # Reason: the substitution is done BEFORE the f-string, not
+                # inside it. A backslash in an f-string expression is a
+                # SyntaxError on Python 3.11 (only legal from 3.12, PEP 701),
+                # and this module runs on 3.11 — inlining it made the whole
+                # file unimportable, so every AI Hub report export raised
+                # SyntaxError at the lazy import in api/v1/ai_hub.py.
+                numbered = re.sub(r"^\d+\.\s", "", clean)
                 ws.cell(
                     row=row,
                     column=1,
-                    value=f"  {re.sub(r'^\\d+\\.\\s', '', clean)}",
+                    value=f"  {numbered}",
                 ).font = body_font
                 row += 1
 
