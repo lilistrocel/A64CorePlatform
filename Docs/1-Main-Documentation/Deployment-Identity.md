@@ -15,6 +15,7 @@ those differences controls, and what breaks when one is wrong.
 - [Each variable, in detail](#each-variable-in-detail)
   - [PUBLIC_BASE_URL](#public_base_url)
   - [Cloudflare tunnel hostname](#cloudflare-tunnel-hostname)
+  - [Cloudflare tunnel identity (instance-manager.sh)](#cloudflare-tunnel-identity-instance-managersh)
   - [Zero Trust team domain and AUD tag](#zero-trust-team-domain-and-aud-tag)
   - [Container name prefix](#container-name-prefix)
   - [Admin contact](#admin-contact)
@@ -52,6 +53,10 @@ of hardcoding a value.
 | Hostname | Output of `hostname` on the box running the stack | |
 | Public base URL | The externally-reachable URL this deployment serves the app at (`PUBLIC_BASE_URL`) | |
 | Cloudflare tunnel hostname | The hostname `cloudflared` publishes for this deployment (lives outside this repo) | |
+| Cloudflare tunnel name (`CLOUDFLARED_TUNNEL_NAME`) | This box's own tunnel — only relevant if `instances/instance-manager.sh` manages it | |
+| Cloudflare tunnel ID (`CLOUDFLARED_TUNNEL_ID`) | UUID of that same tunnel | |
+| Cloudflare domain (`CLOUDFLARE_DOMAIN`) | Domain instance subdomains are created under, e.g. `example.com` | |
+| Tunnel service user/home (`CLOUDFLARED_SERVICE_USER` / `CLOUDFLARED_SERVICE_HOME`) | Linux user + `$HOME` running the tunnel's systemd service | |
 | Zero Trust team domain | `<team>.cloudflareaccess.com` for this deployment's Access setup | |
 | Access AUD tag | This deployment's Application Audience tag in Cloudflare Access | |
 | Compose project / container prefix | The prefix on every container this deployment's `docker compose` starts, e.g. `<prefix>-api-1` | |
@@ -66,6 +71,17 @@ values into your own deployment's table above:**
 | Public base URL | `https://dev.a20core.com` |
 | Cloudflare tunnel hostname | `dev.a20core.com` (same value as public base URL on this deployment — not guaranteed elsewhere) |
 | Compose project / container prefix | `a64coreplatform-` |
+
+This reference deployment's tunnel predates `CLOUDFLARED_TUNNEL_NAME` /
+`CLOUDFLARED_TUNNEL_ID` / `CLOUDFLARE_DOMAIN` / `CLOUDFLARED_SERVICE_USER` /
+`CLOUDFLARED_SERVICE_HOME` existing as tracked variables at all — it runs
+from a systemd unit configured directly on this box, outside
+`instance-manager.sh`. Its values are deliberately omitted here rather than
+shown filled in, for the same reason the rest of this document gives no
+real value as an example: a filled-in tunnel identity is exactly the thing
+the next deployment must not copy. See
+[Cloudflare tunnel identity](#cloudflare-tunnel-identity-instance-managersh)
+below.
 
 ## Each variable, in detail
 
@@ -122,6 +138,70 @@ users reach the app at one address while every printed label points at
 another. Keep both values in the table above so the mismatch is checkable
 in one place instead of two systems that never talk to each other.
 
+### Cloudflare tunnel identity (`instance-manager.sh`)
+
+**What it controls.** `instances/instance-manager.sh` can manage more than
+one A64 instance on a single box, each on its own subdomain
+(`<instance-name>.<CLOUDFLARE_DOMAIN>`), all routed through one shared
+Cloudflare tunnel. `CLOUDFLARE_DOMAIN`, `CLOUDFLARED_TUNNEL_NAME`, and
+`CLOUDFLARED_TUNNEL_ID` identify *which* tunnel that is; `CLOUDFLARED_SERVICE_USER`
+and `CLOUDFLARED_SERVICE_HOME` identify the Linux user/home that runs it as
+a systemd service (`instances/_template/cloudflared.service`).
+
+**Why this is deployment identity, not a shared constant.** A tunnel is a
+specific, provisioned Cloudflare object tied to one account and one set of
+credentials — it is exactly as deployment-specific as `PUBLIC_BASE_URL`,
+not a fact about the *software*. `instance-manager.sh` and
+`instances/_template/cloudflared.service` are tracked in git and shipped to
+every deployment that clones this repo; `instances/<name>/` runtime dirs
+are not (see the note at the top of this repo's task description for this
+document's own origin). Anything hardcoded in the tracked files becomes
+every other deployment's silent default the moment they run the same
+script — which is precisely what happened here: an earlier version of
+`instance-manager.sh` hardcoded one specific box's tunnel name and UUID
+directly into the script.
+
+**Consequence of getting it wrong — the HA-balancing failure mode.**
+Cloudflare tunnels support multiple simultaneous connector processes for
+high availability: when more than one `cloudflared` instance authenticates
+against the same tunnel credentials, Cloudflare load-balances incoming
+requests for that tunnel's hostnames across all connected instances. If a
+*second*, independent deployment's `cloudflared` connects to the *first*
+deployment's tunnel — because it inherited that tunnel's name/ID from a
+hardcoded default instead of provisioning its own — Cloudflare now treats
+both boxes as equally valid connectors for every hostname the tunnel
+serves. Each box's `~/.cloudflared/config.yml` only has ingress rules for
+hostnames *it* knows about. A request for a hostname that only the first
+box's ingress config understands has roughly a 50% chance of landing on
+the second box instead, where no ingress rule matches — resulting in an
+intermittent 404 with no obvious cause: the same URL sometimes works,
+sometimes doesn't, and the failure never correlates cleanly with anything
+an operator would think to check first. This is a materially worse failure
+mode than the `PUBLIC_BASE_URL` mistake this document was originally
+written for: that one was consistently wrong; this one is *inconsistently*
+wrong, which is far harder to diagnose.
+
+**Current safeguard.** None of these five variables has a built-in default
+that names a real tunnel, domain, or user — every one is empty in
+`.env.example`. `instance-manager.sh`'s `create`/`destroy` commands (the
+only commands that touch the tunnel) call `require_tunnel_identity()`
+before any mutation and refuse to proceed, naming exactly which variable
+is missing, if `CLOUDFLARE_DOMAIN` / `CLOUDFLARED_TUNNEL_NAME` /
+`CLOUDFLARED_TUNNEL_ID` are not set (via already-exported shell env, or via
+this box's root `.env`). `instances/_template/cloudflared.service` ships
+with `{{CLOUDFLARED_TUNNEL_NAME}}` / `{{CLOUDFLARED_SERVICE_USER}}` /
+`{{CLOUDFLARED_SERVICE_HOME}}` placeholders instead of a real name/user/
+home, with instructions in its own header comment for filling them in
+per-box before installing the unit. `scripts/preflight.sh` prints all five
+values and warns (non-blocking — plenty of deployments run a tunnel set up
+entirely outside `instance-manager.sh` and never need these) if any is
+unset.
+
+**If you are standing up a new box's tunnel:** provision your own tunnel
+with `cloudflared tunnel create <name>` — never point
+`CLOUDFLARED_TUNNEL_NAME` / `CLOUDFLARED_TUNNEL_ID` at a tunnel another
+deployment already owns, even temporarily "to get started."
+
 ### Zero Trust team domain and AUD tag
 
 These gate Cloudflare Access, not label printing, but they are equally
@@ -168,6 +248,11 @@ every value in the table above and to any future one like it. Concretely:
 - `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` default to empty strings, and
   `src/config/settings.py` refuses to boot with Access enabled and either
   one blank (see [Cloudflare-Access-Setup.md](./Cloudflare-Access-Setup.md)).
+- `CLOUDFLARE_DOMAIN`, `CLOUDFLARED_TUNNEL_NAME`, and `CLOUDFLARED_TUNNEL_ID`
+  default to empty strings, and `instances/instance-manager.sh` refuses to
+  run `create`/`destroy` with any of the three blank — see
+  [Cloudflare tunnel identity](#cloudflare-tunnel-identity-instance-managersh)
+  above for what a copied-instead-of-provisioned value costs here.
 - Any new deployment-identity variable added later should be reviewed
   against this same rule before it ships: could its default, unedited, be
   mistaken for a working value on a different box? If yes, it needs a
@@ -183,11 +268,35 @@ server.
 ## Checking what this box resolved to
 
 `scripts/preflight.sh` runs the discovery steps described in `CLAUDE.md`'s
-"Server & Git" section (hostname, container prefix from `docker ps`, and
-the API's configured `PUBLIC_BASE_URL`) and prints what the current box
-actually resolved to. Run it before trusting any doc's example values on an
-unfamiliar box, and before generating the first label on a newly-configured
-deployment.
+"Server & Git" section (hostname, container prefix from `docker ps`, the
+API's configured `PUBLIC_BASE_URL`, and the Cloudflare tunnel identity
+variables above) and prints what the current box actually resolved to,
+including exactly which `.env` file it read. Run it before trusting any
+doc's example values on an unfamiliar box, and before generating the first
+label on a newly-configured deployment.
+
+**Which `.env` it reads is itself resolved, not assumed.** A box using the
+`instances/<name>/.env` layout (from `instances/instance-manager.sh`)
+rather than a root `.env` was, for a time, invisible to this script — it
+hardcoded `ROOT/.env` and printed a false `[BLOCKING] PUBLIC_BASE_URL is
+unset` on a box where the value was correctly set, just in the wrong file.
+`preflight.sh` now resolves the file to read in this order, and always
+prints which one it picked and why:
+
+1. `--env-file <path>` — explicit, always wins.
+2. `--instance <name>` — explicit, resolves to `instances/<name>/.env`.
+3. `ROOT/.env` — the default when present. A box with **both** a root
+   `.env` and one or more `instances/<name>/` directories reads root `.env`
+   unless told otherwise; the script prints a `NOTE:` naming any
+   `instances/*/.env` it did *not* read, so that precedence is visible
+   output, not a silent assumption.
+4. `instances/<prefix>/.env`, auto-detected from the compose project prefix
+   `docker ps` reports — only tried when root `.env` is absent.
+5. None found — falls back to exported shell env only, same as before.
+
+Run `bash scripts/preflight.sh --instance <name>` to check a specific
+instance's `.env` explicitly regardless of which one the default
+precedence would have picked.
 
 ## See Also
 

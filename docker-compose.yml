@@ -21,6 +21,16 @@ services:
       # the point of use (src/modules/genetics/api/v1/labels.py) rather than
       # silently inheriting some other deployment's host. See .env.example.
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
+      # Host used to build links in outgoing emails — account verification
+      # and password reset (src/utils/email.py). Wrong value means every
+      # recovery email points at the wrong place, but (unlike
+      # PUBLIC_BASE_URL above) it is fixable after the fact by editing .env
+      # and recreating: no physical artifact bakes it in. Falling back to
+      # localhost:3000 is safe under the no-real-deployment-default policy
+      # (commit 75820b2) because it names nothing real; it just means
+      # emails sent before .env is configured contain a dead link instead
+      # of leaking another deployment's host.
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000

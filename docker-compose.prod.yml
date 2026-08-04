@@ -72,6 +72,18 @@ services:
     environment:
       - NODE_ENV=production
     volumes: []  # Remove all volumes (use built files in container)
+    healthcheck:
+      # Override the base file's dev probe (port 5173, Vite dev server).
+      # The production build target serves static files via nginx on port
+      # 80 and never runs Vite, so the base healthcheck always failed here
+      # — reporting unhealthy while the container served correctly.
+      # 127.0.0.1, not localhost, for the same reason as the base file:
+      # /etc/hosts maps localhost to ::1 too, and nginx here binds IPv4 only.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: always
 
   # NGINX - Production Configuration with SSL

@@ -3,9 +3,10 @@
 # scripts/preflight.sh — read-only deployment-identity check.
 #
 # Prints what THIS box actually resolves for every per-deployment value
-# (PUBLIC_BASE_URL, FRONTEND_URL, Cloudflare Access settings — see the
-# "DEPLOYMENT IDENTITY" block in .env.example) and loudly flags anything
-# still undeclared or configured in a way that cannot possibly work.
+# (PUBLIC_BASE_URL, FRONTEND_URL, Cloudflare Access settings, Cloudflare
+# tunnel identity — see the "DEPLOYMENT IDENTITY" block in .env.example)
+# and loudly flags anything still undeclared or configured in a way that
+# cannot possibly work.
 #
 # Background: a sibling deployment on a different machine discovered that
 # docker-compose.yml used to default PUBLIC_BASE_URL to
@@ -15,6 +16,14 @@
 # caught by running one command before a deploy, not by a phone scanning a
 # label after the fact.
 #
+# A second sibling deployment (using the instances/<name>/.env layout from
+# instances/instance-manager.sh) then found this script hardcoded ROOT/.env
+# as the only place it would ever look — so on a box with no root .env, it
+# printed a false [BLOCKING] PUBLIC_BASE_URL-is-unset even though the value
+# was correctly set in instances/<name>/.env. --env-file / --instance below,
+# plus the printed "Env file:" line, fix that: a false BLOCKING is worse
+# than no check, because it teaches people the tool is wrong.
+#
 # Deliberately read-only: makes no changes to .env, docker, or anything
 # else. Does not require the stack to be running, though container-prefix
 # detection degrades gracefully (not an error) when it is not.
@@ -22,13 +31,64 @@
 # POSIX-ish on purpose (this project targets Windows AND Linux — see
 # CLAUDE.md): no GNU-only flags, so this also behaves under Git Bash.
 #
+# Usage:
+#   bash scripts/preflight.sh                     # auto-resolve (see below)
+#   bash scripts/preflight.sh --env-file <path>    # explicit .env to read
+#   bash scripts/preflight.sh --instance <name>    # read instances/<name>/.env
+#
+# Env-file resolution precedence (first match wins; explicit "Env file:"
+# line in the output always says which one was actually used and why):
+#   1. --env-file <path>     — explicit, always wins
+#   2. --instance <name>     — explicit, resolves to instances/<name>/.env
+#   3. ROOT/.env             — if present, this is the default. A box that
+#                              has BOTH a root .env and instances/<name>/
+#                              dirs (e.g. a primary deployment that also
+#                              hosts secondary instances) reads root .env
+#                              unless told otherwise — see the printed NOTE
+#                              when other instances/*/.env exist too.
+#   4. instances/<prefix>/.env — only when root .env is absent, using the
+#                              compose project prefix detected from
+#                              `docker ps` (the same detection this script
+#                              already did, just applied earlier now).
+#   5. none                  — no file found; falls back to exported shell
+#                              env only, same as before.
+#
 # Exit code: 0 if nothing blocking was found, 1 otherwise — safe to use as
 # a deploy gate, e.g.:
 #   bash scripts/preflight.sh || exit 1
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ENV_FILE="$ROOT/.env"
+INSTANCES_ROOT="$ROOT/instances"
+
+usage_and_exit() {
+  local code="${1:-0}"
+  cat <<EOF
+Usage: bash scripts/preflight.sh [--env-file <path>] [--instance <name>]
+
+  --env-file <path>   Read this .env file explicitly (highest precedence).
+  --instance <name>   Read instances/<name>/.env explicitly.
+  -h, --help          Show this help.
+
+With no flags: reads ROOT/.env if present, otherwise auto-detects an
+instances/<prefix>/.env from the running container prefix. See the header
+comment in this script for the full precedence order.
+EOF
+  exit "$code"
+}
+
+OPT_ENV_FILE=""
+OPT_INSTANCE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --env-file) OPT_ENV_FILE="${2:-}"; shift 2 ;;
+    --env-file=*) OPT_ENV_FILE="${1#*=}"; shift ;;
+    --instance) OPT_INSTANCE="${2:-}"; shift 2 ;;
+    --instance=*) OPT_INSTANCE="${1#*=}"; shift ;;
+    -h|--help) usage_and_exit 0 ;;
+    *) echo "Unknown argument: $1" >&2; usage_and_exit 1 ;;
+  esac
+done
 
 BLOCKING=0
 WARNINGS=0
@@ -154,15 +214,110 @@ print_row() {
   printf '  %-22s %-40s [%s]\n' "$1" "$2" "$3"
 }
 
+# --- Compose container-prefix detection (read-only `docker ps`) -----------
+# Run once, early: both the env-file auto-detection below and the display
+# section further down need it, and `docker ps` should only be invoked once.
+DOCKER_PROBE_STATUS="unknown"  # no-docker | no-daemon | empty | ok
+DOCKER_NAMES=""
+DETECTED_PREFIX=""
+
+if ! command -v docker >/dev/null 2>&1; then
+  DOCKER_PROBE_STATUS="no-docker"
+elif ! DOCKER_NAMES="$(docker ps --format '{{.Names}}' 2>/dev/null)"; then
+  DOCKER_PROBE_STATUS="no-daemon"
+elif [ -z "$DOCKER_NAMES" ]; then
+  DOCKER_PROBE_STATUS="empty"
+else
+  DOCKER_PROBE_STATUS="ok"
+  for suffix in api mongodb redis nginx user-portal; do
+    match="$(printf '%s\n' "$DOCKER_NAMES" | grep -E "^.+-${suffix}-[0-9]+\$" | head -n 1 || true)"
+    if [ -n "$match" ]; then
+      DETECTED_PREFIX="$(printf '%s' "$match" | sed -E "s/-${suffix}-[0-9]+\$//")"
+      break
+    fi
+  done
+fi
+
+# --- Env-file resolution ---------------------------------------------------
+# See the precedence order documented in the header comment. Nothing here
+# reads secret values — raw_value_of()/print_var_row() (above) already mask
+# them; this section only decides WHICH file those functions read from, and
+# prints that choice so it is never incidental.
+list_instance_env_dirs() {
+  # Prints instance directory names under instances/ that have a .env,
+  # excluding _template. Read-only; used only for the "NOTE" below.
+  [ -d "$INSTANCES_ROOT" ] || return 0
+  for d in "$INSTANCES_ROOT"/*/; do
+    [ -d "$d" ] || continue
+    local n
+    n="$(basename "$d")"
+    [ "$n" = "_template" ] && continue
+    [ -f "${d}.env" ] && printf '%s\n' "$n"
+  done
+}
+
+ENV_FILE=""
+ENV_FILE_SOURCE=""
+
+if [ -n "$OPT_ENV_FILE" ]; then
+  ENV_FILE="$OPT_ENV_FILE"
+  ENV_FILE_SOURCE="explicit --env-file"
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "[BLOCKING] --env-file '$ENV_FILE' does not exist."
+    BLOCKING=1
+  fi
+elif [ -n "$OPT_INSTANCE" ]; then
+  ENV_FILE="$INSTANCES_ROOT/$OPT_INSTANCE/.env"
+  ENV_FILE_SOURCE="explicit --instance '$OPT_INSTANCE'"
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "[BLOCKING] --instance '$OPT_INSTANCE' has no .env at '$ENV_FILE'."
+    BLOCKING=1
+  fi
+elif [ -f "$ROOT/.env" ]; then
+  ENV_FILE="$ROOT/.env"
+  ENV_FILE_SOURCE="root .env (default precedence: root .env wins over any instances/<name>/.env when both exist on this box — pass --instance <name> or --env-file <path> to check a specific instance instead)"
+elif [ -n "$DETECTED_PREFIX" ] && [ -f "$INSTANCES_ROOT/$DETECTED_PREFIX/.env" ]; then
+  ENV_FILE="$INSTANCES_ROOT/$DETECTED_PREFIX/.env"
+  ENV_FILE_SOURCE="auto-detected instance '$DETECTED_PREFIX' (root .env absent; derived from the running container-name prefix below)"
+else
+  ENV_FILE=""
+  ENV_FILE_SOURCE="none found (no root .env, no auto-detected instances/<prefix>/.env — relying on exported shell env only)"
+fi
+
+# Which instance name (if any) ENV_FILE resolved to, so the "other instances
+# not read" note below doesn't list the one actually in use.
+USED_INSTANCE_NAME=""
+case "$ENV_FILE" in
+  "$INSTANCES_ROOT"/*/.env)
+    USED_INSTANCE_NAME="$(basename "$(dirname "$ENV_FILE")")"
+    ;;
+esac
+
+OTHER_INSTANCES=""
+while IFS= read -r inst; do
+  [ -z "$inst" ] && continue
+  [ "$inst" = "$USED_INSTANCE_NAME" ] && continue
+  OTHER_INSTANCES="$OTHER_INSTANCES $inst"
+done <<INSTLIST
+$(list_instance_env_dirs)
+INSTLIST
+OTHER_INSTANCES="${OTHER_INSTANCES# }"
+
 echo "==============================================================="
 echo " A64 Core Platform — deployment preflight"
 echo "==============================================================="
 echo "Hostname:   $(hostname 2>/dev/null || echo unknown)"
 echo "Repo root:  $ROOT"
-if [ -f "$ENV_FILE" ]; then
-  echo ".env file:  found"
+if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
+  echo "Env file:   $ENV_FILE"
 else
-  echo ".env file:  NOT FOUND (relying on exported shell env only)"
+  echo "Env file:   NOT FOUND"
+fi
+echo "            (source: $ENV_FILE_SOURCE)"
+if [ -n "$OTHER_INSTANCES" ]; then
+  echo "            NOTE: instances/ also has .env for:$OTHER_INSTANCES — NOT read"
+  echo "            this run. Pass --instance <name> or --env-file <path> to check"
+  echo "            one of those instead."
 fi
 echo
 
@@ -171,6 +326,12 @@ echo "--- Deployment identity -----------------------------------------"
 print_var_row PUBLIC_BASE_URL
 print_var_row FRONTEND_URL
 for v in CF_ACCESS_ENABLED CF_ACCESS_TEAM_DOMAIN CF_ACCESS_AUD CF_ACCESS_EXCLUSIVE CF_ACCESS_JIT_PROVISION CF_ACCESS_DEFAULT_ROLE; do
+  print_var_row "$v"
+done
+echo
+
+echo "--- Cloudflare tunnel identity (instances/instance-manager.sh) ---"
+for v in CLOUDFLARE_DOMAIN CLOUDFLARED_TUNNEL_NAME CLOUDFLARED_TUNNEL_ID CLOUDFLARED_SERVICE_USER CLOUDFLARED_SERVICE_HOME; do
   print_var_row "$v"
 done
 echo
@@ -221,30 +382,64 @@ else
 fi
 echo
 
-echo "--- Compose container prefix on this box --------------------------"
-if ! command -v docker >/dev/null 2>&1; then
-  echo "  docker not found on PATH — skipping."
-elif ! docker_names="$(docker ps --format '{{.Names}}' 2>/dev/null)"; then
-  echo "  'docker ps' failed (daemon not running or not reachable) — skipping."
-elif [ -z "$docker_names" ]; then
-  echo "  No running containers found."
-else
-  prefix=""
-  for suffix in api mongodb redis nginx user-portal; do
-    match="$(printf '%s\n' "$docker_names" | grep -E "^.+-${suffix}-[0-9]+\$" | head -n 1 || true)"
-    if [ -n "$match" ]; then
-      prefix="$(printf '%s' "$match" | sed -E "s/-${suffix}-[0-9]+\$//")"
-      break
-    fi
-  done
-  if [ -n "$prefix" ]; then
-    echo "  Detected compose project prefix: ${prefix}-"
-    echo "  (e.g. '${prefix}-api-1', '${prefix}-mongodb-1')"
-  else
-    echo "  Could not confidently derive a prefix from running container names:"
-    printf '%s\n' "$docker_names" | sed 's/^/    /'
+# Non-blocking: these vars are only required if instances/instance-manager.sh
+# is used to manage this box's Cloudflare tunnel (its `create`/`destroy`
+# commands). A deployment whose tunnel was configured manually/outside
+# instance-manager.sh (e.g. a pre-existing host systemd service) never
+# reads them and is unaffected either way — so an unset value here is a
+# WARNING, not a BLOCKING, unlike PUBLIC_BASE_URL above.
+tunnel_missing=""
+for v in CLOUDFLARE_DOMAIN CLOUDFLARED_TUNNEL_NAME CLOUDFLARED_TUNNEL_ID; do
+  v_val="$(raw_value_of "$v")"
+  if [ -z "$v_val" ]; then
+    tunnel_missing="$tunnel_missing $v"
   fi
+done
+tunnel_missing="${tunnel_missing# }"
+if [ -n "$tunnel_missing" ]; then
+  echo "  [WARNING]  Unset: $tunnel_missing"
+  echo "             Required only by instances/instance-manager.sh create/destroy"
+  echo "             (it now fails loudly, naming the missing var, instead of"
+  echo "             falling back to any real tunnel/domain). See the HA-balancing"
+  echo "             failure mode in Docs/1-Main-Documentation/Deployment-Identity.md"
+  echo "             before running instance-manager.sh create/destroy on this box."
+  WARNINGS=1
+else
+  echo "  [ok]       CLOUDFLARE_DOMAIN / CLOUDFLARED_TUNNEL_NAME / CLOUDFLARED_TUNNEL_ID all set."
 fi
+
+service_missing=""
+for v in CLOUDFLARED_SERVICE_USER CLOUDFLARED_SERVICE_HOME; do
+  v_val="$(raw_value_of "$v")"
+  if [ -z "$v_val" ]; then
+    service_missing="$service_missing $v"
+  fi
+done
+service_missing="${service_missing# }"
+if [ -n "$service_missing" ]; then
+  echo "  [WARNING]  Unset: $service_missing"
+  echo "             Needed only when rendering"
+  echo "             instances/_template/cloudflared.service into this box's"
+  echo "             systemd unit (User=/HOME=). Not read by any command here."
+  WARNINGS=1
+fi
+echo
+
+echo "--- Compose container prefix on this box --------------------------"
+case "$DOCKER_PROBE_STATUS" in
+  no-docker) echo "  docker not found on PATH — skipping." ;;
+  no-daemon) echo "  'docker ps' failed (daemon not running or not reachable) — skipping." ;;
+  empty) echo "  No running containers found." ;;
+  ok)
+    if [ -n "$DETECTED_PREFIX" ]; then
+      echo "  Detected compose project prefix: ${DETECTED_PREFIX}-"
+      echo "  (e.g. '${DETECTED_PREFIX}-api-1', '${DETECTED_PREFIX}-mongodb-1')"
+    else
+      echo "  Could not confidently derive a prefix from running container names:"
+      printf '%s\n' "$DOCKER_NAMES" | sed 's/^/    /'
+    fi
+    ;;
+esac
 echo
 
 echo "==============================================================="
@@ -253,6 +448,10 @@ if [ "$BLOCKING" -ne 0 ]; then
   echo "==============================================================="
   exit 1
 fi
-echo " RESULT: no blocking problems found."
+if [ "$WARNINGS" -ne 0 ]; then
+  echo " RESULT: no blocking problems found (non-blocking [WARNING] lines above)."
+else
+  echo " RESULT: no blocking problems found."
+fi
 echo "==============================================================="
 exit 0

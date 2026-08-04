@@ -1,15 +1,36 @@
+# Template for THIS BOX's cloudflared systemd unit — not rendered
+# automatically by any command in instance-manager.sh. Copy this file to
+# /etc/systemd/system/cloudflared.service and replace every {{PLACEHOLDER}}
+# below with this deployment's own values before installing it:
+#
+#   {{CLOUDFLARED_TUNNEL_NAME}}   -> this box's CLOUDFLARED_TUNNEL_NAME
+#   {{CLOUDFLARED_SERVICE_USER}}  -> this box's CLOUDFLARED_SERVICE_USER
+#   {{CLOUDFLARED_SERVICE_HOME}}  -> this box's CLOUDFLARED_SERVICE_HOME
+#
+# All three are deployment identity — see
+# Docs/1-Main-Documentation/Deployment-Identity.md. This template ships to
+# every A64 deployment (it is tracked in git, unlike instances/<name>/), so
+# it must never be committed back with a real user/home/tunnel name filled
+# in — that is the exact defect this rewrite fixes: a previous fix
+# hardcoded one deployment's own tunnel here, which the next deployment to
+# copy this repo would silently inherit. A second `cloudflared` connecting
+# to a tunnel it does not own gets Cloudflare-HA-balanced against the
+# owning connector — roughly half the traffic for a hostname only one of
+# the two connectors has an ingress rule for silently 404s. Give this
+# tunnel its OWN identity (a tunnel `cloudflared tunnel create` made for
+# THIS box), never a copy of another deployment's.
 [Unit]
-Description=Cloudflare Tunnel (a20core)
+Description=Cloudflare Tunnel ({{CLOUDFLARED_TUNNEL_NAME}})
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=noobcity
-ExecStart=/usr/local/bin/cloudflared tunnel run a20core
+User={{CLOUDFLARED_SERVICE_USER}}
+ExecStart=/usr/local/bin/cloudflared tunnel run {{CLOUDFLARED_TUNNEL_NAME}}
 Restart=always
 RestartSec=5
-Environment=HOME=/home/noobcity
+Environment=HOME={{CLOUDFLARED_SERVICE_HOME}}
 
 [Install]
 WantedBy=multi-user.target

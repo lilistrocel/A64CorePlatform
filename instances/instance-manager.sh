@@ -12,8 +12,29 @@ INSTANCES_DIR="$SCRIPT_DIR"
 
 # Cloudflare Tunnel Configuration
 CLOUDFLARED_CONFIG="$HOME/.cloudflared/config.yml"
-CLOUDFLARE_DOMAIN="a20core.com"
-CLOUDFLARED_TUNNEL_ID="3a2d27fa-71b9-4264-ab44-4c161a12ec9b"
+
+# CLOUDFLARE_DOMAIN / CLOUDFLARED_TUNNEL_NAME / CLOUDFLARED_TUNNEL_ID are this
+# BOX's Cloudflare tunnel identity — exactly like PUBLIC_BASE_URL is a
+# per-deployment value (see Docs/1-Main-Documentation/Deployment-Identity.md).
+# They are deliberately NOT hardcoded here: this file ships to every A64
+# deployment, so a real tunnel name/ID/domain baked in here becomes every
+# *other* deployment's default too — the same mistake as the old
+# PUBLIC_BASE_URL default, just one file over. A previous fix for this exact
+# defect substituted a different real tunnel's values directly into this
+# file instead of removing the hardcoding; that only moves the bug to
+# whichever deployment copies this file next. A second connector attaching
+# to a tunnel it doesn't own gets Cloudflare-HA-balanced against it — traffic
+# for a hostname only one of the two connectors knows how to route silently
+# 404s roughly half the time. See Deployment-Identity.md for the full
+# failure mode before ever setting these to a shared tunnel's values.
+#
+# Resolved lazily by require_tunnel_identity() (below) at the point a tunnel
+# operation actually runs (create/destroy) — never at parse time, so
+# `list`/`status`/`logs`/`ports`/`shell`/`stop`, which never touch the
+# tunnel, keep working on a box that has not set these yet.
+CLOUDFLARE_DOMAIN="${CLOUDFLARE_DOMAIN:-}"
+CLOUDFLARED_TUNNEL_NAME="${CLOUDFLARED_TUNNEL_NAME:-}"
+CLOUDFLARED_TUNNEL_ID="${CLOUDFLARED_TUNNEL_ID:-}"
 
 # Default port ranges (base ports for first instance, incremented per instance)
 DEFAULT_BASE_PORTS=(
@@ -73,7 +94,11 @@ ${YELLOW}Port Offset:${NC}
 ${YELLOW}Cloudflare Tunnel:${NC}
     On create: automatically adds DNS CNAME record + tunnel ingress rule + restarts tunnel
     On destroy: removes tunnel ingress rule + reminds to delete DNS record
-    Subdomain pattern: <name>.${CLOUDFLARE_DOMAIN}
+    Subdomain pattern: <name>.<CLOUDFLARE_DOMAIN>
+    Requires CLOUDFLARE_DOMAIN, CLOUDFLARED_TUNNEL_NAME, CLOUDFLARED_TUNNEL_ID
+    set (root .env, or exported) — this box's tunnel identity, never a
+    built-in default. See Docs/1-Main-Documentation/Deployment-Identity.md.
+    Run 'bash scripts/preflight.sh' to see what this box currently resolves.
 EOF
 }
 
@@ -153,6 +178,54 @@ check_ports() {
     return 0
 }
 
+# Read the last matching KEY=VALUE line from a file, no shell expansion of
+# the value — deliberately NOT `source`d, so a value containing shell
+# metacharacters (quotes, $, backticks) can't execute anything. Same
+# approach scripts/preflight.sh uses for the same reason.
+_read_env_var() {
+    local var_name="$1" file="$2" line
+    [[ -f "$file" ]] || return 0
+    line=$(grep -E "^${var_name}=" "$file" 2>/dev/null | tail -n 1 || true)
+    [[ -n "$line" ]] && printf '%s' "${line#*=}"
+    return 0
+}
+
+# Resolves CLOUDFLARE_DOMAIN / CLOUDFLARED_TUNNEL_NAME / CLOUDFLARED_TUNNEL_ID
+# and refuses to proceed if any is still missing, naming exactly which one.
+# Precedence: already-exported shell env wins (lets CI/tests override);
+# otherwise read from PROJECT_ROOT/.env (see .env.example's DEPLOYMENT
+# IDENTITY block). No built-in fallback ever names a real tunnel/domain —
+# see the comment above the CLOUDFLARE_DOMAIN declaration at the top of this
+# file for why that rule exists. Call this before any tunnel mutation
+# (create/destroy); commands that never touch the tunnel must not call it.
+require_tunnel_identity() {
+    local root_env="$PROJECT_ROOT/.env"
+
+    if [[ -z "$CLOUDFLARE_DOMAIN" ]]; then
+        CLOUDFLARE_DOMAIN="$(_read_env_var CLOUDFLARE_DOMAIN "$root_env")"
+    fi
+    if [[ -z "$CLOUDFLARED_TUNNEL_NAME" ]]; then
+        CLOUDFLARED_TUNNEL_NAME="$(_read_env_var CLOUDFLARED_TUNNEL_NAME "$root_env")"
+    fi
+    if [[ -z "$CLOUDFLARED_TUNNEL_ID" ]]; then
+        CLOUDFLARED_TUNNEL_ID="$(_read_env_var CLOUDFLARED_TUNNEL_ID "$root_env")"
+    fi
+
+    local missing=()
+    [[ -z "$CLOUDFLARE_DOMAIN" ]] && missing+=(CLOUDFLARE_DOMAIN)
+    [[ -z "$CLOUDFLARED_TUNNEL_NAME" ]] && missing+=(CLOUDFLARED_TUNNEL_NAME)
+    [[ -z "$CLOUDFLARED_TUNNEL_ID" ]] && missing+=(CLOUDFLARED_TUNNEL_ID)
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        log_error "Missing required tunnel identity variable(s): ${missing[*]}"
+        log_error "These describe THIS box's Cloudflare tunnel and must never default to"
+        log_error "a real one — see Docs/1-Main-Documentation/Deployment-Identity.md."
+        log_error "Set them in ${root_env} (see .env.example's DEPLOYMENT IDENTITY block)"
+        log_error "or export them before running this command. Refusing to guess."
+        exit 1
+    fi
+}
+
 # Add ingress rule to cloudflared config
 tunnel_add_ingress() {
     local name="$1"
@@ -223,7 +296,7 @@ tunnel_add_dns() {
     fi
 
     log_info "Adding DNS record for ${hostname}..."
-    if cloudflared tunnel route dns a20core "$hostname" 2>&1; then
+    if cloudflared tunnel route dns "$CLOUDFLARED_TUNNEL_NAME" "$hostname" 2>&1; then
         log_info "DNS record added: ${hostname}"
     else
         log_warn "DNS record may already exist or failed — check Cloudflare dashboard"
@@ -250,7 +323,7 @@ tunnel_restart() {
         if [[ -n "$pid" ]]; then
             kill "$pid" 2>/dev/null || true
             sleep 2
-            nohup cloudflared tunnel run a20core &>/dev/null &
+            nohup cloudflared tunnel run "$CLOUDFLARED_TUNNEL_NAME" &>/dev/null &
             log_info "Cloudflare tunnel restarted (PID: $!)"
         else
             log_warn "Could not find cloudflared process to restart"
@@ -286,6 +359,10 @@ cmd_create() {
         log_error "Instance '$name' already exists"
         exit 1
     fi
+
+    # Fail before any side effect (not after creating half of an instance)
+    # if this box's tunnel identity is not declared.
+    require_tunnel_identity
 
     log_info "Creating instance: $name (port offset: $port_offset)"
 
@@ -493,6 +570,11 @@ cmd_destroy() {
         log_error "Instance '$name' does not exist"
         exit 1
     fi
+
+    # Fail before the confirmation prompt if this box's tunnel identity is
+    # not declared — better than asking the operator to confirm a destroy
+    # that would only fail partway through the tunnel cleanup below.
+    require_tunnel_identity
 
     local env_file
     env_file=$(get_env_file "$name")
