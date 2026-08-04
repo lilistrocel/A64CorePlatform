@@ -66,31 +66,32 @@ async def test_farm_scope_missing_farm_id_falls_back():
 @pytest.mark.asyncio
 async def test_global_builder_failure_returns_safe_fallback():
     """When the global context builder raises, a safe minimal prompt is returned."""
-    from src.modules.ai_assistant.services.context_composer import _build_global_prompt
+    from src.modules.ai_assistant.services.context_composer import build_system_prompt
 
-    with patch(
-        "src.modules.ai_assistant.services.context_composer.build_global_system_prompt",
-        side_effect=Exception("DB error"),
-    ):
-        # Need to bypass the import inside _build_global_prompt
-        pass
+    ctx = ChatContext(scope=ChatScope.GLOBAL)
 
-    # Verify _build_global_prompt itself handles builder exceptions
+    # `_build_global_prompt` (the private helper `build_system_prompt` calls
+    # for GLOBAL scope) imports `build_global_system_prompt` LOCALLY from
+    # farm_manager.services.global_ai.context_builder inside its own
+    # try/except, so we must patch that definition site rather than a
+    # (nonexistent) `context_composer.build_global_system_prompt` module
+    # attribute — patching a lazily-imported symbol on the wrong module is
+    # silently a no-op and the real, unmocked call runs instead. This is the
+    # same failure mode that broke test_query_mongodb_routes_to_engine below
+    # and the recent Cloudflare Access test work.
     with patch(
-        "src.modules.ai_assistant.services.context_composer."
         "src.modules.farm_manager.services.global_ai.context_builder"
         ".build_global_system_prompt",
         side_effect=Exception("DB error"),
     ):
-        try:
-            result = await _build_global_prompt()
-            # If it returns, it must be a non-empty safe fallback
-            assert isinstance(result, str)
-            assert len(result) > 10
-        except Exception:
-            # Exception propagation is acceptable here; the important thing
-            # is that the outer build_system_prompt catches it.
-            pass
+        result = await build_system_prompt(ctx)
+
+    # _build_global_prompt's own try/except (context_composer.py) catches the
+    # failure and returns its hardcoded safe-fallback string instead of
+    # propagating — verify build_system_prompt (the public entry point)
+    # surfaces that fallback rather than raising.
+    assert isinstance(result, str)
+    assert len(result) > 10
 
 
 @pytest.mark.asyncio
@@ -101,8 +102,15 @@ async def test_prompt_contains_read_only_constraint():
     base = "You are a farm assistant."
     result = _append_base_instructions(base)
 
+    # Honest caveat: this is still a literal substring match, just a
+    # currently-correct one — the previous assertion ("CANNOT control") broke
+    # when the prompt was reworded, and this one would too. Asserting prose
+    # meaning is not something a string check can do. Kept because the
+    # read-only constraint is worth guarding and there is no structured
+    # representation of it to assert against; if the prompt is reworded,
+    # update this deliberately rather than deleting the check.
     assert "READ-ONLY" in result
-    assert "CANNOT control" in result.upper() or "cannot control" in result
+    assert "cannot control any equipment" in result.lower()
 
 
 @pytest.mark.asyncio

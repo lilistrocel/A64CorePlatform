@@ -241,8 +241,12 @@ class TestFullPayload:
     def test_timing_expected_harvest_date_present(self) -> None:
         assert "expected_harvest_date" in self.payload["timing"]
 
-    def test_population_max_capacity(self) -> None:
-        assert self.payload["population"]["max_capacity"] == 60
+    def test_population_max_capacity_omitted(self) -> None:
+        # Reason: maxPlants removed in Phase 1; max_capacity is deliberately
+        # omitted from the population block rather than sent as a value (see
+        # sensehub_crop_sync.py _build_set_crop_data_payload). Kept as an
+        # explicit assertion so the key doesn't silently get reintroduced.
+        assert "max_capacity" not in self.payload["population"]
 
     def test_population_plant_count(self) -> None:
         assert self.payload["population"]["plant_count"] == 48
