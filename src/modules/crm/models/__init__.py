@@ -9,7 +9,7 @@ from .customer import (
     CustomerUpdate,
     CustomerType,
     CustomerStatus,
-    Address
+    Address,
 )
 
 __all__ = [
@@ -19,5 +19,5 @@ __all__ = [
     "CustomerUpdate",
     "CustomerType",
     "CustomerStatus",
-    "Address"
+    "Address",
 ]

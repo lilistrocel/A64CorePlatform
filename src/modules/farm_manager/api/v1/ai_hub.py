@@ -155,8 +155,13 @@ async def confirm_action(
 
 
 ALLOWED_AUDIO_TYPES = {
-    "audio/webm", "audio/ogg", "audio/wav", "audio/mp4",
-    "audio/mpeg", "audio/x-m4a", "video/webm",
+    "audio/webm",
+    "audio/ogg",
+    "audio/wav",
+    "audio/mp4",
+    "audio/mpeg",
+    "audio/x-m4a",
+    "video/webm",
 }
 MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -195,7 +200,7 @@ async def transcribe_audio(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported audio type: {raw_content_type}. "
-                   f"Allowed: {', '.join(sorted(ALLOWED_AUDIO_TYPES))}",
+            f"Allowed: {', '.join(sorted(ALLOWED_AUDIO_TYPES))}",
         )
 
     audio_bytes = await audio.read()

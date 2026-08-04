@@ -19,7 +19,7 @@ from ...models.farm_analytics import (
     BlockComparisonItem,
     HistoricalTrends,
     YieldTimelinePoint,
-    StateTransitionEvent
+    StateTransitionEvent,
 )
 from ...models.block import Block, BlockStatus
 from ...models.block_analytics import TimePeriod
@@ -40,7 +40,7 @@ class FarmAnalyticsService:
         period: str = "30d",
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        farming_year: Optional[int] = None
+        farming_year: Optional[int] = None,
     ) -> FarmAnalyticsResponse:
         """
         Get comprehensive analytics for a farm aggregated from all blocks
@@ -58,10 +58,13 @@ class FarmAnalyticsService:
         Raises:
             ValueError: If farm not found
         """
-        logger.info(f"[Farm Analytics] Generating analytics for farm {farm_id}, period: {period}, farming_year: {farming_year}")
+        logger.info(
+            f"[Farm Analytics] Generating analytics for farm {farm_id}, period: {period}, farming_year: {farming_year}"
+        )
 
         # Get farm details
         from .farm_repository import FarmRepository
+
         farm_repo = FarmRepository()
         farm = await farm_repo.get_by_id(farm_id)
         if not farm:
@@ -74,10 +77,7 @@ class FarmAnalyticsService:
 
         # Get all blocks for this farm
         blocks, total_blocks = await BlockRepository.get_by_farm(
-            farm_id,
-            skip=0,
-            limit=1000,
-            farming_year=farming_year
+            farm_id, skip=0, limit=1000, farming_year=farming_year
         )
 
         logger.info(f"[Farm Analytics] Found {total_blocks} blocks")
@@ -106,14 +106,12 @@ class FarmAnalyticsService:
             aggregatedMetrics=aggregated_metrics,
             stateBreakdown=state_breakdown,
             blockComparison=block_comparison,
-            historicalTrends=historical_trends
+            historicalTrends=historical_trends,
         )
 
     @staticmethod
     def _calculate_date_range(
-        period: str,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        period: str, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> Tuple[datetime, datetime]:
         """Calculate actual start and end dates based on period"""
         now = datetime.utcnow()
@@ -140,26 +138,34 @@ class FarmAnalyticsService:
 
     @staticmethod
     async def _calculate_aggregated_metrics(
-        blocks: List[Block],
-        start_date: datetime,
-        end_date: datetime
+        blocks: List[Block], start_date: datetime, end_date: datetime
     ) -> AggregatedMetrics:
         """Calculate aggregated metrics from all blocks"""
-        logger.info(f"[Farm Analytics] Calculating aggregated metrics for {len(blocks)} blocks")
+        logger.info(
+            f"[Farm Analytics] Calculating aggregated metrics for {len(blocks)} blocks"
+        )
 
         total_blocks = len(blocks)
         total_yield_kg = 0.0
         total_predicted_yield = 0.0
         total_weighted_efficiency = 0.0
-        total_predicted_with_harvest = 0.0  # Track predicted yield only for blocks with harvests
+        total_predicted_with_harvest = (
+            0.0  # Track predicted yield only for blocks with harvests
+        )
         total_performance_score = 0.0
-        blocks_with_harvests = 0  # Count blocks that have actual yield for performance calculation
+        blocks_with_harvests = (
+            0  # Count blocks that have actual yield for performance calculation
+        )
         total_capacity = 0
         current_plant_count = 0
         active_plantings = 0
 
         # Count blocks in active planting states
-        active_states = {BlockStatus.GROWING, BlockStatus.FRUITING, BlockStatus.HARVESTING}
+        active_states = {
+            BlockStatus.GROWING,
+            BlockStatus.FRUITING,
+            BlockStatus.HARVESTING,
+        }
 
         for block in blocks:
             # Count active plantings
@@ -183,7 +189,9 @@ class FarmAnalyticsService:
                 # Weighted average efficiency (weight by predicted yield)
                 # Only include blocks with actual harvests in efficiency calculation
                 if block.kpi.predictedYieldKg > 0 and block.kpi.actualYieldKg > 0:
-                    total_weighted_efficiency += block.kpi.yieldEfficiencyPercent * block.kpi.predictedYieldKg
+                    total_weighted_efficiency += (
+                        block.kpi.yieldEfficiencyPercent * block.kpi.predictedYieldKg
+                    )
                     total_predicted_with_harvest += block.kpi.predictedYieldKg
                     blocks_with_harvests += 1
 
@@ -200,23 +208,33 @@ class FarmAnalyticsService:
                 skip=0,
                 limit=1000,
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
             )
             # Sum all harvest quantities
             for harvest in harvests:
                 total_yield_kg += harvest.quantityKg
 
-        logger.info(f"[Farm Analytics] Total yield including historical harvests: {total_yield_kg} kg")
+        logger.info(
+            f"[Farm Analytics] Total yield including historical harvests: {total_yield_kg} kg"
+        )
 
         # Calculate averages (only from blocks with actual harvests)
         avg_yield_efficiency = 0.0
         if total_predicted_with_harvest > 0:
-            avg_yield_efficiency = total_weighted_efficiency / total_predicted_with_harvest
+            avg_yield_efficiency = (
+                total_weighted_efficiency / total_predicted_with_harvest
+            )
 
-        overall_performance_score = total_performance_score / blocks_with_harvests if blocks_with_harvests > 0 else 0.0
+        overall_performance_score = (
+            total_performance_score / blocks_with_harvests
+            if blocks_with_harvests > 0
+            else 0.0
+        )
 
         # Calculate utilization
-        current_utilization = (current_plant_count / total_capacity * 100) if total_capacity > 0 else 0.0
+        current_utilization = (
+            (current_plant_count / total_capacity * 100) if total_capacity > 0 else 0.0
+        )
 
         return AggregatedMetrics(
             totalBlocks=total_blocks,
@@ -226,7 +244,7 @@ class FarmAnalyticsService:
             overallPerformanceScore=round(overall_performance_score, 2),
             totalCapacity=total_capacity,
             currentUtilization=round(current_utilization, 2),
-            predictedYieldKg=round(total_predicted_yield, 2)
+            predictedYieldKg=round(total_predicted_yield, 2),
         )
 
     @staticmethod
@@ -242,7 +260,7 @@ class FarmAnalyticsService:
             "fruiting": {"block_ids": [], "days": []},
             "harvesting": {"block_ids": [], "days": []},
             "cleaning": {"block_ids": [], "days": []},
-            "alert": {"block_ids": [], "days": []}
+            "alert": {"block_ids": [], "days": []},
         }
 
         # Group blocks by state
@@ -267,7 +285,7 @@ class FarmAnalyticsService:
             item = StateBreakdownItem(
                 count=len(data["block_ids"]),
                 blockIds=data["block_ids"],
-                avgDaysInState=round(avg_days, 1) if avg_days is not None else None
+                avgDaysInState=round(avg_days, 1) if avg_days is not None else None,
             )
 
             setattr(breakdown, state_name, item)
@@ -276,9 +294,7 @@ class FarmAnalyticsService:
 
     @staticmethod
     async def _calculate_block_comparison(
-        blocks: List[Block],
-        start_date: datetime,
-        end_date: datetime
+        blocks: List[Block], start_date: datetime, end_date: datetime
     ) -> List[BlockComparisonItem]:
         """Calculate comparison data for each block"""
         logger.info(f"[Farm Analytics] Calculating block comparison data")
@@ -293,24 +309,26 @@ class FarmAnalyticsService:
                 days_in_cycle = (datetime.utcnow() - block.plantedDate).days
 
             # Get task completion rate
-            tasks = await db.farm_tasks.find({
-                "blockId": str(block.blockId)
-            }).to_list(length=1000)
+            tasks = await db.farm_tasks.find({"blockId": str(block.blockId)}).to_list(
+                length=1000
+            )
 
             total_tasks = len(tasks)
             completed_tasks = sum(1 for t in tasks if t.get("status") == "completed")
-            task_completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+            task_completion_rate = (
+                (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+            )
 
             # Get active alerts count
             alerts, _ = await AlertRepository.get_by_block(
-                block.blockId,
-                skip=0,
-                limit=1000
+                block.blockId, skip=0, limit=1000
             )
             active_alerts = sum(1 for a in alerts if a.status == "active")
 
             # Calculate performance score (simple average of yield efficiency and task completion)
-            yield_score = min(100, block.kpi.yieldEfficiencyPercent) if block.kpi else 0.0
+            yield_score = (
+                min(100, block.kpi.yieldEfficiencyPercent) if block.kpi else 0.0
+            )
             performance_score = (yield_score + task_completion_rate) / 2
 
             comparison_items.append(
@@ -321,11 +339,13 @@ class FarmAnalyticsService:
                     state=block.state.value,
                     currentCrop=block.targetCropName,
                     yieldKg=round(block.kpi.actualYieldKg, 2) if block.kpi else 0.0,
-                    yieldEfficiency=round(block.kpi.yieldEfficiencyPercent, 2) if block.kpi else 0.0,
+                    yieldEfficiency=(
+                        round(block.kpi.yieldEfficiencyPercent, 2) if block.kpi else 0.0
+                    ),
                     performanceScore=round(performance_score, 2),
                     daysInCycle=days_in_cycle,
                     taskCompletionRate=round(task_completion_rate, 2),
-                    activeAlerts=active_alerts
+                    activeAlerts=active_alerts,
                 )
             )
 
@@ -336,10 +356,7 @@ class FarmAnalyticsService:
 
     @staticmethod
     async def _calculate_historical_trends(
-        farm_id: UUID,
-        blocks: List[Block],
-        start_date: datetime,
-        end_date: datetime
+        farm_id: UUID, blocks: List[Block], start_date: datetime, end_date: datetime
     ) -> HistoricalTrends:
         """Calculate historical trends and patterns"""
         logger.info(f"[Farm Analytics] Calculating historical trends")
@@ -352,7 +369,7 @@ class FarmAnalyticsService:
                 skip=0,
                 limit=1000,
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
             )
             all_harvests.extend([(h, block.blockId, block.blockCode) for h in harvests])
 
@@ -375,7 +392,7 @@ class FarmAnalyticsService:
                     date=datetime.fromisoformat(date_str),
                     totalYieldKg=round(data["total_kg"], 2),
                     harvestCount=data["count"],
-                    blockIds=list(data["block_ids"])
+                    blockIds=list(data["block_ids"]),
                 )
             )
 
@@ -387,7 +404,9 @@ class FarmAnalyticsService:
                 if change.changedAt < start_date or change.changedAt > end_date:
                     continue
 
-                from_state = block.statusChanges[i - 1].status.value if i > 0 else "empty"
+                from_state = (
+                    block.statusChanges[i - 1].status.value if i > 0 else "empty"
+                )
 
                 state_transitions.append(
                     StateTransitionEvent(
@@ -395,7 +414,7 @@ class FarmAnalyticsService:
                         blockId=block.blockId,
                         blockCode=block.blockCode or f"B{str(block.blockId)[:6]}",
                         fromState=from_state,
-                        toState=change.status.value
+                        toState=change.status.value,
                     )
                 )
 
@@ -416,7 +435,8 @@ class FarmAnalyticsService:
             performances = [
                 min(100, b.kpi.yieldEfficiencyPercent) if b.kpi else 0.0
                 for b in blocks
-                if b.state in {BlockStatus.GROWING, BlockStatus.FRUITING, BlockStatus.HARVESTING}
+                if b.state
+                in {BlockStatus.GROWING, BlockStatus.FRUITING, BlockStatus.HARVESTING}
             ]
 
             if performances:
@@ -432,5 +452,5 @@ class FarmAnalyticsService:
             yieldTimeline=yield_timeline,
             stateTransitions=state_transitions,
             performanceTrend=performance_trend,
-            avgHarvestsPerWeek=round(avg_harvests_per_week, 2)
+            avgHarvestsPerWeek=round(avg_harvests_per_week, 2),
         )

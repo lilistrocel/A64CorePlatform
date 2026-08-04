@@ -22,11 +22,7 @@ class RouteService:
     def __init__(self):
         self.repository = RouteRepository()
 
-    async def create_route(
-        self,
-        route_data: RouteCreate,
-        created_by: UUID
-    ) -> Route:
+    async def create_route(self, route_data: RouteCreate, created_by: UUID) -> Route:
         """
         Create a new route
 
@@ -45,19 +41,19 @@ class RouteService:
             if not route_data.name or not route_data.name.strip():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Route name is required"
+                    detail="Route name is required",
                 )
 
             if route_data.distance <= 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Distance must be greater than 0"
+                    detail="Distance must be greater than 0",
                 )
 
             if route_data.estimatedDuration <= 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Estimated duration must be greater than 0"
+                    detail="Estimated duration must be greater than 0",
                 )
 
             route = await self.repository.create(route_data, created_by)
@@ -70,7 +66,7 @@ class RouteService:
             logger.error(f"Error creating route: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create route"
+                detail="Failed to create route",
             )
 
     async def get_route(self, route_id: UUID) -> Route:
@@ -90,15 +86,12 @@ class RouteService:
         if not route:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Route {route_id} not found"
+                detail=f"Route {route_id} not found",
             )
         return route
 
     async def get_all_routes(
-        self,
-        page: int = 1,
-        per_page: int = 20,
-        is_active: Optional[bool] = None
+        self, page: int = 1, per_page: int = 20, is_active: Optional[bool] = None
     ) -> tuple[List[Route], int, int]:
         """
         Get all routes with pagination
@@ -123,11 +116,7 @@ class RouteService:
 
         return routes, total, total_pages
 
-    async def update_route(
-        self,
-        route_id: UUID,
-        update_data: RouteUpdate
-    ) -> Route:
+    async def update_route(self, route_id: UUID, update_data: RouteUpdate) -> Route:
         """
         Update a route
 
@@ -148,26 +137,29 @@ class RouteService:
         if update_data.name is not None and not update_data.name.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Route name cannot be empty"
+                detail="Route name cannot be empty",
             )
 
         if update_data.distance is not None and update_data.distance <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Distance must be greater than 0"
+                detail="Distance must be greater than 0",
             )
 
-        if update_data.estimatedDuration is not None and update_data.estimatedDuration <= 0:
+        if (
+            update_data.estimatedDuration is not None
+            and update_data.estimatedDuration <= 0
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Estimated duration must be greater than 0"
+                detail="Estimated duration must be greater than 0",
             )
 
         updated_route = await self.repository.update(route_id, update_data)
         if not updated_route:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Route {route_id} not found"
+                detail=f"Route {route_id} not found",
             )
 
         logger.info(f"Route updated: {route_id}")
@@ -193,7 +185,7 @@ class RouteService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Route {route_id} not found"
+                detail=f"Route {route_id} not found",
             )
 
         logger.info(f"Route deleted: {route_id}")

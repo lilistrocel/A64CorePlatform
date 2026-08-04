@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class SubstrateStatus(str, Enum):
     """Substrate batch status"""
+
     PREPARING = "preparing"
     STERILIZED = "sterilized"
     LOADED = "loaded"
@@ -22,6 +23,7 @@ class SubstrateStatus(str, Enum):
 
 class SterilizationMethod(str, Enum):
     """Sterilization method"""
+
     AUTOCLAVE = "autoclave"
     PASTEURIZATION = "pasteurization"
     COLD_PASTEURIZATION = "cold_pasteurization"
@@ -31,6 +33,7 @@ class SterilizationMethod(str, Enum):
 
 class RawMaterial(BaseModel):
     """Raw material in a substrate batch"""
+
     name: str = Field(..., min_length=1, max_length=100)
     weightKg: float = Field(..., gt=0)
     supplier: Optional[str] = Field(None, max_length=200)
@@ -39,21 +42,34 @@ class RawMaterial(BaseModel):
 
 class SubstrateBatchBase(BaseModel):
     """Base substrate batch fields"""
-    batchCode: str = Field(..., min_length=1, max_length=20, description="Batch identifier")
-    recipe: Optional[str] = Field(None, max_length=500, description="Recipe name or description")
-    totalWeight: Optional[float] = Field(None, gt=0, description="Total batch weight in kg")
+
+    batchCode: str = Field(
+        ..., min_length=1, max_length=20, description="Batch identifier"
+    )
+    recipe: Optional[str] = Field(
+        None, max_length=500, description="Recipe name or description"
+    )
+    totalWeight: Optional[float] = Field(
+        None, gt=0, description="Total batch weight in kg"
+    )
 
 
 class SubstrateBatchCreate(SubstrateBatchBase):
     """Schema for creating a substrate batch"""
+
     rawMaterials: Optional[List[RawMaterial]] = None
     sterilizationMethod: Optional[SterilizationMethod] = None
-    sterilizationTemp: Optional[float] = Field(None, description="Sterilization temperature (Celsius)")
-    sterilizationDuration: Optional[int] = Field(None, gt=0, description="Duration in minutes")
+    sterilizationTemp: Optional[float] = Field(
+        None, description="Sterilization temperature (Celsius)"
+    )
+    sterilizationDuration: Optional[int] = Field(
+        None, gt=0, description="Duration in minutes"
+    )
 
 
 class SubstrateBatchUpdate(BaseModel):
     """Schema for updating a substrate batch"""
+
     batchCode: Optional[str] = Field(None, min_length=1, max_length=20)
     recipe: Optional[str] = Field(None, max_length=500)
     totalWeight: Optional[float] = Field(None, gt=0)
@@ -66,7 +82,10 @@ class SubstrateBatchUpdate(BaseModel):
 
 class SubstrateBatch(SubstrateBatchBase):
     """Complete substrate batch model"""
-    batchId: str = Field(default_factory=lambda: str(uuid4()), description="Unique batch ID")
+
+    batchId: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique batch ID"
+    )
     facilityId: str = Field(..., description="Facility where batch was prepared")
 
     # Materials and preparation
@@ -77,7 +96,9 @@ class SubstrateBatch(SubstrateBatchBase):
 
     # Status and tracking
     status: SubstrateStatus = Field(SubstrateStatus.PREPARING)
-    assignedRooms: List[str] = Field(default_factory=list, description="Room IDs using this batch")
+    assignedRooms: List[str] = Field(
+        default_factory=list, description="Room IDs using this batch"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")

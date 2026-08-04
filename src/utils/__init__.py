@@ -1,4 +1,5 @@
 """Utilities package"""
+
 from .security import (
     hash_password,
     verify_password,
@@ -7,7 +8,7 @@ from .security import (
     decode_token,
     verify_access_token,
     verify_refresh_token,
-    generate_token_id
+    generate_token_id,
 )
 
 __all__ = [
@@ -18,5 +19,5 @@ __all__ = [
     "decode_token",
     "verify_access_token",
     "verify_refresh_token",
-    "generate_token_id"
+    "generate_token_id",
 ]

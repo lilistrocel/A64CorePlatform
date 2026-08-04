@@ -42,24 +42,22 @@ async def _get_harvest_inventory_stats(farming_year: Optional[int] = None) -> di
     if match_stage:
         pipeline.append({"$match": match_stage})
 
-    pipeline.append({
-        "$group": {
-            "_id": None,
-            "total": {"$sum": 1},
-            # Rows with available stock are those whose availableQuantity > 0
-            "available": {
-                "$sum": {
-                    "$cond": [{"$gt": ["$availableQuantity", 0]}, 1, 0]
-                }
-            },
-            # Reserved rows carry reservedQuantity > 0
-            "reserved": {
-                "$sum": {
-                    "$cond": [{"$gt": ["$reservedQuantity", 0]}, 1, 0]
-                }
-            },
+    pipeline.append(
+        {
+            "$group": {
+                "_id": None,
+                "total": {"$sum": 1},
+                # Rows with available stock are those whose availableQuantity > 0
+                "available": {
+                    "$sum": {"$cond": [{"$gt": ["$availableQuantity", 0]}, 1, 0]}
+                },
+                # Reserved rows carry reservedQuantity > 0
+                "reserved": {
+                    "$sum": {"$cond": [{"$gt": ["$reservedQuantity", 0]}, 1, 0]}
+                },
+            }
         }
-    })
+    )
 
     results = await db.inventory_harvest.aggregate(pipeline).to_list(length=1)
     if not results:
@@ -80,17 +78,17 @@ async def _get_harvest_inventory_stats(farming_year: Optional[int] = None) -> di
     "",
     response_model=SuccessResponse[dict],
     summary="Get sales dashboard statistics",
-    description="Get comprehensive sales dashboard statistics including orders, inventory, and purchase orders. Use farmingYear parameter to filter order counts, revenue, and inventory stats by farming year."
+    description="Get comprehensive sales dashboard statistics including orders, inventory, and purchase orders. Use farmingYear parameter to filter order counts, revenue, and inventory stats by farming year.",
 )
 @cache_response(ttl=30, key_prefix="sales")
 async def get_dashboard_stats(
     farmingYear: Optional[int] = Query(
         None,
-        description="Filter order counts, revenue, and inventory by farming year (e.g., 2025). When specified, all statistics are filtered by farmingYear field. Default to all data when not specified."
+        description="Filter order counts, revenue, and inventory by farming year (e.g., 2025). When specified, all statistics are filtered by farmingYear field. Default to all data when not specified.",
     ),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     order_service: OrderService = Depends(),
-    po_service: PurchaseOrderService = Depends()
+    po_service: PurchaseOrderService = Depends(),
 ):
     """
     Get comprehensive sales dashboard statistics
@@ -102,12 +100,20 @@ async def get_dashboard_stats(
 
     # Get order statistics (filtered by farming year if specified)
     # Service returns tuple: (orders_list, total_count, total_pages)
-    orders_list, total_orders, _ = await order_service.get_all_orders(page=1, per_page=100, farming_year=farmingYear)
+    orders_list, total_orders, _ = await order_service.get_all_orders(
+        page=1, per_page=100, farming_year=farmingYear
+    )
 
     # Get accurate status counts by querying with status filters (filtered by farming year if specified)
-    _, confirmed_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.CONFIRMED, farming_year=farmingYear)
-    _, shipped_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.SHIPPED, farming_year=farmingYear)
-    _, delivered_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.DELIVERED, farming_year=farmingYear)
+    _, confirmed_orders, _ = await order_service.get_all_orders(
+        page=1, per_page=1, status=SalesOrderStatus.CONFIRMED, farming_year=farmingYear
+    )
+    _, shipped_orders, _ = await order_service.get_all_orders(
+        page=1, per_page=1, status=SalesOrderStatus.SHIPPED, farming_year=farmingYear
+    )
+    _, delivered_orders, _ = await order_service.get_all_orders(
+        page=1, per_page=1, status=SalesOrderStatus.DELIVERED, farming_year=farmingYear
+    )
 
     # Get revenue stats using aggregation (filtered by farming year if specified)
     revenue_stats = await order_service.get_revenue_stats(farming_year=farmingYear)
@@ -134,14 +140,14 @@ async def get_dashboard_stats(
     # Get recent orders (last 5)
     recent_orders = sorted(
         orders_list,
-        key=lambda x: x.createdAt if hasattr(x, 'createdAt') and x.createdAt else "",
-        reverse=True
+        key=lambda x: x.createdAt if hasattr(x, "createdAt") and x.createdAt else "",
+        reverse=True,
     )[:5]
 
     # Build farming year context
     farming_year_context = {
         "farmingYear": farmingYear,
-        "isFiltered": farmingYear is not None
+        "isFiltered": farmingYear is not None,
     }
 
     dashboard_stats = {
@@ -167,12 +173,20 @@ async def get_dashboard_stats(
                 "status": o.status,
                 "total": o.total,
                 "paymentStatus": o.paymentStatus,
-                "orderDate": str(o.orderDate) if hasattr(o, 'orderDate') and o.orderDate else None,
-                "createdAt": str(o.createdAt) if hasattr(o, 'createdAt') and o.createdAt else None
+                "orderDate": (
+                    str(o.orderDate)
+                    if hasattr(o, "orderDate") and o.orderDate
+                    else None
+                ),
+                "createdAt": (
+                    str(o.createdAt)
+                    if hasattr(o, "createdAt") and o.createdAt
+                    else None
+                ),
             }
             for o in recent_orders
         ],
-        "farmingYearContext": farming_year_context
+        "farmingYearContext": farming_year_context,
     }
 
     return SuccessResponse(data=dashboard_stats)
@@ -182,22 +196,22 @@ async def get_dashboard_stats(
     "/stats",
     response_model=SuccessResponse[dict],
     summary="Get sales dashboard stats (alias)",
-    description="Alias for GET /api/v1/sales/dashboard - returns sales metrics including total orders, revenue, and status breakdown. Supports farmingYear filter."
+    description="Alias for GET /api/v1/sales/dashboard - returns sales metrics including total orders, revenue, and status breakdown. Supports farmingYear filter.",
 )
 @cache_response(ttl=30, key_prefix="sales_stats")
 async def get_dashboard_stats_alias(
     farmingYear: Optional[int] = Query(
         None,
-        description="Filter order counts, revenue, and inventory by farming year (e.g., 2025)"
+        description="Filter order counts, revenue, and inventory by farming year (e.g., 2025)",
     ),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     order_service: OrderService = Depends(),
-    po_service: PurchaseOrderService = Depends()
+    po_service: PurchaseOrderService = Depends(),
 ):
     """Get sales dashboard stats - alias endpoint for /dashboard/stats"""
     return await get_dashboard_stats(
         farmingYear=farmingYear,
         current_user=current_user,
         order_service=order_service,
-        po_service=po_service
+        po_service=po_service,
     )

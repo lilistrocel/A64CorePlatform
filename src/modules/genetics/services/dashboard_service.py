@@ -12,7 +12,14 @@ from typing import Any, Dict, List
 from pydantic import BaseModel, Field
 
 from ..models.enums import AccessionStatus
-from .database import ACCESSIONS, BATCHES, LINES, OBSERVATIONS, PROPAGATIONS, genetics_db
+from .database import (
+    ACCESSIONS,
+    BATCHES,
+    LINES,
+    OBSERVATIONS,
+    PROPAGATIONS,
+    genetics_db,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +33,7 @@ RECENT_ACTIVITY_DAYS = 30
 
 class KindBreakdown(BaseModel):
     """Line counts per biological domain."""
+
     plant: int = 0
     fungus: int = 0
     animal: int = 0
@@ -42,7 +50,9 @@ class GeneticsDashboard(BaseModel):
     totalAccessions: int = 0
     activeAccessions: int = 0
     contaminatedAccessions: int = 0
-    totalVessels: int = Field(0, description="Vessels/head held across active accessions")
+    totalVessels: int = Field(
+        0, description="Vessels/head held across active accessions"
+    )
 
     propagationsLast30Days: int = 0
     observationsLast30Days: int = 0

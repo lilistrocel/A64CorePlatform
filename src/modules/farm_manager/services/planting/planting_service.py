@@ -25,9 +25,7 @@ class PlantingService:
 
     @staticmethod
     async def create_planting_plan(
-        planting_data: PlantingCreate,
-        planner_user_id: UUID,
-        planner_email: str
+        planting_data: PlantingCreate, planner_user_id: UUID, planner_email: str
     ) -> Tuple[Planting, dict]:
         """
         Create a planting plan for a block.
@@ -53,7 +51,7 @@ class PlantingService:
         if block.state != BlockState.EMPTY:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Block is not empty (current state: {block.state}). Cannot create planting plan."
+                detail=f"Block is not empty (current state: {block.state}). Cannot create planting plan.",
             )
 
         # 2. (maxPlants removed in Phase 1 — no block capacity cap for plantings)
@@ -63,7 +61,7 @@ class PlantingService:
         if actual_total != planting_data.totalPlants:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Sum of plant quantities ({actual_total}) doesn't match totalPlants ({planting_data.totalPlants})"
+                detail=f"Sum of plant quantities ({actual_total}) doesn't match totalPlants ({planting_data.totalPlants})",
             )
 
         # 4. Fetch plant data and create snapshots
@@ -76,7 +74,9 @@ class PlantingService:
             # Fetch plant data from plant_data_enhanced (the active collection).
             # PlantDataEnhancedService.get_plant_data raises HTTP 404 on missing,
             # so no additional None check is needed.
-            plant_data = await PlantDataEnhancedService.get_plant_data(plant_item.plantDataId)
+            plant_data = await PlantDataEnhancedService.get_plant_data(
+                plant_item.plantDataId
+            )
 
             # Resolve nested fields from the enhanced model.
             # Reason: enhanced model uses growthCycle.totalCycleDays and yieldInfo.* sub-documents.
@@ -88,8 +88,12 @@ class PlantingService:
             # Pre-check confirmed all 57 dev docs have this field, but model allows None.
             env_reqs = plant_data.environmentalRequirements
             temp = env_reqs.temperature if env_reqs is not None else None
-            min_temperature: float | None = temp.minCelsius if temp is not None else None
-            max_temperature: float | None = temp.maxCelsius if temp is not None else None
+            min_temperature: float | None = (
+                temp.minCelsius if temp is not None else None
+            )
+            max_temperature: float | None = (
+                temp.maxCelsius if temp is not None else None
+            )
 
             # Calculate yield for this plant type
             plant_yield = yield_per_plant * plant_item.quantity
@@ -101,7 +105,7 @@ class PlantingService:
             elif yield_unit != plant_yield_unit:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"All plants must have the same yield unit. Found {yield_unit} and {plant_yield_unit}"
+                    detail=f"All plants must have the same yield unit. Found {yield_unit} and {plant_yield_unit}",
                 )
 
             # Track longest growth cycle for harvest estimation
@@ -126,7 +130,7 @@ class PlantingService:
                     plantDataId=plant_item.plantDataId,
                     plantName=plant_data.plantName,
                     quantity=plant_item.quantity,
-                    plantDataSnapshot=plant_snapshot
+                    plantDataSnapshot=plant_snapshot,
                 )
             )
 
@@ -146,7 +150,7 @@ class PlantingService:
             yieldUnit=yield_unit or "kg",
             status="planned",
             createdAt=now,
-            updatedAt=now
+            updatedAt=now,
         )
 
         # 6. Save planting to database
@@ -162,20 +166,21 @@ class PlantingService:
             BlockState.PLANNED,
             user_id=planner_user_id,
             user_email=planner_email,
-            notes=f"Planting plan created: {created_planting.plantingId}"
+            notes=f"Planting plan created: {created_planting.plantingId}",
         )
         if updated_block is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Block {block.blockId} not found during state update"
+                detail=f"Block {block.blockId} not found during state update",
             )
         # Set currentPlantingId separately (not in BlockRepository.update_status signature).
         # Reason: update_status does not accept arbitrary extra fields; raw $set is needed.
         from ..database import farm_db as _farm_db
+
         _db = _farm_db.get_database()
         await _db.blocks.update_one(
             {"blockId": str(block.blockId)},
-            {"$set": {"currentPlantingId": str(created_planting.plantingId)}}
+            {"$set": {"currentPlantingId": str(created_planting.plantingId)}},
         )
         # Re-fetch to reflect currentPlantingId in the returned block
         updated_block = await BlockRepository.get_by_id(block.blockId)
@@ -189,9 +194,7 @@ class PlantingService:
 
     @staticmethod
     async def mark_as_planted(
-        planting_id: UUID,
-        farmer_user_id: UUID,
-        farmer_email: str
+        planting_id: UUID, farmer_user_id: UUID, farmer_email: str
     ) -> Tuple[Planting, dict]:
         """
         Mark a planned planting as planted (farmer executes the plan).
@@ -214,14 +217,14 @@ class PlantingService:
         if not planting:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Planting {planting_id} not found"
+                detail=f"Planting {planting_id} not found",
             )
 
         # 2. Validate planting is in planned state
         if planting.status != "planned":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Planting is not in planned state (current: {planting.status})"
+                detail=f"Planting is not in planned state (current: {planting.status})",
             )
 
         # 3. Validate block is in PLANNED state
@@ -231,7 +234,7 @@ class PlantingService:
         if block.state != BlockState.PLANNED:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Block is not in planned state (current: {block.state})"
+                detail=f"Block is not in planned state (current: {block.state})",
             )
 
         # 4. Calculate harvest estimation dates
@@ -243,7 +246,9 @@ class PlantingService:
 
         planted_at = datetime.utcnow()
         estimated_harvest_start = planted_at + timedelta(days=longest_cycle)
-        estimated_harvest_end = estimated_harvest_start + timedelta(days=7)  # Assume 1 week harvest window
+        estimated_harvest_end = estimated_harvest_start + timedelta(
+            days=7
+        )  # Assume 1 week harvest window
 
         # 5. Update planting record
         update_data = {
@@ -252,7 +257,7 @@ class PlantingService:
             "plantedAt": planted_at,
             "estimatedHarvestStartDate": estimated_harvest_start,
             "estimatedHarvestEndDate": estimated_harvest_end,
-            "status": "planted"
+            "status": "planted",
         }
 
         updated_planting = await PlantingRepository.update(planting_id, update_data)
@@ -279,7 +284,7 @@ class PlantingService:
         if updated_block is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Block {planting.blockId} not found during state update"
+                detail=f"Block {planting.blockId} not found during state update",
             )
 
         logger.info(
@@ -301,7 +306,9 @@ class PlantingService:
             """
             from ..sensehub.sensehub_crop_sync import SenseHubCropSync
             from ..sensehub.sensehub_stage_mapper import compute_stage
-            from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+            from ..plant_data.plant_data_enhanced_repository import (
+                PlantDataEnhancedRepository,
+            )
 
             block_id_str = str(_block_for_sync.blockId)
             try:
@@ -320,7 +327,9 @@ class PlantingService:
                     )
                     return
 
-                plant_data = await PlantDataEnhancedRepository.get_by_id(_block_for_sync.targetCrop)
+                plant_data = await PlantDataEnhancedRepository.get_by_id(
+                    _block_for_sync.targetCrop
+                )
                 if plant_data is None:
                     logger.warning(
                         "[SenseHub] plant_data_enhanced not found for id=%s (block %s) — "
@@ -381,17 +390,14 @@ class PlantingService:
         if not planting:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Planting {planting_id} not found"
+                detail=f"Planting {planting_id} not found",
             )
 
         return planting
 
     @staticmethod
     async def get_farm_plantings(
-        farm_id: UUID,
-        page: int = 1,
-        per_page: int = 20,
-        status: Optional[str] = None
+        farm_id: UUID, page: int = 1, per_page: int = 20, status: Optional[str] = None
     ) -> Tuple[List[Planting], int]:
         """
         Get plantings for a farm with pagination.
@@ -405,7 +411,9 @@ class PlantingService:
         Returns:
             Tuple of (plantings list, total count)
         """
-        return await PlantingRepository.get_farm_plantings(farm_id, page, per_page, status)
+        return await PlantingRepository.get_farm_plantings(
+            farm_id, page, per_page, status
+        )
 
     @staticmethod
     async def get_active_planting_for_block(block_id: UUID) -> Optional[Planting]:

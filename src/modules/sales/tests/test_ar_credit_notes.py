@@ -149,9 +149,7 @@ class _FakeCollection:
 
     async def update_one(self, query, update, **kwargs):
         for doc in self._docs:
-            top_matches = all(
-                doc.get(k) == v for k, v in query.items() if "." not in k
-            )
+            top_matches = all(doc.get(k) == v for k, v in query.items() if "." not in k)
             if not top_matches:
                 continue
 
@@ -173,7 +171,7 @@ class _FakeCollection:
             if "$inc" in update:
                 for field, delta in update["$inc"].items():
                     if field.startswith("lines.$."):
-                        sub_field = field[len("lines.$."):]
+                        sub_field = field[len("lines.$.") :]
                         if line_id_query:
                             for line in doc.get("lines", []):
                                 if line.get("lineId") == line_id_query:
@@ -348,7 +346,9 @@ def _make_arc_payload(
                 base_doc_ref={
                     "doc_type": "RTN" if base_return_doc_ref else "AR_INVOICE",
                     "doc_id": _RTN_ID if base_return_doc_ref else _ARI_ID,
-                    "doc_number": "RTN-2026-0001" if base_return_doc_ref else _ARI_NUMBER,
+                    "doc_number": (
+                        "RTN-2026-0001" if base_return_doc_ref else _ARI_NUMBER
+                    ),
                     "line_id": _RTN_LINE_ID if base_return_doc_ref else None,
                 },
             )
@@ -495,7 +495,9 @@ async def test_update_open_arc_raises():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -527,7 +529,9 @@ async def test_delete_draft_arc():
         db, doc_entry=created.doc_entry, org_id=_ORG, user_id=_USER
     )
     assert deleted is True
-    assert await get_ar_credit_note(db, doc_entry=created.doc_entry, org_id=_ORG) is None
+    assert (
+        await get_ar_credit_note(db, doc_entry=created.doc_entry, org_id=_ORG) is None
+    )
 
 
 @pytest.mark.asyncio
@@ -546,7 +550,9 @@ async def test_delete_non_draft_raises():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -580,7 +586,9 @@ async def test_transition_draft_to_open_validates_allocation_sum():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -603,7 +611,9 @@ async def test_transition_draft_to_open_updates_credited_amount():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -630,7 +640,9 @@ async def test_transition_draft_to_open_auto_closes_invoice():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -654,7 +666,9 @@ async def test_over_credit_raises():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -677,7 +691,9 @@ async def test_transition_draft_to_open_emits_outbox():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -715,7 +731,9 @@ async def test_transition_draft_to_open_increments_return_consumed_qty():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -753,7 +771,9 @@ async def test_rtn_auto_closed_when_fully_consumed():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -780,7 +800,9 @@ async def test_transition_open_to_cancelled_reversal():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -793,7 +815,9 @@ async def test_transition_open_to_cancelled_reversal():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.CANCELLED
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -820,7 +844,9 @@ async def test_transition_open_to_cancelled_restores_invoice_status():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -833,7 +859,9 @@ async def test_transition_open_to_cancelled_restores_invoice_status():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.CANCELLED
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -859,7 +887,9 @@ async def test_transition_open_to_cancelled_emits_outbox():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -872,7 +902,9 @@ async def test_transition_open_to_cancelled_emits_outbox():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.CANCELLED
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -894,7 +926,9 @@ async def test_transition_draft_to_cancelled_no_side_effects():
     result = await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+        request_body=ARCreditNoteStatusTransitionRequest(
+            new_status=DocumentStatus.CANCELLED
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -922,7 +956,9 @@ async def test_transition_illegal_raises():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -934,7 +970,9 @@ async def test_transition_illegal_raises():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.CLOSED),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.CLOSED
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -943,7 +981,9 @@ async def test_transition_illegal_raises():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARCreditNoteStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -955,7 +995,9 @@ async def test_transition_not_found_returns_none():
     result = await transition_status(
         db,
         doc_entry=str(uuid.uuid4()),
-        request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+        request_body=ARCreditNoteStatusTransitionRequest(
+            new_status=DocumentStatus.OPEN
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -1032,9 +1074,9 @@ def test_to_dt_converts_date_to_datetime() -> None:
     d = date(2026, 5, 30)
     result = _to_dt(d)
 
-    assert isinstance(result, datetime), (
-        f"_to_dt must return datetime.datetime, got {type(result).__name__!r}"
-    )
+    assert isinstance(
+        result, datetime
+    ), f"_to_dt must return datetime.datetime, got {type(result).__name__!r}"
     assert result.year == 2026 and result.month == 5 and result.day == 30
     assert result.hour == 0 and result.minute == 0 and result.second == 0
     assert result.tzinfo is not None, "_to_dt must return a timezone-aware datetime"
@@ -1085,31 +1127,33 @@ async def test_update_arc_stores_datetime_not_date() -> None:
     # Dates seeded as datetime (already correct) to simulate a document already
     # existing; we then patch doc_date and dateOfSupply via update to exercise
     # the _to_dt path in update_ar_credit_note.
-    db[_ARC_COL]._add({
-        "docEntry": _ARC_DOC_ENTRY,
-        "docNumber": "ARC-2026-0001",
-        "docType": "ARC",
-        "organizationId": _ORG,
-        "companyCode": "1000",
-        "customerId": _CUSTOMER_ID,
-        "customerName": "Test Customer",
-        "status": "draft",
-        "docDate": datetime(2026, 5, 1, 0, 0, 0, tzinfo=timezone.utc),
-        "dateOfSupply": datetime(2026, 4, 30, 0, 0, 0, tzinfo=timezone.utc),
-        "invoiceDate": datetime(2026, 5, 1, 0, 0, 0, tzinfo=timezone.utc),
-        "taxDate": datetime(2026, 4, 30, 0, 0, 0, tzinfo=timezone.utc),
-        "currency": "AED",
-        "exchangeRate": 1.0,
-        "creditReason": "return",
-        "totals": {"net": 100.0, "tax": 5.0, "gross": 105.0},
-        "lines": [],
-        "allocations": [],
-        "targetDocRefs": [],
-        "createdAt": datetime.now(tz=timezone.utc),
-        "createdBy": _USER,
-        "updatedAt": datetime.now(tz=timezone.utc),
-        "updatedBy": _USER,
-    })
+    db[_ARC_COL]._add(
+        {
+            "docEntry": _ARC_DOC_ENTRY,
+            "docNumber": "ARC-2026-0001",
+            "docType": "ARC",
+            "organizationId": _ORG,
+            "companyCode": "1000",
+            "customerId": _CUSTOMER_ID,
+            "customerName": "Test Customer",
+            "status": "draft",
+            "docDate": datetime(2026, 5, 1, 0, 0, 0, tzinfo=timezone.utc),
+            "dateOfSupply": datetime(2026, 4, 30, 0, 0, 0, tzinfo=timezone.utc),
+            "invoiceDate": datetime(2026, 5, 1, 0, 0, 0, tzinfo=timezone.utc),
+            "taxDate": datetime(2026, 4, 30, 0, 0, 0, tzinfo=timezone.utc),
+            "currency": "AED",
+            "exchangeRate": 1.0,
+            "creditReason": "return",
+            "totals": {"net": 100.0, "tax": 5.0, "gross": 105.0},
+            "lines": [],
+            "allocations": [],
+            "targetDocRefs": [],
+            "createdAt": datetime.now(tz=timezone.utc),
+            "createdBy": _USER,
+            "updatedAt": datetime.now(tz=timezone.utc),
+            "updatedBy": _USER,
+        }
+    )
 
     update_payload = ARCreditNoteUpdate(
         doc_date=date(2026, 6, 1),
@@ -1134,9 +1178,9 @@ async def test_update_arc_stores_datetime_not_date() -> None:
             f"After update, field '{field}' must be datetime.datetime for BSON "
             f"compatibility, got {type(value).__name__!r}. Bug #4."
         )
-        assert value.tzinfo is not None, (
-            f"After update, field '{field}' must be timezone-aware"
-        )
+        assert (
+            value.tzinfo is not None
+        ), f"After update, field '{field}' must be timezone-aware"
 
     # taxDate = min(2026-05-28, 2026-06-01) = 2026-05-28
     assert raw["taxDate"] == datetime(2026, 5, 28, 0, 0, 0, tzinfo=timezone.utc)

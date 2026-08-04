@@ -52,12 +52,14 @@ class AttachmentDocType(str, Enum):
 # Allowed MIME types (whitelist)
 # ---------------------------------------------------------------------------
 
-ALLOWED_MIME_TYPES: frozenset = frozenset({
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-})
+ALLOWED_MIME_TYPES: frozenset = frozenset(
+    {
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+)
 """
 Mime types accepted by the upload endpoint.
 
@@ -89,18 +91,20 @@ CANONICAL_EXTENSION: dict = {
 # Statuses that make a document immutable for attachments
 # ---------------------------------------------------------------------------
 
-IMMUTABLE_STATUSES: frozenset = frozenset({
-    "Pending Approval",
-    "Approved",
-    "Posted",
-    "Sent",
-    "Open",
-    "Partially Received",
-    "Received",
-    "Closed",
-    "Rejected",
-    "Cancelled",
-})
+IMMUTABLE_STATUSES: frozenset = frozenset(
+    {
+        "Pending Approval",
+        "Approved",
+        "Posted",
+        "Sent",
+        "Open",
+        "Partially Received",
+        "Received",
+        "Closed",
+        "Rejected",
+        "Cancelled",
+    }
+)
 """
 Document statuses after which attachment uploads and deletes are rejected.
 
@@ -142,9 +146,19 @@ class AttachmentMetadata(BaseModel):
     fileId: str
     organizationId: str
     docType: Literal[
-        "PR", "PO", "GR", "AP", "PAYMENT",
-        "QUOTE", "SALES_ORDER", "DELIVERY", "AR_INVOICE",
-        "CUSTOMER_RECEIPT", "RETURN_REQUEST", "RETURN", "AR_CREDIT_NOTE",
+        "PR",
+        "PO",
+        "GR",
+        "AP",
+        "PAYMENT",
+        "QUOTE",
+        "SALES_ORDER",
+        "DELIVERY",
+        "AR_INVOICE",
+        "CUSTOMER_RECEIPT",
+        "RETURN_REQUEST",
+        "RETURN",
+        "AR_CREDIT_NOTE",
     ]
     docId: str
     originalFilename: str

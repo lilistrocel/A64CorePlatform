@@ -10,7 +10,12 @@ from uuid import UUID
 from fastapi import HTTPException, status
 import logging
 
-from src.modules.hr.models.employee import Employee, EmployeeCreate, EmployeeUpdate, EmployeeStatus
+from src.modules.hr.models.employee import (
+    Employee,
+    EmployeeCreate,
+    EmployeeUpdate,
+    EmployeeStatus,
+)
 from src.modules.hr.services.employee.employee_repository import EmployeeRepository
 from src.modules.hr.services.database import hr_db
 
@@ -24,9 +29,7 @@ class EmployeeService:
         self.repository = EmployeeRepository()
 
     async def create_employee(
-        self,
-        employee_data: EmployeeCreate,
-        created_by: UUID
+        self, employee_data: EmployeeCreate, created_by: UUID
     ) -> Employee:
         """
         Create a new employee
@@ -46,13 +49,13 @@ class EmployeeService:
             if not employee_data.firstName or not employee_data.firstName.strip():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="First name is required"
+                    detail="First name is required",
                 )
 
             if not employee_data.lastName or not employee_data.lastName.strip():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Last name is required"
+                    detail="Last name is required",
                 )
 
             employee = await self.repository.create(employee_data, created_by)
@@ -65,7 +68,7 @@ class EmployeeService:
             logger.error(f"Error creating employee: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create employee"
+                detail="Failed to create employee",
             )
 
     async def get_employee(self, employee_id: UUID) -> Employee:
@@ -85,7 +88,7 @@ class EmployeeService:
         if not employee:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee {employee_id} not found"
+                detail=f"Employee {employee_id} not found",
             )
         return employee
 
@@ -94,7 +97,7 @@ class EmployeeService:
         page: int = 1,
         per_page: int = 20,
         status: Optional[EmployeeStatus] = None,
-        department: Optional[str] = None
+        department: Optional[str] = None,
     ) -> tuple[List[Employee], int, int]:
         """
         Get all employees with pagination
@@ -114,17 +117,16 @@ class EmployeeService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        employees, total = await self.repository.get_all(skip, per_page, status, department)
+        employees, total = await self.repository.get_all(
+            skip, per_page, status, department
+        )
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 
         return employees, total, total_pages
 
     async def search_employees(
-        self,
-        search_term: str,
-        page: int = 1,
-        per_page: int = 20
+        self, search_term: str, page: int = 1, per_page: int = 20
     ) -> tuple[List[Employee], int, int]:
         """
         Search employees by name, email, or department
@@ -150,9 +152,7 @@ class EmployeeService:
         return employees, total, total_pages
 
     async def update_employee(
-        self,
-        employee_id: UUID,
-        update_data: EmployeeUpdate
+        self, employee_id: UUID, update_data: EmployeeUpdate
     ) -> Employee:
         """
         Update an employee
@@ -174,20 +174,20 @@ class EmployeeService:
         if update_data.firstName is not None and not update_data.firstName.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="First name cannot be empty"
+                detail="First name cannot be empty",
             )
 
         if update_data.lastName is not None and not update_data.lastName.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Last name cannot be empty"
+                detail="Last name cannot be empty",
             )
 
         updated_employee = await self.repository.update(employee_id, update_data)
         if not updated_employee:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee {employee_id} not found"
+                detail=f"Employee {employee_id} not found",
             )
 
         logger.info(f"Employee updated: {employee_id}")
@@ -245,7 +245,7 @@ class EmployeeService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee {employee_id} not found"
+                detail=f"Employee {employee_id} not found",
             )
 
         logger.info(f"Employee deleted: {employee_id}")
@@ -256,6 +256,6 @@ class EmployeeService:
                 "contracts": contracts_deleted,
                 "visas": visas_deleted,
                 "insurance": insurance_deleted,
-                "performanceReviews": performance_deleted
-            }
+                "performanceReviews": performance_deleted,
+            },
         }

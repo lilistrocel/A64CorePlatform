@@ -231,7 +231,5 @@ def get_google_search_tool() -> list[Tool]:
     Returns:
         A single-element list containing the Google Search tool.
     """
-    proto = aiplatform_types.Tool(
-        google_search=aiplatform_types.Tool.GoogleSearch()
-    )
+    proto = aiplatform_types.Tool(google_search=aiplatform_types.Tool.GoogleSearch())
     return [Tool._from_gapic(proto)]

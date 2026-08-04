@@ -102,7 +102,7 @@ class UserService:
         limit: int = 20,
         role: Optional[UserRole] = None,
         is_active: Optional[bool] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         List users with pagination
@@ -118,6 +118,7 @@ class UserService:
             Dict with data, meta, and links for pagination
         """
         import re
+
         db = mongodb.get_database()
 
         # Limit max page size per User-Structure.md (max 100)
@@ -140,7 +141,7 @@ class UserService:
             query["$or"] = [
                 {"email": regex_pattern},
                 {"firstName": regex_pattern},
-                {"lastName": regex_pattern}
+                {"lastName": regex_pattern},
             ]
 
         # Get total count
@@ -153,26 +154,28 @@ class UserService:
         # Convert to UserResponse objects
         users = []
         for user_doc in user_docs:
-            users.append(UserResponse(
-                userId=user_doc["userId"],
-                email=user_doc["email"],
-                firstName=user_doc["firstName"],
-                lastName=user_doc["lastName"],
-                role=UserRole(user_doc["role"]),
-                isActive=user_doc["isActive"],
-                isEmailVerified=user_doc["isEmailVerified"],
-                mfaEnabled=user_doc.get("mfaEnabled", False),
-                mfaSetupRequired=user_doc.get("mfaSetupRequired", False),
-                phone=user_doc.get("phone"),
-                avatar=user_doc.get("avatar"),
-                timezone=user_doc.get("timezone"),
-                locale=user_doc.get("locale"),
-                lastLoginAt=user_doc.get("lastLoginAt"),
-                createdAt=user_doc["createdAt"],
-                updatedAt=user_doc["updatedAt"],
-                authProvider=user_doc.get("authProvider", "password"),
-                nameAutoDerived=user_doc.get("nameAutoDerived", False),
-            ))
+            users.append(
+                UserResponse(
+                    userId=user_doc["userId"],
+                    email=user_doc["email"],
+                    firstName=user_doc["firstName"],
+                    lastName=user_doc["lastName"],
+                    role=UserRole(user_doc["role"]),
+                    isActive=user_doc["isActive"],
+                    isEmailVerified=user_doc["isEmailVerified"],
+                    mfaEnabled=user_doc.get("mfaEnabled", False),
+                    mfaSetupRequired=user_doc.get("mfaSetupRequired", False),
+                    phone=user_doc.get("phone"),
+                    avatar=user_doc.get("avatar"),
+                    timezone=user_doc.get("timezone"),
+                    locale=user_doc.get("locale"),
+                    lastLoginAt=user_doc.get("lastLoginAt"),
+                    createdAt=user_doc["createdAt"],
+                    updatedAt=user_doc["updatedAt"],
+                    authProvider=user_doc.get("authProvider", "password"),
+                    nameAutoDerived=user_doc.get("nameAutoDerived", False),
+                )
+            )
 
         # Calculate pagination metadata
         current_page = (skip // limit) + 1
@@ -184,14 +187,22 @@ class UserService:
                 "total": total,
                 "page": current_page,
                 "perPage": limit,
-                "totalPages": total_pages
+                "totalPages": total_pages,
             },
             "links": {
                 "first": f"/api/v1/users?page=1&perPage={limit}",
                 "last": f"/api/v1/users?page={total_pages}&perPage={limit}",
-                "prev": f"/api/v1/users?page={current_page - 1}&perPage={limit}" if current_page > 1 else None,
-                "next": f"/api/v1/users?page={current_page + 1}&perPage={limit}" if current_page < total_pages else None
-            }
+                "prev": (
+                    f"/api/v1/users?page={current_page - 1}&perPage={limit}"
+                    if current_page > 1
+                    else None
+                ),
+                "next": (
+                    f"/api/v1/users?page={current_page + 1}&perPage={limit}"
+                    if current_page < total_pages
+                    else None
+                ),
+            },
         }
 
     @staticmethod
@@ -216,8 +227,7 @@ class UserService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Build update document (only update provided fields)
@@ -240,10 +250,7 @@ class UserService:
         update_dict["updatedAt"] = datetime.utcnow()
 
         # Update user
-        await db.users.update_one(
-            {"userId": user_id},
-            {"$set": update_dict}
-        )
+        await db.users.update_one({"userId": user_id}, {"$set": update_dict})
 
         logger.info(f"User updated: {user_id}")
 
@@ -331,8 +338,7 @@ class UserService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Soft delete - set deletedAt timestamp
@@ -342,15 +348,14 @@ class UserService:
                 "$set": {
                     "deletedAt": datetime.utcnow(),
                     "isActive": False,
-                    "updatedAt": datetime.utcnow()
+                    "updatedAt": datetime.utcnow(),
                 }
-            }
+            },
         )
 
         # Revoke all refresh tokens
         await db.refresh_tokens.update_many(
-            {"userId": user_id, "isRevoked": False},
-            {"$set": {"isRevoked": True}}
+            {"userId": user_id, "isRevoked": False}, {"$set": {"isRevoked": True}}
         )
 
         logger.info(f"User soft deleted: {user_id}")
@@ -381,19 +386,13 @@ class UserService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Update role
         await db.users.update_one(
             {"userId": user_id},
-            {
-                "$set": {
-                    "role": new_role.value,
-                    "updatedAt": datetime.utcnow()
-                }
-            }
+            {"$set": {"role": new_role.value, "updatedAt": datetime.utcnow()}},
         )
 
         logger.info(f"User role changed: {user_id} -> {new_role.value}")
@@ -422,18 +421,12 @@ class UserService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         await db.users.update_one(
             {"userId": user_id},
-            {
-                "$set": {
-                    "isActive": True,
-                    "updatedAt": datetime.utcnow()
-                }
-            }
+            {"$set": {"isActive": True, "updatedAt": datetime.utcnow()}},
         )
 
         logger.info(f"User activated: {user_id}")
@@ -462,24 +455,17 @@ class UserService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         await db.users.update_one(
             {"userId": user_id},
-            {
-                "$set": {
-                    "isActive": False,
-                    "updatedAt": datetime.utcnow()
-                }
-            }
+            {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}},
         )
 
         # Revoke all refresh tokens
         await db.refresh_tokens.update_many(
-            {"userId": user_id, "isRevoked": False},
-            {"$set": {"isRevoked": True}}
+            {"userId": user_id, "isRevoked": False}, {"$set": {"isRevoked": True}}
         )
 
         logger.info(f"User deactivated: {user_id}")

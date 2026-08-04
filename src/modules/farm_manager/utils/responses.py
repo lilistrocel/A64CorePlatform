@@ -7,17 +7,19 @@ Standard response formats for the farm management module.
 from typing import Generic, TypeVar, Optional, List, Any
 from pydantic import BaseModel, Field
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class SuccessResponse(BaseModel, Generic[T]):
     """Standard success response"""
+
     data: T
     message: Optional[str] = None
 
 
 class ErrorResponse(BaseModel):
     """Standard error response"""
+
     error: str
     detail: Optional[str] = None
     code: Optional[str] = None
@@ -25,6 +27,7 @@ class ErrorResponse(BaseModel):
 
 class PaginationMeta(BaseModel):
     """Pagination metadata"""
+
     total: int = Field(..., description="Total number of items")
     page: int = Field(..., description="Current page number")
     perPage: int = Field(..., description="Items per page")
@@ -33,6 +36,7 @@ class PaginationMeta(BaseModel):
 
 class PaginationLinks(BaseModel):
     """Pagination links"""
+
     first: Optional[str] = None
     last: Optional[str] = None
     prev: Optional[str] = None
@@ -41,6 +45,7 @@ class PaginationLinks(BaseModel):
 
 class PaginatedResponse(BaseModel, Generic[T]):
     """Paginated response with metadata"""
+
     data: List[T]
     meta: PaginationMeta
     links: Optional[PaginationLinks] = None

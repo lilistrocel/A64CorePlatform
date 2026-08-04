@@ -15,11 +15,14 @@ from .spacing_standards import SpacingCategory
 
 class DataContributor(BaseModel):
     """External data contributor information"""
+
     name: str = Field(..., description="Contributor's name")
     organization: Optional[str] = Field(None, description="Organization name")
     email: Optional[str] = Field(None, description="Contact email")
     website: Optional[str] = Field(None, description="Website URL")
-    contributedAt: Optional[str] = Field(None, description="Date of contribution (e.g., 'January 2024')")
+    contributedAt: Optional[str] = Field(
+        None, description="Date of contribution (e.g., 'January 2024')"
+    )
 
     class Config:
         json_schema_extra = {
@@ -28,15 +31,18 @@ class DataContributor(BaseModel):
                 "organization": "Agrinova",
                 "email": "tayeb@agrinovame.com",
                 "website": "agrinovame.com",
-                "contributedAt": "January 2024"
+                "contributedAt": "January 2024",
             }
         }
 
 
 class PlantDataBase(BaseModel):
     """Base plant data fields"""
+
     # Identification
-    plantName: str = Field(..., min_length=1, max_length=200, description="Common plant name")
+    plantName: str = Field(
+        ..., min_length=1, max_length=200, description="Common plant name"
+    )
     scientificName: Optional[str] = Field(None, description="Scientific name")
     plantType: str = Field(..., description="Plant type (Crop, Tree, Herb, etc.)")
 
@@ -44,24 +50,42 @@ class PlantDataBase(BaseModel):
     growthCycleDays: int = Field(..., gt=0, description="Days from planting to harvest")
 
     # Environmental requirements
-    minTemperatureCelsius: Optional[float] = Field(None, description="Minimum temperature")
-    maxTemperatureCelsius: Optional[float] = Field(None, description="Maximum temperature")
-    optimalPHMin: Optional[float] = Field(None, ge=0, le=14, description="Optimal soil pH minimum")
-    optimalPHMax: Optional[float] = Field(None, ge=0, le=14, description="Optimal soil pH maximum")
+    minTemperatureCelsius: Optional[float] = Field(
+        None, description="Minimum temperature"
+    )
+    maxTemperatureCelsius: Optional[float] = Field(
+        None, description="Maximum temperature"
+    )
+    optimalPHMin: Optional[float] = Field(
+        None, ge=0, le=14, description="Optimal soil pH minimum"
+    )
+    optimalPHMax: Optional[float] = Field(
+        None, ge=0, le=14, description="Optimal soil pH maximum"
+    )
 
     # Care requirements
-    wateringFrequencyDays: Optional[int] = Field(None, gt=0, description="Days between watering")
-    sunlightHoursDaily: Optional[str] = Field(None, description="Daily sunlight hours (e.g. '6-8')")
+    wateringFrequencyDays: Optional[int] = Field(
+        None, gt=0, description="Days between watering"
+    )
+    sunlightHoursDaily: Optional[str] = Field(
+        None, description="Daily sunlight hours (e.g. '6-8')"
+    )
 
     # Yield information
-    expectedYieldPerPlant: float = Field(..., gt=0, description="Expected yield per plant")
+    expectedYieldPerPlant: float = Field(
+        ..., gt=0, description="Expected yield per plant"
+    )
     yieldUnit: str = Field(..., description="Unit of yield (kg, lbs, units)")
-    seedsPerPlantingPoint: int = Field(1, ge=1, description="Number of seeds/plants per planting point (drip). Defaults to 1 for single-plant setups.")
+    seedsPerPlantingPoint: int = Field(
+        1,
+        ge=1,
+        description="Number of seeds/plants per planting point (drip). Defaults to 1 for single-plant setups.",
+    )
 
     # Spacing category for density calculations
     spacingCategory: Optional[SpacingCategory] = Field(
         None,
-        description="Spacing category for plant density calculations (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree)"
+        description="Spacing category for plant density calculations (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree)",
     )
 
     # Additional information
@@ -69,16 +93,20 @@ class PlantDataBase(BaseModel):
     tags: Optional[List[str]] = Field(None, description="Search tags")
 
     # Data contributor (external source attribution)
-    contributor: Optional[DataContributor] = Field(None, description="External data contributor")
+    contributor: Optional[DataContributor] = Field(
+        None, description="External data contributor"
+    )
 
 
 class PlantDataCreate(PlantDataBase):
     """Schema for creating new plant data"""
+
     pass
 
 
 class PlantDataUpdate(BaseModel):
     """Schema for updating plant data"""
+
     plantName: Optional[str] = Field(None, min_length=1, max_length=200)
     scientificName: Optional[str] = None
     plantType: Optional[str] = None
@@ -100,7 +128,10 @@ class PlantDataUpdate(BaseModel):
 
 class PlantData(PlantDataBase):
     """Complete plant data model with all fields"""
-    plantDataId: UUID = Field(default_factory=uuid4, description="Unique plant data identifier")
+
+    plantDataId: UUID = Field(
+        default_factory=uuid4, description="Unique plant data identifier"
+    )
 
     # Versioning (for frozen data on planting)
     dataVersion: int = Field(1, description="Data version number")
@@ -140,12 +171,12 @@ class PlantData(PlantDataBase):
                     "organization": "Agrinova",
                     "email": "tayeb@agrinovame.com",
                     "website": "agrinovame.com",
-                    "contributedAt": "January 2024"
+                    "contributedAt": "January 2024",
                 },
                 "dataVersion": 1,
                 "createdBy": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "createdByEmail": "agronomist@example.com",
                 "createdAt": "2025-01-10T10:00:00Z",
-                "updatedAt": "2025-01-10T10:00:00Z"
+                "updatedAt": "2025-01-10T10:00:00Z",
             }
         }

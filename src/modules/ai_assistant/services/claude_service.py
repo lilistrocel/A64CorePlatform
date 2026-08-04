@@ -177,9 +177,7 @@ class ClaudeAssistantService:
         # ------------------------------------------------------------------
         messages: List[Dict[str, Any]] = []
         for msg in conversation.messages:
-            messages.append(
-                {"role": msg.role.value, "content": msg.content}
-            )
+            messages.append({"role": msg.role.value, "content": msg.content})
 
         # Append the new user message
         messages.append({"role": "user", "content": user_message})
@@ -219,15 +217,23 @@ class ClaudeAssistantService:
                     final = await stream.get_final_message()
 
             except anthropic.AuthenticationError:
-                logger.error("Anthropic authentication failed — check ANTHROPIC_API_KEY")
+                logger.error(
+                    "Anthropic authentication failed — check ANTHROPIC_API_KEY"
+                )
                 yield _make_sse_event(
-                    {"type": "error", "message": "AI assistant is not configured. Contact your administrator."}
+                    {
+                        "type": "error",
+                        "message": "AI assistant is not configured. Contact your administrator.",
+                    }
                 )
                 return
             except anthropic.RateLimitError:
                 logger.warning("Anthropic rate limit hit for user %s", user_id)
                 yield _make_sse_event(
-                    {"type": "error", "message": "The AI assistant is temporarily busy. Please try again in a moment."}
+                    {
+                        "type": "error",
+                        "message": "The AI assistant is temporarily busy. Please try again in a moment.",
+                    }
                 )
                 return
             except Exception as exc:
@@ -235,7 +241,10 @@ class ClaudeAssistantService:
                     "Claude API error for user %s: %s", user_id, exc, exc_info=True
                 )
                 yield _make_sse_event(
-                    {"type": "error", "message": "An unexpected error occurred. Please try again."}
+                    {
+                        "type": "error",
+                        "message": "An unexpected error occurred. Please try again.",
+                    }
                 )
                 return
 
@@ -287,7 +296,10 @@ class ClaudeAssistantService:
                     except Exception as exc:
                         logger.error(
                             "Tool %s failed for user %s: %s",
-                            tool_name, user_id, exc, exc_info=True,
+                            tool_name,
+                            user_id,
+                            exc,
+                            exc_info=True,
                         )
                         result = {"error": f"Tool execution failed: {str(exc)}"}
 
@@ -311,7 +323,9 @@ class ClaudeAssistantService:
                 if tool_turn >= MAX_TOOL_TURNS:
                     logger.warning(
                         "Tool turn limit (%d) reached for user %s conversation %s",
-                        MAX_TOOL_TURNS, user_id, active_conv_id,
+                        MAX_TOOL_TURNS,
+                        user_id,
+                        active_conv_id,
                     )
                     break
 

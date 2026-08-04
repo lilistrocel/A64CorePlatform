@@ -144,9 +144,7 @@ class _EmbeddedLineCollection(_FakeCollection):
     ) -> None:
         for doc in self._docs:
             # Match top-level fields (docEntry, organizationId).
-            top_matches = all(
-                doc.get(k) == v for k, v in query.items() if "." not in k
-            )
+            top_matches = all(doc.get(k) == v for k, v in query.items() if "." not in k)
             if not top_matches:
                 continue
 
@@ -166,7 +164,7 @@ class _EmbeddedLineCollection(_FakeCollection):
             if "$inc" in update:
                 for field, delta in update["$inc"].items():
                     if field.startswith("lines.$."):
-                        sub_field = field[len("lines.$."):]
+                        sub_field = field[len("lines.$.") :]
                         if line_id_query is not None:
                             for line in doc.get("lines", []):
                                 if line.get("lineId") == line_id_query:
@@ -179,7 +177,7 @@ class _EmbeddedLineCollection(_FakeCollection):
             if "$push" in update:
                 for field, val in update["$push"].items():
                     if field.startswith("lines.$."):
-                        sub_field = field[len("lines.$."):]
+                        sub_field = field[len("lines.$.") :]
                         if line_id_query is not None:
                             for line in doc.get("lines", []):
                                 if line.get("lineId") == line_id_query:
@@ -325,25 +323,27 @@ def _make_so(
         },
     ]
     if include_line2:
-        lines.append({
-            "lineId": LINE_2_ID,
-            "lineNumber": 2,
-            "itemId": ITEM_2_ID,
-            "itemCode": "ITEM-DN-002",
-            "itemName": "Test Item DN 2",
-            "description": "Test Item DN 2",
-            "quantity": line2_ordered,
-            "uom": "kg",
-            "unitPrice": 50.0,
-            "warehouseId": WAREHOUSE_ID,
-            "orderedQty": line2_ordered,
-            "deliveredQty": line2_delivered,
-            "cancelledQty": 0.0,
-            "committedQty": line2_ordered,
-            "invoicedQty": 0.0,
-            "targetDocRefs": [],
-            "baseDocRef": None,
-        })
+        lines.append(
+            {
+                "lineId": LINE_2_ID,
+                "lineNumber": 2,
+                "itemId": ITEM_2_ID,
+                "itemCode": "ITEM-DN-002",
+                "itemName": "Test Item DN 2",
+                "description": "Test Item DN 2",
+                "quantity": line2_ordered,
+                "uom": "kg",
+                "unitPrice": 50.0,
+                "warehouseId": WAREHOUSE_ID,
+                "orderedQty": line2_ordered,
+                "deliveredQty": line2_delivered,
+                "cancelledQty": 0.0,
+                "committedQty": line2_ordered,
+                "invoicedQty": 0.0,
+                "targetDocRefs": [],
+                "baseDocRef": None,
+            }
+        )
 
     return {
         "docEntry": SO_DOC_ENTRY,
@@ -456,9 +456,7 @@ async def test_create_delivery_from_so_happy_path() -> None:
 async def test_create_delivery_from_partly_closed_so() -> None:
     """Delivery creation from a PARTLY_CLOSED SO should succeed."""
     db = _FakeDB()
-    db["sales_orders_v2"]._add(
-        _make_so(status="partly_closed", line1_delivered=3.0)
-    )
+    db["sales_orders_v2"]._add(_make_so(status="partly_closed", line1_delivered=3.0))
     request = _make_delivery_request(qty1=5.0)  # 10 ordered, 3 delivered → 7 open
     dn = await create_delivery_from_so(
         db, so_doc_entry=SO_DOC_ENTRY, payload=request, org_id=ORG_ID, user_id=USER_ID
@@ -476,7 +474,11 @@ async def test_create_delivery_qty_exceeds_open_qty_raises() -> None:
     request = _make_delivery_request(qty1=11.0)  # Only 10 available
     with pytest.raises(ValueError, match="exceeds available open_qty"):
         await create_delivery_from_so(
-            db, so_doc_entry=SO_DOC_ENTRY, payload=request, org_id=ORG_ID, user_id=USER_ID
+            db,
+            so_doc_entry=SO_DOC_ENTRY,
+            payload=request,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
 
@@ -488,7 +490,11 @@ async def test_create_delivery_from_cancelled_so_raises() -> None:
     request = _make_delivery_request()
     with pytest.raises(ValueError, match="status is 'cancelled'"):
         await create_delivery_from_so(
-            db, so_doc_entry=SO_DOC_ENTRY, payload=request, org_id=ORG_ID, user_id=USER_ID
+            db,
+            so_doc_entry=SO_DOC_ENTRY,
+            payload=request,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
 
@@ -500,7 +506,11 @@ async def test_create_delivery_from_draft_so_raises() -> None:
     request = _make_delivery_request()
     with pytest.raises(ValueError, match="status is 'draft'"):
         await create_delivery_from_so(
-            db, so_doc_entry=SO_DOC_ENTRY, payload=request, org_id=ORG_ID, user_id=USER_ID
+            db,
+            so_doc_entry=SO_DOC_ENTRY,
+            payload=request,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
 
@@ -792,7 +802,11 @@ async def test_cancel_open_delivery_restores_inventory() -> None:
     ):
         open_req = DeliveryStatusTransitionRequest(new_status=DocumentStatus.OPEN)
         await transition_status(
-            db, doc_entry=doc_entry, request_body=open_req, org_id=ORG_ID, user_id=USER_ID
+            db,
+            doc_entry=doc_entry,
+            request_body=open_req,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     movements_after_open = len(db["inventory_movements"]._docs)
@@ -803,9 +817,15 @@ async def test_cancel_open_delivery_restores_inventory() -> None:
         new_callable=AsyncMock,
         return_value=str(uuid.uuid4()),
     ):
-        cancel_req = DeliveryStatusTransitionRequest(new_status=DocumentStatus.CANCELLED)
+        cancel_req = DeliveryStatusTransitionRequest(
+            new_status=DocumentStatus.CANCELLED
+        )
         dn = await transition_status(
-            db, doc_entry=doc_entry, request_body=cancel_req, org_id=ORG_ID, user_id=USER_ID
+            db,
+            doc_entry=doc_entry,
+            request_body=cancel_req,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     assert dn.status == DocumentStatus.CANCELLED
@@ -832,7 +852,9 @@ async def test_cancel_open_delivery_decrements_so_delivered_qty_back() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -850,7 +872,9 @@ async def test_cancel_open_delivery_decrements_so_delivered_qty_back() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.CANCELLED
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -880,7 +904,9 @@ async def test_cancel_delivery_emits_delivery_cancelled_event() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -894,7 +920,9 @@ async def test_cancel_delivery_emits_delivery_cancelled_event() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.CANCELLED
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -929,7 +957,9 @@ async def test_open_to_closed_transition_no_inventory_effect() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -986,7 +1016,9 @@ async def test_patch_open_delivery_raises() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -1028,15 +1060,15 @@ async def test_delete_open_delivery_raises() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
 
     with pytest.raises(ValueError, match="only DRAFT Deliveries may be deleted"):
-        await delete_delivery(
-            db, doc_entry=doc_entry, org_id=ORG_ID, user_id=USER_ID
-        )
+        await delete_delivery(db, doc_entry=doc_entry, org_id=ORG_ID, user_id=USER_ID)
 
 
 # ---------------------------------------------------------------------------
@@ -1116,14 +1148,18 @@ async def test_closed_delivery_is_terminal() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=DeliveryStatusTransitionRequest(new_status=DocumentStatus.CLOSED),
+            request_body=DeliveryStatusTransitionRequest(
+                new_status=DocumentStatus.CLOSED
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -1149,13 +1185,15 @@ async def test_unit_cost_snapshotted_from_inventory_balances() -> None:
     """
     db = _FakeDB()
     # Seed an inventory_balances record with avgCost = 12.50.
-    db["inventory_balances"]._add({
-        "itemId": ITEM_1_ID,
-        "warehouseId": WAREHOUSE_ID,
-        "organizationId": ORG_ID,
-        "avgCost": 12.50,
-        "quantityOnHand": 100.0,
-    })
+    db["inventory_balances"]._add(
+        {
+            "itemId": ITEM_1_ID,
+            "warehouseId": WAREHOUSE_ID,
+            "organizationId": ORG_ID,
+            "avgCost": 12.50,
+            "quantityOnHand": 100.0,
+        }
+    )
     db["sales_orders_v2"]._add(_make_so())
 
     request = _make_delivery_request(qty1=5.0)

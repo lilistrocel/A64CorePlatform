@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class ContaminationType(str, Enum):
     """Types of contamination"""
+
     TRICHODERMA = "trichoderma"
     COBWEB_MOLD = "cobweb_mold"
     BACTERIA = "bacteria"
@@ -24,6 +25,7 @@ class ContaminationType(str, Enum):
 
 class ContaminationSeverity(str, Enum):
     """Severity levels"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -32,6 +34,7 @@ class ContaminationSeverity(str, Enum):
 
 class ContaminationAction(str, Enum):
     """Action taken in response"""
+
     MONITORING = "monitoring"
     TREATMENT = "treatment"
     QUARANTINE = "quarantine"
@@ -40,26 +43,36 @@ class ContaminationAction(str, Enum):
 
 class ContaminationReportBase(BaseModel):
     """Base contamination report fields"""
-    contaminationType: ContaminationType = Field(..., description="Type of contamination")
+
+    contaminationType: ContaminationType = Field(
+        ..., description="Type of contamination"
+    )
     severity: ContaminationSeverity = Field(..., description="Severity level")
-    description: Optional[str] = Field(None, max_length=1000, description="Detailed description")
+    description: Optional[str] = Field(
+        None, max_length=1000, description="Detailed description"
+    )
 
 
 class ContaminationReportCreate(ContaminationReportBase):
     """Schema for creating a contamination report"""
+
     actionTaken: Optional[ContaminationAction] = None
     quarantined: bool = Field(False, description="Whether room was quarantined")
 
 
 class ContaminationResolveRequest(BaseModel):
     """Request to resolve a contamination report"""
+
     resolutionNotes: Optional[str] = Field(None, max_length=1000)
     actionTaken: Optional[ContaminationAction] = None
 
 
 class ContaminationReport(ContaminationReportBase):
     """Complete contamination report model"""
-    reportId: str = Field(default_factory=lambda: str(uuid4()), description="Unique report ID")
+
+    reportId: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique report ID"
+    )
     roomId: str = Field(..., description="Affected growing room ID")
     facilityId: str = Field(..., description="Facility ID")
 

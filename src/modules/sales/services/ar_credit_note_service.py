@@ -359,9 +359,7 @@ def _raw_totals_to_model(raw_totals: Dict[str, Any]) -> CreditNoteTotals:
 def _doc_to_response(raw: Dict[str, Any]) -> ARCreditNoteResponse:
     """Convert a raw MongoDB ar_credit_notes_v2 document to ARCreditNoteResponse."""
     lines = [_raw_line_to_response(ln) for ln in raw.get("lines", [])]
-    allocations = [
-        _raw_allocation_to_response(a) for a in raw.get("allocations", [])
-    ]
+    allocations = [_raw_allocation_to_response(a) for a in raw.get("allocations", [])]
     raw_totals = raw.get("totals", {})
 
     return ARCreditNoteResponse(
@@ -579,32 +577,36 @@ def _build_outbox_payload(
 
     lines_payload = []
     for ln in sorted(arc_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)):
-        lines_payload.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln["itemId"],
-            "itemCode": ln.get("itemCode", ""),
-            "creditedQty": str(ln.get("creditedQty", 0)),
-            "unitPrice": str(ln.get("unitPrice", 0)),
-            "lineNet": str(ln.get("lineNet", 0)),
-            "taxCodeId": ln.get("taxCodeId"),
-            "taxPercent": str(ln.get("taxPercent", 0)),
-            "lineTax": str(ln.get("lineTax", 0)),
-            "lineGross": str(ln.get("lineGross", 0)),
-            "revenueAccountId": ln.get("revenueAccountId", ""),
-            "costCenterId": ln.get("costCenterId"),
-        })
+        lines_payload.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln["itemId"],
+                "itemCode": ln.get("itemCode", ""),
+                "creditedQty": str(ln.get("creditedQty", 0)),
+                "unitPrice": str(ln.get("unitPrice", 0)),
+                "lineNet": str(ln.get("lineNet", 0)),
+                "taxCodeId": ln.get("taxCodeId"),
+                "taxPercent": str(ln.get("taxPercent", 0)),
+                "lineTax": str(ln.get("lineTax", 0)),
+                "lineGross": str(ln.get("lineGross", 0)),
+                "revenueAccountId": ln.get("revenueAccountId", ""),
+                "costCenterId": ln.get("costCenterId"),
+            }
+        )
 
     allocations_payload = []
     for alloc in sorted(
         arc_raw.get("allocations", []),
         key=lambda x: x.get("allocationLineNumber", 0),
     ):
-        allocations_payload.append({
-            "allocationLineNumber": alloc["allocationLineNumber"],
-            "arInvoiceDocEntry": alloc["arInvoiceDocEntry"],
-            "arInvoiceDocNumber": alloc.get("arInvoiceDocNumber", ""),
-            "amountApplied": str(alloc.get("amountApplied", 0)),
-        })
+        allocations_payload.append(
+            {
+                "allocationLineNumber": alloc["allocationLineNumber"],
+                "arInvoiceDocEntry": alloc["arInvoiceDocEntry"],
+                "arInvoiceDocNumber": alloc.get("arInvoiceDocNumber", ""),
+                "amountApplied": str(alloc.get("amountApplied", 0)),
+            }
+        )
 
     base_return_ref = arc_raw.get("baseReturnDocRef") or {}
     totals = arc_raw.get("totals", {})
@@ -620,8 +622,10 @@ def _build_outbox_payload(
         "currency": arc_raw.get("currency", "AED"),
         "exchangeRate": str(arc_raw.get("exchangeRate", 1)),
         "creditReason": arc_raw.get("creditReason", ""),
-        "baseReturnDocEntry": base_return_ref.get("docId") or base_return_ref.get("doc_id", ""),
-        "baseReturnDocNumber": base_return_ref.get("docNumber") or base_return_ref.get("doc_number", ""),
+        "baseReturnDocEntry": base_return_ref.get("docId")
+        or base_return_ref.get("doc_id", ""),
+        "baseReturnDocNumber": base_return_ref.get("docNumber")
+        or base_return_ref.get("doc_number", ""),
         "totals": {
             "net": str(totals.get("net", 0)),
             "tax": str(totals.get("tax", 0)),
@@ -838,9 +842,7 @@ async def get_ar_credit_note(
     Returns:
         ARCreditNoteResponse if found, None otherwise.
     """
-    raw = await db[_ARC_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARC_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
     raw.pop("_id", None)
@@ -943,9 +945,7 @@ async def update_ar_credit_note(
         ValueError: If the Credit Note is not in DRAFT status, or if any new
                     line is a stock item on a standalone (direct) Credit Note.
     """
-    raw = await db[_ARC_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARC_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -962,10 +962,18 @@ async def update_ar_credit_note(
         # Reason: date fields are converted via _to_dt to datetime.datetime before
         # writing — PyMongo cannot encode bare datetime.date objects.
         "docDate": _to_dt(payload.doc_date) if payload.doc_date is not None else None,
-        "dateOfSupply": _to_dt(payload.date_of_supply) if payload.date_of_supply is not None else None,
-        "invoiceDate": _to_dt(payload.invoice_date) if payload.invoice_date is not None else None,
+        "dateOfSupply": (
+            _to_dt(payload.date_of_supply)
+            if payload.date_of_supply is not None
+            else None
+        ),
+        "invoiceDate": (
+            _to_dt(payload.invoice_date) if payload.invoice_date is not None else None
+        ),
         "currency": payload.currency,
-        "exchangeRate": float(payload.exchange_rate) if payload.exchange_rate is not None else None,
+        "exchangeRate": (
+            float(payload.exchange_rate) if payload.exchange_rate is not None else None
+        ),
         "creditReason": payload.credit_reason,
         "creditReasonText": payload.credit_reason_text,
         "journalMemo": payload.journal_memo,
@@ -1069,9 +1077,7 @@ async def delete_ar_credit_note(
     Raises:
         ValueError: If the Credit Note is not in DRAFT status.
     """
-    raw = await db[_ARC_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARC_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return False
 
@@ -1151,9 +1157,7 @@ async def transition_status(
     Raises:
         ValueError: If the transition is illegal or validation fails.
     """
-    raw = await db[_ARC_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARC_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -1164,8 +1168,7 @@ async def transition_status(
     # Special case: OPEN → CANCELLED is not in LEGAL_TRANSITIONS (intentionally).
     # It requires super_admin and is a full financial reversal.
     is_open_to_cancelled = (
-        current_status == DocumentStatus.OPEN
-        and new_status == DocumentStatus.CANCELLED
+        current_status == DocumentStatus.OPEN and new_status == DocumentStatus.CANCELLED
     )
 
     if not is_open_to_cancelled:
@@ -1279,9 +1282,15 @@ async def transition_status(
                 post_totals = ari_post_inc.get("totals", {})
                 post_gross = float(Decimal(str(post_totals.get("gross", 0))))
                 post_paid = float(Decimal(str(post_totals.get("paidAmount", 0))))
-                post_down = float(Decimal(str(post_totals.get("downPaymentApplied", 0))))
-                post_credited = float(Decimal(str(post_totals.get("creditedAmount", 0))))
-                new_open_amount = max(0.0, post_gross - post_paid - post_down - post_credited)
+                post_down = float(
+                    Decimal(str(post_totals.get("downPaymentApplied", 0)))
+                )
+                post_credited = float(
+                    Decimal(str(post_totals.get("creditedAmount", 0)))
+                )
+                new_open_amount = max(
+                    0.0, post_gross - post_paid - post_down - post_credited
+                )
                 await db[_ARI_COL].update_one(
                     {"docEntry": ari_doc_entry, "organizationId": org_id},
                     {"$set": {"totals.openAmount": new_open_amount, "updatedAt": now}},
@@ -1324,14 +1333,16 @@ async def transition_status(
         # Step 3: If return-driven, increment Return line consumedQty per ARC line.
         base_return_ref = raw.get("baseReturnDocRef")
         if base_return_ref:
-            rtn_doc_entry = (
-                base_return_ref.get("docId") or base_return_ref.get("doc_id")
+            rtn_doc_entry = base_return_ref.get("docId") or base_return_ref.get(
+                "doc_id"
             )
             if rtn_doc_entry:
                 for arc_line in arc_lines:
                     arc_base = arc_line.get("baseDocRef") or {}
                     rtn_line_id = arc_base.get("lineId") or arc_base.get("line_id")
-                    src_doc_type = arc_base.get("docType") or arc_base.get("doc_type", "")
+                    src_doc_type = arc_base.get("docType") or arc_base.get(
+                        "doc_type", ""
+                    )
 
                     # Only increment consumedQty on Return lines (not direct invoice refs).
                     if rtn_line_id and src_doc_type.upper() in {"RTN", "RETURN"}:
@@ -1360,7 +1371,9 @@ async def transition_status(
                         rtn_lines = rtn_refreshed.get("lines", [])
                         all_consumed = all(
                             Decimal(str(ln.get("consumedQty", 0)))
-                            >= Decimal(str(ln.get("orderedQty", ln.get("returnedQty", 0))))
+                            >= Decimal(
+                                str(ln.get("orderedQty", ln.get("returnedQty", 0)))
+                            )
                             - _TOLERANCE
                             for ln in rtn_lines
                         )
@@ -1398,7 +1411,9 @@ async def transition_status(
         emitted_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             emitted_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1442,9 +1457,7 @@ async def transition_status(
                 "to": new_status.value,
                 "reason": request_body.reason,
                 "outboxEventId": str(emitted_event_id) if emitted_event_id else None,
-                "affectedArInvoices": [
-                    a.get("arInvoiceDocEntry") for a in allocations
-                ],
+                "affectedArInvoices": [a.get("arInvoiceDocEntry") for a in allocations],
             },
         )
 
@@ -1477,9 +1490,15 @@ async def transition_status(
                 post_totals = ari_post_dec.get("totals", {})
                 post_gross = float(Decimal(str(post_totals.get("gross", 0))))
                 post_paid = float(Decimal(str(post_totals.get("paidAmount", 0))))
-                post_down = float(Decimal(str(post_totals.get("downPaymentApplied", 0))))
-                post_credited = float(Decimal(str(post_totals.get("creditedAmount", 0))))
-                restored_open = max(0.0, post_gross - post_paid - post_down - post_credited)
+                post_down = float(
+                    Decimal(str(post_totals.get("downPaymentApplied", 0)))
+                )
+                post_credited = float(
+                    Decimal(str(post_totals.get("creditedAmount", 0)))
+                )
+                restored_open = max(
+                    0.0, post_gross - post_paid - post_down - post_credited
+                )
                 await db[_ARI_COL].update_one(
                     {"docEntry": ari_doc_entry, "organizationId": org_id},
                     {"$set": {"totals.openAmount": restored_open, "updatedAt": now}},
@@ -1510,14 +1529,16 @@ async def transition_status(
         # Step 3: If return-driven, decrement Return line consumedQty.
         base_return_ref = raw.get("baseReturnDocRef")
         if base_return_ref:
-            rtn_doc_entry = (
-                base_return_ref.get("docId") or base_return_ref.get("doc_id")
+            rtn_doc_entry = base_return_ref.get("docId") or base_return_ref.get(
+                "doc_id"
             )
             if rtn_doc_entry:
                 for arc_line in arc_lines:
                     arc_base = arc_line.get("baseDocRef") or {}
                     rtn_line_id = arc_base.get("lineId") or arc_base.get("line_id")
-                    src_doc_type = arc_base.get("docType") or arc_base.get("doc_type", "")
+                    src_doc_type = arc_base.get("docType") or arc_base.get(
+                        "doc_type", ""
+                    )
 
                     if rtn_line_id and src_doc_type.upper() in {"RTN", "RETURN"}:
                         credited_qty_val = float(
@@ -1568,7 +1589,9 @@ async def transition_status(
         cancelled_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             cancelled_event_id = await OutboxWriter.publish(
                 db=db,

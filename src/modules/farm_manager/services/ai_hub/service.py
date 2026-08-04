@@ -48,7 +48,9 @@ from ..global_ai.tool_executor import (
     resolve_farm_by_name,
     resolve_block as global_resolve_block,
 )
-from ..farm_level_ai.tool_executor import execute_read_tool as farm_level_execute_read_tool
+from ..farm_level_ai.tool_executor import (
+    execute_read_tool as farm_level_execute_read_tool,
+)
 from .context_builder import build_hub_system_prompt
 from .tool_definitions import get_gemini_tools, WRITE_TOOL_NAMES, GLOBAL_TOOL_NAMES
 from .models import AIHubChatResponse, AIHubSection
@@ -214,9 +216,7 @@ class AIHubService:
             role = "user" if msg.get("role") == "user" else "model"
             content_text = msg.get("content", "")
             if content_text:
-                history.append(
-                    Content(role=role, parts=[Part.from_text(content_text)])
-                )
+                history.append(Content(role=role, parts=[Part.from_text(content_text)]))
 
         # Create model with system instruction baked in
         model = GenerativeModel(
@@ -380,13 +380,17 @@ class AIHubService:
 
         except GoogleAPICallError as e:
             logger.error(f"Vertex AI API error (AI Hub / {section}): {e}")
-            error_code = getattr(e, 'code', None) or getattr(e, 'grpc_status_code', None)
-            if '429' in str(e) or 'Resource exhausted' in str(e):
+            error_code = getattr(e, "code", None) or getattr(
+                e, "grpc_status_code", None
+            )
+            if "429" in str(e) or "Resource exhausted" in str(e):
                 detail = "Vertex AI rate limit exceeded (429). Please wait a moment and try again."
-            elif '403' in str(e) or 'Permission' in str(e):
+            elif "403" in str(e) or "Permission" in str(e):
                 detail = "Vertex AI permission denied (403). Check service account credentials."
-            elif '404' in str(e):
-                detail = "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+            elif "404" in str(e):
+                detail = (
+                    "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+                )
             else:
                 detail = f"Vertex AI error ({error_code or 'unknown'}): {str(e)[:200]}"
             return AIHubChatResponse(
@@ -524,9 +528,7 @@ class AIHubService:
             )
 
         except Exception as e:
-            logger.error(
-                f"Failed to execute confirmed AI Hub action {action_id}: {e}"
-            )
+            logger.error(f"Failed to execute confirmed AI Hub action {action_id}: {e}")
             return ConfirmActionResponse(
                 status="executed",
                 message=f"Action execution failed: {str(e)}",
@@ -567,7 +569,5 @@ class AIHubService:
             docs = await cursor.to_list(length=limit)
             return docs
         except Exception as e:
-            logger.error(
-                f"Failed to retrieve AI Hub history (section={section}): {e}"
-            )
+            logger.error(f"Failed to retrieve AI Hub history (section={section}): {e}")
             return []

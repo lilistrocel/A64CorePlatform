@@ -18,4 +18,6 @@ api_router.include_router(employees_router, prefix="/employees", tags=["employee
 api_router.include_router(contracts_router, prefix="/contracts", tags=["contracts"])
 api_router.include_router(visas_router, prefix="/visas", tags=["visas"])
 api_router.include_router(insurance_router, prefix="/insurance", tags=["insurance"])
-api_router.include_router(performance_router, prefix="/performance", tags=["performance"])
+api_router.include_router(
+    performance_router, prefix="/performance", tags=["performance"]
+)

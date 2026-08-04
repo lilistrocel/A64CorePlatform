@@ -13,7 +13,13 @@ import vertexai
 from vertexai.generative_models import GenerationConfig, GenerativeModel
 
 from src.config.settings import settings
-from .models import AISummary, FarmStatusCard, InspectionVerdict, InspectionRawData, Recommendation
+from .models import (
+    AISummary,
+    FarmStatusCard,
+    InspectionVerdict,
+    InspectionRawData,
+    Recommendation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,9 +109,7 @@ class ReportGenerator:
         # Initialise Vertex AI SDK on first instantiation (idempotent)
         _init_vertexai()
 
-    async def generate_summary(
-        self, raw_data: InspectionRawData
-    ) -> AISummary:
+    async def generate_summary(self, raw_data: InspectionRawData) -> AISummary:
         """
         Send raw inspection data to Gemini and parse the structured response.
 
@@ -121,8 +125,7 @@ class ReportGenerator:
         """
         if not settings.GOOGLE_CLOUD_PROJECT:
             raise ValueError(
-                "GOOGLE_CLOUD_PROJECT is not configured. "
-                "Cannot generate AI summary."
+                "GOOGLE_CLOUD_PROJECT is not configured. " "Cannot generate AI summary."
             )
 
         # Serialise the raw data to a JSON-safe dict for the prompt
@@ -177,16 +180,14 @@ class ReportGenerator:
         # Build AISummary from parsed data
         try:
             farm_status_cards = [
-                FarmStatusCard(**card)
-                for card in parsed.get("farmStatusCards", [])
+                FarmStatusCard(**card) for card in parsed.get("farmStatusCards", [])
             ]
             inspection_results = [
                 InspectionVerdict(**verdict)
                 for verdict in parsed.get("inspectionResults", [])
             ]
             recommendations = [
-                Recommendation(**rec)
-                for rec in parsed.get("recommendations", [])
+                Recommendation(**rec) for rec in parsed.get("recommendations", [])
             ]
 
             summary = AISummary(

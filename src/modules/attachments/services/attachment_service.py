@@ -206,7 +206,11 @@ class AttachmentService:
         await self._storage.save(storage_path, file_data)
         logger.info(
             "[Attachments] Stored file %s for %s/%s (org=%s, size=%d)",
-            stored_filename, doc_type.value, doc_id, organization_id, size,
+            stored_filename,
+            doc_type.value,
+            doc_id,
+            organization_id,
+            size,
         )
 
         # Step 8: Insert MongoDB document
@@ -612,7 +616,9 @@ def _sanitize_filename(original: str, mime_type: str) -> str:
             stem, ext = name.rsplit(".", 1)
             ext_with_dot = "." + ext
             max_stem = 255 - len(ext_with_dot)
-            name = stem[:max_stem] + ext_with_dot if max_stem > 0 else ext_with_dot[:255]
+            name = (
+                stem[:max_stem] + ext_with_dot if max_stem > 0 else ext_with_dot[:255]
+            )
         else:
             name = name[:255]
 

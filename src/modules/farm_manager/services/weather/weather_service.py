@@ -52,7 +52,7 @@ class WeatherCache:
         self._cache[key] = {
             "data": data,
             "cached_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(seconds=ttl_seconds)
+            "expires_at": datetime.utcnow() + timedelta(seconds=ttl_seconds),
         }
 
     def invalidate(self, key: str) -> None:
@@ -92,7 +92,7 @@ class WeatherService:
         if not farm.location:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Farm does not have location data configured"
+                detail="Farm does not have location data configured",
             )
 
         lat = farm.location.latitude
@@ -101,7 +101,7 @@ class WeatherService:
         if lat is None or lon is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Farm does not have coordinates (latitude/longitude) configured"
+                detail="Farm does not have coordinates (latitude/longitude) configured",
             )
 
         return lat, lon, farm.name
@@ -114,7 +114,9 @@ class WeatherService:
             city=api_data.get("city_name"),
             country=api_data.get("country_code"),
             timezone=api_data.get("timezone"),
-            observedAt=datetime.fromisoformat(api_data.get("ob_time", datetime.utcnow().isoformat()).replace(" ", "T")),
+            observedAt=datetime.fromisoformat(
+                api_data.get("ob_time", datetime.utcnow().isoformat()).replace(" ", "T")
+            ),
             temperature=api_data.get("temp", 0),
             feelsLike=api_data.get("app_temp"),
             description=api_data.get("weather", {}).get("description", "Unknown"),
@@ -131,7 +133,7 @@ class WeatherService:
             gustSpeed=api_data.get("gust"),
             uvIndex=api_data.get("uv"),
             solarRadiation=api_data.get("solar_rad"),
-            airQualityIndex=api_data.get("aqi")
+            airQualityIndex=api_data.get("aqi"),
         )
 
     def _parse_soil_conditions(self, api_data: Dict[str, Any]) -> SoilConditions:
@@ -144,13 +146,13 @@ class WeatherService:
             moisture_0_10cm=api_data.get("soilm_0_10cm"),
             moisture_10_40cm=api_data.get("soilm_10_40cm"),
             moisture_40_100cm=api_data.get("soilm_40_100cm"),
-            moisture_100_200cm=api_data.get("soilm_100_200cm")
+            moisture_100_200cm=api_data.get("soilm_100_200cm"),
         )
 
     def _parse_solar_data(
         self,
         current_data: Optional[Dict[str, Any]],
-        agweather_data: Optional[Dict[str, Any]] = None
+        agweather_data: Optional[Dict[str, Any]] = None,
     ) -> SolarData:
         """
         Parse solar and light data from current weather and ag-weather APIs
@@ -215,14 +217,11 @@ class WeatherService:
             pollenGrass=api_data.get("pollen_level_grass"),
             pollenWeed=api_data.get("pollen_level_weed"),
             moldLevel=api_data.get("mold_level"),
-            predominantPollen=api_data.get("predominant_pollen_type")
+            predominantPollen=api_data.get("predominant_pollen_type"),
         )
 
     def _parse_agweather_forecast(
-        self,
-        api_data: Dict[str, Any],
-        lat: float,
-        lon: float
+        self, api_data: Dict[str, Any], lat: float, lon: float
     ) -> AgriWeatherForecast:
         """Parse AgWeather forecast response"""
         days = []
@@ -243,23 +242,25 @@ class WeatherService:
                 soil=soil,
                 solarRadiationAvg=day_data.get("t_solar_rad"),
                 solarRadiationMax=day_data.get("max_solar_rad"),
-                description=day_data.get("weather", {}).get("description") if isinstance(day_data.get("weather"), dict) else None,
-                icon=day_data.get("weather", {}).get("icon") if isinstance(day_data.get("weather"), dict) else None
+                description=(
+                    day_data.get("weather", {}).get("description")
+                    if isinstance(day_data.get("weather"), dict)
+                    else None
+                ),
+                icon=(
+                    day_data.get("weather", {}).get("icon")
+                    if isinstance(day_data.get("weather"), dict)
+                    else None
+                ),
             )
             days.append(day)
 
         return AgriWeatherForecast(
-            latitude=lat,
-            longitude=lon,
-            generatedAt=datetime.utcnow(),
-            days=days
+            latitude=lat, longitude=lon, generatedAt=datetime.utcnow(), days=days
         )
 
     def _parse_standard_forecast(
-        self,
-        api_data: Dict[str, Any],
-        lat: float,
-        lon: float
+        self, api_data: Dict[str, Any], lat: float, lon: float
     ) -> AgriWeatherForecast:
         """Parse standard forecast as fallback (no soil data)"""
         days = []
@@ -274,16 +275,21 @@ class WeatherService:
                 precipitationProbability=day_data.get("pop"),
                 humidity=day_data.get("rh"),
                 windSpeed=day_data.get("wind_spd"),
-                description=day_data.get("weather", {}).get("description") if isinstance(day_data.get("weather"), dict) else None,
-                icon=day_data.get("weather", {}).get("icon") if isinstance(day_data.get("weather"), dict) else None
+                description=(
+                    day_data.get("weather", {}).get("description")
+                    if isinstance(day_data.get("weather"), dict)
+                    else None
+                ),
+                icon=(
+                    day_data.get("weather", {}).get("icon")
+                    if isinstance(day_data.get("weather"), dict)
+                    else None
+                ),
             )
             days.append(day)
 
         return AgriWeatherForecast(
-            latitude=lat,
-            longitude=lon,
-            generatedAt=datetime.utcnow(),
-            days=days
+            latitude=lat, longitude=lon, generatedAt=datetime.utcnow(), days=days
         )
 
     def _parse_combined_forecast(
@@ -291,7 +297,7 @@ class WeatherService:
         agweather_data: Optional[Dict[str, Any]],
         standard_data: Optional[Dict[str, Any]],
         lat: float,
-        lon: float
+        lon: float,
     ) -> AgriWeatherForecast:
         """
         Combine AgWeather (soil data, evapotranspiration) with standard forecast (temperature)
@@ -319,7 +325,9 @@ class WeatherService:
                     agweather_by_date[date] = day_data
 
         # Get all unique dates from both sources
-        all_dates = sorted(set(list(standard_by_date.keys()) + list(agweather_by_date.keys())))
+        all_dates = sorted(
+            set(list(standard_by_date.keys()) + list(agweather_by_date.keys()))
+        )
 
         for date in all_dates[:8]:  # Limit to 8 days
             std = standard_by_date.get(date, {})
@@ -342,28 +350,33 @@ class WeatherService:
                 precipitationProbability=std.get("pop"),
                 humidity=std.get("rh") or agw.get("rh"),
                 windSpeed=std.get("wind_spd") or agw.get("wind_spd"),
-                description=std.get("weather", {}).get("description") if isinstance(std.get("weather"), dict) else None,
-                icon=std.get("weather", {}).get("icon") if isinstance(std.get("weather"), dict) else None,
+                description=(
+                    std.get("weather", {}).get("description")
+                    if isinstance(std.get("weather"), dict)
+                    else None
+                ),
+                icon=(
+                    std.get("weather", {}).get("icon")
+                    if isinstance(std.get("weather"), dict)
+                    else None
+                ),
                 # Agricultural data from agweather
                 evapotranspiration=agw.get("evapotranspiration"),
                 soil=soil,
                 solarRadiationAvg=agw.get("t_solar_rad") or std.get("solar_rad"),
-                solarRadiationMax=agw.get("max_solar_rad")
+                solarRadiationMax=agw.get("max_solar_rad"),
             )
             days.append(day)
 
         return AgriWeatherForecast(
-            latitude=lat,
-            longitude=lon,
-            generatedAt=datetime.utcnow(),
-            days=days
+            latitude=lat, longitude=lon, generatedAt=datetime.utcnow(), days=days
         )
 
     def _generate_insights(
         self,
         current: Optional[CurrentWeather],
         forecast: Optional[AgriWeatherForecast],
-        soil: Optional[SoilConditions]
+        soil: Optional[SoilConditions],
     ) -> AgriculturalInsights:
         """Generate agricultural insights from weather data"""
         recommendations = []
@@ -389,7 +402,9 @@ class WeatherService:
             elif temp <= 4:
                 frost_risk = "medium"
                 alerts.append("Frost possible overnight")
-                recommendations.append("Monitor temperatures and prepare frost protection")
+                recommendations.append(
+                    "Monitor temperatures and prepare frost protection"
+                )
             elif temp <= 8:
                 frost_risk = "low"
 
@@ -397,10 +412,14 @@ class WeatherService:
             if temp >= 38:
                 heat_stress_risk = "high"
                 alerts.append("HEAT STRESS WARNING: Extreme temperatures")
-                recommendations.append("Increase irrigation frequency and provide shade for sensitive crops")
+                recommendations.append(
+                    "Increase irrigation frequency and provide shade for sensitive crops"
+                )
             elif temp >= 32:
                 heat_stress_risk = "medium"
-                recommendations.append("Monitor crop stress and ensure adequate water supply")
+                recommendations.append(
+                    "Monitor crop stress and ensure adequate water supply"
+                )
             elif temp >= 28:
                 heat_stress_risk = "low"
 
@@ -417,14 +436,20 @@ class WeatherService:
             # Humidity-based recommendations
             if current.humidity:
                 if current.humidity > 90:
-                    recommendations.append("High humidity - monitor for fungal diseases")
+                    recommendations.append(
+                        "High humidity - monitor for fungal diseases"
+                    )
                     alerts.append("Disease risk: High humidity conditions")
                 elif current.humidity < 30:
-                    recommendations.append("Low humidity - crops may need additional irrigation")
+                    recommendations.append(
+                        "Low humidity - crops may need additional irrigation"
+                    )
 
             # Wind-based recommendations
             if current.windSpeed and current.windSpeed > 10:
-                recommendations.append("High winds - check for crop damage and secure structures")
+                recommendations.append(
+                    "High winds - check for crop damage and secure structures"
+                )
                 if current.windSpeed > 15:
                     alerts.append("Strong wind warning - potential crop damage")
 
@@ -436,7 +461,9 @@ class WeatherService:
             # Drought risk
             if total_precip < 5:
                 drought_risk = "high"
-                recommendations.append("Little rainfall expected - plan irrigation schedule")
+                recommendations.append(
+                    "Little rainfall expected - plan irrigation schedule"
+                )
             elif total_precip < 15:
                 drought_risk = "medium"
                 recommendations.append("Below average rainfall - monitor soil moisture")
@@ -479,7 +506,9 @@ class WeatherService:
                 # These are rough thresholds - actual values depend on soil type
                 if soil.moisture_0_10cm < 10:
                     irrigation_need = "high"
-                    recommendations.append("Topsoil moisture low - irrigation recommended")
+                    recommendations.append(
+                        "Topsoil moisture low - irrigation recommended"
+                    )
                 elif soil.moisture_0_10cm < 20:
                     irrigation_need = "moderate"
                 elif soil.moisture_0_10cm < 40:
@@ -487,7 +516,9 @@ class WeatherService:
                 else:
                     irrigation_need = "none"
                     if soil.moisture_0_10cm > 50:
-                        recommendations.append("High soil moisture - avoid heavy equipment")
+                        recommendations.append(
+                            "High soil moisture - avoid heavy equipment"
+                        )
                         soil_workability = "poor"
 
         # Add general recommendations if none generated
@@ -504,7 +535,7 @@ class WeatherService:
             soilWorkability=soil_workability,
             irrigationNeed=irrigation_need,
             recommendations=recommendations,
-            alerts=alerts
+            alerts=alerts,
         )
 
     async def get_current_weather(self, farm_id: UUID) -> CurrentWeather:
@@ -531,18 +562,18 @@ class WeatherService:
 
             # Cache result
             self.cache.set(
-                cache_key,
-                weather.model_dump(),
-                settings.WEATHERBIT_CACHE_TTL_CURRENT
+                cache_key, weather.model_dump(), settings.WEATHERBIT_CACHE_TTL_CURRENT
             )
 
             return weather
 
         except WeatherAPIError as e:
-            logger.error(f"Failed to get current weather for farm {farm_id}: {e.message}")
+            logger.error(
+                f"Failed to get current weather for farm {farm_id}: {e.message}"
+            )
             raise HTTPException(
                 status_code=e.status_code or status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Weather service error: {e.message}"
+                detail=f"Weather service error: {e.message}",
             )
 
     async def get_agri_forecast(self, farm_id: UUID) -> AgriWeatherForecast:
@@ -580,7 +611,9 @@ class WeatherService:
             if e.status_code != 403:
                 logger.warning(f"Could not get agweather forecast: {e.message}")
             else:
-                logger.info(f"AgWeather API not available (requires Business plan) for farm {farm_id}")
+                logger.info(
+                    f"AgWeather API not available (requires Business plan) for farm {farm_id}"
+                )
 
         # Combine both data sources
         if agweather_data or standard_data:
@@ -590,14 +623,14 @@ class WeatherService:
         else:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Weather service error: Could not retrieve forecast data"
+                detail="Weather service error: Could not retrieve forecast data",
             )
 
         # Cache result
         self.cache.set(
             cache_key,
             forecast.model_dump(mode="json"),
-            settings.WEATHERBIT_CACHE_TTL_FORECAST
+            settings.WEATHERBIT_CACHE_TTL_FORECAST,
         )
 
         return forecast
@@ -630,12 +663,12 @@ class WeatherService:
             # Cache current weather
             cache_key = f"current:{farm_id}"
             self.cache.set(
-                cache_key,
-                current.model_dump(),
-                settings.WEATHERBIT_CACHE_TTL_CURRENT
+                cache_key, current.model_dump(), settings.WEATHERBIT_CACHE_TTL_CURRENT
             )
         except WeatherAPIError as e:
-            logger.warning(f"Could not get current weather for farm {farm_id}: {e.message}")
+            logger.warning(
+                f"Could not get current weather for farm {farm_id}: {e.message}"
+            )
 
         # Get forecast
         try:
@@ -665,9 +698,13 @@ class WeatherService:
             air_quality = self._parse_air_quality(air_quality_raw)
         except WeatherAPIError as e:
             if e.status_code == 403:
-                logger.info(f"Air Quality API not available (requires paid plan) for farm {farm_id}")
+                logger.info(
+                    f"Air Quality API not available (requires paid plan) for farm {farm_id}"
+                )
             else:
-                logger.warning(f"Could not get air quality for farm {farm_id}: {e.message}")
+                logger.warning(
+                    f"Could not get air quality for farm {farm_id}: {e.message}"
+                )
 
         # Generate insights
         insights = self._generate_insights(current, forecast, soil)
@@ -689,5 +726,5 @@ class WeatherService:
             hasSoilData=soil is not None,
             hasForecast=forecast is not None,
             hasSolarData=solar is not None,
-            hasAirQuality=air_quality is not None
+            hasAirQuality=air_quality is not None,
         )

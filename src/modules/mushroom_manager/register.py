@@ -23,7 +23,9 @@ async def startup_hook() -> None:
 
     Connects to the database and creates module-specific MongoDB indexes.
     """
-    logger.info(f"[Mushroom Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Mushroom Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await mushroom_db.connect()

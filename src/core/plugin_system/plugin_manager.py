@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ModuleManifest:
     """Module manifest metadata"""
+
     module_name: str
     display_name: str
     version: str
@@ -31,8 +32,12 @@ class ModuleManifest:
     enabled_by_default: bool = True
     core_module: bool = False
     # Multi-industry support fields
-    industries: Optional[List[str]] = None  # e.g. ["vegetable_fruits"], ["mushroom"], ["all"]
-    industry_mode: str = "shared"  # "exclusive" = only for listed industries, "shared" = all industries
+    industries: Optional[List[str]] = (
+        None  # e.g. ["vegetable_fruits"], ["mushroom"], ["all"]
+    )
+    industry_mode: str = (
+        "shared"  # "exclusive" = only for listed industries, "shared" = all industries
+    )
 
 
 class PluginManager:
@@ -62,7 +67,9 @@ class PluginManager:
         self.loaded_modules: Dict[str, ModuleManifest] = {}
         self.module_instances: Dict[str, any] = {}
 
-        logger.info(f"[PluginManager] Initialized with modules directory: {self.modules_dir}")
+        logger.info(
+            f"[PluginManager] Initialized with modules directory: {self.modules_dir}"
+        )
 
     def discover_modules(self) -> List[str]:
         """
@@ -72,7 +79,9 @@ class PluginManager:
             List of module names (directory names)
         """
         if not self.modules_dir.exists():
-            logger.warning(f"[PluginManager] Modules directory does not exist: {self.modules_dir}")
+            logger.warning(
+                f"[PluginManager] Modules directory does not exist: {self.modules_dir}"
+            )
             return []
 
         modules = []
@@ -114,7 +123,9 @@ class PluginManager:
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid manifest.json for module '{module_name}': {e}")
         except TypeError as e:
-            raise ValueError(f"Manifest.json has invalid structure for module '{module_name}': {e}")
+            raise ValueError(
+                f"Manifest.json has invalid structure for module '{module_name}': {e}"
+            )
 
     def _validate_dependencies(self, manifest: ModuleManifest) -> bool:
         """
@@ -136,14 +147,13 @@ class PluginManager:
         """
         # TODO: Implement actual dependency validation
         # For now, just log and return True
-        logger.debug(f"[PluginManager] Validating dependencies for {manifest.module_name}: {manifest.dependencies}")
+        logger.debug(
+            f"[PluginManager] Validating dependencies for {manifest.module_name}: {manifest.dependencies}"
+        )
         return True
 
     async def load_module(
-        self,
-        module_name: str,
-        app: FastAPI,
-        validate_license: bool = False
+        self, module_name: str, app: FastAPI, validate_license: bool = False
     ) -> ModuleManifest:
         """
         Load a module and register it with the application.
@@ -172,7 +182,9 @@ class PluginManager:
         # Validate license if required (placeholder for future implementation)
         if validate_license and manifest.license_required:
             # TODO: Implement license validation
-            logger.warning(f"[PluginManager] License validation not yet implemented for {module_name}")
+            logger.warning(
+                f"[PluginManager] License validation not yet implemented for {module_name}"
+            )
 
         # Import and register module
         try:
@@ -191,20 +203,30 @@ class PluginManager:
                 self.loaded_modules[module_name] = manifest
                 self.module_instances[module_name] = module
 
-                logger.info(f"[PluginManager] ✓ Successfully loaded module: {manifest.display_name} v{manifest.version}")
+                logger.info(
+                    f"[PluginManager] ✓ Successfully loaded module: {manifest.display_name} v{manifest.version}"
+                )
             else:
-                raise ValueError(f"Module '{module_name}' does not have a register() function")
+                raise ValueError(
+                    f"Module '{module_name}' does not have a register() function"
+                )
 
         except ImportError as e:
-            logger.error(f"[PluginManager] Failed to import module '{module_name}': {e}")
+            logger.error(
+                f"[PluginManager] Failed to import module '{module_name}': {e}"
+            )
             raise
         except Exception as e:
-            logger.error(f"[PluginManager] Failed to register module '{module_name}': {e}")
+            logger.error(
+                f"[PluginManager] Failed to register module '{module_name}': {e}"
+            )
             raise
 
         return manifest
 
-    async def load_all_modules(self, app: FastAPI, enabled_modules: Optional[List[str]] = None) -> Dict[str, ModuleManifest]:
+    async def load_all_modules(
+        self, app: FastAPI, enabled_modules: Optional[List[str]] = None
+    ) -> Dict[str, ModuleManifest]:
         """
         Load all discovered modules (or specified modules).
 
@@ -226,7 +248,9 @@ class PluginManager:
             # Load only specified modules
             modules_to_load = [m for m in enabled_modules if m in available_modules]
 
-        logger.info(f"[PluginManager] Loading {len(modules_to_load)} modules: {modules_to_load}")
+        logger.info(
+            f"[PluginManager] Loading {len(modules_to_load)} modules: {modules_to_load}"
+        )
 
         # Load each module
         loaded = {}
@@ -235,11 +259,15 @@ class PluginManager:
                 manifest = await self.load_module(module_name, app)
                 loaded[module_name] = manifest
             except Exception as e:
-                logger.error(f"[PluginManager] Failed to load module '{module_name}': {e}")
+                logger.error(
+                    f"[PluginManager] Failed to load module '{module_name}': {e}"
+                )
                 # Continue loading other modules even if one fails
                 continue
 
-        logger.info(f"[PluginManager] Successfully loaded {len(loaded)}/{len(modules_to_load)} modules")
+        logger.info(
+            f"[PluginManager] Successfully loaded {len(loaded)}/{len(modules_to_load)} modules"
+        )
         return loaded
 
     def get_loaded_modules(self) -> Dict[str, ModuleManifest]:
@@ -251,7 +279,9 @@ class PluginManager:
         """
         return self.loaded_modules.copy()
 
-    def get_modules_for_industry(self, industry_type: str) -> Dict[str, "ModuleManifest"]:
+    def get_modules_for_industry(
+        self, industry_type: str
+    ) -> Dict[str, "ModuleManifest"]:
         """
         Get all loaded modules that support a given industry type.
 

@@ -29,7 +29,7 @@ from ...models.module import (
     ModuleStatusResponse,
     ModuleInstallResponse,
     ModuleUninstallResponse,
-    ModuleAuditLog
+    ModuleAuditLog,
 )
 from ...services.module_manager import module_manager
 from ...middleware.permissions import require_role, require_super_admin
@@ -43,6 +43,7 @@ router = APIRouter(prefix="/modules", tags=["Module Management"])
 # =============================================================================
 # Module Installation
 # =============================================================================
+
 
 @router.post(
     "/install",
@@ -73,11 +74,10 @@ router = APIRouter(prefix="/modules", tags=["Module Management"])
     - All operations logged in audit trail
 
     **Rate Limit:** 10 requests/minute
-    """
+    """,
 )
 async def install_module(
-    config: ModuleConfig,
-    current_user: UserInDB = Depends(require_super_admin)
+    config: ModuleConfig, current_user: UserInDB = Depends(require_super_admin)
 ) -> ModuleInstallResponse:
     """
     Install a new module.
@@ -107,13 +107,13 @@ async def install_module(
             config=config,
             user_id=current_user.userId,
             user_email=current_user.email,
-            user_role=current_user.role
+            user_role=current_user.role,
         )
 
         return ModuleInstallResponse(
             message=result["message"],
             module_name=result["module_name"],
-            status=result["status"]
+            status=result["status"],
         )
 
     except ValueError as e:
@@ -122,22 +122,16 @@ async def install_module(
 
         # Determine appropriate status code
         if "already installed" in str(e).lower():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=str(e)
-            )
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
         else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e)
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     except RuntimeError as e:
         # Installation errors (Docker, network, etc.)
         logger.error(f"Module installation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to install module: {str(e)}"
+            detail=f"Failed to install module: {str(e)}",
         )
 
     except Exception as e:
@@ -145,13 +139,14 @@ async def install_module(
         logger.exception(f"Unexpected error during module installation")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred during module installation"
+            detail="An unexpected error occurred during module installation",
         )
 
 
 # =============================================================================
 # List Installed Modules
 # =============================================================================
+
 
 @router.get(
     "/installed",
@@ -176,12 +171,12 @@ async def install_module(
     **Pagination:**
     - Default: 20 items per page
     - Maximum: 100 items per page
-    """
+    """,
 )
 async def list_installed_modules(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
-    current_user: UserInDB = Depends(require_super_admin)
+    current_user: UserInDB = Depends(require_super_admin),
 ) -> ModuleListResponse:
     """
     List all installed modules with pagination.
@@ -200,30 +195,29 @@ async def list_installed_modules(
     """
 
     try:
-        logger.info(f"List modules request: page={page}, per_page={per_page} by {current_user.email}")
+        logger.info(
+            f"List modules request: page={page}, per_page={per_page} by {current_user.email}"
+        )
 
         # Get installed modules
         result = await module_manager.get_installed_modules(
-            page=page,
-            per_page=per_page
+            page=page, per_page=per_page
         )
 
-        return ModuleListResponse(
-            data=result["data"],
-            meta=result["meta"]
-        )
+        return ModuleListResponse(data=result["data"], meta=result["meta"])
 
     except Exception as e:
         logger.exception("Error listing installed modules")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve installed modules"
+            detail="Failed to retrieve installed modules",
         )
 
 
 # =============================================================================
 # Module Status
 # =============================================================================
+
 
 @router.get(
     "/{module_name}/status",
@@ -243,11 +237,10 @@ async def list_installed_modules(
     - Uptime in seconds
     - Error information (if applicable)
     - Start/finish timestamps
-    """
+    """,
 )
 async def get_module_status(
-    module_name: str,
-    current_user: UserInDB = Depends(require_super_admin)
+    module_name: str, current_user: UserInDB = Depends(require_super_admin)
 ) -> ModuleStatusResponse:
     """
     Get detailed status for a specific module.
@@ -275,22 +268,20 @@ async def get_module_status(
     except ValueError as e:
         # Module not found
         logger.warning(f"Module not found: {module_name}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     except Exception as e:
         logger.exception(f"Error getting module status: {module_name}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve module status"
+            detail="Failed to retrieve module status",
         )
 
 
 # =============================================================================
 # Module Uninstallation
 # =============================================================================
+
 
 @router.delete(
     "/{module_name}",
@@ -314,11 +305,10 @@ async def get_module_status(
     Make sure to backup any important data before uninstalling.
 
     **Rate Limit:** 10 requests/minute
-    """
+    """,
 )
 async def uninstall_module(
-    module_name: str,
-    current_user: UserInDB = Depends(require_super_admin)
+    module_name: str, current_user: UserInDB = Depends(require_super_admin)
 ) -> ModuleUninstallResponse:
     """
     Uninstall a module.
@@ -337,35 +327,33 @@ async def uninstall_module(
     """
 
     try:
-        logger.info(f"Module uninstallation request: {module_name} by {current_user.email}")
+        logger.info(
+            f"Module uninstallation request: {module_name} by {current_user.email}"
+        )
 
         # Uninstall module
         result = await module_manager.uninstall_module(
             module_name=module_name,
             user_id=current_user.userId,
             user_email=current_user.email,
-            user_role=current_user.role
+            user_role=current_user.role,
         )
 
         return ModuleUninstallResponse(
-            message=result["message"],
-            module_name=result["module_name"]
+            message=result["message"], module_name=result["module_name"]
         )
 
     except ValueError as e:
         # Module not found
         logger.warning(f"Module not found: {module_name}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     except RuntimeError as e:
         # Uninstallation error
         logger.error(f"Module uninstallation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to uninstall module: {str(e)}"
+            detail=f"Failed to uninstall module: {str(e)}",
         )
 
     except Exception as e:
@@ -373,13 +361,14 @@ async def uninstall_module(
         logger.exception(f"Unexpected error during module uninstallation")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred during module uninstallation"
+            detail="An unexpected error occurred during module uninstallation",
         )
 
 
 # =============================================================================
 # Audit Log
 # =============================================================================
+
 
 @router.get(
     "/audit-log",
@@ -411,16 +400,20 @@ async def uninstall_module(
     - Maximum: 100 items per page
 
     **Note:** Audit logs are automatically deleted after 90 days (TTL index).
-    """
+    """,
 )
 async def get_audit_log(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     per_page: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
     module_name: Optional[str] = Query(None, description="Filter by module name"),
-    operation: Optional[str] = Query(None, description="Filter by operation (install, uninstall, etc.)"),
-    status: Optional[str] = Query(None, description="Filter by status (success, failure)"),
+    operation: Optional[str] = Query(
+        None, description="Filter by operation (install, uninstall, etc.)"
+    ),
+    status: Optional[str] = Query(
+        None, description="Filter by status (success, failure)"
+    ),
     user_id: Optional[str] = Query(None, description="Filter by user ID"),
-    current_user: UserInDB = Depends(require_super_admin)
+    current_user: UserInDB = Depends(require_super_admin),
 ) -> dict:
     """
     Get module audit log with pagination and filters.
@@ -458,6 +451,7 @@ async def get_audit_log(
 
         # Get database
         from ...services.database import mongodb
+
         db = mongodb.get_database()
 
         # Count total
@@ -465,7 +459,12 @@ async def get_audit_log(
 
         # Get audit logs
         skip = (page - 1) * per_page
-        cursor = db.module_audit_log.find(query_filter).sort("timestamp", -1).skip(skip).limit(per_page)
+        cursor = (
+            db.module_audit_log.find(query_filter)
+            .sort("timestamp", -1)
+            .skip(skip)
+            .limit(per_page)
+        )
         logs = await cursor.to_list(length=per_page)
 
         # Convert ObjectId to string
@@ -478,27 +477,28 @@ async def get_audit_log(
                 "total": total,
                 "page": page,
                 "per_page": per_page,
-                "total_pages": (total + per_page - 1) // per_page
+                "total_pages": (total + per_page - 1) // per_page,
             },
             "filters": {
                 "module_name": module_name,
                 "operation": operation,
                 "status": status,
-                "user_id": user_id
-            }
+                "user_id": user_id,
+            },
         }
 
     except Exception as e:
         logger.exception("Error retrieving audit log")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve audit log"
+            detail="Failed to retrieve audit log",
         )
 
 
 # =============================================================================
 # Health Check (for module system)
 # =============================================================================
+
 
 @router.get(
     "/health",
@@ -512,7 +512,7 @@ async def get_audit_log(
     - License validator initialization
 
     **No authentication required** (health check endpoint)
-    """
+    """,
 )
 async def module_system_health() -> dict:
     """
@@ -536,6 +536,7 @@ async def module_system_health() -> dict:
     try:
         # Check database connectivity
         from ...services.database import mongodb
+
         db_healthy = await mongodb.health_check()
         db_status = "healthy" if db_healthy else "unhealthy"
     except Exception as e:
@@ -543,22 +544,25 @@ async def module_system_health() -> dict:
         db_status = "unhealthy"
 
     # Overall status
-    overall_status = "healthy" if (docker_status == "healthy" and db_status == "healthy") else "unhealthy"
+    overall_status = (
+        "healthy"
+        if (docker_status == "healthy" and db_status == "healthy")
+        else "unhealthy"
+    )
 
     result = {
         "status": overall_status,
         "components": {
             "docker": docker_status,
             "database": db_status,
-            "license_validator": "healthy"
+            "license_validator": "healthy",
         },
-        "timestamp": str(datetime.utcnow())
+        "timestamp": str(datetime.utcnow()),
     }
 
     if overall_status == "unhealthy":
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=result
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=result
         )
 
     return result

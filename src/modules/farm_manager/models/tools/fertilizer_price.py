@@ -29,12 +29,18 @@ class PriceOverride(BaseModel):
         updatedAt: Timestamp of last write.
     """
 
-    overrideId: UUID = Field(default_factory=uuid4, description="Unique override identifier")
-    chemicalId: UUID = Field(..., description="References fertilizer_chemicals.chemicalId")
+    overrideId: UUID = Field(
+        default_factory=uuid4, description="Unique override identifier"
+    )
+    chemicalId: UUID = Field(
+        ..., description="References fertilizer_chemicals.chemicalId"
+    )
     price: float = Field(..., ge=0, description="Price in AED per defaultUnit")
 
     # Scoping
-    organizationId: UUID = Field(..., description="Organisation this override belongs to")
+    organizationId: UUID = Field(
+        ..., description="Organisation this override belongs to"
+    )
 
     # Audit
     updatedBy: UUID = Field(..., description="User who last updated this override")
@@ -57,8 +63,9 @@ class ResolvedPrice(BaseModel):
     """
 
     chemicalId: UUID = Field(..., description="Chemical identifier")
-    price: Optional[float] = Field(None, ge=0, description="Price in AED per defaultUnit")
+    price: Optional[float] = Field(
+        None, ge=0, description="Price in AED per defaultUnit"
+    )
     source: Literal["override", "inventory", "none"] = Field(
-        ...,
-        description="Where the price was resolved from"
+        ..., description="Where the price was resolved from"
     )

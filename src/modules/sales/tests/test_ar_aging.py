@@ -130,7 +130,9 @@ def _make_invoice(
         "customerId": customer_id,
         "customerName": customer_name,
         "currency": currency,
-        "dueDate": datetime(due_date.year, due_date.month, due_date.day, tzinfo=timezone.utc),
+        "dueDate": datetime(
+            due_date.year, due_date.month, due_date.day, tzinfo=timezone.utc
+        ),
         "status": status,
         "totals": {
             "net": float(open_amount),
@@ -177,7 +179,9 @@ async def test_one_invoice_per_bucket() -> None:
     db = _FakeDB()
     as_of = date(2026, 5, 30)
 
-    inv_current = _make_invoice(due_date=date(2026, 5, 31), open_amount=Decimal("100.00"))
+    inv_current = _make_invoice(
+        due_date=date(2026, 5, 31), open_amount=Decimal("100.00")
+    )
     inv_1_30 = _make_invoice(due_date=date(2026, 5, 15), open_amount=Decimal("200.00"))
     inv_31_60 = _make_invoice(due_date=date(2026, 4, 20), open_amount=Decimal("300.00"))
     inv_61_90 = _make_invoice(due_date=date(2026, 3, 1), open_amount=Decimal("400.00"))
@@ -260,13 +264,19 @@ async def test_customer_filter() -> None:
     as_of = date(2026, 5, 30)
 
     db["ar_invoices_v2"]._add(
-        _make_invoice(customer_id=_CUSTOMER_A, customer_name="Alpha", due_date=date(2026, 5, 31))
+        _make_invoice(
+            customer_id=_CUSTOMER_A, customer_name="Alpha", due_date=date(2026, 5, 31)
+        )
     )
     db["ar_invoices_v2"]._add(
-        _make_invoice(customer_id=_CUSTOMER_B, customer_name="Beta", due_date=date(2026, 5, 31))
+        _make_invoice(
+            customer_id=_CUSTOMER_B, customer_name="Beta", due_date=date(2026, 5, 31)
+        )
     )
 
-    report = await compute_ar_aging(db, _ORG_ID, customer_id=_CUSTOMER_A, as_of_date=as_of)
+    report = await compute_ar_aging(
+        db, _ORG_ID, customer_id=_CUSTOMER_A, as_of_date=as_of
+    )
 
     assert len(report.customers) == 1
     assert report.customers[0].customer_id == _CUSTOMER_A
@@ -293,7 +303,9 @@ async def test_skips_non_outstanding_statuses() -> None:
 
     # One open invoice
     db["ar_invoices_v2"]._add(
-        _make_invoice(status="open", due_date=date(2026, 5, 15), open_amount=Decimal("42.00"))
+        _make_invoice(
+            status="open", due_date=date(2026, 5, 15), open_amount=Decimal("42.00")
+        )
     )
 
     report = await compute_ar_aging(db, _ORG_ID, as_of_date=as_of)
@@ -338,11 +350,18 @@ async def test_decimal_precision_and_sums() -> None:
 
     for row in report.customers:
         # Verify all amounts are exactly 2dp.
-        for field_name in ("current", "days_1_to_30", "days_31_to_60", "days_61_to_90", "over_90", "total"):
+        for field_name in (
+            "current",
+            "days_1_to_30",
+            "days_31_to_60",
+            "days_61_to_90",
+            "over_90",
+            "total",
+        ):
             amount: Decimal = getattr(row, field_name)
-            assert amount == amount.quantize(Decimal("0.01")), (
-                f"Field {field_name} on row {row.customer_name} is not 2dp: {amount!r}"
-            )
+            assert amount == amount.quantize(
+                Decimal("0.01")
+            ), f"Field {field_name} on row {row.customer_name} is not 2dp: {amount!r}"
 
     # Grand totals should equal sum of row totals.
     expected_grand_total = sum(r.total for r in report.customers)

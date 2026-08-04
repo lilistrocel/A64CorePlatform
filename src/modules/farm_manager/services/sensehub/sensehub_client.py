@@ -205,9 +205,7 @@ class SenseHubClient:
     # Relay Control
     # =========================================================================
 
-    async def control_relay(
-        self, equipment_id: int, channel: int, state: bool
-    ) -> dict:
+    async def control_relay(self, equipment_id: int, channel: int, state: bool) -> dict:
         """POST /api/equipment/:id/relay/control"""
         return await self._request(
             "POST",
@@ -215,9 +213,7 @@ class SenseHubClient:
             json={"channel": channel, "state": state},
         )
 
-    async def control_relay_all(
-        self, equipment_id: int, states: list
-    ) -> dict:
+    async def control_relay_all(self, equipment_id: int, states: list) -> dict:
         """POST /api/equipment/:id/relay/all"""
         return await self._request(
             "POST",
@@ -238,9 +234,7 @@ class SenseHubClient:
 
     async def create_automation(self, automation_data: dict) -> dict:
         """POST /api/automations"""
-        return await self._request(
-            "POST", "/api/automations", json=automation_data
-        )
+        return await self._request("POST", "/api/automations", json=automation_data)
 
     async def update_automation(
         self, automation_id: int, automation_data: dict
@@ -256,15 +250,11 @@ class SenseHubClient:
 
     async def toggle_automation(self, automation_id: int) -> dict:
         """POST /api/automations/:id/toggle"""
-        return await self._request(
-            "POST", f"/api/automations/{automation_id}/toggle"
-        )
+        return await self._request("POST", f"/api/automations/{automation_id}/toggle")
 
     async def trigger_automation(self, automation_id: int) -> dict:
         """POST /api/automations/:id/trigger"""
-        return await self._request(
-            "POST", f"/api/automations/{automation_id}/trigger"
-        )
+        return await self._request("POST", f"/api/automations/{automation_id}/trigger")
 
     # =========================================================================
     # Alerts
@@ -288,6 +278,4 @@ class SenseHubClient:
 
     async def acknowledge_alert(self, alert_id: int) -> dict:
         """POST /api/alerts/:id/acknowledge"""
-        return await self._request(
-            "POST", f"/api/alerts/{alert_id}/acknowledge"
-        )
+        return await self._request("POST", f"/api/alerts/{alert_id}/acknowledge")

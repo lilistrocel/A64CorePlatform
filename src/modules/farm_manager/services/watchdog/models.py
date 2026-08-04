@@ -54,16 +54,22 @@ class CheckType(str, Enum):
 
 class WatchdogConfig(BaseModel):
     """Watchdog configuration stored in system_config collection."""
+
     botToken: str = ""
     chatId: str = ""
     enabled: bool = False
     checkIntervalMinutes: int = Field(default=15, ge=1, le=1440)
     notificationCooldownMinutes: int = Field(default=60, ge=5, le=1440)
     severityThreshold: SeverityThreshold = SeverityThreshold.HIGH_PLUS
-    enabledChecks: List[str] = Field(default_factory=lambda: [
-        "mcp_reachability", "late_items", "active_alerts",
-        "block_health", "system_health"
-    ])
+    enabledChecks: List[str] = Field(
+        default_factory=lambda: [
+            "mcp_reachability",
+            "late_items",
+            "active_alerts",
+            "block_health",
+            "system_health",
+        ]
+    )
     updatedAt: Optional[datetime] = None
     updatedBy: Optional[str] = None
     updatedByEmail: Optional[str] = None
@@ -71,6 +77,7 @@ class WatchdogConfig(BaseModel):
 
 class WatchdogConfigUpdate(BaseModel):
     """Payload for updating watchdog configuration."""
+
     botToken: Optional[str] = None
     chatId: Optional[str] = None
     enabled: Optional[bool] = None
@@ -82,6 +89,7 @@ class WatchdogConfigUpdate(BaseModel):
 
 class WatchdogIssue(BaseModel):
     """A single issue detected by a checker."""
+
     checkType: CheckType
     severity: Severity
     title: str
@@ -99,6 +107,7 @@ class WatchdogIssue(BaseModel):
 
 class WatchdogRunResult(BaseModel):
     """Result of a single watchdog run."""
+
     runId: str = Field(default_factory=lambda: str(uuid4()))
     startedAt: datetime
     completedAt: Optional[datetime] = None
@@ -111,6 +120,7 @@ class WatchdogRunResult(BaseModel):
 
 class NotificationLog(BaseModel):
     """Log entry for a sent Telegram notification."""
+
     logId: str = Field(default_factory=lambda: str(uuid4()))
     issueKey: str
     checkType: str

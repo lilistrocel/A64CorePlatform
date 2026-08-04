@@ -171,9 +171,11 @@ class ProtocolService:
         at the point of work is the failure an SOP system exists to prevent.
         """
         db = protocols_db.get_database()
-        cursor = db[PROTOCOLS].find(
-            {"appliesTo": scope, "status": ProtocolStatus.ACTIVE.value}
-        ).sort("code", 1)
+        cursor = (
+            db[PROTOCOLS]
+            .find({"appliesTo": scope, "status": ProtocolStatus.ACTIVE.value})
+            .sort("code", 1)
+        )
         return [_doc_to_model(d) async for d in cursor]
 
     # -----------------------------------------------------------------------
@@ -257,7 +259,7 @@ class ProtocolService:
                     "approvedBy": getattr(current_user, "userId", None),
                     "approvedByName": data.approvedByName
                     or f"{getattr(current_user, 'firstName', '')} "
-                       f"{getattr(current_user, 'lastName', '')}".strip()
+                    f"{getattr(current_user, 'lastName', '')}".strip()
                     or None,
                     "approvedAt": datetime.utcnow(),
                     "updatedAt": datetime.utcnow(),

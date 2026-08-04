@@ -21,7 +21,7 @@ from ..models.user import (
     UserRole,
     TokenResponse,
     RefreshTokenCreate,
-    MFALoginResponse
+    MFALoginResponse,
 )
 from ..utils.security import (
     hash_password,
@@ -32,12 +32,12 @@ from ..utils.security import (
     create_verification_token,
     verify_verification_token,
     create_mfa_token,
-    verify_mfa_token
+    verify_mfa_token,
 )
 from ..utils.email import (
     send_email_verification,
     send_password_reset,
-    send_welcome_email
+    send_welcome_email,
 )
 from .database import mongodb
 from .cf_access_service import CFAccessIdentity
@@ -114,8 +114,7 @@ class AuthService:
         existing_user = await db.users.find_one({"email": user_data.email})
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
+                status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
             )
 
         # Generate user ID
@@ -145,7 +144,7 @@ class AuthService:
             "createdAt": datetime.utcnow(),
             "updatedAt": datetime.utcnow(),
             "deletedAt": None,
-            "metadata": {}
+            "metadata": {},
         }
 
         try:
@@ -180,14 +179,13 @@ class AuthService:
         except DuplicateKeyError:
             # Race condition - email was registered between check and insert
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
+                status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
             )
         except Exception as e:
             logger.error(f"Error registering user: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to register user"
+                detail="Failed to register user",
             )
 
     @staticmethod
@@ -211,9 +209,7 @@ class AuthService:
 
         # Generate tokens for auto-login
         access_token = create_access_token(
-            user_id=user.userId,
-            email=user.email,
-            role=user.role
+            user_id=user.userId, email=user.email, role=user.role
         )
 
         refresh_token, token_id = create_refresh_token(user_id=user.userId)
@@ -226,19 +222,21 @@ class AuthService:
             "expiresAt": datetime.utcnow() + timedelta(days=7),
             "isRevoked": False,
             "createdAt": datetime.utcnow(),
-            "lastUsedAt": None
+            "lastUsedAt": None,
         }
 
         await db.refresh_tokens.insert_one(refresh_token_doc)
 
-        logger.info(f"Auto-login tokens generated for newly registered user: {user.email}")
+        logger.info(
+            f"Auto-login tokens generated for newly registered user: {user.email}"
+        )
 
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
             expires_in=3600,
-            user=user
+            user=user,
         )
 
     @staticmethod
@@ -277,8 +275,7 @@ class AuthService:
         if not user_doc:
             # Don't reveal if email exists or not (security)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
 
         # Check if user is active
@@ -289,8 +286,7 @@ class AuthService:
         if not verify_password(credentials.password, user_doc["passwordHash"]):
             logger.warning(f"Failed login attempt for: {credentials.email}")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
 
         logger.info(f"User logged in successfully: {user_doc['email']}")
@@ -328,8 +324,7 @@ class AuthService:
 
         if not token_payload:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
             )
 
         user_id = token_payload["userId"]
@@ -341,7 +336,7 @@ class AuthService:
         if not token_doc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Refresh token not found"
+                detail="Refresh token not found",
             )
 
         # Check if token is revoked
@@ -349,14 +344,14 @@ class AuthService:
             logger.warning(f"Attempted use of revoked token: {token_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Refresh token has been revoked"
+                detail="Refresh token has been revoked",
             )
 
         # Check if token is expired
         if token_doc["expiresAt"] < datetime.utcnow():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Refresh token has expired"
+                detail="Refresh token has expired",
             )
 
         # Fetch user
@@ -365,24 +360,21 @@ class AuthService:
         if not user_doc or not user_doc.get("isActive", False):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found or inactive"
+                detail="User not found or inactive",
             )
 
         # Generate new tokens
         role = UserRole(user_doc["role"])
 
         new_access_token = create_access_token(
-            user_id=user_id,
-            email=user_doc["email"],
-            role=role
+            user_id=user_id, email=user_doc["email"], role=role
         )
 
         new_refresh_token, new_token_id = create_refresh_token(user_id=user_id)
 
         # Revoke old refresh token (one-time use)
         await db.refresh_tokens.update_one(
-            {"tokenId": token_id},
-            {"$set": {"isRevoked": True}}
+            {"tokenId": token_id}, {"$set": {"isRevoked": True}}
         )
 
         # Store new refresh token
@@ -393,7 +385,7 @@ class AuthService:
             "expiresAt": datetime.utcnow() + timedelta(days=7),
             "isRevoked": False,
             "createdAt": datetime.utcnow(),
-            "lastUsedAt": None
+            "lastUsedAt": None,
         }
 
         await db.refresh_tokens.insert_one(new_refresh_token_doc)
@@ -430,7 +422,7 @@ class AuthService:
             refresh_token=new_refresh_token,
             token_type="bearer",
             expires_in=3600,
-            user=user_response
+            user=user_response,
         )
 
     @staticmethod
@@ -458,15 +450,13 @@ class AuthService:
 
             if token_payload and token_payload["userId"] == user_id:
                 await db.refresh_tokens.update_one(
-                    {"tokenId": token_payload["tokenId"]},
-                    {"$set": {"isRevoked": True}}
+                    {"tokenId": token_payload["tokenId"]}, {"$set": {"isRevoked": True}}
                 )
                 logger.info(f"Refresh token revoked for user: {user_id}")
         else:
             # Revoke all tokens for user
             await db.refresh_tokens.update_many(
-                {"userId": user_id, "isRevoked": False},
-                {"$set": {"isRevoked": True}}
+                {"userId": user_id, "isRevoked": False}, {"$set": {"isRevoked": True}}
             )
             logger.info(f"All refresh tokens revoked for user: {user_id}")
 
@@ -493,22 +483,18 @@ class AuthService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Check if already verified
         if user_doc.get("isEmailVerified", False):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already verified"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified"
             )
 
         # Generate verification token (24 hours expiry)
         token, token_id = create_verification_token(
-            user_id=user_id,
-            email=user_doc["email"],
-            token_type="email_verification"
+            user_id=user_id, email=user_doc["email"], token_type="email_verification"
         )
 
         # Store token in database
@@ -521,16 +507,14 @@ class AuthService:
             "expiresAt": datetime.utcnow() + timedelta(hours=24),
             "isUsed": False,
             "createdAt": datetime.utcnow(),
-            "usedAt": None
+            "usedAt": None,
         }
 
         await db.verification_tokens.insert_one(token_doc)
 
         # Send verification email
         await send_email_verification(
-            email=user_doc["email"],
-            token=token,
-            user_name=user_doc["firstName"]
+            email=user_doc["email"], token=token, user_name=user_doc["firstName"]
         )
 
         logger.info(f"Verification email sent to: {user_doc['email']}")
@@ -558,7 +542,7 @@ class AuthService:
         if not token_payload:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired verification token"
+                detail="Invalid or expired verification token",
             )
 
         user_id = token_payload["userId"]
@@ -570,45 +554,38 @@ class AuthService:
         if not token_doc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Verification token not found"
+                detail="Verification token not found",
             )
 
         # Check if token already used
         if token_doc.get("isUsed", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification token already used"
+                detail="Verification token already used",
             )
 
         # Check if token expired
         if token_doc["expiresAt"] < datetime.utcnow():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Verification token has expired"
+                detail="Verification token has expired",
             )
 
         # Update user email verification status
         result = await db.users.update_one(
             {"userId": user_id},
-            {"$set": {
-                "isEmailVerified": True,
-                "updatedAt": datetime.utcnow()
-            }}
+            {"$set": {"isEmailVerified": True, "updatedAt": datetime.utcnow()}},
         )
 
         if result.matched_count == 0:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Mark token as used
         await db.verification_tokens.update_one(
             {"tokenId": token_id},
-            {"$set": {
-                "isUsed": True,
-                "usedAt": datetime.utcnow()
-            }}
+            {"$set": {"isUsed": True, "usedAt": datetime.utcnow()}},
         )
 
         # Fetch updated user
@@ -616,8 +593,7 @@ class AuthService:
 
         # Send welcome email
         await send_welcome_email(
-            email=user_doc["email"],
-            user_name=user_doc["firstName"]
+            email=user_doc["email"], user_name=user_doc["firstName"]
         )
 
         logger.info(f"Email verified for user: {user_doc['email']}")
@@ -677,9 +653,7 @@ class AuthService:
 
         # Generate password reset token (1 hour expiry)
         token, token_id = create_verification_token(
-            user_id=user_doc["userId"],
-            email=email,
-            token_type="password_reset"
+            user_id=user_doc["userId"], email=email, token_type="password_reset"
         )
 
         # Store token in database
@@ -692,16 +666,14 @@ class AuthService:
             "expiresAt": datetime.utcnow() + timedelta(hours=1),
             "isUsed": False,
             "createdAt": datetime.utcnow(),
-            "usedAt": None
+            "usedAt": None,
         }
 
         await db.verification_tokens.insert_one(token_doc)
 
         # Send password reset email
         await send_password_reset(
-            email=email,
-            token=token,
-            user_name=user_doc["firstName"]
+            email=email, token=token, user_name=user_doc["firstName"]
         )
 
         logger.info(f"Password reset email sent to: {email}")
@@ -730,7 +702,7 @@ class AuthService:
         if not token_payload:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired password reset token"
+                detail="Invalid or expired password reset token",
             )
 
         user_id = token_payload["userId"]
@@ -742,21 +714,21 @@ class AuthService:
         if not token_doc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Password reset token not found"
+                detail="Password reset token not found",
             )
 
         # Check if token already used
         if token_doc.get("isUsed", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password reset token already used"
+                detail="Password reset token already used",
             )
 
         # Check if token expired
         if token_doc["expiresAt"] < datetime.utcnow():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Password reset token has expired"
+                detail="Password reset token has expired",
             )
 
         # Hash new password
@@ -765,31 +737,23 @@ class AuthService:
         # Update user password
         result = await db.users.update_one(
             {"userId": user_id},
-            {"$set": {
-                "passwordHash": password_hash,
-                "updatedAt": datetime.utcnow()
-            }}
+            {"$set": {"passwordHash": password_hash, "updatedAt": datetime.utcnow()}},
         )
 
         if result.matched_count == 0:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Mark token as used
         await db.verification_tokens.update_one(
             {"tokenId": token_id},
-            {"$set": {
-                "isUsed": True,
-                "usedAt": datetime.utcnow()
-            }}
+            {"$set": {"isUsed": True, "usedAt": datetime.utcnow()}},
         )
 
         # Revoke all refresh tokens for security
         await db.refresh_tokens.update_many(
-            {"userId": user_id, "isRevoked": False},
-            {"$set": {"isRevoked": True}}
+            {"userId": user_id, "isRevoked": False}, {"$set": {"isRevoked": True}}
         )
 
         logger.info(f"Password reset successfully for user: {user_id}")
@@ -798,7 +762,9 @@ class AuthService:
     # ============= MFA Login Flow Methods =============
 
     @staticmethod
-    async def login_user_with_mfa_check(credentials: UserLogin) -> Union[TokenResponse, MFALoginResponse]:
+    async def login_user_with_mfa_check(
+        credentials: UserLogin,
+    ) -> Union[TokenResponse, MFALoginResponse]:
         """
         Authenticate user with MFA check
 
@@ -825,8 +791,7 @@ class AuthService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
 
         # Check if user is active
@@ -837,8 +802,7 @@ class AuthService:
         if not verify_password(credentials.password, user_doc["passwordHash"]):
             logger.warning(f"Failed login attempt for: {credentials.email}")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
 
         # Check if MFA is enabled
@@ -883,7 +847,7 @@ class AuthService:
             "expiresAt": datetime.utcnow() + timedelta(minutes=5),
             "isUsed": False,
             "failedAttempts": 0,
-            "createdAt": datetime.utcnow()
+            "createdAt": datetime.utcnow(),
         }
 
         await db.mfa_pending_tokens.insert_one(mfa_token_doc)
@@ -897,7 +861,7 @@ class AuthService:
             mfaRequired=True,
             mfaToken=mfa_token,
             userId=masked_user_id,
-            message="MFA verification required. Please enter your authenticator code."
+            message="MFA verification required. Please enter your authenticator code.",
         )
 
     @staticmethod
@@ -935,11 +899,7 @@ class AuthService:
         role = UserRole(user_doc["role"])
 
         # Create access token (1 hour expiry)
-        access_token = create_access_token(
-            user_id=user_id,
-            email=email,
-            role=role
-        )
+        access_token = create_access_token(user_id=user_id, email=email, role=role)
 
         # Create refresh token (7 days expiry)
         refresh_token, token_id = create_refresh_token(user_id=user_id)
@@ -952,17 +912,14 @@ class AuthService:
             "expiresAt": datetime.utcnow() + timedelta(days=7),
             "isRevoked": False,
             "createdAt": datetime.utcnow(),
-            "lastUsedAt": None
+            "lastUsedAt": None,
         }
 
         await db.refresh_tokens.insert_one(refresh_token_doc)
 
         # Update user's lastLoginAt
         now = datetime.utcnow()
-        await db.users.update_one(
-            {"userId": user_id},
-            {"$set": {"lastLoginAt": now}}
-        )
+        await db.users.update_one({"userId": user_id}, {"$set": {"lastLoginAt": now}})
 
         user_response = UserResponse(
             userId=user_id,
@@ -1052,14 +1009,18 @@ class AuthService:
         )
 
         if user_doc is None:
-            jit_provision = await deployment_settings_service.get_value("CF_ACCESS_JIT_PROVISION")
+            jit_provision = await deployment_settings_service.get_value(
+                "CF_ACCESS_JIT_PROVISION"
+            )
             if jit_provision:
                 local_part = email.split("@", 1)[0]
                 name_first, _, name_last = local_part.partition(".")
                 first_name = (name_first or local_part).capitalize()
                 last_name = name_last.capitalize() if name_last else first_name
 
-                default_role = await deployment_settings_service.get_value("CF_ACCESS_DEFAULT_ROLE")
+                default_role = await deployment_settings_service.get_value(
+                    "CF_ACCESS_DEFAULT_ROLE"
+                )
                 now = datetime.utcnow()
                 new_user_doc = {
                     "userId": str(uuid.uuid4()),
@@ -1149,7 +1110,7 @@ class AuthService:
         if not token_payload:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired MFA token. Please login again."
+                detail="Invalid or expired MFA token. Please login again.",
             )
 
         user_id = token_payload["userId"]
@@ -1165,21 +1126,21 @@ class AuthService:
         if not token_doc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="MFA token not found. Please login again."
+                detail="MFA token not found. Please login again.",
             )
 
         # Check if token is already used
         if token_doc.get("isUsed", False):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="MFA token already used. Please login again."
+                detail="MFA token already used. Please login again.",
             )
 
         # Check if token is expired
         if token_doc["expiresAt"] < datetime.utcnow():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="MFA token has expired. Please login again."
+                detail="MFA token has expired. Please login again.",
             )
 
         # Check failed attempts (limit to 5)
@@ -1187,16 +1148,17 @@ class AuthService:
         if failed_attempts >= 5:
             # Mark token as used to prevent further attempts
             await db.mfa_pending_tokens.update_one(
-                {"tokenId": token_id},
-                {"$set": {"isUsed": True}}
+                {"tokenId": token_id}, {"$set": {"isUsed": True}}
             )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Too many failed MFA attempts. Please login again."
+                detail="Too many failed MFA attempts. Please login again.",
             )
 
         # Verify MFA code using MFA service
-        is_valid, used_backup_code, remaining_backup_codes = await mfa_service.verify_mfa_code(user_id, code)
+        is_valid, used_backup_code, remaining_backup_codes = (
+            await mfa_service.verify_mfa_code(user_id, code)
+        )
 
         if not is_valid:
             # Record failed attempt in Redis-backed rate limiter (Feature #319)
@@ -1204,15 +1166,14 @@ class AuthService:
 
             # Also increment per-token attempts
             await db.mfa_pending_tokens.update_one(
-                {"tokenId": token_id},
-                {"$inc": {"failedAttempts": 1}}
+                {"tokenId": token_id}, {"$inc": {"failedAttempts": 1}}
             )
 
             remaining_attempts = mfa_rate_limiter.get_remaining_attempts(attempt_count)
             # Feature #335: Clear error message for invalid code
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid verification code. Please try again. ({remaining_attempts} attempts remaining)"
+                detail=f"Invalid verification code. Please try again. ({remaining_attempts} attempts remaining)",
             )
 
         # Clear MFA rate limit attempts on success (Feature #319)
@@ -1221,7 +1182,7 @@ class AuthService:
         # Mark MFA token as used
         await db.mfa_pending_tokens.update_one(
             {"tokenId": token_id},
-            {"$set": {"isUsed": True, "usedAt": datetime.utcnow()}}
+            {"$set": {"isUsed": True, "usedAt": datetime.utcnow()}},
         )
 
         # Fetch user for token generation
@@ -1230,7 +1191,7 @@ class AuthService:
         if not user_doc or not user_doc.get("isActive", False):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found or inactive"
+                detail="User not found or inactive",
             )
 
         if used_backup_code:

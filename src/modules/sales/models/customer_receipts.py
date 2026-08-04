@@ -70,12 +70,16 @@ class ReceiptAllocationCreate(BaseModel):
         ..., max_length=50, description="Denormalised AR Invoice doc number"
     )
     amount_applied: Decimal = Field(
-        ..., gt=Decimal("0"), description="Amount applied to this AR Invoice; must be > 0"
+        ...,
+        gt=Decimal("0"),
+        description="Amount applied to this AR Invoice; must be > 0",
     )
     currency_applied: str = Field(
         "AED", max_length=3, description="Currency of the applied amount"
     )
-    notes: Optional[str] = Field(None, max_length=500, description="Per-allocation notes")
+    notes: Optional[str] = Field(
+        None, max_length=500, description="Per-allocation notes"
+    )
 
 
 class ReceiptAllocationResponse(BaseModel):
@@ -139,11 +143,19 @@ class CustomerReceiptCreate(BaseModel):
     """
 
     organization_id: str = Field(..., description="Owning organisation UUID")
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     customer_id: str = Field(..., description="FK to customers collection")
-    customer_name: str = Field(..., max_length=200, description="Denormalised customer name")
+    customer_name: str = Field(
+        ..., max_length=200, description="Denormalised customer name"
+    )
     bp_ref_no: Optional[str] = Field(
-        None, max_length=100, description="Customer's transfer reference / cheque number"
+        None,
+        max_length=100,
+        description="Customer's transfer reference / cheque number",
     )
     doc_date: date = Field(..., description="Payment receipt date")
     payment_method: Literal["bank_transfer", "cheque", "cash", "card"] = Field(
@@ -169,7 +181,9 @@ class CustomerReceiptCreate(BaseModel):
     allocations: List[ReceiptAllocationCreate] = Field(
         ..., min_length=1, description="AR Invoice allocations (at least one required)"
     )
-    journal_memo: Optional[str] = Field(None, max_length=500, description="GL journal memo")
+    journal_memo: Optional[str] = Field(
+        None, max_length=500, description="GL journal memo"
+    )
     notes: Optional[str] = Field(None, max_length=2000, description="Free-text notes")
 
     @field_validator("bank_account_id")
@@ -310,8 +324,12 @@ class CustomerReceiptResponse(BaseModel):
         description="Credit Note refunds if any",
     )
     # Outbox event tracking
-    outbox_event_id: Optional[str] = Field(None, description="event_id from outbox (set at OPEN)")
-    outbox_event_emitted_at: Optional[datetime] = Field(None, description="UTC timestamp")
+    outbox_event_id: Optional[str] = Field(
+        None, description="event_id from outbox (set at OPEN)"
+    )
+    outbox_event_emitted_at: Optional[datetime] = Field(
+        None, description="UTC timestamp"
+    )
     # Audit
     journal_memo: Optional[str]
     notes: Optional[str]
@@ -380,7 +398,9 @@ class CustomerReceiptStatusTransitionRequest(BaseModel):
         reason:     Optional free-text reason stored in the audit log.
     """
 
-    new_status: DocumentStatus = Field(..., description="Target status for the transition")
+    new_status: DocumentStatus = Field(
+        ..., description="Target status for the transition"
+    )
     reason: Optional[str] = Field(
         None, max_length=500, description="Optional reason (stored in audit log)"
     )
@@ -412,7 +432,11 @@ class CustomerReceiptFromInvoiceRequest(BaseModel):
         notes:             Free-text notes.
     """
 
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     doc_date: date = Field(..., description="Payment receipt date")
     payment_method: Literal["bank_transfer", "cheque", "cash", "card"] = Field(...)
     payment_ref: Optional[str] = Field(None, max_length=100)

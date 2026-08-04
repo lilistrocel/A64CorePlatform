@@ -42,7 +42,7 @@ class RouteRepository:
             {"_id": "route_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
@@ -70,11 +70,13 @@ class RouteRepository:
             routeCode=route_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         route_doc = route.model_dump(by_alias=True)
-        route_doc["routeId"] = str(route_doc["routeId"])  # Convert UUID to string for MongoDB
+        route_doc["routeId"] = str(
+            route_doc["routeId"]
+        )  # Convert UUID to string for MongoDB
         route_doc["createdBy"] = str(route_doc["createdBy"])
 
         await collection.insert_one(route_doc)
@@ -101,10 +103,7 @@ class RouteRepository:
         return None
 
     async def get_all(
-        self,
-        skip: int = 0,
-        limit: int = 20,
-        is_active: Optional[bool] = None
+        self, skip: int = 0, limit: int = 20, is_active: Optional[bool] = None
     ) -> tuple[List[Route], int]:
         """
         Get all routes with pagination and filters
@@ -156,8 +155,7 @@ class RouteRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"routeId": str(route_id)},
-            {"$set": update_dict}
+            {"routeId": str(route_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

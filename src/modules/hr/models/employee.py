@@ -14,6 +14,7 @@ from enum import Enum
 
 class EmployeeStatus(str, Enum):
     """Employee status enumeration"""
+
     ACTIVE = "active"
     ON_LEAVE = "on_leave"
     TERMINATED = "terminated"
@@ -21,12 +22,14 @@ class EmployeeStatus(str, Enum):
 
 class Gender(str, Enum):
     """Gender enumeration"""
+
     MALE = "male"
     FEMALE = "female"
 
 
 class MaritalStatus(str, Enum):
     """Marital status enumeration"""
+
     SINGLE = "single"
     MARRIED = "married"
     DIVORCED = "divorced"
@@ -35,25 +38,43 @@ class MaritalStatus(str, Enum):
 
 class EmergencyContact(BaseModel):
     """Emergency contact information"""
-    name: str = Field(..., min_length=1, max_length=200, description="Emergency contact name")
+
+    name: str = Field(
+        ..., min_length=1, max_length=200, description="Emergency contact name"
+    )
     phone: str = Field(..., max_length=50, description="Emergency contact phone")
-    relationship: str = Field(..., max_length=100, description="Relationship to employee")
+    relationship: str = Field(
+        ..., max_length=100, description="Relationship to employee"
+    )
 
 
 class EmployeeBase(BaseModel):
     """Base employee fields"""
+
     # English name (required)
-    firstName: str = Field(..., min_length=1, max_length=100, description="Employee first name (English)")
-    lastName: str = Field(..., min_length=1, max_length=100, description="Employee last name (English)")
+    firstName: str = Field(
+        ..., min_length=1, max_length=100, description="Employee first name (English)"
+    )
+    lastName: str = Field(
+        ..., min_length=1, max_length=100, description="Employee last name (English)"
+    )
 
     # Arabic name (optional - for UAE official documents)
-    arabicFirstName: Optional[str] = Field(None, max_length=100, description="Employee first name (Arabic)")
-    arabicMiddleName: Optional[str] = Field(None, max_length=100, description="Employee middle name (Arabic)")
-    arabicLastName: Optional[str] = Field(None, max_length=100, description="Employee last name (Arabic)")
+    arabicFirstName: Optional[str] = Field(
+        None, max_length=100, description="Employee first name (Arabic)"
+    )
+    arabicMiddleName: Optional[str] = Field(
+        None, max_length=100, description="Employee middle name (Arabic)"
+    )
+    arabicLastName: Optional[str] = Field(
+        None, max_length=100, description="Employee last name (Arabic)"
+    )
 
     # Contact information
     email: EmailStr = Field(..., description="Employee email address")
-    phone: Optional[str] = Field(None, max_length=50, description="Employee phone number")
+    phone: Optional[str] = Field(
+        None, max_length=50, description="Employee phone number"
+    )
 
     # Employment details
     department: str = Field(..., min_length=1, max_length=100, description="Department")
@@ -63,24 +84,34 @@ class EmployeeBase(BaseModel):
 
     # Personal details
     gender: Optional[Gender] = Field(None, description="Employee gender")
-    nationality: Optional[str] = Field(None, max_length=100, description="Employee nationality")
+    nationality: Optional[str] = Field(
+        None, max_length=100, description="Employee nationality"
+    )
     maritalStatus: Optional[MaritalStatus] = Field(None, description="Marital status")
 
     # UAE-specific identification
-    emiratesId: Optional[str] = Field(None, max_length=20, description="Emirates ID number (15 digits)")
-    visaIssuancePlace: Optional[str] = Field(None, max_length=100, description="Place of visa issuance")
+    emiratesId: Optional[str] = Field(
+        None, max_length=20, description="Emirates ID number (15 digits)"
+    )
+    visaIssuancePlace: Optional[str] = Field(
+        None, max_length=100, description="Place of visa issuance"
+    )
 
     # Emergency contact
-    emergencyContact: Optional[EmergencyContact] = Field(None, description="Emergency contact information")
+    emergencyContact: Optional[EmergencyContact] = Field(
+        None, description="Emergency contact information"
+    )
 
 
 class EmployeeCreate(EmployeeBase):
     """Schema for creating a new employee"""
+
     pass
 
 
 class EmployeeUpdate(BaseModel):
     """Schema for updating an employee"""
+
     # English name
     firstName: Optional[str] = Field(None, min_length=1, max_length=100)
     lastName: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -115,8 +146,13 @@ class EmployeeUpdate(BaseModel):
 
 class Employee(EmployeeBase):
     """Complete employee model with all fields"""
-    employeeId: UUID = Field(default_factory=uuid4, description="Unique employee identifier")
-    employeeCode: Optional[str] = Field(None, description="Human-readable employee code (e.g., E001)")
+
+    employeeId: UUID = Field(
+        default_factory=uuid4, description="Unique employee identifier"
+    )
+    employeeCode: Optional[str] = Field(
+        None, description="Human-readable employee code (e.g., E001)"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
@@ -151,10 +187,10 @@ class Employee(EmployeeBase):
                 "emergencyContact": {
                     "name": "Ahmed Khan",
                     "phone": "+971-50-987-6543",
-                    "relationship": "Brother"
+                    "relationship": "Brother",
                 },
                 "createdBy": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "createdAt": "2025-01-15T10:00:00Z",
-                "updatedAt": "2025-01-15T10:00:00Z"
+                "updatedAt": "2025-01-15T10:00:00Z",
             }
         }

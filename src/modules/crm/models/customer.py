@@ -13,12 +13,14 @@ from enum import Enum
 
 class CustomerType(str, Enum):
     """Customer type enumeration"""
+
     INDIVIDUAL = "individual"
     BUSINESS = "business"
 
 
 class CustomerStatus(str, Enum):
     """Customer status enumeration"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     LEAD = "lead"
@@ -27,21 +29,29 @@ class CustomerStatus(str, Enum):
 
 class Address(BaseModel):
     """Customer address"""
+
     street: Optional[str] = Field(None, max_length=200, description="Street address")
     city: Optional[str] = Field(None, max_length=100, description="City")
     state: Optional[str] = Field(None, max_length=100, description="State/Province")
     country: Optional[str] = Field(None, max_length=100, description="Country")
-    postalCode: Optional[str] = Field(None, max_length=20, description="Postal/ZIP code")
+    postalCode: Optional[str] = Field(
+        None, max_length=20, description="Postal/ZIP code"
+    )
 
 
 class CustomerBase(BaseModel):
     """Base customer fields"""
+
     name: str = Field(..., min_length=1, max_length=200, description="Customer name")
     email: Optional[EmailStr] = Field(None, description="Customer email address")
-    phone: Optional[str] = Field(None, max_length=50, description="Customer phone number")
+    phone: Optional[str] = Field(
+        None, max_length=50, description="Customer phone number"
+    )
     company: Optional[str] = Field(None, max_length=200, description="Company name")
     address: Optional[Address] = Field(None, description="Customer address")
-    type: CustomerType = Field(CustomerType.INDIVIDUAL, description="Customer type (individual or business)")
+    type: CustomerType = Field(
+        CustomerType.INDIVIDUAL, description="Customer type (individual or business)"
+    )
     status: CustomerStatus = Field(CustomerStatus.LEAD, description="Customer status")
     notes: Optional[str] = Field(None, description="Additional notes about customer")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
@@ -49,11 +59,13 @@ class CustomerBase(BaseModel):
 
 class CustomerCreate(CustomerBase):
     """Schema for creating a new customer"""
+
     pass
 
 
 class CustomerUpdate(BaseModel):
     """Schema for updating a customer"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(None, max_length=50)
@@ -67,8 +79,13 @@ class CustomerUpdate(BaseModel):
 
 class Customer(CustomerBase):
     """Complete customer model with all fields"""
-    customerId: UUID = Field(default_factory=uuid4, description="Unique customer identifier")
-    customerCode: Optional[str] = Field(None, description="Human-readable customer code (e.g., C001)")
+
+    customerId: UUID = Field(
+        default_factory=uuid4, description="Unique customer identifier"
+    )
+    customerCode: Optional[str] = Field(
+        None, description="Human-readable customer code (e.g., C001)"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
@@ -93,7 +110,7 @@ class Customer(CustomerBase):
                     "city": "New York",
                     "state": "NY",
                     "country": "United States",
-                    "postalCode": "10001"
+                    "postalCode": "10001",
                 },
                 "type": "business",
                 "status": "active",
@@ -101,6 +118,6 @@ class Customer(CustomerBase):
                 "tags": ["enterprise", "priority", "northeast"],
                 "createdBy": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "createdAt": "2025-01-15T10:00:00Z",
-                "updatedAt": "2025-01-15T10:00:00Z"
+                "updatedAt": "2025-01-15T10:00:00Z",
             }
         }

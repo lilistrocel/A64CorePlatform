@@ -60,9 +60,9 @@ for _tool in FARM_LEVEL_WRITE_TOOLS:
         },
         **_tool["input_schema"]["properties"],
     }
-    _hub_tool["input_schema"]["required"] = [
-        "farm_name"
-    ] + list(_tool["input_schema"].get("required", []))
+    _hub_tool["input_schema"]["required"] = ["farm_name"] + list(
+        _tool["input_schema"].get("required", [])
+    )
 
     # Update description to clarify the hub context
     _hub_tool["description"] = (

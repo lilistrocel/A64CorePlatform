@@ -32,7 +32,6 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-
 # Shared response config: serialise snake_case fields as camelCase aliases
 # while still accepting snake_case input (populate_by_name).
 _DOC_LINK_CONFIG = ConfigDict(populate_by_name=True, alias_generator=to_camel)

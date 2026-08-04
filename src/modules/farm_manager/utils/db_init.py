@@ -41,50 +41,46 @@ class DatabaseInitializer:
             {
                 "keys": [("plantDataId", ASCENDING)],
                 "name": "idx_plant_data_plant_data_id",
-                "unique": True
+                "unique": True,
             },
             # 2. Plant Name Index
-            {
-                "keys": [("plantName", ASCENDING)],
-                "name": "idx_plant_data_plant_name"
-            },
+            {"keys": [("plantName", ASCENDING)], "name": "idx_plant_data_plant_name"},
             # 3. Scientific Name Index (Unique, Partial)
             {
                 "keys": [("scientificName", ASCENDING)],
                 "name": "idx_plant_data_scientific_name",
                 "unique": True,
-                "partialFilterExpression": {"scientificName": {"$exists": True, "$ne": None}}
+                "partialFilterExpression": {
+                    "scientificName": {"$exists": True, "$ne": None}
+                },
             },
             # 4. Farm Type Compatibility Index
             {
                 "keys": [("farmTypeCompatibility", ASCENDING)],
-                "name": "idx_plant_data_farm_type_compatibility"
+                "name": "idx_plant_data_farm_type_compatibility",
             },
             # 5. Tags Index
-            {
-                "keys": [("tags", ASCENDING)],
-                "name": "idx_plant_data_tags"
-            },
+            {"keys": [("tags", ASCENDING)], "name": "idx_plant_data_tags"},
             # 6. Growth Cycle Duration Index
             {
                 "keys": [("growthCycle.totalCycleDays", ASCENDING)],
-                "name": "idx_plant_data_growth_cycle_total"
+                "name": "idx_plant_data_growth_cycle_total",
             },
             # 7. Soft Delete Index (Sparse)
             {
                 "keys": [("deletedAt", ASCENDING)],
                 "name": "idx_plant_data_deleted_at",
-                "sparse": True
+                "sparse": True,
             },
             # 8. Created By User Index (Compound)
             {
                 "keys": [("createdBy", ASCENDING), ("createdAt", DESCENDING)],
-                "name": "idx_plant_data_created_by_created_at"
+                "name": "idx_plant_data_created_by_created_at",
             },
             # 9. Active Records Index (Compound)
             {
                 "keys": [("deletedAt", ASCENDING), ("updatedAt", DESCENDING)],
-                "name": "idx_plant_data_deleted_at_updated_at"
+                "name": "idx_plant_data_deleted_at_updated_at",
             },
             # 10. Text Search Index (Weighted)
             {
@@ -92,16 +88,16 @@ class DatabaseInitializer:
                     ("plantName", TEXT),
                     ("scientificName", TEXT),
                     ("tags", TEXT),
-                    ("additionalInfo.notes", TEXT)
+                    ("additionalInfo.notes", TEXT),
                 ],
                 "name": "idx_plant_data_text_search",
                 "weights": {
                     "plantName": 10,
                     "scientificName": 8,
                     "tags": 5,
-                    "additionalInfo.notes": 1
-                }
-            }
+                    "additionalInfo.notes": 1,
+                },
+            },
         ]
 
         # Create each index
@@ -114,12 +110,18 @@ class DatabaseInitializer:
                 indexes_created += 1
             except OperationFailure as e:
                 if "already exists" in str(e):
-                    logger.info(f"[DB Init] ⏭️  Skipped index (already exists): {idx_config['name']}")
+                    logger.info(
+                        f"[DB Init] ⏭️  Skipped index (already exists): {idx_config['name']}"
+                    )
                 else:
-                    logger.error(f"[DB Init] ❌ Failed to create index {idx_config['name']}: {e}")
+                    logger.error(
+                        f"[DB Init] ❌ Failed to create index {idx_config['name']}: {e}"
+                    )
                     raise
 
-        logger.info(f"[DB Init] ✅ Created {indexes_created} indexes for plant_data_enhanced")
+        logger.info(
+            f"[DB Init] ✅ Created {indexes_created} indexes for plant_data_enhanced"
+        )
         return indexes_created
 
     @staticmethod
@@ -143,28 +145,22 @@ class DatabaseInitializer:
             {
                 "keys": [("plantDataId", ASCENDING)],
                 "name": "idx_plant_data_plant_data_id",
-                "unique": True
+                "unique": True,
             },
             # 2. Plant Name
-            {
-                "keys": [("plantName", ASCENDING)],
-                "name": "idx_plant_data_plant_name"
-            },
+            {"keys": [("plantName", ASCENDING)], "name": "idx_plant_data_plant_name"},
             # 3. Scientific Name
             {
                 "keys": [("scientificName", ASCENDING)],
-                "name": "idx_plant_data_scientific_name"
+                "name": "idx_plant_data_scientific_name",
             },
             # 4. Tags
-            {
-                "keys": [("tags", ASCENDING)],
-                "name": "idx_plant_data_tags"
-            },
+            {"keys": [("tags", ASCENDING)], "name": "idx_plant_data_tags"},
             # 5. Created By
             {
                 "keys": [("createdBy", ASCENDING), ("createdAt", DESCENDING)],
-                "name": "idx_plant_data_created_by_created_at"
-            }
+                "name": "idx_plant_data_created_by_created_at",
+            },
         ]
 
         for idx_config in indexes:
@@ -175,9 +171,13 @@ class DatabaseInitializer:
                 indexes_created += 1
             except OperationFailure as e:
                 if "already exists" in str(e):
-                    logger.info(f"[DB Init] ⏭️  Skipped index (already exists): {idx_config['name']}")
+                    logger.info(
+                        f"[DB Init] ⏭️  Skipped index (already exists): {idx_config['name']}"
+                    )
                 else:
-                    logger.error(f"[DB Init] ❌ Failed to create index {idx_config['name']}: {e}")
+                    logger.error(
+                        f"[DB Init] ❌ Failed to create index {idx_config['name']}: {e}"
+                    )
                     raise
 
         logger.info(f"[DB Init] ✅ Created {indexes_created} indexes for plant_data")
@@ -201,23 +201,29 @@ class DatabaseInitializer:
             "plant_data_legacy_indexes": 0,
             "total_indexes": 0,
             "success": True,
-            "errors": []
+            "errors": [],
         }
 
         try:
             # Create enhanced plant data indexes
-            results["plant_data_enhanced_indexes"] = await DatabaseInitializer.create_plant_data_enhanced_indexes(db)
+            results["plant_data_enhanced_indexes"] = (
+                await DatabaseInitializer.create_plant_data_enhanced_indexes(db)
+            )
 
             # Create legacy plant data indexes
-            results["plant_data_legacy_indexes"] = await DatabaseInitializer.create_legacy_plant_data_indexes(db)
+            results["plant_data_legacy_indexes"] = (
+                await DatabaseInitializer.create_legacy_plant_data_indexes(db)
+            )
 
             # Calculate total
             results["total_indexes"] = (
-                results["plant_data_enhanced_indexes"] +
-                results["plant_data_legacy_indexes"]
+                results["plant_data_enhanced_indexes"]
+                + results["plant_data_legacy_indexes"]
             )
 
-            logger.info(f"[DB Init] ✅ Database initialization complete. Total indexes: {results['total_indexes']}")
+            logger.info(
+                f"[DB Init] ✅ Database initialization complete. Total indexes: {results['total_indexes']}"
+            )
 
         except Exception as e:
             results["success"] = False
@@ -228,7 +234,9 @@ class DatabaseInitializer:
         return results
 
 
-async def run_initialization(mongo_uri: str = "mongodb://localhost:27017", db_name: str = "farm_management_db"):
+async def run_initialization(
+    mongo_uri: str = "mongodb://localhost:27017", db_name: str = "farm_management_db"
+):
     """
     Run database initialization script.
 

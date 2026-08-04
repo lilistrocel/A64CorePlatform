@@ -12,7 +12,11 @@ from uuid import uuid4
 
 from fastapi import HTTPException, status
 
-from ...models.substrate import SubstrateBatch, SubstrateBatchCreate, SubstrateBatchUpdate
+from ...models.substrate import (
+    SubstrateBatch,
+    SubstrateBatchCreate,
+    SubstrateBatchUpdate,
+)
 from ..database import mushroom_db
 
 logger = logging.getLogger(__name__)
@@ -33,9 +37,7 @@ class SubstrateService:
 
     @staticmethod
     async def create_batch(
-        facility_id: str,
-        data: SubstrateBatchCreate,
-        current_user
+        facility_id: str, data: SubstrateBatchCreate, current_user
     ) -> SubstrateBatch:
         """
         Create a new substrate batch for a facility.
@@ -56,11 +58,13 @@ class SubstrateService:
         db = mushroom_db.get_database()
 
         # Validate parent facility exists
-        facility_doc = await db.mushroom_facilities.find_one({"facilityId": facility_id})
+        facility_doc = await db.mushroom_facilities.find_one(
+            {"facilityId": facility_id}
+        )
         if not facility_doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Facility '{facility_id}' not found"
+                detail=f"Facility '{facility_id}' not found",
             )
 
         # Enforce unique batchCode per facility
@@ -73,7 +77,7 @@ class SubstrateService:
                 detail=(
                     f"Batch code '{data.batchCode}' already exists "
                     f"in facility '{facility_id}'"
-                )
+                ),
             )
 
         batch = SubstrateBatch(
@@ -92,7 +96,7 @@ class SubstrateService:
             logger.error(f"[SubstrateService] insert_one failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create substrate batch"
+                detail="Failed to create substrate batch",
             )
 
         logger.info(
@@ -124,7 +128,7 @@ class SubstrateService:
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Substrate batch '{batch_id}' not found"
+                detail=f"Substrate batch '{batch_id}' not found",
             )
         doc.pop("_id", None)
         return SubstrateBatch(**doc)
@@ -135,9 +139,7 @@ class SubstrateService:
 
     @staticmethod
     async def list_batches(
-        facility_id: str,
-        skip: int = 0,
-        limit: int = 20
+        facility_id: str, skip: int = 0, limit: int = 20
     ) -> Tuple[List[SubstrateBatch], int]:
         """
         Return a paginated list of substrate batches for a facility.
@@ -155,8 +157,7 @@ class SubstrateService:
 
         total = await db.substrate_batches.count_documents(query)
         cursor = (
-            db.substrate_batches
-            .find(query)
+            db.substrate_batches.find(query)
             .sort([("createdAt", -1)])
             .skip(skip)
             .limit(limit)
@@ -196,16 +197,17 @@ class SubstrateService:
         if not update_fields:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No fields provided for update"
+                detail="No fields provided for update",
             )
 
         update_fields["updatedAt"] = datetime.utcnow()
 
         db = mushroom_db.get_database()
         await db.substrate_batches.update_one(
-            {"batchId": batch_id},
-            {"$set": update_fields}
+            {"batchId": batch_id}, {"$set": update_fields}
         )
 
-        logger.info(f"[SubstrateService] Updated batch {batch_id}: {list(update_fields.keys())}")
+        logger.info(
+            f"[SubstrateService] Updated batch {batch_id}: {list(update_fields.keys())}"
+        )
         return await SubstrateService.get_batch(batch_id)

@@ -23,13 +23,14 @@ class RoomType(str, Enum):
 
     Room type therefore decides which model applies (see ``BATCH_ROOM_TYPES``).
     """
-    LAB = "lab"                          # Agar work, liquid culture — clean room
-    SPAWN = "spawn"                      # Grain spawn incubation
-    SUBSTRATE_PREP = "substrate_prep"    # Mixing, sterilisation, pasteurisation
-    INCUBATION = "incubation"            # Bulk block colonisation
-    FRUITING = "fruiting"                # Cropping — the single-crop model
-    STORAGE = "storage"                  # Cold storage, culture library
-    HARVEST_PACK = "harvest_pack"        # Post-harvest handling
+
+    LAB = "lab"  # Agar work, liquid culture — clean room
+    SPAWN = "spawn"  # Grain spawn incubation
+    SUBSTRATE_PREP = "substrate_prep"  # Mixing, sterilisation, pasteurisation
+    INCUBATION = "incubation"  # Bulk block colonisation
+    FRUITING = "fruiting"  # Cropping — the single-crop model
+    STORAGE = "storage"  # Cold storage, culture library
+    HARVEST_PACK = "harvest_pack"  # Post-harvest handling
 
 
 # Room types that run ONE crop through a lifecycle. Everything else is a
@@ -40,6 +41,7 @@ BATCH_ROOM_TYPES = frozenset({RoomType.FRUITING})
 
 class RoomPhase(str, Enum):
     """Growing room lifecycle phases (12 states)"""
+
     EMPTY = "empty"
     PREPARING = "preparing"
     INOCULATED = "inoculated"
@@ -56,14 +58,22 @@ class RoomPhase(str, Enum):
 
 # Valid phase transitions
 VALID_TRANSITIONS: Dict[RoomPhase, List[RoomPhase]] = {
-    RoomPhase.EMPTY: [RoomPhase.PREPARING, RoomPhase.MAINTENANCE, RoomPhase.DECOMMISSIONED],
+    RoomPhase.EMPTY: [
+        RoomPhase.PREPARING,
+        RoomPhase.MAINTENANCE,
+        RoomPhase.DECOMMISSIONED,
+    ],
     RoomPhase.PREPARING: [RoomPhase.INOCULATED, RoomPhase.QUARANTINED, RoomPhase.EMPTY],
     RoomPhase.INOCULATED: [RoomPhase.COLONIZING, RoomPhase.QUARANTINED],
     RoomPhase.COLONIZING: [RoomPhase.FRUITING_INITIATION, RoomPhase.QUARANTINED],
     RoomPhase.FRUITING_INITIATION: [RoomPhase.FRUITING, RoomPhase.QUARANTINED],
     RoomPhase.FRUITING: [RoomPhase.HARVESTING, RoomPhase.QUARANTINED],
     RoomPhase.HARVESTING: [RoomPhase.RESTING, RoomPhase.QUARANTINED],
-    RoomPhase.RESTING: [RoomPhase.FRUITING_INITIATION, RoomPhase.CLEANING, RoomPhase.QUARANTINED],
+    RoomPhase.RESTING: [
+        RoomPhase.FRUITING_INITIATION,
+        RoomPhase.CLEANING,
+        RoomPhase.QUARANTINED,
+    ],
     RoomPhase.CLEANING: [RoomPhase.EMPTY, RoomPhase.QUARANTINED],
     RoomPhase.QUARANTINED: [RoomPhase.CLEANING, RoomPhase.DECOMMISSIONED],
     RoomPhase.MAINTENANCE: [RoomPhase.EMPTY, RoomPhase.DECOMMISSIONED],
@@ -74,13 +84,15 @@ VALID_TRANSITIONS: Dict[RoomPhase, List[RoomPhase]] = {
 # Phases meaningful to a container room. A lab is never "fruiting" — the dishes
 # inside it have states, the room itself is just open, being cleaned, shut for
 # maintenance, or quarantined.
-OPERATIONAL_PHASES: frozenset = frozenset({
-    RoomPhase.EMPTY,
-    RoomPhase.CLEANING,
-    RoomPhase.QUARANTINED,
-    RoomPhase.MAINTENANCE,
-    RoomPhase.DECOMMISSIONED,
-})
+OPERATIONAL_PHASES: frozenset = frozenset(
+    {
+        RoomPhase.EMPTY,
+        RoomPhase.CLEANING,
+        RoomPhase.QUARANTINED,
+        RoomPhase.MAINTENANCE,
+        RoomPhase.DECOMMISSIONED,
+    }
+)
 
 
 def allowed_phases_for(room_type: RoomType) -> frozenset:
@@ -92,17 +104,27 @@ def allowed_phases_for(room_type: RoomType) -> frozenset:
 
 class ClimateSettings(BaseModel):
     """Climate control settings for a specific phase"""
+
     tempMin: Optional[float] = Field(None, description="Min temperature (Celsius)")
     tempMax: Optional[float] = Field(None, description="Max temperature (Celsius)")
-    humidityMin: Optional[float] = Field(None, ge=0, le=100, description="Min humidity %")
-    humidityMax: Optional[float] = Field(None, ge=0, le=100, description="Max humidity %")
+    humidityMin: Optional[float] = Field(
+        None, ge=0, le=100, description="Min humidity %"
+    )
+    humidityMax: Optional[float] = Field(
+        None, ge=0, le=100, description="Max humidity %"
+    )
     co2Max: Optional[int] = Field(None, description="Max CO2 level (ppm)")
-    lightLevel: Optional[str] = Field(None, description="Light level: none, low, medium, high")
-    freshAirExchanges: Optional[int] = Field(None, description="Fresh air exchanges per hour")
+    lightLevel: Optional[str] = Field(
+        None, description="Light level: none, low, medium, high"
+    )
+    freshAirExchanges: Optional[int] = Field(
+        None, description="Fresh air exchanges per hour"
+    )
 
 
 class PhaseHistoryEntry(BaseModel):
     """Record of a phase transition"""
+
     fromPhase: RoomPhase
     toPhase: RoomPhase
     changedAt: datetime = Field(default_factory=datetime.utcnow)
@@ -112,21 +134,29 @@ class PhaseHistoryEntry(BaseModel):
 
 class FlushInfo(BaseModel):
     """Track flush cycle information"""
+
     currentFlush: int = Field(1, ge=1, description="Current flush number")
     totalFlushes: int = Field(0, ge=0, description="Total completed flushes")
-    maxFlushes: int = Field(4, ge=1, description="Max flushes before substrate is spent")
+    maxFlushes: int = Field(
+        4, ge=1, description="Max flushes before substrate is spent"
+    )
 
 
 class GrowingRoomBase(BaseModel):
     """Base growing room fields — mirrors CreateRoomPayload from the frontend"""
-    roomCode: str = Field(..., min_length=1, max_length=20, description="Room identifier code")
+
+    roomCode: str = Field(
+        ..., min_length=1, max_length=20, description="Room identifier code"
+    )
     name: Optional[str] = Field(None, max_length=200, description="Room display name")
     roomType: RoomType = Field(
         RoomType.FRUITING,
         description="What the room is for. Only FRUITING runs a single-crop lifecycle.",
     )
     area: Optional[float] = Field(None, gt=0, description="Room area in sq meters")
-    capacity: Optional[int] = Field(None, gt=0, description="Capacity in substrate bags/blocks")
+    capacity: Optional[int] = Field(
+        None, gt=0, description="Capacity in substrate bags/blocks"
+    )
     notes: Optional[str] = Field(None, max_length=500, description="Free-text notes")
 
 
@@ -138,12 +168,14 @@ class GrowingRoomCreate(GrowingRoomBase):
     ``climateSettings`` is intentionally omitted — the frontend does not send
     it during creation.  It can be set later via the update endpoint.
     """
+
     strainId: Optional[str] = Field(None, description="Mushroom strain ID")
     substrateBatchId: Optional[str] = Field(None, description="Substrate batch ID")
 
 
 class GrowingRoomUpdate(BaseModel):
     """Schema for updating a growing room"""
+
     roomCode: Optional[str] = Field(None, min_length=1, max_length=20)
     name: Optional[str] = Field(None, max_length=200)
     roomType: Optional[RoomType] = None
@@ -157,6 +189,7 @@ class GrowingRoomUpdate(BaseModel):
 
 class PhaseTransitionRequest(BaseModel):
     """Request to advance the room lifecycle phase"""
+
     targetPhase: RoomPhase = Field(..., description="Phase to transition to")
     notes: Optional[str] = Field(None, max_length=500, description="Transition notes")
 
@@ -174,11 +207,17 @@ class GrowingRoom(GrowingRoomBase):
 
     # Strain and substrate
     strainId: Optional[str] = Field(None, description="Current mushroom strain ID")
-    substrateBatchId: Optional[str] = Field(None, description="Current substrate batch ID")
-    substrateWeight: Optional[float] = Field(None, gt=0, description="Substrate weight in kg")
+    substrateBatchId: Optional[str] = Field(
+        None, description="Current substrate batch ID"
+    )
+    substrateWeight: Optional[float] = Field(
+        None, gt=0, description="Substrate weight in kg"
+    )
 
     # Lifecycle
-    currentPhase: RoomPhase = Field(RoomPhase.EMPTY, description="Current lifecycle phase")
+    currentPhase: RoomPhase = Field(
+        RoomPhase.EMPTY, description="Current lifecycle phase"
+    )
     flushInfo: FlushInfo = Field(default_factory=FlushInfo)
     phaseHistory: List[PhaseHistoryEntry] = Field(default_factory=list)
 
@@ -189,9 +228,13 @@ class GrowingRoom(GrowingRoomBase):
 
     # Performance
     biologicalEfficiency: Optional[float] = Field(
-        None, ge=0, description="Biological efficiency % (harvest weight / substrate weight * 100)"
+        None,
+        ge=0,
+        description="Biological efficiency % (harvest weight / substrate weight * 100)",
     )
-    totalYieldKg: float = Field(0, ge=0, description="Total yield in kg across all flushes")
+    totalYieldKg: float = Field(
+        0, ge=0, description="Total yield in kg across all flushes"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")

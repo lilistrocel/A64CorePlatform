@@ -36,8 +36,12 @@ router = APIRouter()
     ),
 )
 async def get_lineage_graph(
-    accessionId: Optional[str] = Query(None, description="Root accession to walk out from"),
-    lineId: Optional[str] = Query(None, description="Graph every accession on this line"),
+    accessionId: Optional[str] = Query(
+        None, description="Root accession to walk out from"
+    ),
+    lineId: Optional[str] = Query(
+        None, description="Graph every accession on this line"
+    ),
     includeAncestors: bool = Query(True),
     includeDescendants: bool = Query(True),
     maxDepth: Optional[int] = Query(None, ge=1, le=25),

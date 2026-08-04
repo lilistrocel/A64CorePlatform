@@ -53,10 +53,22 @@ then Range: bytes=0-{total} for full rendering.
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import Response
 
-from src.modules.farm_manager.middleware.auth import CurrentUser, get_current_active_user
+from src.modules.farm_manager.middleware.auth import (
+    CurrentUser,
+    get_current_active_user,
+)
 from src.modules.farm_manager.utils.responses import SuccessResponse
 from src.modules.farm_manager.services.database import farm_db
 from src.config.settings import settings
@@ -80,26 +92,30 @@ router = APIRouter(tags=["Attachments"])
 # All authenticated users can download/list; upload/delete is restricted.
 # ---------------------------------------------------------------------------
 
-_ATTACHMENT_READ_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-    "accountant",
-    "finance_admin",
-    "auditor",
-    "moderator",
-    "user",
-})
+_ATTACHMENT_READ_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+        "accountant",
+        "finance_admin",
+        "auditor",
+        "moderator",
+        "user",
+    }
+)
 
-_ATTACHMENT_WRITE_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-    "accountant",
-    "finance_admin",
-})
+_ATTACHMENT_WRITE_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+        "accountant",
+        "finance_admin",
+    }
+)
 
 
 def _require_org(user: CurrentUser) -> str:
@@ -173,9 +189,15 @@ def _get_service() -> AttachmentService:
 async def upload_attachment(
     doc_type: AttachmentDocType,
     doc_id: str,
-    organization_id: str = Query(..., description="Organisation UUID (must match caller's org)"),
-    file: UploadFile = File(..., description="File to attach (PDF, JPEG, PNG, WebP; max 10 MB)"),
-    description: Optional[str] = Form(None, max_length=500, description="Optional note"),
+    organization_id: str = Query(
+        ..., description="Organisation UUID (must match caller's org)"
+    ),
+    file: UploadFile = File(
+        ..., description="File to attach (PDF, JPEG, PNG, WebP; max 10 MB)"
+    ),
+    description: Optional[str] = Form(
+        None, max_length=500, description="Optional note"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse[AttachmentMetadata]:
     """
@@ -269,7 +291,9 @@ async def upload_attachment(
 async def list_attachments(
     doc_type: AttachmentDocType,
     doc_id: str,
-    organization_id: str = Query(..., description="Organisation UUID (must match caller's org)"),
+    organization_id: str = Query(
+        ..., description="Organisation UUID (must match caller's org)"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse[List[AttachmentMetadata]]:
     """
@@ -307,7 +331,9 @@ async def list_attachments(
 )
 async def get_attachment_info(
     file_id: str,
-    organization_id: str = Query(..., description="Organisation UUID (must match caller's org)"),
+    organization_id: str = Query(
+        ..., description="Organisation UUID (must match caller's org)"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse[AttachmentMetadata]:
     """
@@ -354,7 +380,9 @@ async def get_attachment_info(
 )
 async def download_attachment(
     file_id: str,
-    organization_id: str = Query(..., description="Organisation UUID (must match caller's org)"),
+    organization_id: str = Query(
+        ..., description="Organisation UUID (must match caller's org)"
+    ),
     range_header: Optional[str] = None,
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> Response:
@@ -406,7 +434,7 @@ async def download_attachment(
                 headers={"Content-Range": f"bytes */{total_size}"},
             )
         start, end = parsed
-        chunk = data[start:end + 1]
+        chunk = data[start : end + 1]
         return Response(
             content=chunk,
             status_code=status.HTTP_206_PARTIAL_CONTENT,
@@ -443,7 +471,9 @@ async def download_attachment(
 )
 async def delete_attachment(
     file_id: str,
-    organization_id: str = Query(..., description="Organisation UUID (must match caller's org)"),
+    organization_id: str = Query(
+        ..., description="Organisation UUID (must match caller's org)"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> Response:
     """

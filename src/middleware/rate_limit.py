@@ -73,7 +73,7 @@ class RateLimiter:
                 max_connections=10,
                 decode_responses=True,
                 socket_timeout=5,
-                socket_connect_timeout=5
+                socket_connect_timeout=5,
             )
 
             self._redis = Redis(connection_pool=self._pool)
@@ -123,9 +123,7 @@ class RateLimiter:
         return UserRole.GUEST
 
     async def _check_rate_limit_redis(
-        self,
-        client_id: str,
-        limit: int
+        self, client_id: str, limit: int
     ) -> tuple[bool, int]:
         """
         Check rate limit using Redis sliding window counter.
@@ -158,15 +156,13 @@ class RateLimiter:
             return is_allowed, current_count
 
         except (RedisError, RedisConnectionError) as e:
-            logger.warning(f"[Rate Limiter] Redis error: {str(e)}. Falling back to in-memory.")
+            logger.warning(
+                f"[Rate Limiter] Redis error: {str(e)}. Falling back to in-memory."
+            )
             self._redis_available = False
             raise
 
-    def _check_rate_limit_memory(
-        self,
-        client_id: str,
-        limit: int
-    ) -> tuple[bool, int]:
+    def _check_rate_limit_memory(self, client_id: str, limit: int) -> tuple[bool, int]:
         """
         Check rate limit using in-memory storage (fallback).
 
@@ -184,7 +180,8 @@ class RateLimiter:
         # Clean old requests
         if client_id in self.requests:
             self.requests[client_id] = [
-                req_time for req_time in self.requests[client_id]
+                req_time
+                for req_time in self.requests[client_id]
                 if req_time > window_start
             ]
         else:
@@ -224,21 +221,16 @@ class RateLimiter:
         if redis_connected:
             try:
                 is_allowed, current_count = await self._check_rate_limit_redis(
-                    client_id,
-                    limit
+                    client_id, limit
                 )
             except (RedisError, RedisConnectionError):
                 # Fallback to in-memory
                 is_allowed, current_count = self._check_rate_limit_memory(
-                    client_id,
-                    limit
+                    client_id, limit
                 )
         else:
             # Use in-memory storage
-            is_allowed, current_count = self._check_rate_limit_memory(
-                client_id,
-                limit
-            )
+            is_allowed, current_count = self._check_rate_limit_memory(client_id, limit)
 
         # Calculate remaining requests
         remaining = max(0, limit - current_count)
@@ -260,8 +252,8 @@ class RateLimiter:
                     "Retry-After": str(retry_after),
                     "X-RateLimit-Limit": str(limit),
                     "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(retry_after)
-                }
+                    "X-RateLimit-Reset": str(retry_after),
+                },
             )
 
         # Log if approaching limit (80% threshold)
@@ -324,11 +316,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             from jose import jwt, JWTError
 
             token = auth_header[7:]  # Remove "Bearer " prefix
-            payload = jwt.decode(
-                token,
-                settings.SECRET_KEY,
-                algorithms=["HS256"]
-            )
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
 
             user_id = payload.get("userId")
             role = payload.get("role")
@@ -357,7 +345,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Skip rate limiting for health check and documentation endpoints
-        skip_paths = ["/api/health", "/api/ready", "/", "/api/docs", "/api/redoc", "/api/openapi.json"]
+        skip_paths = [
+            "/api/health",
+            "/api/ready",
+            "/",
+            "/api/docs",
+            "/api/redoc",
+            "/api/openapi.json",
+        ]
         if request.url.path in skip_paths:
             return await call_next(request)
 
@@ -368,7 +363,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 request.state.user = user
 
             # Check rate limit and get info for headers
-            limit, remaining, current_count = await rate_limiter.check_rate_limit(request)
+            limit, remaining, current_count = await rate_limiter.check_rate_limit(
+                request
+            )
 
             # Process the request
             response = await call_next(request)
@@ -385,10 +382,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         except HTTPException as exc:
             # Rate limit exceeded - return 429 response with headers
             from fastapi.responses import JSONResponse
+
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"detail": exc.detail},
-                headers=exc.headers or {}
+                headers=exc.headers or {},
             )
 
 
@@ -436,7 +434,7 @@ class LoginRateLimiter:
                 max_connections=10,
                 decode_responses=True,
                 socket_timeout=5,
-                socket_connect_timeout=5
+                socket_connect_timeout=5,
             )
 
             self._redis = Redis(connection_pool=self._pool)
@@ -493,13 +491,17 @@ class LoginRateLimiter:
                 await self._redis.delete(redis_key)
                 if recent_attempts:
                     # Re-add only recent attempts
-                    await self._redis.rpush(redis_key, *[str(ts) for ts in recent_attempts])
+                    await self._redis.rpush(
+                        redis_key, *[str(ts) for ts in recent_attempts]
+                    )
                     await self._redis.expire(redis_key, self.lockout_seconds)
 
             return recent_attempts
 
         except (RedisError, RedisConnectionError, ValueError) as e:
-            logger.warning(f"[Login Rate Limiter] Redis get error for {email}: {str(e)}")
+            logger.warning(
+                f"[Login Rate Limiter] Redis get error for {email}: {str(e)}"
+            )
             self._redis_available = False
             raise
 
@@ -524,7 +526,9 @@ class LoginRateLimiter:
             await self._redis.expire(redis_key, self.lockout_seconds)
 
         except (RedisError, RedisConnectionError) as e:
-            logger.warning(f"[Login Rate Limiter] Redis record error for {email}: {str(e)}")
+            logger.warning(
+                f"[Login Rate Limiter] Redis record error for {email}: {str(e)}"
+            )
             self._redis_available = False
             raise
 
@@ -540,7 +544,9 @@ class LoginRateLimiter:
             await self._redis.delete(redis_key)
 
         except (RedisError, RedisConnectionError) as e:
-            logger.warning(f"[Login Rate Limiter] Redis clear error for {email}: {str(e)}")
+            logger.warning(
+                f"[Login Rate Limiter] Redis clear error for {email}: {str(e)}"
+            )
             self._redis_available = False
             raise
 
@@ -560,7 +566,8 @@ class LoginRateLimiter:
         # Clean old attempts
         if email in self.failed_attempts:
             self.failed_attempts[email] = [
-                attempt_time for attempt_time in self.failed_attempts[email]
+                attempt_time
+                for attempt_time in self.failed_attempts[email]
                 if attempt_time > window_start
             ]
         else:
@@ -628,11 +635,13 @@ class LoginRateLimiter:
             # Ensure remaining is at least 1 minute
             remaining = max(1, remaining)
 
-            logger.warning(f"Login locked for email: {email} (attempts: {attempt_count})")
+            logger.warning(
+                f"Login locked for email: {email} (attempts: {attempt_count})"
+            )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Too many failed login attempts. Try again in {remaining} minutes.",
-                headers={"Retry-After": str(remaining * 60)}
+                headers={"Retry-After": str(remaining * 60)},
             )
 
     async def record_failed_attempt(self, email: str) -> None:
@@ -718,7 +727,7 @@ class MFARateLimiter:
                 max_connections=10,
                 decode_responses=True,
                 socket_timeout=5,
-                socket_connect_timeout=5
+                socket_connect_timeout=5,
             )
 
             self._redis = Redis(connection_pool=self._pool)
@@ -775,13 +784,17 @@ class MFARateLimiter:
                 await self._redis.delete(redis_key)
                 if recent_attempts:
                     # Re-add only recent attempts
-                    await self._redis.rpush(redis_key, *[str(ts) for ts in recent_attempts])
+                    await self._redis.rpush(
+                        redis_key, *[str(ts) for ts in recent_attempts]
+                    )
                     await self._redis.expire(redis_key, self.lockout_seconds)
 
             return recent_attempts
 
         except (RedisError, RedisConnectionError, ValueError) as e:
-            logger.warning(f"[MFA Rate Limiter] Redis get error for {user_id}: {str(e)}")
+            logger.warning(
+                f"[MFA Rate Limiter] Redis get error for {user_id}: {str(e)}"
+            )
             self._redis_available = False
             raise
 
@@ -813,7 +826,9 @@ class MFARateLimiter:
             return count
 
         except (RedisError, RedisConnectionError) as e:
-            logger.warning(f"[MFA Rate Limiter] Redis record error for {user_id}: {str(e)}")
+            logger.warning(
+                f"[MFA Rate Limiter] Redis record error for {user_id}: {str(e)}"
+            )
             self._redis_available = False
             raise
 
@@ -829,7 +844,9 @@ class MFARateLimiter:
             await self._redis.delete(redis_key)
 
         except (RedisError, RedisConnectionError) as e:
-            logger.warning(f"[MFA Rate Limiter] Redis clear error for {user_id}: {str(e)}")
+            logger.warning(
+                f"[MFA Rate Limiter] Redis clear error for {user_id}: {str(e)}"
+            )
             self._redis_available = False
             raise
 
@@ -849,7 +866,8 @@ class MFARateLimiter:
         # Clean old attempts
         if user_id in self.failed_attempts:
             self.failed_attempts[user_id] = [
-                attempt_time for attempt_time in self.failed_attempts[user_id]
+                attempt_time
+                for attempt_time in self.failed_attempts[user_id]
                 if attempt_time > window_start
             ]
         else:
@@ -932,10 +950,7 @@ class MFARateLimiter:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Too many failed MFA verification attempts. Try again in {remaining} minutes.",
-                headers={
-                    "Retry-After": str(remaining * 60),
-                    "X-MFA-Lockout": "true"
-                }
+                headers={"Retry-After": str(remaining * 60), "X-MFA-Lockout": "true"},
             )
 
     async def record_failed_attempt(self, user_id: str) -> int:
@@ -977,7 +992,9 @@ class MFARateLimiter:
         if redis_connected:
             try:
                 await self._clear_attempts_redis(user_id)
-                logger.info(f"[MFA Rate Limiter] MFA attempts cleared for user: {user_id} (Redis)")
+                logger.info(
+                    f"[MFA Rate Limiter] MFA attempts cleared for user: {user_id} (Redis)"
+                )
                 return
             except (RedisError, RedisConnectionError):
                 # Fallback to memory
@@ -985,7 +1002,9 @@ class MFARateLimiter:
 
         # Use memory storage
         self._clear_attempts_memory(user_id)
-        logger.info(f"[MFA Rate Limiter] MFA attempts cleared for user: {user_id} (in-memory)")
+        logger.info(
+            f"[MFA Rate Limiter] MFA attempts cleared for user: {user_id} (in-memory)"
+        )
 
     def get_remaining_attempts(self, attempt_count: int) -> int:
         """

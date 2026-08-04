@@ -10,7 +10,12 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
-from ...models.purchase_order import PurchaseOrder, PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderStatus
+from ...models.purchase_order import (
+    PurchaseOrder,
+    PurchaseOrderCreate,
+    PurchaseOrderUpdate,
+    PurchaseOrderStatus,
+)
 from ..database import sales_db
 
 logger = logging.getLogger(__name__)
@@ -42,12 +47,14 @@ class PurchaseOrderRepository:
             {"_id": "purchase_order_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
 
-    async def create(self, po_data: PurchaseOrderCreate, created_by: UUID) -> PurchaseOrder:
+    async def create(
+        self, po_data: PurchaseOrderCreate, created_by: UUID
+    ) -> PurchaseOrder:
         """
         Create a new purchase order with auto-generated poCode
 
@@ -70,17 +77,21 @@ class PurchaseOrderRepository:
             poCode=po_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         po_doc = purchase_order.model_dump(by_alias=True)
-        po_doc["purchaseOrderId"] = str(po_doc["purchaseOrderId"])  # Convert UUID to string for MongoDB
+        po_doc["purchaseOrderId"] = str(
+            po_doc["purchaseOrderId"]
+        )  # Convert UUID to string for MongoDB
         po_doc["supplierId"] = str(po_doc["supplierId"])
         po_doc["createdBy"] = str(po_doc["createdBy"])
 
         await collection.insert_one(po_doc)
 
-        logger.info(f"Created purchase order: {purchase_order.purchaseOrderId} with code {po_code}")
+        logger.info(
+            f"Created purchase order: {purchase_order.purchaseOrderId} with code {po_code}"
+        )
         return purchase_order
 
     async def get_by_id(self, po_id: UUID) -> Optional[PurchaseOrder]:
@@ -106,7 +117,7 @@ class PurchaseOrderRepository:
         skip: int = 0,
         limit: int = 20,
         status: Optional[PurchaseOrderStatus] = None,
-        supplier_id: Optional[UUID] = None
+        supplier_id: Optional[UUID] = None,
     ) -> tuple[List[PurchaseOrder], int]:
         """
         Get all purchase orders with pagination and filters
@@ -141,7 +152,9 @@ class PurchaseOrderRepository:
 
         return purchase_orders, total
 
-    async def update(self, po_id: UUID, update_data: PurchaseOrderUpdate) -> Optional[PurchaseOrder]:
+    async def update(
+        self, po_id: UUID, update_data: PurchaseOrderUpdate
+    ) -> Optional[PurchaseOrder]:
         """
         Update a purchase order
 
@@ -165,8 +178,7 @@ class PurchaseOrderRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"purchaseOrderId": str(po_id)},
-            {"$set": update_dict}
+            {"purchaseOrderId": str(po_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:
@@ -175,7 +187,9 @@ class PurchaseOrderRepository:
 
         return None
 
-    async def update_status(self, po_id: UUID, new_status: PurchaseOrderStatus) -> Optional[PurchaseOrder]:
+    async def update_status(
+        self, po_id: UUID, new_status: PurchaseOrderStatus
+    ) -> Optional[PurchaseOrder]:
         """
         Update purchase order status
 
@@ -190,12 +204,7 @@ class PurchaseOrderRepository:
 
         result = await collection.update_one(
             {"purchaseOrderId": str(po_id)},
-            {
-                "$set": {
-                    "status": new_status.value,
-                    "updatedAt": datetime.utcnow()
-                }
-            }
+            {"$set": {"status": new_status.value, "updatedAt": datetime.utcnow()}},
         )
 
         if result.modified_count > 0:

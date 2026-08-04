@@ -96,7 +96,7 @@ def _extract_auth_token(request: Request) -> Optional[str]:
     """Extract the raw Bearer token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 
@@ -119,8 +119,12 @@ async def list_return_requests_endpoint(
     organization_id: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
     customer_id: Optional[str] = Query(None),
-    date_from: Optional[date] = Query(None, description="Inclusive lower bound on doc_date"),
-    date_to: Optional[date] = Query(None, description="Inclusive upper bound on doc_date"),
+    date_from: Optional[date] = Query(
+        None, description="Inclusive lower bound on doc_date"
+    ),
+    date_to: Optional[date] = Query(
+        None, description="Inclusive upper bound on doc_date"
+    ),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=200),
     current_user: CurrentUser = Depends(get_current_active_user),

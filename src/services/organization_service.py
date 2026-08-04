@@ -175,7 +175,10 @@ class OrganizationService:
         update_fields = data.model_dump(exclude_none=True)
         if "slug" in update_fields and update_fields["slug"] != existing["slug"]:
             slug_conflict = await collection.find_one(
-                {"slug": update_fields["slug"], "organizationId": {"$ne": organization_id}}
+                {
+                    "slug": update_fields["slug"],
+                    "organizationId": {"$ne": organization_id},
+                }
             )
             if slug_conflict:
                 raise HTTPException(
@@ -278,9 +281,7 @@ class OrganizationService:
                 {"organizationId": organization_id},
                 {"$set": set_fields},
             )
-            updated_doc = await collection.find_one(
-                {"organizationId": organization_id}
-            )
+            updated_doc = await collection.find_one({"organizationId": organization_id})
             logger.info(
                 f"Updated organization modules for '{organization_id}': "
                 f"{set_fields}"

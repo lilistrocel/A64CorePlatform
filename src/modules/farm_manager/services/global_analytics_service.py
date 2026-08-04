@@ -17,7 +17,7 @@ from ..models.global_analytics import (
     GlobalStateBreakdown,
     FarmSummaryItem,
     GlobalYieldTimeline,
-    GlobalPerformanceInsights
+    GlobalPerformanceInsights,
 )
 from ..models.farm_analytics import FarmAnalyticsResponse
 from .farm.farm_analytics_service import FarmAnalyticsService
@@ -43,7 +43,9 @@ class GlobalAnalyticsService:
         Raises:
             ValueError: If period is invalid
         """
-        logger.info(f"[Global Analytics] Generating global analytics for period: {period}")
+        logger.info(
+            f"[Global Analytics] Generating global analytics for period: {period}"
+        )
 
         # Get all farms (fetch with high limit to get all farms)
         farm_repo = FarmRepository()
@@ -62,14 +64,24 @@ class GlobalAnalyticsService:
         )
 
         # Calculate date range from first farm's analytics (they all use same period)
-        start_date = farm_analytics_list[0].startDate if farm_analytics_list else datetime.utcnow()
-        end_date = farm_analytics_list[0].endDate if farm_analytics_list else datetime.utcnow()
+        start_date = (
+            farm_analytics_list[0].startDate
+            if farm_analytics_list
+            else datetime.utcnow()
+        )
+        end_date = (
+            farm_analytics_list[0].endDate if farm_analytics_list else datetime.utcnow()
+        )
 
         # Aggregate metrics across all farms
-        aggregated_metrics = GlobalAnalyticsService._aggregate_metrics(farm_analytics_list)
+        aggregated_metrics = GlobalAnalyticsService._aggregate_metrics(
+            farm_analytics_list
+        )
 
         # Aggregate state breakdown
-        state_breakdown = GlobalAnalyticsService._aggregate_state_breakdown(farm_analytics_list)
+        state_breakdown = GlobalAnalyticsService._aggregate_state_breakdown(
+            farm_analytics_list
+        )
 
         # Build farm summaries
         farm_summaries = GlobalAnalyticsService._build_farm_summaries(
@@ -77,7 +89,9 @@ class GlobalAnalyticsService:
         )
 
         # Aggregate yield timeline
-        yield_timeline = GlobalAnalyticsService._aggregate_yield_timeline(farm_analytics_list)
+        yield_timeline = GlobalAnalyticsService._aggregate_yield_timeline(
+            farm_analytics_list
+        )
 
         # Calculate performance insights
         performance_insights = GlobalAnalyticsService._calculate_performance_insights(
@@ -92,13 +106,12 @@ class GlobalAnalyticsService:
             stateBreakdown=state_breakdown,
             farmSummaries=farm_summaries,
             yieldTimeline=yield_timeline,
-            performanceInsights=performance_insights
+            performanceInsights=performance_insights,
         )
 
     @staticmethod
     async def _fetch_all_farm_analytics(
-        farms: List[Any],
-        period: str
+        farms: List[Any], period: str
     ) -> List[FarmAnalyticsResponse]:
         """
         Fetch analytics for all farms in parallel.
@@ -110,12 +123,16 @@ class GlobalAnalyticsService:
         Returns:
             List of farm analytics responses
         """
-        logger.info(f"[Global Analytics] Fetching analytics for {len(farms)} farms in parallel")
+        logger.info(
+            f"[Global Analytics] Fetching analytics for {len(farms)} farms in parallel"
+        )
 
         # Create tasks for fetching each farm's analytics
         tasks = []
         for farm in farms:
-            task = GlobalAnalyticsService._fetch_farm_analytics_safe(farm.farmId, period)
+            task = GlobalAnalyticsService._fetch_farm_analytics_safe(
+                farm.farmId, period
+            )
             tasks.append(task)
 
         # Execute all tasks in parallel
@@ -125,16 +142,22 @@ class GlobalAnalyticsService:
         farm_analytics_list = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"[Global Analytics] Failed to fetch analytics for farm {farms[i].farmId}: {result}")
+                logger.error(
+                    f"[Global Analytics] Failed to fetch analytics for farm {farms[i].farmId}: {result}"
+                )
             else:
                 farm_analytics_list.append(result)
 
-        logger.info(f"[Global Analytics] Successfully fetched analytics for {len(farm_analytics_list)}/{len(farms)} farms")
+        logger.info(
+            f"[Global Analytics] Successfully fetched analytics for {len(farm_analytics_list)}/{len(farms)} farms"
+        )
 
         return farm_analytics_list
 
     @staticmethod
-    async def _fetch_farm_analytics_safe(farm_id, period: str) -> Optional[FarmAnalyticsResponse]:
+    async def _fetch_farm_analytics_safe(
+        farm_id, period: str
+    ) -> Optional[FarmAnalyticsResponse]:
         """
         Safely fetch farm analytics (handles errors gracefully).
 
@@ -148,12 +171,14 @@ class GlobalAnalyticsService:
         try:
             return await FarmAnalyticsService.get_farm_analytics(farm_id, period)
         except Exception as e:
-            logger.error(f"[Global Analytics] Error fetching analytics for farm {farm_id}: {e}")
+            logger.error(
+                f"[Global Analytics] Error fetching analytics for farm {farm_id}: {e}"
+            )
             raise
 
     @staticmethod
     def _aggregate_metrics(
-        farm_analytics_list: List[FarmAnalyticsResponse]
+        farm_analytics_list: List[FarmAnalyticsResponse],
     ) -> GlobalAggregatedMetrics:
         """
         Aggregate metrics across all farms.
@@ -164,7 +189,9 @@ class GlobalAnalyticsService:
         Returns:
             Global aggregated metrics
         """
-        logger.info(f"[Global Analytics] Aggregating metrics from {len(farm_analytics_list)} farms")
+        logger.info(
+            f"[Global Analytics] Aggregating metrics from {len(farm_analytics_list)} farms"
+        )
 
         total_farms = len(farm_analytics_list)
         total_blocks = 0
@@ -175,7 +202,9 @@ class GlobalAnalyticsService:
 
         # For weighted averages
         total_weighted_efficiency = 0.0
-        total_yield_for_efficiency = 0.0  # Only count yield from farms with efficiency > 0
+        total_yield_for_efficiency = (
+            0.0  # Only count yield from farms with efficiency > 0
+        )
         total_performance_score = 0.0
         farms_with_performance = 0  # Count farms that have performance scores
         total_utilization = 0.0
@@ -192,7 +221,9 @@ class GlobalAnalyticsService:
             # Weighted by predicted yield for efficiency
             # Only include farms that have actual yield (efficiency > 0)
             if metrics.avgYieldEfficiency > 0 and metrics.totalYieldKg > 0:
-                total_weighted_efficiency += metrics.avgYieldEfficiency * metrics.totalYieldKg
+                total_weighted_efficiency += (
+                    metrics.avgYieldEfficiency * metrics.totalYieldKg
+                )
                 total_yield_for_efficiency += metrics.totalYieldKg
 
             # Simple average for performance and utilization (only farms with scores)
@@ -204,9 +235,15 @@ class GlobalAnalyticsService:
         # Calculate averages (only from farms with actual harvests)
         avg_yield_efficiency = 0.0
         if total_yield_for_efficiency > 0:
-            avg_yield_efficiency = total_weighted_efficiency / total_yield_for_efficiency
+            avg_yield_efficiency = (
+                total_weighted_efficiency / total_yield_for_efficiency
+            )
 
-        avg_performance_score = total_performance_score / farms_with_performance if farms_with_performance > 0 else 0.0
+        avg_performance_score = (
+            total_performance_score / farms_with_performance
+            if farms_with_performance > 0
+            else 0.0
+        )
         avg_utilization = total_utilization / total_farms if total_farms > 0 else 0.0
 
         return GlobalAggregatedMetrics(
@@ -218,12 +255,12 @@ class GlobalAnalyticsService:
             avgPerformanceScore=round(avg_performance_score, 2),
             totalCapacity=total_capacity,
             avgUtilization=round(avg_utilization, 2),
-            totalPredictedYieldKg=round(total_predicted_yield, 2)
+            totalPredictedYieldKg=round(total_predicted_yield, 2),
         )
 
     @staticmethod
     def _aggregate_state_breakdown(
-        farm_analytics_list: List[FarmAnalyticsResponse]
+        farm_analytics_list: List[FarmAnalyticsResponse],
     ) -> GlobalStateBreakdown:
         """
         Aggregate state breakdown across all farms.
@@ -243,7 +280,7 @@ class GlobalAnalyticsService:
             "fruiting": 0,
             "harvesting": 0,
             "cleaning": 0,
-            "alert": 0
+            "alert": 0,
         }
 
         total_blocks = 0
@@ -269,13 +306,12 @@ class GlobalAnalyticsService:
             harvesting=state_counts["harvesting"],
             cleaning=state_counts["cleaning"],
             alert=state_counts["alert"],
-            totalBlocks=total_blocks
+            totalBlocks=total_blocks,
         )
 
     @staticmethod
     def _build_farm_summaries(
-        farms: List[Any],
-        farm_analytics_list: List[FarmAnalyticsResponse]
+        farms: List[Any], farm_analytics_list: List[FarmAnalyticsResponse]
     ) -> List[FarmSummaryItem]:
         """
         Build summary items for each farm.
@@ -291,8 +327,7 @@ class GlobalAnalyticsService:
 
         # Create mapping of farm_id to analytics
         analytics_map = {
-            str(analytics.farmId): analytics
-            for analytics in farm_analytics_list
+            str(analytics.farmId): analytics for analytics in farm_analytics_list
         }
 
         summaries = []
@@ -302,7 +337,9 @@ class GlobalAnalyticsService:
             analytics = analytics_map.get(farm_id_str)
 
             if not analytics:
-                logger.warning(f"[Global Analytics] No analytics found for farm {farm_id_str}")
+                logger.warning(
+                    f"[Global Analytics] No analytics found for farm {farm_id_str}"
+                )
                 continue
 
             metrics = analytics.aggregatedMetrics
@@ -316,7 +353,7 @@ class GlobalAnalyticsService:
                     totalYieldKg=round(metrics.totalYieldKg, 2),
                     avgYieldEfficiency=round(metrics.avgYieldEfficiency, 2),
                     overallPerformanceScore=round(metrics.overallPerformanceScore, 2),
-                    currentUtilization=round(metrics.currentUtilization, 2)
+                    currentUtilization=round(metrics.currentUtilization, 2),
                 )
             )
 
@@ -327,7 +364,7 @@ class GlobalAnalyticsService:
 
     @staticmethod
     def _aggregate_yield_timeline(
-        farm_analytics_list: List[FarmAnalyticsResponse]
+        farm_analytics_list: List[FarmAnalyticsResponse],
     ) -> List[GlobalYieldTimeline]:
         """
         Aggregate yield timeline across all farms.
@@ -363,7 +400,7 @@ class GlobalAnalyticsService:
                     date=datetime.fromisoformat(date_str),
                     totalYieldKg=round(data["total_kg"], 2),
                     harvestCount=data["harvest_count"],
-                    farmCount=len(data["farms"])
+                    farmCount=len(data["farms"]),
                 )
             )
 
@@ -371,7 +408,7 @@ class GlobalAnalyticsService:
 
     @staticmethod
     def _calculate_performance_insights(
-        farm_summaries: List[FarmSummaryItem]
+        farm_summaries: List[FarmSummaryItem],
     ) -> GlobalPerformanceInsights:
         """
         Calculate performance insights and identify top/bottom performers.
@@ -389,7 +426,7 @@ class GlobalAnalyticsService:
                 topPerformingFarms=[],
                 underPerformingFarms=[],
                 farmsNeedingAttention=[],
-                overallTrend="insufficient_data"
+                overallTrend="insufficient_data",
             )
 
         # Top 5 performers
@@ -400,14 +437,17 @@ class GlobalAnalyticsService:
 
         # Farms needing attention (low utilization < 50% OR low performance < 60)
         farms_needing_attention = [
-            farm for farm in farm_summaries
+            farm
+            for farm in farm_summaries
             if farm.currentUtilization < 50.0 or farm.overallPerformanceScore < 60.0
         ]
 
         # Calculate overall trend
         overall_trend = "insufficient_data"
         if len(farm_summaries) >= 3:
-            avg_performance = sum(f.overallPerformanceScore for f in farm_summaries) / len(farm_summaries)
+            avg_performance = sum(
+                f.overallPerformanceScore for f in farm_summaries
+            ) / len(farm_summaries)
 
             if avg_performance >= 85:
                 overall_trend = "improving"
@@ -420,7 +460,7 @@ class GlobalAnalyticsService:
             topPerformingFarms=top_performing,
             underPerformingFarms=under_performing,
             farmsNeedingAttention=farms_needing_attention,
-            overallTrend=overall_trend
+            overallTrend=overall_trend,
         )
 
     @staticmethod
@@ -444,5 +484,5 @@ class GlobalAnalyticsService:
             stateBreakdown=GlobalStateBreakdown(),
             farmSummaries=[],
             yieldTimeline=[],
-            performanceInsights=GlobalPerformanceInsights()
+            performanceInsights=GlobalPerformanceInsights(),
         )

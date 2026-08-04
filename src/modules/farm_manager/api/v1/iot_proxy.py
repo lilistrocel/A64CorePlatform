@@ -21,12 +21,16 @@ router = APIRouter(prefix="/iot-proxy", tags=["iot-proxy"])
 @router.get(
     "",
     response_model=SuccessResponse[Dict[str, Any]],
-    summary="Proxy GET request to IoT controller"
+    summary="Proxy GET request to IoT controller",
 )
 async def proxy_get_request(
-    url: str = Query(..., description="URL-encoded target URL of the IoT controller endpoint"),
-    apiKey: Optional[str] = Query(None, description="API key to forward to IoT controller (X-API-Key header)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    url: str = Query(
+        ..., description="URL-encoded target URL of the IoT controller endpoint"
+    ),
+    apiKey: Optional[str] = Query(
+        None, description="API key to forward to IoT controller (X-API-Key header)"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Proxy a GET request to an IoT controller (Raspberry Pi/ESP32).
@@ -65,14 +69,16 @@ async def proxy_get_request(
     # Decode URL
     decoded_url = unquote(url)
 
-    logger.info(f"[IoT Proxy] GET request from user {current_user.email} to {decoded_url}")
+    logger.info(
+        f"[IoT Proxy] GET request from user {current_user.email} to {decoded_url}"
+    )
 
     # Validate URL format (basic security check)
-    if not decoded_url.startswith(('http://', 'https://')):
+    if not decoded_url.startswith(("http://", "https://")):
         logger.warning(f"[IoT Proxy] Invalid URL format: {decoded_url}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid URL format. URL must start with http:// or https://"
+            detail="Invalid URL format. URL must start with http:// or https://",
         )
 
     # Reason: Use httpx for async HTTP requests with timeout to prevent hanging
@@ -94,49 +100,58 @@ async def proxy_get_request(
             except Exception:
                 data = {"response": response.text}
 
-            logger.info(f"[IoT Proxy] Successfully proxied GET request to {decoded_url}")
+            logger.info(
+                f"[IoT Proxy] Successfully proxied GET request to {decoded_url}"
+            )
 
             return SuccessResponse(
-                data=data,
-                message="IoT controller request successful"
+                data=data, message="IoT controller request successful"
             )
 
     except httpx.TimeoutException:
         logger.error(f"[IoT Proxy] Timeout connecting to {decoded_url}")
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail=f"Timeout connecting to IoT controller at {decoded_url}"
+            detail=f"Timeout connecting to IoT controller at {decoded_url}",
         )
     except httpx.HTTPStatusError as e:
-        logger.error(f"[IoT Proxy] HTTP error from {decoded_url}: {e.response.status_code}")
+        logger.error(
+            f"[IoT Proxy] HTTP error from {decoded_url}: {e.response.status_code}"
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"IoT controller returned error: {e.response.status_code}"
+            detail=f"IoT controller returned error: {e.response.status_code}",
         )
     except httpx.RequestError as e:
         logger.error(f"[IoT Proxy] Request error to {decoded_url}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to connect to IoT controller: {str(e)}"
+            detail=f"Failed to connect to IoT controller: {str(e)}",
         )
     except Exception as e:
-        logger.error(f"[IoT Proxy] Unexpected error proxying to {decoded_url}: {str(e)}")
+        logger.error(
+            f"[IoT Proxy] Unexpected error proxying to {decoded_url}: {str(e)}"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while proxying the request"
+            detail="An unexpected error occurred while proxying the request",
         )
 
 
 @router.put(
     "",
     response_model=SuccessResponse[Dict[str, Any]],
-    summary="Proxy PUT request to IoT controller (for relay control)"
+    summary="Proxy PUT request to IoT controller (for relay control)",
 )
 async def proxy_put_request(
-    url: str = Query(..., description="URL-encoded target URL of the IoT controller endpoint"),
-    apiKey: Optional[str] = Query(None, description="API key to forward to IoT controller (X-API-Key header)"),
+    url: str = Query(
+        ..., description="URL-encoded target URL of the IoT controller endpoint"
+    ),
+    apiKey: Optional[str] = Query(
+        None, description="API key to forward to IoT controller (X-API-Key header)"
+    ),
     request: Request = None,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Proxy a PUT request to an IoT controller (for relay control).
@@ -187,14 +202,16 @@ async def proxy_put_request(
     # Decode URL
     decoded_url = unquote(url)
 
-    logger.info(f"[IoT Proxy] PUT request from user {current_user.email} to {decoded_url}")
+    logger.info(
+        f"[IoT Proxy] PUT request from user {current_user.email} to {decoded_url}"
+    )
 
     # Validate URL format
-    if not decoded_url.startswith(('http://', 'https://')):
+    if not decoded_url.startswith(("http://", "https://")):
         logger.warning(f"[IoT Proxy] Invalid URL format: {decoded_url}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid URL format. URL must start with http:// or https://"
+            detail="Invalid URL format. URL must start with http:// or https://",
         )
 
     # Reason: Get request body to forward to IoT controller
@@ -204,7 +221,7 @@ async def proxy_put_request(
         logger.error(f"[IoT Proxy] Failed to read request body: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to read request body"
+            detail="Failed to read request body",
         )
 
     # Reason: Use httpx for async HTTP requests with timeout
@@ -218,11 +235,7 @@ async def proxy_put_request(
             if apiKey:
                 headers["X-API-Key"] = apiKey
 
-            response = await client.put(
-                decoded_url,
-                content=body,
-                headers=headers
-            )
+            response = await client.put(decoded_url, content=body, headers=headers)
 
             # Reason: Check if response is successful
             response.raise_for_status()
@@ -233,34 +246,39 @@ async def proxy_put_request(
             except Exception:
                 data = {"response": response.text}
 
-            logger.info(f"[IoT Proxy] Successfully proxied PUT request to {decoded_url}")
+            logger.info(
+                f"[IoT Proxy] Successfully proxied PUT request to {decoded_url}"
+            )
 
             return SuccessResponse(
-                data=data,
-                message="IoT controller control command successful"
+                data=data, message="IoT controller control command successful"
             )
 
     except httpx.TimeoutException:
         logger.error(f"[IoT Proxy] Timeout connecting to {decoded_url}")
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail=f"Timeout connecting to IoT controller at {decoded_url}"
+            detail=f"Timeout connecting to IoT controller at {decoded_url}",
         )
     except httpx.HTTPStatusError as e:
-        logger.error(f"[IoT Proxy] HTTP error from {decoded_url}: {e.response.status_code}")
+        logger.error(
+            f"[IoT Proxy] HTTP error from {decoded_url}: {e.response.status_code}"
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"IoT controller returned error: {e.response.status_code}"
+            detail=f"IoT controller returned error: {e.response.status_code}",
         )
     except httpx.RequestError as e:
         logger.error(f"[IoT Proxy] Request error to {decoded_url}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to connect to IoT controller: {str(e)}"
+            detail=f"Failed to connect to IoT controller: {str(e)}",
         )
     except Exception as e:
-        logger.error(f"[IoT Proxy] Unexpected error proxying to {decoded_url}: {str(e)}")
+        logger.error(
+            f"[IoT Proxy] Unexpected error proxying to {decoded_url}: {str(e)}"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while proxying the request"
+            detail="An unexpected error occurred while proxying the request",
         )

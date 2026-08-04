@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class QueryValidationError(Exception):
     """Raised when query validation fails"""
+
     pass
 
 
@@ -70,10 +71,7 @@ class QueryValidator:
         logger.info(f"Updated valid collections: {len(collections)} collections")
 
     def validate_query(
-        self,
-        collection: str,
-        query: List[Dict[str, Any]],
-        user_role: str = "user"
+        self, collection: str, query: List[Dict[str, Any]], user_role: str = "user"
     ) -> None:
         """
         Validate MongoDB aggregation pipeline query.
@@ -141,17 +139,14 @@ class QueryValidator:
             )
 
         # Check for injection attempts in collection name
-        if not re.match(r'^[a-zA-Z0-9_]+$', collection):
+        if not re.match(r"^[a-zA-Z0-9_]+$", collection):
             raise QueryValidationError(
                 f"Invalid collection name '{collection}'. "
                 "Only alphanumeric characters and underscores allowed."
             )
 
     def _validate_stage(
-        self,
-        stage: Dict[str, Any],
-        stage_idx: int,
-        user_role: str
+        self, stage: Dict[str, Any], stage_idx: int, user_role: str
     ) -> None:
         """
         Validate a single pipeline stage.
@@ -207,11 +202,7 @@ class QueryValidator:
         elif operator == "$skip":
             self._validate_skip_stage(stage_content, stage_idx)
 
-    def _check_for_dangerous_operators(
-        self,
-        obj: Any,
-        path: str
-    ) -> None:
+    def _check_for_dangerous_operators(self, obj: Any, path: str) -> None:
         """
         Recursively check for dangerous operators in nested structures.
 
@@ -256,12 +247,12 @@ class QueryValidator:
         """
         # Common JavaScript patterns
         js_patterns = [
-            r'\bfunction\s*\(',
-            r'\beval\s*\(',
-            r'\breturn\s+',
-            r'=>',
-            r'\bthis\.',
-            r'\.prototype\.',
+            r"\bfunction\s*\(",
+            r"\beval\s*\(",
+            r"\breturn\s+",
+            r"=>",
+            r"\bthis\.",
+            r"\.prototype\.",
         ]
 
         for pattern in js_patterns:
@@ -271,9 +262,7 @@ class QueryValidator:
         return False
 
     def _validate_lookup_stage(
-        self,
-        stage_content: Dict[str, Any],
-        stage_idx: int
+        self, stage_content: Dict[str, Any], stage_idx: int
     ) -> None:
         """
         Validate $lookup stage.
@@ -301,9 +290,7 @@ class QueryValidator:
             )
 
     def _validate_group_stage(
-        self,
-        stage_content: Dict[str, Any],
-        stage_idx: int
+        self, stage_content: Dict[str, Any], stage_idx: int
     ) -> None:
         """
         Validate $group stage.
@@ -334,9 +321,7 @@ class QueryValidator:
                         )
 
     def _validate_match_stage(
-        self,
-        stage_content: Dict[str, Any],
-        stage_idx: int
+        self, stage_content: Dict[str, Any], stage_idx: int
     ) -> None:
         """
         Validate $match stage.
@@ -356,11 +341,7 @@ class QueryValidator:
 
         # No additional validation needed - already checked for dangerous operators
 
-    def _validate_limit_stage(
-        self,
-        stage_content: int,
-        stage_idx: int
-    ) -> None:
+    def _validate_limit_stage(self, stage_content: int, stage_idx: int) -> None:
         """
         Validate $limit stage.
 
@@ -386,11 +367,7 @@ class QueryValidator:
                 f"$limit at stage {stage_idx} exceeds maximum ({self.MAX_LIMIT}), got {stage_content}"
             )
 
-    def _validate_skip_stage(
-        self,
-        stage_content: int,
-        stage_idx: int
-    ) -> None:
+    def _validate_skip_stage(self, stage_content: int, stage_idx: int) -> None:
         """
         Validate $skip stage.
 
@@ -450,7 +427,9 @@ class QueryValidator:
 
         if not has_limit:
             # Auto-add $limit if missing (safety measure)
-            logger.warning(f"No $limit stage found, auto-adding $limit {self.MAX_LIMIT}")
+            logger.warning(
+                f"No $limit stage found, auto-adding $limit {self.MAX_LIMIT}"
+            )
             query.append({"$limit": self.MAX_LIMIT})
 
 
@@ -458,7 +437,7 @@ def validate_query(
     collection: str,
     query: List[Dict[str, Any]],
     valid_collections: Optional[Set[str]] = None,
-    user_role: str = "user"
+    user_role: str = "user",
 ) -> None:
     """
     Convenience function to validate a query.

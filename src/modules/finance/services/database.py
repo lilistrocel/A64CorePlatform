@@ -45,44 +45,40 @@ class FinanceDatabaseManager:
             await db.sales_order_lines.create_index(
                 [("farmId", 1), ("farmingYear", 1)],
                 name="sol_farmId_farmingYear",
-                background=True
+                background=True,
             )
             # Index for priceSource filtering
             await db.sales_order_lines.create_index(
-                [("metadata.priceSource", 1)],
-                name="sol_priceSource",
-                background=True
+                [("metadata.priceSource", 1)], name="sol_priceSource", background=True
             )
             # Index for orderRef lookups (joining to sales_orders)
             await db.sales_order_lines.create_index(
-                [("orderRef", 1)],
-                name="sol_orderRef",
-                background=True
+                [("orderRef", 1)], name="sol_orderRef", background=True
             )
             # Composite for by-month queries
             await db.sales_order_lines.create_index(
                 [("createdAt", 1), ("farmId", 1)],
                 name="sol_createdAt_farmId",
-                background=True
+                background=True,
             )
 
             # --- purchase_register ---
             await db.purchase_register.create_index(
                 [("buyerEntity", 1), ("date", 1)],
                 name="pr_buyerEntity_date",
-                background=True
+                background=True,
             )
             await db.purchase_register.create_index(
                 [("items.mappedCropName", 1)],
                 name="pr_items_mappedCropName",
-                background=True
+                background=True,
             )
 
             # --- inventory_movements ---
             await db.inventory_movements.create_index(
                 [("type", 1), ("movementDate", 1)],
                 name="im_type_movementDate",
-                background=True
+                background=True,
             )
 
             logger.info("[Finance Module] MongoDB indexes created successfully")
@@ -93,7 +89,9 @@ class FinanceDatabaseManager:
     @classmethod
     async def disconnect(cls) -> None:
         """Disconnect delegated to core manager."""
-        logger.info("[Finance Module] Finance module shutdown (database managed by core)")
+        logger.info(
+            "[Finance Module] Finance module shutdown (database managed by core)"
+        )
 
     @classmethod
     async def health_check(cls) -> bool:

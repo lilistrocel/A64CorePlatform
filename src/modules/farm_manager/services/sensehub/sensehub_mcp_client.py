@@ -77,7 +77,7 @@ class SenseHubMCPClient:
             for line in resp.text.splitlines():
                 line = line.strip()
                 if line.startswith("data:"):
-                    data = line[len("data:"):].strip()
+                    data = line[len("data:") :].strip()
                     if data:
                         try:
                             return json.loads(data)
@@ -235,9 +235,7 @@ class SenseHubMCPClient:
         result = await self._call_tool("get_system_status", {})
         return result.get("system_info", result)
 
-    async def control_relay(
-        self, equipment_id: int, channel: int, state: bool
-    ) -> dict:
+    async def control_relay(self, equipment_id: int, channel: int, state: bool) -> dict:
         """Control a relay channel via MCP tool."""
         return await self._call_tool(
             "control_relay",
@@ -319,7 +317,12 @@ class SenseHubMCPClient:
         result = await self._call_tool("get_lab_readings", args)
         if isinstance(result, dict):
             return result
-        return {"readings": result, "total": len(result), "limit": limit or 50, "offset": 0}
+        return {
+            "readings": result,
+            "total": len(result),
+            "limit": limit or 50,
+            "offset": 0,
+        }
 
     async def get_lab_stats(
         self,
@@ -357,9 +360,7 @@ class SenseHubMCPClient:
             "capture_camera_snapshot", {"camera_id": camera_id}
         )
 
-    async def get_camera_snapshots(
-        self, camera_id: int, limit: int = 42
-    ) -> list:
+    async def get_camera_snapshots(self, camera_id: int, limit: int = 42) -> list:
         """Get list of stored snapshots with metadata for a camera."""
         result = await self._call_tool(
             "get_camera_snapshots", {"camera_id": camera_id, "limit": limit}

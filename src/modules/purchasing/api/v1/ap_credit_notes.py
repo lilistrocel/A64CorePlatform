@@ -69,14 +69,16 @@ router = APIRouter(tags=["Purchasing — AP Credit Notes"])
 # Role sets
 # ---------------------------------------------------------------------------
 
-_ACN_WRITE_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-    "accountant",
-    "finance_admin",
-})
+_ACN_WRITE_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+        "accountant",
+        "finance_admin",
+    }
+)
 
 _ACN_DELETE_ROLES = frozenset({"super_admin"})
 
@@ -143,7 +145,7 @@ def _extract_token(request: Request) -> Optional[str]:
     """Extract the raw Bearer token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 
@@ -546,4 +548,6 @@ async def transition_acn_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"AP Credit Note '{doc_id}' not found",
         )
-    return SuccessResponse(data=acn, message=f"AP Credit Note transitioned to {body.target_status}")
+    return SuccessResponse(
+        data=acn, message=f"AP Credit Note transitioned to {body.target_status}"
+    )

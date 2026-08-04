@@ -24,10 +24,7 @@ class VisaService:
         self.repository = VisaRepository()
         self.employee_repository = EmployeeRepository()
 
-    async def create_visa(
-        self,
-        visa_data: VisaCreate
-    ) -> Visa:
+    async def create_visa(self, visa_data: VisaCreate) -> Visa:
         """
         Create a new visa
 
@@ -42,18 +39,20 @@ class VisaService:
         """
         try:
             # Verify employee exists
-            employee_exists = await self.employee_repository.exists(visa_data.employeeId)
+            employee_exists = await self.employee_repository.exists(
+                visa_data.employeeId
+            )
             if not employee_exists:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Employee {visa_data.employeeId} not found"
+                    detail=f"Employee {visa_data.employeeId} not found",
                 )
 
             # Validate dates
             if visa_data.expiryDate < visa_data.issueDate:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Expiry date must be after issue date"
+                    detail="Expiry date must be after issue date",
                 )
 
             visa = await self.repository.create(visa_data)
@@ -66,7 +65,7 @@ class VisaService:
             logger.error(f"Error creating visa: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create visa"
+                detail="Failed to create visa",
             )
 
     async def get_visa(self, visa_id: UUID) -> Visa:
@@ -86,15 +85,12 @@ class VisaService:
         if not visa:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Visa {visa_id} not found"
+                detail=f"Visa {visa_id} not found",
             )
         return visa
 
     async def get_employee_visas(
-        self,
-        employee_id: UUID,
-        page: int = 1,
-        per_page: int = 20
+        self, employee_id: UUID, page: int = 1, per_page: int = 20
     ) -> tuple[List[Visa], int, int]:
         """
         Get visas for a specific employee
@@ -112,7 +108,7 @@ class VisaService:
         if not employee_exists:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee {employee_id} not found"
+                detail=f"Employee {employee_id} not found",
             )
 
         if page < 1:
@@ -121,17 +117,16 @@ class VisaService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        visas, total = await self.repository.get_by_employee_id(employee_id, skip, per_page)
+        visas, total = await self.repository.get_by_employee_id(
+            employee_id, skip, per_page
+        )
 
         total_pages = (total + per_page - 1) // per_page
 
         return visas, total, total_pages
 
     async def get_all_visas(
-        self,
-        page: int = 1,
-        per_page: int = 20,
-        status: Optional[VisaStatus] = None
+        self, page: int = 1, per_page: int = 20, status: Optional[VisaStatus] = None
     ) -> tuple[List[Visa], int, int]:
         """
         Get all visas with pagination
@@ -156,11 +151,7 @@ class VisaService:
 
         return visas, total, total_pages
 
-    async def update_visa(
-        self,
-        visa_id: UUID,
-        update_data: VisaUpdate
-    ) -> Visa:
+    async def update_visa(self, visa_id: UUID, update_data: VisaUpdate) -> Visa:
         """
         Update a visa
 
@@ -182,14 +173,14 @@ class VisaService:
             if update_data.expiryDate < update_data.issueDate:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Expiry date must be after issue date"
+                    detail="Expiry date must be after issue date",
                 )
 
         updated_visa = await self.repository.update(visa_id, update_data)
         if not updated_visa:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Visa {visa_id} not found"
+                detail=f"Visa {visa_id} not found",
             )
 
         logger.info(f"Visa updated: {visa_id}")
@@ -215,7 +206,7 @@ class VisaService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Visa {visa_id} not found"
+                detail=f"Visa {visa_id} not found",
             )
 
         logger.info(f"Visa deleted: {visa_id}")

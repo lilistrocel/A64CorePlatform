@@ -89,9 +89,7 @@ async def get_finance_reachability(
             )
         except Exception as exc:
             # Reason: write failure is non-fatal — next request will retry.
-            logger.warning(
-                "[FinanceReachability] cache write failed: %s", exc
-            )
+            logger.warning("[FinanceReachability] cache write failed: %s", exc)
 
     return reachable, version
 
@@ -119,9 +117,7 @@ async def _ping_finance_health() -> Tuple[bool, Optional[str]]:
     except (httpx.TimeoutException, httpx.ConnectError) as exc:
         # Reason: expected when finance is not deployed or briefly down —
         # log at INFO not WARNING so it doesn't drown the dev console.
-        logger.info(
-            "[FinanceReachability] finance unreachable at %s: %s", url, exc
-        )
+        logger.info("[FinanceReachability] finance unreachable at %s: %s", url, exc)
         return False, None
     except Exception as exc:
         # Unexpected failure (DNS, bad JSON, etc.) — log louder but still
@@ -143,6 +139,4 @@ async def invalidate_reachability_cache(redis: Optional[Redis]) -> None:
     try:
         await redis.delete(_KEY_REACHABLE, _KEY_VERSION)
     except Exception as exc:
-        logger.warning(
-            "[FinanceReachability] cache invalidation failed: %s", exc
-        )
+        logger.warning("[FinanceReachability] cache invalidation failed: %s", exc)

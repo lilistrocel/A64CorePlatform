@@ -56,14 +56,16 @@ router = APIRouter(tags=["Purchasing — AP Invoices"])
 # AP Invoice write-role set (expanded to include accountant and finance_admin)
 # ---------------------------------------------------------------------------
 
-_AP_WRITE_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-    "accountant",
-    "finance_admin",
-})
+_AP_WRITE_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+        "accountant",
+        "finance_admin",
+    }
+)
 
 
 def _require_ap_write(current_user: CurrentUser) -> None:
@@ -110,7 +112,7 @@ def _extract_token(request: Request) -> Optional[str]:
     """Extract the raw Bearer token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 
@@ -377,7 +379,10 @@ async def update_ap(
 
     try:
         ap = await service.update_ap(
-            org_id, doc_id, body, current_user.userId,
+            org_id,
+            doc_id,
+            body,
+            current_user.userId,
             auth_token=_extract_token(request),
         )
     except ValueError as exc:
@@ -486,7 +491,11 @@ async def submit_ap(
         )
     except ValueError as exc:
         detail = str(exc)
-        code = status.HTTP_404_NOT_FOUND if "not found" in detail else status.HTTP_409_CONFLICT
+        code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail
+            else status.HTTP_409_CONFLICT
+        )
         raise HTTPException(status_code=code, detail=detail)
 
     return SuccessResponse(data=ap, message="AP Invoice submitted for approval")
@@ -536,7 +545,11 @@ async def approve_ap(
         )
     except ValueError as exc:
         detail = str(exc)
-        code = status.HTTP_404_NOT_FOUND if "not found" in detail else status.HTTP_409_CONFLICT
+        code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail
+            else status.HTTP_409_CONFLICT
+        )
         raise HTTPException(status_code=code, detail=detail)
 
     return SuccessResponse(data=ap, message="AP Invoice approved and posted")
@@ -585,7 +598,11 @@ async def reject_ap(
         )
     except ValueError as exc:
         detail = str(exc)
-        code = status.HTTP_404_NOT_FOUND if "not found" in detail else status.HTTP_409_CONFLICT
+        code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail
+            else status.HTTP_409_CONFLICT
+        )
         raise HTTPException(status_code=code, detail=detail)
 
     return SuccessResponse(data=ap, message="AP Invoice rejected")
@@ -632,7 +649,11 @@ async def withdraw_ap(
         )
     except ValueError as exc:
         detail = str(exc)
-        code = status.HTTP_404_NOT_FOUND if "not found" in detail else status.HTTP_409_CONFLICT
+        code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail
+            else status.HTTP_409_CONFLICT
+        )
         raise HTTPException(status_code=code, detail=detail)
 
     return SuccessResponse(data=ap, message="AP Invoice withdrawn to Draft")

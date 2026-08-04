@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class DailyHarvestEntry(BaseModel):
     """Single day's harvest entry for one plant type"""
+
     plantDataId: UUID = Field(..., description="Plant type harvested")
     plantName: str = Field(..., description="Plant name")
     quantityHarvested: float = Field(..., ge=0, description="Quantity harvested today")
@@ -21,12 +22,17 @@ class DailyHarvestEntry(BaseModel):
 
 class DailyHarvestCreate(BaseModel):
     """Schema for creating a daily harvest record"""
+
     cycleId: UUID = Field(..., description="Reference to block cycle")
     plantingId: UUID = Field(..., description="Reference to planting")
     blockId: UUID = Field(..., description="Block harvested")
     harvestDate: datetime = Field(..., description="Date of this harvest")
-    entries: List[DailyHarvestEntry] = Field(..., description="Harvest entries by plant type")
-    totalQuantity: float = Field(..., ge=0, description="Total quantity harvested today")
+    entries: List[DailyHarvestEntry] = Field(
+        ..., description="Harvest entries by plant type"
+    )
+    totalQuantity: float = Field(
+        ..., ge=0, description="Total quantity harvested today"
+    )
     yieldUnit: str = Field(..., description="Unit of yield")
     weatherConditions: Optional[str] = Field(None, description="Weather during harvest")
     notes: Optional[str] = Field(None, description="General notes")
@@ -34,7 +40,10 @@ class DailyHarvestCreate(BaseModel):
 
 class DailyHarvest(DailyHarvestCreate):
     """Complete daily harvest model with all fields"""
-    dailyHarvestId: UUID = Field(default_factory=uuid4, description="Unique daily harvest identifier")
+
+    dailyHarvestId: UUID = Field(
+        default_factory=uuid4, description="Unique daily harvest identifier"
+    )
     farmId: UUID = Field(..., description="Farm ID")
 
     # Harvest information
@@ -60,7 +69,7 @@ class DailyHarvest(DailyHarvestCreate):
                         "plantName": "Tomato",
                         "quantityHarvested": 45.0,
                         "qualityGrade": "A",
-                        "notes": "First day harvest, excellent condition"
+                        "notes": "First day harvest, excellent condition",
                     }
                 ],
                 "totalQuantity": 45.0,
@@ -70,6 +79,6 @@ class DailyHarvest(DailyHarvestCreate):
                 "weatherConditions": "Sunny, 25°C",
                 "notes": "Good harvest day",
                 "createdAt": "2025-04-15T08:30:00Z",
-                "updatedAt": "2025-04-15T08:30:00Z"
+                "updatedAt": "2025-04-15T08:30:00Z",
             }
         }

@@ -244,11 +244,7 @@ class _EmbeddedLineCollection(_FakeCollection):
     ) -> None:
         for doc in self._docs:
             # Check top-level query fields (doc_entry, organizationId).
-            top_matches = all(
-                doc.get(k) == v
-                for k, v in query.items()
-                if "." not in k
-            )
+            top_matches = all(doc.get(k) == v for k, v in query.items() if "." not in k)
             if not top_matches:
                 continue
 
@@ -268,7 +264,7 @@ class _EmbeddedLineCollection(_FakeCollection):
             if "$inc" in update:
                 for field, delta in update["$inc"].items():
                     if field.startswith("lines.$."):
-                        sub_field = field[len("lines.$."):]
+                        sub_field = field[len("lines.$.") :]
                         if line_id_query is not None:
                             for line in doc.get("lines", []):
                                 if line.get("lineId") == line_id_query:
@@ -497,7 +493,7 @@ async def test_create_so_from_quote_partial_consumption() -> None:
         doc_date=date(2026, 5, 1),
         valid_until_date=date(2026, 6, 1),
         lines=[
-            _QUOTE_LINE,   # line 1: qty 100
+            _QUOTE_LINE,  # line 1: qty 100
             QuoteLineCreate(
                 item_id="item-2",
                 item_code="ITEM-002",
@@ -577,7 +573,9 @@ async def test_create_so_from_cancelled_quote_raises() -> None:
     create_sales_order_from_quote raises ValueError when the Quote is CANCELLED.
     """
     from src.modules.sales.models.quotes import QuoteStatusTransitionRequest
-    from src.modules.sales.services.quote_service import transition_status as q_transition
+    from src.modules.sales.services.quote_service import (
+        transition_status as q_transition,
+    )
 
     db = _FakeDBWithEmbeddedLineSupport()
     quote = await create_quote(db, payload=_QUOTE_CREATE_PAYLOAD, user_id=USER_ID)
@@ -659,7 +657,9 @@ async def test_transition_draft_to_open_credit_blocked() -> None:
     with patch(
         "src.modules.sales.services.sales_order_service.httpx.AsyncClient"
     ) as mock_client_cls:
-        mock_client_cls.return_value = _mock_httpx_client(_make_credit_check_blocked(limit=100.0))
+        mock_client_cls.return_value = _mock_httpx_client(
+            _make_credit_check_blocked(limit=100.0)
+        )
 
         with pytest.raises(ValueError, match="[Cc]redit limit check BLOCKED"):
             await transition_status(
@@ -691,7 +691,9 @@ async def test_transition_draft_to_open_credit_blocked_admin_override() -> None:
     with patch(
         "src.modules.sales.services.sales_order_service.httpx.AsyncClient"
     ) as mock_client_cls:
-        mock_client_cls.return_value = _mock_httpx_client(_make_credit_check_blocked(limit=100.0))
+        mock_client_cls.return_value = _mock_httpx_client(
+            _make_credit_check_blocked(limit=100.0)
+        )
 
         transitioned = await transition_status(
             db,
@@ -720,7 +722,9 @@ async def test_transition_draft_to_open_credit_blocked_admin_override() -> None:
 
 
 @pytest.mark.asyncio
-async def test_transition_draft_to_open_credit_blocked_non_admin_override_fails() -> None:
+async def test_transition_draft_to_open_credit_blocked_non_admin_override_fails() -> (
+    None
+):
     """
     DRAFT → OPEN with override_credit_check=True but caller is not admin → PermissionError.
     """
@@ -730,7 +734,9 @@ async def test_transition_draft_to_open_credit_blocked_non_admin_override_fails(
     with patch(
         "src.modules.sales.services.sales_order_service.httpx.AsyncClient"
     ) as mock_client_cls:
-        mock_client_cls.return_value = _mock_httpx_client(_make_credit_check_blocked(limit=100.0))
+        mock_client_cls.return_value = _mock_httpx_client(
+            _make_credit_check_blocked(limit=100.0)
+        )
 
         with pytest.raises(PermissionError, match="super_admin or finance_admin"):
             await transition_status(

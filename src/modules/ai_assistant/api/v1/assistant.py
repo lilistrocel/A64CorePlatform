@@ -90,7 +90,10 @@ async def chat(
             # without sending a client-visible error event.
             logger.error("Unhandled error in chat stream: %s", exc, exc_info=True)
             import json
-            yield json.dumps({"type": "error", "message": "An unexpected error occurred."}) + "\n"
+
+            yield json.dumps(
+                {"type": "error", "message": "An unexpected error occurred."}
+            ) + "\n"
 
     return StreamingResponse(
         event_stream(),

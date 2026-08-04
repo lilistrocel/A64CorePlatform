@@ -150,9 +150,7 @@ class FarmLevelAIChatService:
             role = "user" if msg.get("role") == "user" else "model"
             content_text = msg.get("content", "")
             if content_text:
-                history.append(
-                    Content(role=role, parts=[Part.from_text(content_text)])
-                )
+                history.append(Content(role=role, parts=[Part.from_text(content_text)]))
 
         # Create model with system instruction baked in
         model = GenerativeModel(
@@ -275,12 +273,14 @@ class FarmLevelAIChatService:
 
         except GoogleAPICallError as e:
             logger.error(f"Vertex AI API error (farm-level chat): {e}")
-            if '429' in str(e) or 'Resource exhausted' in str(e):
+            if "429" in str(e) or "Resource exhausted" in str(e):
                 detail = "Vertex AI rate limit exceeded (429). Please wait a moment and try again."
-            elif '403' in str(e) or 'Permission' in str(e):
+            elif "403" in str(e) or "Permission" in str(e):
                 detail = "Vertex AI permission denied (403). Check service account credentials."
-            elif '404' in str(e):
-                detail = "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+            elif "404" in str(e):
+                detail = (
+                    "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+                )
             else:
                 detail = f"Vertex AI error: {str(e)[:200]}"
             return FarmLevelAIChatResponse(
@@ -289,9 +289,7 @@ class FarmLevelAIChatService:
                 tools_used=tools_used,
             )
         except Exception as e:
-            logger.error(
-                f"Unexpected error in Farm-Level AI chat: {e}", exc_info=True
-            )
+            logger.error(f"Unexpected error in Farm-Level AI chat: {e}", exc_info=True)
             return FarmLevelAIChatResponse(
                 message=f"Unexpected error: {type(e).__name__}: {str(e)[:200]}",
                 farm_summary=farm_summary,

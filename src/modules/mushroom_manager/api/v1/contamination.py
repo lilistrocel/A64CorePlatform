@@ -31,6 +31,7 @@ router = APIRouter()
 # POST /facilities/{facility_id}/rooms/{room_id}/contamination
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/facilities/{facility_id}/rooms/{room_id}/contamination",
     response_model=SuccessResponse[ContaminationReport],
@@ -59,12 +60,15 @@ async def create_report(
         data=report_data,
         current_user=current_user,
     )
-    return SuccessResponse(data=report, message="Contamination report created successfully")
+    return SuccessResponse(
+        data=report, message="Contamination report created successfully"
+    )
 
 
 # ---------------------------------------------------------------------------
 # GET /facilities/{facility_id}/rooms/{room_id}/contamination
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/facilities/{facility_id}/rooms/{room_id}/contamination",
@@ -91,6 +95,7 @@ async def list_reports(
 # PATCH /contamination/{report_id}/resolve
 # ---------------------------------------------------------------------------
 
+
 @router.patch(
     "/contamination/{report_id}/resolve",
     response_model=SuccessResponse[ContaminationReport],
@@ -116,4 +121,6 @@ async def resolve_report(
         data=resolve_data,
         current_user=current_user,
     )
-    return SuccessResponse(data=report, message="Contamination report resolved successfully")
+    return SuccessResponse(
+        data=report, message="Contamination report resolved successfully"
+    )

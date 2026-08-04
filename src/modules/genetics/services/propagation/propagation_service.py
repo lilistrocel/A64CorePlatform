@@ -382,11 +382,7 @@ class PropagationService:
 
         total = await db[PROPAGATIONS].count_documents(query)
         cursor = (
-            db[PROPAGATIONS]
-            .find(query)
-            .sort("performedAt", -1)
-            .skip(skip)
-            .limit(limit)
+            db[PROPAGATIONS].find(query).sort("performedAt", -1).skip(skip).limit(limit)
         )
 
         events: List[PropagationEvent] = []

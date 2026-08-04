@@ -13,7 +13,6 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Input models
 # ---------------------------------------------------------------------------
@@ -35,7 +34,9 @@ class PurchaseItemCreate(BaseModel):
     organizationId: str
     itemCode: Optional[str] = Field(None, max_length=20)
     name: str = Field(..., min_length=1, max_length=200)
-    itemType: Literal["raw_material", "consumable", "service", "fixed_asset_acquisition"]
+    itemType: Literal[
+        "raw_material", "consumable", "service", "fixed_asset_acquisition"
+    ]
     uom: str = Field(..., min_length=1, max_length=20)
     description: Optional[str] = None
     defaultWarehouseId: Optional[str] = Field(None, max_length=100)
@@ -52,7 +53,9 @@ class PurchaseItemUpdate(BaseModel):
     """
 
     name: Optional[str] = Field(None, min_length=1, max_length=200)
-    itemType: Optional[Literal["raw_material", "consumable", "service", "fixed_asset_acquisition"]] = None
+    itemType: Optional[
+        Literal["raw_material", "consumable", "service", "fixed_asset_acquisition"]
+    ] = None
     uom: Optional[str] = Field(None, min_length=1, max_length=20)
     description: Optional[str] = None
     defaultWarehouseId: Optional[str] = Field(None, max_length=100)

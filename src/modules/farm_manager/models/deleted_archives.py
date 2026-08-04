@@ -51,7 +51,7 @@ class DeletedFarm(BaseModel):
                 "deletedAt": "2025-11-26T10:00:00Z",
                 "deletedBy": "user-uuid",
                 "blockCount": 3,
-                "archiveCount": 5
+                "archiveCount": 5,
             }
         }
 
@@ -95,7 +95,9 @@ class DeletedBlock(BaseModel):
     deletedAt: datetime = Field(default_factory=datetime.utcnow)
     deletedBy: UUID = Field(..., description="User who deleted")
     deletedByEmail: str = Field(..., description="Email of deleting user")
-    deletedWithFarm: bool = Field(False, description="Whether deleted as part of farm deletion")
+    deletedWithFarm: bool = Field(
+        False, description="Whether deleted as part of farm deletion"
+    )
     deletionReason: Optional[str] = None
 
     class Config:
@@ -107,7 +109,7 @@ class DeletedBlock(BaseModel):
                 "farmName": "Al Ain Farm",
                 "lastCropName": "Corn - Sweet (Sweet Corn)",
                 "totalCycles": 2,
-                "deletedAt": "2025-11-26T10:00:00Z"
+                "deletedAt": "2025-11-26T10:00:00Z",
             }
         }
 
@@ -122,7 +124,9 @@ class DeletedBlockArchive(BaseModel):
 
     # Original archive ID
     archiveId: UUID = Field(..., description="Original archive ID")
-    originalCollection: str = Field("block_archives", description="Where this came from")
+    originalCollection: str = Field(
+        "block_archives", description="Where this came from"
+    )
 
     # Block/Farm references
     blockId: UUID = Field(..., description="Block this archive belongs to")
@@ -163,7 +167,9 @@ class DeletedBlockArchive(BaseModel):
 
     # Deletion metadata
     movedToDeletedAt: datetime = Field(default_factory=datetime.utcnow)
-    movedReason: str = Field("block_deleted", description="block_deleted or farm_deleted")
+    movedReason: str = Field(
+        "block_deleted", description="block_deleted or farm_deleted"
+    )
 
 
 class DeletedBlockHarvest(BaseModel):
@@ -187,4 +193,6 @@ class DeletedBlockHarvest(BaseModel):
 
     # Deletion metadata
     movedToDeletedAt: datetime = Field(default_factory=datetime.utcnow)
-    movedReason: str = Field("block_deleted", description="block_deleted or farm_deleted")
+    movedReason: str = Field(
+        "block_deleted", description="block_deleted or farm_deleted"
+    )

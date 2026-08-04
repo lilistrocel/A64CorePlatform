@@ -181,7 +181,11 @@ class ReturnRequestCreate(BaseModel):
         notes:             Free-text notes.
     """
 
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     customer_id: str = Field(..., description="FK to customer")
     customer_name: str = Field(..., max_length=200)
     doc_date: date
@@ -203,9 +207,7 @@ class ReturnRequestCreate(BaseModel):
             ValueError: If valid_until_date is before doc_date.
         """
         if self.valid_until_date < self.doc_date:
-            raise ValueError(
-                "valid_until_date must be >= doc_date"
-            )
+            raise ValueError("valid_until_date must be >= doc_date")
         return self
 
 

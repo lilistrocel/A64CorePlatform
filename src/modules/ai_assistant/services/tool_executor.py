@@ -89,7 +89,9 @@ async def _get_sensehub_client(block_id: Optional[str]):
 
     farm_id_str = block.get("farmId")
     if not farm_id_str:
-        raise ValueError(f"Block '{block_id}' has no farmId — cannot connect to SenseHub.")
+        raise ValueError(
+            f"Block '{block_id}' has no farmId — cannot connect to SenseHub."
+        )
 
     try:
         client = await SenseHubConnectionService.get_client(
@@ -164,7 +166,9 @@ async def execute_tool(
             "Only read-only tools are permitted in the AI assistant."
         )
 
-    logger.debug("Executing tool: %s | input keys: %s", tool_name, list(tool_input.keys()))
+    logger.debug(
+        "Executing tool: %s | input keys: %s", tool_name, list(tool_input.keys())
+    )
 
     # ------------------------------------------------------------------
     # query_mongodb — delegates to the existing ai_analytics QueryEngine
@@ -418,7 +422,11 @@ async def _execute_get_lab_readings(
         data = await client._request(
             "GET", "/api/lab/readings", params={"limit": min(limit, 100)}
         )
-        readings = data if isinstance(data, list) else data.get("readings", data.get("data", []))
+        readings = (
+            data
+            if isinstance(data, list)
+            else data.get("readings", data.get("data", []))
+        )
         return {"readings": readings, "count": len(readings)}
     except ValueError as exc:
         return {"error": str(exc)}

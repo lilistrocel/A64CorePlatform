@@ -126,7 +126,9 @@ class ChemicalsService:
 
         # Reason: fetch ALL chemicals (including archived) so we can detect archived matches
         # and skip them rather than auto-creating duplicates.
-        all_existing = await ChemicalsRepository.list_all(organization_id, include_archived=True)
+        all_existing = await ChemicalsRepository.list_all(
+            organization_id, include_archived=True
+        )
 
         # Build two lookup sets:
         # - active_names_lower: names/aliases of ACTIVE chemicals → already catalogued, skip
@@ -175,7 +177,8 @@ class ChemicalsService:
             except ValueError:
                 # Reason: another concurrent call may have inserted the same name
                 logger.debug(
-                    "[ChemicalsService] Skipping duplicate '%s' — already exists", original_name
+                    "[ChemicalsService] Skipping duplicate '%s' — already exists",
+                    original_name,
                 )
 
         logger.info(
@@ -213,7 +216,9 @@ class ChemicalsService:
         archived_by_name: Dict[str, ArchivedChemicalMatch] = {}
 
         for c in sorted(all_chemicals, key=lambda x: str(x.chemicalId)):
-            all_names = [c.name.strip().lower()] + [a.strip().lower() for a in c.aliases]
+            all_names = [c.name.strip().lower()] + [
+                a.strip().lower() for a in c.aliases
+            ]
             if c.archivedAt is None:
                 for n in all_names:
                     if n not in active_by_name:
@@ -234,6 +239,7 @@ class ChemicalsService:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _record_ingredient(ing: dict, seen: dict) -> None:
     """

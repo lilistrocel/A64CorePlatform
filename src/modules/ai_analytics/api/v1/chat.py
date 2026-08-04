@@ -15,7 +15,7 @@ from ...models.chat import (
     SchemaResponse,
     ErrorResponse,
     UserCostResponse,
-    ErrorDetail
+    ErrorDetail,
 )
 from ...services.query_engine import get_query_engine, QueryExecutionError
 from ...services.schema_service import get_schema_service
@@ -36,8 +36,8 @@ router = APIRouter(
     responses={
         401: {"description": "Unauthorized"},
         403: {"description": "Forbidden"},
-        500: {"description": "Internal Server Error"}
-    }
+        500: {"description": "Internal Server Error"},
+    },
 )
 
 
@@ -45,16 +45,16 @@ router = APIRouter(
 # Chat Endpoints
 # ============================================================================
 
+
 @router.post(
     "/chat",
     response_model=ChatQueryResponse,
     status_code=status.HTTP_200_OK,
     summary="Send AI chat query",
-    description="Convert natural language to MongoDB query and execute it"
+    description="Convert natural language to MongoDB query and execute it",
 )
 async def chat_query(
-    request: ChatQueryRequest,
-    current_user: UserResponse = Depends(get_current_user)
+    request: ChatQueryRequest, current_user: UserResponse = Depends(get_current_user)
 ) -> ChatQueryResponse:
     """
     Execute AI-powered database query from natural language.
@@ -88,8 +88,7 @@ async def chat_query(
     if current_user.role not in ("admin", "super_admin"):
         try:
             cost_service = get_cost_tracking_service(
-                mongodb_client=mongodb.client,
-                db_name="a64core_db"
+                mongodb_client=mongodb.client, db_name="a64core_db"
             )
             queries_today = await cost_service.get_user_query_count_today(
                 user_id=str(current_user.userId)
@@ -105,16 +104,16 @@ async def chat_query(
                         "error": {
                             "code": "AI_RATE_LIMIT_EXCEEDED",
                             "message": f"Daily AI query limit exceeded. "
-                                       f"You have used {queries_today}/{AI_DAILY_QUERY_LIMIT} "
-                                       f"queries today. Limit resets at midnight UTC.",
+                            f"You have used {queries_today}/{AI_DAILY_QUERY_LIMIT} "
+                            f"queries today. Limit resets at midnight UTC.",
                             "details": {
                                 "queries_used": queries_today,
                                 "daily_limit": AI_DAILY_QUERY_LIMIT,
-                                "role": current_user.role
+                                "role": current_user.role,
                             },
-                            "timestamp": datetime.utcnow().isoformat()
+                            "timestamp": datetime.utcnow().isoformat(),
                         }
-                    }
+                    },
                 )
         except HTTPException:
             raise  # Re-raise 429 error
@@ -124,34 +123,34 @@ async def chat_query(
     try:
         # Get query engine
         query_engine = get_query_engine(
-            mongodb_client=mongodb.client,
-            db_name="a64core_db"
+            mongodb_client=mongodb.client, db_name="a64core_db"
         )
 
         # Convert conversation history to dict format
-        conversation_history = [
-            {"role": msg.role, "content": msg.content}
-            for msg in request.conversation_history
-        ] if request.conversation_history else None
+        conversation_history = (
+            [
+                {"role": msg.role, "content": msg.content}
+                for msg in request.conversation_history
+            ]
+            if request.conversation_history
+            else None
+        )
 
         # Execute query
-        logger.info(
-            f"User {current_user.userId} query: {request.prompt[:50]}..."
-        )
+        logger.info(f"User {current_user.userId} query: {request.prompt[:50]}...")
 
         result = await query_engine.execute_ai_query(
             user_prompt=request.prompt,
             user_id=str(current_user.userId),
             user_role=current_user.role,
             conversation_history=conversation_history,
-            force_refresh=request.force_refresh
+            force_refresh=request.force_refresh,
         )
 
         # Log query cost to MongoDB for tracking
         try:
             cost_service = get_cost_tracking_service(
-                mongodb_client=mongodb.client,
-                db_name="a64core_db"
+                mongodb_client=mongodb.client, db_name="a64core_db"
             )
             metadata = result.get("metadata", {})
             cost_data = metadata.get("cost", {})
@@ -162,7 +161,7 @@ async def chat_query(
                 cost_data=cost_data,
                 execution_time_seconds=metadata.get("execution_time_seconds", 0),
                 result_count=metadata.get("result_count", 0),
-                cache_hit=metadata.get("cache_hit", False)
+                cache_hit=metadata.get("cache_hit", False),
             )
         except Exception as log_err:
             logger.warning(f"Failed to log query cost (non-blocking): {log_err}")
@@ -178,9 +177,9 @@ async def chat_query(
                     "code": "QUERY_VALIDATION_FAILED",
                     "message": str(e),
                     "details": {},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
     except QueryExecutionError as e:
@@ -192,9 +191,9 @@ async def chat_query(
                     "code": "QUERY_EXECUTION_FAILED",
                     "message": str(e),
                     "details": {},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
     except Exception as e:
@@ -206,9 +205,9 @@ async def chat_query(
                     "code": "INTERNAL_SERVER_ERROR",
                     "message": "An unexpected error occurred",
                     "details": {"error": str(e)},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
 
@@ -216,15 +215,16 @@ async def chat_query(
 # Schema Endpoints
 # ============================================================================
 
+
 @router.get(
     "/schema",
     response_model=SchemaResponse,
     status_code=status.HTTP_200_OK,
     summary="Get database schema",
-    description="Retrieve complete database schema with field types and indexes"
+    description="Retrieve complete database schema with field types and indexes",
 )
 async def get_schema(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> SchemaResponse:
     """
     Get complete database schema.
@@ -241,8 +241,7 @@ async def get_schema(
     """
     try:
         schema_service = get_schema_service(
-            mongodb_client=mongodb.client,
-            db_name="a64core_db"
+            mongodb_client=mongodb.client, db_name="a64core_db"
         )
 
         schema = await schema_service.get_schema()
@@ -258,9 +257,9 @@ async def get_schema(
                     "code": "SCHEMA_FETCH_FAILED",
                     "message": "Failed to retrieve database schema",
                     "details": {"error": str(e)},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
 
@@ -269,10 +268,10 @@ async def get_schema(
     response_model=SchemaResponse,
     status_code=status.HTTP_200_OK,
     summary="Refresh database schema",
-    description="Force refresh of database schema cache"
+    description="Force refresh of database schema cache",
 )
 async def refresh_schema(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> SchemaResponse:
     """
     Force refresh of database schema.
@@ -293,15 +292,14 @@ async def refresh_schema(
                     "code": "INSUFFICIENT_PERMISSIONS",
                     "message": "Only admins can refresh schema",
                     "details": {"required_role": "admin"},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
     try:
         schema_service = get_schema_service(
-            mongodb_client=mongodb.client,
-            db_name="a64core_db"
+            mongodb_client=mongodb.client, db_name="a64core_db"
         )
 
         # Force refresh
@@ -320,9 +318,9 @@ async def refresh_schema(
                     "code": "SCHEMA_REFRESH_FAILED",
                     "message": "Failed to refresh database schema",
                     "details": {"error": str(e)},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
 
@@ -330,14 +328,15 @@ async def refresh_schema(
 # Cache Management Endpoints
 # ============================================================================
 
+
 @router.post(
     "/cache/clear",
     status_code=status.HTTP_200_OK,
     summary="Clear query cache",
-    description="Clear all cached query results"
+    description="Clear all cached query results",
 )
 async def clear_cache(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """
     Clear all cached query results.
@@ -353,15 +352,14 @@ async def clear_cache(
                     "code": "INSUFFICIENT_PERMISSIONS",
                     "message": "Only admins can clear cache",
                     "details": {"required_role": "admin"},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
     try:
         query_engine = get_query_engine(
-            mongodb_client=mongodb.client,
-            db_name="a64core_db"
+            mongodb_client=mongodb.client, db_name="a64core_db"
         )
 
         query_engine.clear_cache()
@@ -370,7 +368,7 @@ async def clear_cache(
 
         return {
             "message": "Cache cleared successfully",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
     except Exception as e:
@@ -382,9 +380,9 @@ async def clear_cache(
                     "code": "CACHE_CLEAR_FAILED",
                     "message": "Failed to clear cache",
                     "details": {"error": str(e)},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
 
@@ -392,10 +390,10 @@ async def clear_cache(
     "/cache/stats",
     status_code=status.HTTP_200_OK,
     summary="Get cache statistics",
-    description="Get statistics about query result cache"
+    description="Get statistics about query result cache",
 )
 async def get_cache_stats(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """
     Get cache statistics.
@@ -408,16 +406,12 @@ async def get_cache_stats(
     """
     try:
         query_engine = get_query_engine(
-            mongodb_client=mongodb.client,
-            db_name="a64core_db"
+            mongodb_client=mongodb.client, db_name="a64core_db"
         )
 
         stats = query_engine.get_cache_stats()
 
-        return {
-            "cache_stats": stats,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        return {"cache_stats": stats, "timestamp": datetime.utcnow().isoformat()}
 
     except Exception as e:
         logger.error(f"Failed to get cache stats: {e}", exc_info=True)
@@ -428,9 +422,9 @@ async def get_cache_stats(
                     "code": "CACHE_STATS_FAILED",
                     "message": "Failed to get cache statistics",
                     "details": {"error": str(e)},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )
 
 
@@ -438,16 +432,16 @@ async def get_cache_stats(
 # Cost/Usage Endpoints
 # ============================================================================
 
+
 @router.get(
     "/cost",
     response_model=UserCostResponse,
     status_code=status.HTTP_200_OK,
     summary="Get cost statistics",
-    description="Get user's AI API cost statistics"
+    description="Get user's AI API cost statistics",
 )
 async def get_cost_stats(
-    period: str = "today",
-    current_user: UserResponse = Depends(get_current_user)
+    period: str = "today", current_user: UserResponse = Depends(get_current_user)
 ) -> UserCostResponse:
     """
     Get cost statistics for current user.
@@ -461,14 +455,12 @@ async def get_cost_stats(
     """
     try:
         cost_service = get_cost_tracking_service(
-            mongodb_client=mongodb.client,
-            db_name="a64core_db"
+            mongodb_client=mongodb.client, db_name="a64core_db"
         )
 
         # Get cost summary for the requested period
         cost_summary = await cost_service.get_user_cost_summary(
-            user_id=str(current_user.userId),
-            period=period
+            user_id=str(current_user.userId), period=period
         )
 
         # Get daily breakdown for this_month and all_time periods
@@ -476,15 +468,14 @@ async def get_cost_stats(
         if period in ("this_month", "all_time"):
             days = 30 if period == "this_month" else 365
             daily_breakdown = await cost_service.get_user_daily_breakdown(
-                user_id=str(current_user.userId),
-                days=days
+                user_id=str(current_user.userId), days=days
             )
 
         return UserCostResponse(
             user_id=str(current_user.userId),
             period=period,
             cost_summary=cost_summary,
-            daily_breakdown=daily_breakdown
+            daily_breakdown=daily_breakdown,
         )
 
     except Exception as e:
@@ -496,7 +487,7 @@ async def get_cost_stats(
                     "code": "COST_STATS_FAILED",
                     "message": "Failed to retrieve cost statistics",
                     "details": {"error": str(e)},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            }
+            },
         )

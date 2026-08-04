@@ -10,8 +10,12 @@ from datetime import datetime
 import logging
 
 from ...models.alert import (
-    Alert, AlertCreate, AlertResolve,
-    AlertStatus, AlertSeverity, AlertType
+    Alert,
+    AlertCreate,
+    AlertResolve,
+    AlertStatus,
+    AlertSeverity,
+    AlertType,
 )
 from ..database import farm_db
 
@@ -38,7 +42,7 @@ class AlertRepository:
             **alert_data.model_dump(),
             farmId=UUID(farm_id),
             createdBy=user_id,
-            createdByEmail=user_email
+            createdByEmail=user_email,
         )
 
         alert_dict = alert.model_dump()
@@ -52,7 +56,9 @@ class AlertRepository:
         if not result.inserted_id:
             raise Exception("Failed to create alert")
 
-        logger.info(f"[Alert Repository] Created alert: {alert.alertId} for block {alert.blockId}")
+        logger.info(
+            f"[Alert Repository] Created alert: {alert.alertId} for block {alert.blockId}"
+        )
         return alert
 
     @staticmethod
@@ -73,7 +79,7 @@ class AlertRepository:
         skip: int = 0,
         limit: int = 100,
         status: Optional[AlertStatus] = None,
-        severity: Optional[AlertSeverity] = None
+        severity: Optional[AlertSeverity] = None,
     ) -> Tuple[List[Alert], int]:
         """Get alerts for a block with filters"""
         db = farm_db.get_database()
@@ -91,7 +97,9 @@ class AlertRepository:
         total = await db.block_alerts.count_documents(query)
 
         # Get paginated results (most recent first)
-        cursor = db.block_alerts.find(query).sort("createdAt", -1).skip(skip).limit(limit)
+        cursor = (
+            db.block_alerts.find(query).sort("createdAt", -1).skip(skip).limit(limit)
+        )
         alert_docs = await cursor.to_list(length=limit)
 
         alerts = [Alert(**doc) for doc in alert_docs]
@@ -104,7 +112,7 @@ class AlertRepository:
         skip: int = 0,
         limit: int = 100,
         status: Optional[AlertStatus] = None,
-        severity: Optional[AlertSeverity] = None
+        severity: Optional[AlertSeverity] = None,
     ) -> Tuple[List[Alert], int]:
         """Get all alerts for a farm with filters"""
         db = farm_db.get_database()
@@ -122,7 +130,9 @@ class AlertRepository:
         total = await db.block_alerts.count_documents(query)
 
         # Get paginated results
-        cursor = db.block_alerts.find(query).sort("createdAt", -1).skip(skip).limit(limit)
+        cursor = (
+            db.block_alerts.find(query).sort("createdAt", -1).skip(skip).limit(limit)
+        )
         alert_docs = await cursor.to_list(length=limit)
 
         alerts = [Alert(**doc) for doc in alert_docs]
@@ -134,10 +144,9 @@ class AlertRepository:
         """Get all active alerts for a block"""
         db = farm_db.get_database()
 
-        cursor = db.block_alerts.find({
-            "blockId": str(block_id),
-            "status": AlertStatus.ACTIVE.value
-        }).sort("createdAt", -1)
+        cursor = db.block_alerts.find(
+            {"blockId": str(block_id), "status": AlertStatus.ACTIVE.value}
+        ).sort("createdAt", -1)
 
         alert_docs = await cursor.to_list(length=None)
 
@@ -145,10 +154,7 @@ class AlertRepository:
 
     @staticmethod
     async def resolve(
-        alert_id: UUID,
-        user_id: UUID,
-        user_email: str,
-        resolution_notes: str
+        alert_id: UUID, user_id: UUID, user_email: str, resolution_notes: str
     ) -> Optional[Alert]:
         """Resolve an alert"""
         db = farm_db.get_database()
@@ -158,12 +164,11 @@ class AlertRepository:
             "resolvedBy": str(user_id),
             "resolvedByEmail": user_email,
             "resolvedAt": datetime.utcnow(),
-            "resolutionNotes": resolution_notes
+            "resolutionNotes": resolution_notes,
         }
 
         result = await db.block_alerts.update_one(
-            {"alertId": str(alert_id)},
-            {"$set": update_dict}
+            {"alertId": str(alert_id)}, {"$set": update_dict}
         )
 
         if result.matched_count == 0:
@@ -173,7 +178,9 @@ class AlertRepository:
         return await AlertRepository.get_by_id(alert_id)
 
     @staticmethod
-    async def dismiss(alert_id: UUID, user_id: UUID, user_email: str) -> Optional[Alert]:
+    async def dismiss(
+        alert_id: UUID, user_id: UUID, user_email: str
+    ) -> Optional[Alert]:
         """Dismiss an alert without resolution"""
         db = farm_db.get_database()
 
@@ -181,12 +188,11 @@ class AlertRepository:
             "status": AlertStatus.DISMISSED.value,
             "resolvedBy": str(user_id),
             "resolvedByEmail": user_email,
-            "resolvedAt": datetime.utcnow()
+            "resolvedAt": datetime.utcnow(),
         }
 
         result = await db.block_alerts.update_one(
-            {"alertId": str(alert_id)},
-            {"$set": update_dict}
+            {"alertId": str(alert_id)}, {"$set": update_dict}
         )
 
         if result.matched_count == 0:
@@ -233,9 +239,9 @@ class AlertRepository:
                     },
                     "highAlerts": {
                         "$sum": {"$cond": [{"$eq": ["$severity", "high"]}, 1, 0]}
-                    }
+                    },
                 }
-            }
+            },
         ]
 
         result = await db.block_alerts.aggregate(pipeline).to_list(length=1)
@@ -247,7 +253,7 @@ class AlertRepository:
                 "resolvedAlerts": 0,
                 "dismissedAlerts": 0,
                 "criticalAlerts": 0,
-                "highAlerts": 0
+                "highAlerts": 0,
             }
 
         return result[0]
@@ -262,22 +268,20 @@ class AlertRepository:
                 "$match": {
                     "blockId": str(block_id),
                     "status": AlertStatus.RESOLVED.value,
-                    "resolvedAt": {"$exists": True}
+                    "resolvedAt": {"$exists": True},
                 }
             },
             {
                 "$project": {
-                    "resolutionTimeMs": {
-                        "$subtract": ["$resolvedAt", "$createdAt"]
-                    }
+                    "resolutionTimeMs": {"$subtract": ["$resolvedAt", "$createdAt"]}
                 }
             },
             {
                 "$group": {
                     "_id": None,
-                    "avgResolutionTimeMs": {"$avg": "$resolutionTimeMs"}
+                    "avgResolutionTimeMs": {"$avg": "$resolutionTimeMs"},
                 }
-            }
+            },
         ]
 
         result = await db.block_alerts.aggregate(pipeline).to_list(length=1)
@@ -296,16 +300,12 @@ class AlertRepository:
 
         pipeline = [
             {"$match": {"blockId": str(block_id)}},
-            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}},
         ]
 
         result = await db.block_alerts.aggregate(pipeline).to_list(length=10)
 
-        counts = {
-            "active": 0,
-            "resolved": 0,
-            "dismissed": 0
-        }
+        counts = {"active": 0, "resolved": 0, "dismissed": 0}
 
         for item in result:
             status = item["_id"]

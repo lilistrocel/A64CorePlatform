@@ -9,8 +9,15 @@ from typing import Optional, List
 from uuid import UUID
 
 from ...models.farm_task import (
-    FarmTask, FarmTaskCreate, FarmTaskUpdate, FarmTaskWithDetails,
-    TaskType, TaskStatus, TaskPriority, HarvestEntryCreate, TaskCompletionData
+    FarmTask,
+    FarmTaskCreate,
+    FarmTaskUpdate,
+    FarmTaskWithDetails,
+    TaskType,
+    TaskStatus,
+    TaskPriority,
+    HarvestEntryCreate,
+    TaskCompletionData,
 )
 from ...services.task.task_service import TaskService
 from ...services.task.task_generator import TaskGeneratorService
@@ -24,12 +31,14 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 @router.get(
     "/my-tasks",
     response_model=SuccessResponse[List[FarmTaskWithDetails]],
-    summary="Get tasks for current user"
+    summary="Get tasks for current user",
 )
 async def get_my_tasks(
     farm_id: Optional[UUID] = Query(None, description="Filter by specific farm"),
-    status_filter: Optional[TaskStatus] = Query(None, alias="status", description="Filter by status"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    status_filter: Optional[TaskStatus] = Query(
+        None, alias="status", description="Filter by status"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get tasks visible to the current user.
@@ -44,24 +53,19 @@ async def get_my_tasks(
     **Response**: List of tasks sorted by scheduled date
     """
     tasks = await TaskService.get_my_tasks(
-        user_id=UUID(current_user.userId),
-        farm_id=farm_id,
-        status=status_filter
+        user_id=UUID(current_user.userId), farm_id=farm_id, status=status_filter
     )
 
-    return SuccessResponse(
-        data=tasks,
-        message=f"Retrieved {len(tasks)} tasks"
-    )
+    return SuccessResponse(data=tasks, message=f"Retrieved {len(tasks)} tasks")
 
 
 @router.get(
     "/pending-count",
     response_model=SuccessResponse[int],
-    summary="Get pending task count for user"
+    summary="Get pending task count for user",
 )
 async def get_pending_task_count(
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get count of pending tasks for the current user.
@@ -72,24 +76,25 @@ async def get_pending_task_count(
     """
     count = await TaskService.get_pending_task_count(UUID(current_user.userId))
 
-    return SuccessResponse(
-        data=count,
-        message=f"{count} pending tasks"
-    )
+    return SuccessResponse(data=count, message=f"{count} pending tasks")
 
 
 @router.get(
     "/farms/{farm_id}",
     response_model=PaginatedResponse[FarmTaskWithDetails],
-    summary="List tasks for a farm"
+    summary="List tasks for a farm",
 )
 async def list_farm_tasks(
     farm_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(50, ge=1, le=100, description="Items per page"),
-    status_filter: Optional[TaskStatus] = Query(None, alias="status", description="Filter by status"),
-    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    status_filter: Optional[TaskStatus] = Query(
+        None, alias="status", description="Filter by status"
+    ),
+    farmingYear: Optional[int] = Query(
+        None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get paginated list of tasks for a farm.
@@ -109,7 +114,7 @@ async def list_farm_tasks(
         status=status_filter,
         page=page,
         per_page=perPage,
-        farming_year=farmingYear
+        farming_year=farmingYear,
     )
 
     return response
@@ -118,15 +123,19 @@ async def list_farm_tasks(
 @router.get(
     "/blocks/{block_id}",
     response_model=PaginatedResponse[FarmTaskWithDetails],
-    summary="List tasks for a block"
+    summary="List tasks for a block",
 )
 async def list_block_tasks(
     block_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(50, ge=1, le=100, description="Items per page"),
-    status_filter: Optional[TaskStatus] = Query(None, alias="status", description="Filter by status"),
-    sort_by: Optional[str] = Query("scheduledDate", description="Sort field: scheduledDate, priority, createdAt"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    status_filter: Optional[TaskStatus] = Query(
+        None, alias="status", description="Filter by status"
+    ),
+    sort_by: Optional[str] = Query(
+        "scheduledDate", description="Sort field: scheduledDate, priority, createdAt"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get paginated list of tasks for a specific block.
@@ -144,7 +153,7 @@ async def list_block_tasks(
         status=status_filter,
         page=page,
         per_page=perPage,
-        sort_by=sort_by
+        sort_by=sort_by,
     )
 
     return response
@@ -153,11 +162,10 @@ async def list_block_tasks(
 @router.get(
     "/{task_id}",
     response_model=SuccessResponse[FarmTaskWithDetails],
-    summary="Get task details"
+    summary="Get task details",
 )
 async def get_task(
-    task_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    task_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Get detailed information about a specific task.
@@ -166,10 +174,7 @@ async def get_task(
     """
     try:
         task = await TaskService.get_task(task_id)
-        return SuccessResponse(
-            data=task,
-            message="Task retrieved successfully"
-        )
+        return SuccessResponse(data=task, message="Task retrieved successfully")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -178,11 +183,11 @@ async def get_task(
     "",
     response_model=SuccessResponse[FarmTask],
     status_code=status.HTTP_201_CREATED,
-    summary="Create a custom task"
+    summary="Create a custom task",
 )
 async def create_custom_task(
     task_data: FarmTaskCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Create a custom task (manager only).
@@ -203,25 +208,20 @@ async def create_custom_task(
         task = await TaskService.create_custom_task(
             task_data=task_data,
             created_by=UUID(current_user.userId),
-            created_by_email=current_user.email
+            created_by_email=current_user.email,
         )
-        return SuccessResponse(
-            data=task,
-            message="Custom task created successfully"
-        )
+        return SuccessResponse(data=task, message="Custom task created successfully")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.put(
-    "/{task_id}",
-    response_model=SuccessResponse[FarmTask],
-    summary="Update a task"
+    "/{task_id}", response_model=SuccessResponse[FarmTask], summary="Update a task"
 )
 async def update_task(
     task_id: UUID,
     update_data: FarmTaskUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Update task details (manager only).
@@ -239,12 +239,9 @@ async def update_task(
             task_id=task_id,
             update_data=update_data,
             updated_by=UUID(current_user.userId),
-            updated_by_email=current_user.email
+            updated_by_email=current_user.email,
         )
-        return SuccessResponse(
-            data=task,
-            message="Task updated successfully"
-        )
+        return SuccessResponse(data=task, message="Task updated successfully")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -252,12 +249,12 @@ async def update_task(
 @router.post(
     "/{task_id}/complete",
     response_model=SuccessResponse[FarmTask],
-    summary="Complete a task"
+    summary="Complete a task",
 )
 async def complete_task(
     task_id: UUID,
     completion_data: TaskCompletionData,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Mark a task as completed (for non-harvest tasks).
@@ -281,12 +278,9 @@ async def complete_task(
             task_id=task_id,
             user_id=UUID(current_user.userId),
             user_email=current_user.email,
-            completion_data=completion_data
+            completion_data=completion_data,
         )
-        return SuccessResponse(
-            data=task,
-            message="Task completed successfully"
-        )
+        return SuccessResponse(data=task, message="Task completed successfully")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -294,12 +288,12 @@ async def complete_task(
 @router.post(
     "/{task_id}/harvest",
     response_model=SuccessResponse[FarmTask],
-    summary="Add harvest entry to daily harvest task"
+    summary="Add harvest entry to daily harvest task",
 )
 async def add_harvest_entry(
     task_id: UUID,
     entry_data: HarvestEntryCreate,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Add a harvest entry to a daily_harvest task.
@@ -324,11 +318,11 @@ async def add_harvest_entry(
             task_id=task_id,
             user_id=UUID(current_user.userId),
             user_email=current_user.email,
-            entry_data=entry_data
+            entry_data=entry_data,
         )
         return SuccessResponse(
             data=task,
-            message=f"Harvest entry added: {entry_data.quantity}kg grade {entry_data.grade}"
+            message=f"Harvest entry added: {entry_data.quantity}kg grade {entry_data.grade}",
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -337,11 +331,11 @@ async def add_harvest_entry(
 @router.post(
     "/{task_id}/end-harvest",
     response_model=SuccessResponse[FarmTask],
-    summary="Manually end daily harvest task"
+    summary="Manually end daily harvest task",
 )
 async def end_daily_harvest(
     task_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Manually end a daily harvest task early (manager only).
@@ -362,11 +356,10 @@ async def end_daily_harvest(
         task = await TaskService.end_daily_harvest(
             task_id=task_id,
             user_id=UUID(current_user.userId),
-            user_email=current_user.email
+            user_email=current_user.email,
         )
         return SuccessResponse(
-            data=task,
-            message="Daily harvest ended and aggregated successfully"
+            data=task, message="Daily harvest ended and aggregated successfully"
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -375,11 +368,11 @@ async def end_daily_harvest(
 @router.post(
     "/{task_id}/cancel",
     response_model=SuccessResponse[FarmTask],
-    summary="Cancel a task"
+    summary="Cancel a task",
 )
 async def cancel_task(
     task_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Cancel a task (manager only).
@@ -396,24 +389,19 @@ async def cancel_task(
         task = await TaskService.cancel_task(
             task_id=task_id,
             user_id=UUID(current_user.userId),
-            user_email=current_user.email
+            user_email=current_user.email,
         )
-        return SuccessResponse(
-            data=task,
-            message="Task cancelled successfully"
-        )
+        return SuccessResponse(data=task, message="Task cancelled successfully")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete(
-    "/{task_id}",
-    response_model=SuccessResponse[bool],
-    summary="Delete a task"
+    "/{task_id}", response_model=SuccessResponse[bool], summary="Delete a task"
 )
 async def delete_task(
     task_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Delete a task permanently (admin only).
@@ -428,12 +416,9 @@ async def delete_task(
         success = await TaskService.delete_task(
             task_id=task_id,
             user_id=UUID(current_user.userId),
-            user_email=current_user.email
+            user_email=current_user.email,
         )
-        return SuccessResponse(
-            data=success,
-            message="Task deleted successfully"
-        )
+        return SuccessResponse(data=success, message="Task deleted successfully")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -442,14 +427,15 @@ async def delete_task(
 # ADMIN/MONITORING ENDPOINTS
 # ============================================================
 
+
 @router.post(
     "/admin/aggregate-harvest/{task_id}",
     response_model=SuccessResponse[bool],
-    summary="[Admin] Manually aggregate a daily harvest task"
+    summary="[Admin] Manually aggregate a daily harvest task",
 )
 async def admin_aggregate_harvest(
     task_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Manually trigger harvest aggregation for a specific task (admin/testing).
@@ -469,19 +455,16 @@ async def admin_aggregate_harvest(
     if not success:
         raise HTTPException(status_code=400, detail="Failed to aggregate harvest task")
 
-    return SuccessResponse(
-        data=success,
-        message="Harvest task aggregated successfully"
-    )
+    return SuccessResponse(data=success, message="Harvest task aggregated successfully")
 
 
 @router.post(
     "/admin/run-daily-aggregation",
     response_model=SuccessResponse[dict],
-    summary="[Admin] Run daily harvest aggregation for all tasks"
+    summary="[Admin] Run daily harvest aggregation for all tasks",
 )
 async def admin_run_daily_aggregation(
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Run daily harvest aggregation for all in_progress tasks (cron job endpoint).
@@ -510,17 +493,17 @@ async def admin_run_daily_aggregation(
 
     return SuccessResponse(
         data=stats,
-        message=f"Daily aggregation completed: {stats['tasks_aggregated']} tasks processed, {stats['new_tasks_generated']} new tasks generated"
+        message=f"Daily aggregation completed: {stats['tasks_aggregated']} tasks processed, {stats['new_tasks_generated']} new tasks generated",
     )
 
 
 @router.get(
     "/admin/pending-aggregations",
     response_model=SuccessResponse[List[FarmTask]],
-    summary="[Admin] Get tasks pending aggregation"
+    summary="[Admin] Get tasks pending aggregation",
 )
 async def admin_get_pending_aggregations(
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Get list of daily harvest tasks that need aggregation (admin/monitoring).
@@ -539,6 +522,5 @@ async def admin_get_pending_aggregations(
     tasks = await HarvestAggregatorService.get_pending_aggregations()
 
     return SuccessResponse(
-        data=tasks,
-        message=f"Found {len(tasks)} tasks pending aggregation"
+        data=tasks, message=f"Found {len(tasks)} tasks pending aggregation"
     )

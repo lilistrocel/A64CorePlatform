@@ -48,10 +48,7 @@ class FacilityService:
     # ---------------------------------------------------------------------------
 
     @staticmethod
-    async def create_facility(
-        data: FacilityCreate,
-        current_user
-    ) -> Facility:
+    async def create_facility(data: FacilityCreate, current_user) -> Facility:
         db = mushroom_db.get_database()
 
         facility = Facility(
@@ -70,7 +67,7 @@ class FacilityService:
             logger.error(f"[FacilityService] insert_one failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create facility"
+                detail="Failed to create facility",
             )
 
         logger.info(
@@ -90,7 +87,7 @@ class FacilityService:
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Facility '{facility_id}' not found"
+                detail=f"Facility '{facility_id}' not found",
             )
         return _doc_to_model(doc)
 
@@ -99,17 +96,13 @@ class FacilityService:
     # ---------------------------------------------------------------------------
 
     @staticmethod
-    async def list_facilities(skip: int = 0, limit: int = 20) -> Tuple[List[Facility], int]:
+    async def list_facilities(
+        skip: int = 0, limit: int = 20
+    ) -> Tuple[List[Facility], int]:
         db = mushroom_db.get_database()
 
         total = await db.mushroom_facilities.count_documents({})
-        cursor = (
-            db.mushroom_facilities
-            .find({})
-            .sort("name", 1)
-            .skip(skip)
-            .limit(limit)
-        )
+        cursor = db.mushroom_facilities.find({}).sort("name", 1).skip(skip).limit(limit)
 
         facilities: List[Facility] = []
         async for doc in cursor:
@@ -122,28 +115,26 @@ class FacilityService:
     # ---------------------------------------------------------------------------
 
     @staticmethod
-    async def update_facility(
-        facility_id: str,
-        data: FacilityUpdate
-    ) -> Facility:
+    async def update_facility(facility_id: str, data: FacilityUpdate) -> Facility:
         await FacilityService.get_facility(facility_id)
 
         update_fields = data.model_dump(exclude_none=True)
         if not update_fields:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No fields provided for update"
+                detail="No fields provided for update",
             )
 
         update_fields["updatedAt"] = datetime.utcnow()
 
         db = mushroom_db.get_database()
         await db.mushroom_facilities.update_one(
-            {_MONGO_ID_KEY: facility_id},
-            {"$set": update_fields}
+            {_MONGO_ID_KEY: facility_id}, {"$set": update_fields}
         )
 
-        logger.info(f"[FacilityService] Updated facility {facility_id}: {list(update_fields.keys())}")
+        logger.info(
+            f"[FacilityService] Updated facility {facility_id}: {list(update_fields.keys())}"
+        )
         return await FacilityService.get_facility(facility_id)
 
     # ---------------------------------------------------------------------------

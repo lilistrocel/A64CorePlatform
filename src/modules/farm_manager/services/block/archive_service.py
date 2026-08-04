@@ -11,8 +11,9 @@ from fastapi import HTTPException
 import logging
 
 from ...models.block_archive import (
-    BlockArchive, BlockArchiveAnalytics,
-    CropPerformanceComparison
+    BlockArchive,
+    BlockArchiveAnalytics,
+    CropPerformanceComparison,
 )
 from .archive_repository import ArchiveRepository
 
@@ -38,7 +39,7 @@ class ArchiveService:
         page: int = 1,
         per_page: int = 20,
         farming_year: Optional[int] = None,
-        farming_year_filter: str = "planted"
+        farming_year_filter: str = "planted",
     ) -> Tuple[List[BlockArchive], int, int]:
         """
         List all archived cycles for a block
@@ -57,7 +58,7 @@ class ArchiveService:
             skip,
             per_page,
             farming_year=farming_year,
-            farming_year_filter=farming_year_filter
+            farming_year_filter=farming_year_filter,
         )
 
         total_pages = (total + per_page - 1) // per_page
@@ -73,7 +74,7 @@ class ArchiveService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         farming_year: Optional[int] = None,
-        farming_year_filter: str = "planted"
+        farming_year_filter: str = "planted",
     ) -> Tuple[List[BlockArchive], int, int]:
         """
         List all archives for a farm with filters
@@ -98,7 +99,7 @@ class ArchiveService:
             start_date,
             end_date,
             farming_year=farming_year,
-            farming_year_filter=farming_year_filter
+            farming_year_filter=farming_year_filter,
         )
 
         total_pages = (total + per_page - 1) // per_page
@@ -107,9 +108,7 @@ class ArchiveService:
 
     @staticmethod
     async def list_archives_by_crop(
-        crop_id: UUID,
-        page: int = 1,
-        per_page: int = 20
+        crop_id: UUID, page: int = 1, per_page: int = 20
     ) -> Tuple[List[BlockArchive], int, int]:
         """List all archives for a specific crop"""
         skip = (page - 1) * per_page
@@ -124,7 +123,7 @@ class ArchiveService:
     async def get_performance_analytics(
         farm_id: Optional[UUID] = None,
         block_id: Optional[UUID] = None,
-        crop_id: Optional[UUID] = None
+        crop_id: Optional[UUID] = None,
     ) -> BlockArchiveAnalytics:
         """
         Get performance analytics for archived cycles
@@ -135,11 +134,13 @@ class ArchiveService:
         - crop_id: Analytics for all cycles of a specific crop
         - No filters: System-wide analytics
         """
-        return await ArchiveRepository.get_performance_analytics(farm_id, block_id, crop_id)
+        return await ArchiveRepository.get_performance_analytics(
+            farm_id, block_id, crop_id
+        )
 
     @staticmethod
     async def compare_crop_performance(
-        farm_id: Optional[UUID] = None
+        farm_id: Optional[UUID] = None,
     ) -> List[CropPerformanceComparison]:
         """
         Compare performance across different crops
@@ -149,26 +150,17 @@ class ArchiveService:
         return await ArchiveRepository.get_crop_performance_comparison(farm_id)
 
     @staticmethod
-    async def get_top_performing_blocks(
-        farm_id: UUID,
-        limit: int = 10
-    ) -> List[dict]:
+    async def get_top_performing_blocks(farm_id: UUID, limit: int = 10) -> List[dict]:
         """Get top performing blocks for a farm by average yield efficiency"""
         return await ArchiveRepository.get_top_performing_blocks(farm_id, limit)
 
     @staticmethod
-    async def get_block_cycle_history(
-        block_id: UUID
-    ) -> dict:
+    async def get_block_cycle_history(block_id: UUID) -> dict:
         """Get complete cycle history with statistics for a block"""
         archives, _ = await ArchiveRepository.get_by_block(block_id, 0, 1000)
 
         if not archives:
-            return {
-                "blockId": str(block_id),
-                "totalCycles": 0,
-                "cycles": []
-            }
+            return {"blockId": str(block_id), "totalCycles": 0, "cycles": []}
 
         # Calculate statistics
         total_cycles = len(archives)
@@ -188,7 +180,7 @@ class ArchiveService:
                 crops_grown[crop_name] = {
                     "count": 0,
                     "totalYield": 0.0,
-                    "avgEfficiency": 0.0
+                    "avgEfficiency": 0.0,
                 }
 
             crops_grown[crop_name]["count"] += 1
@@ -211,14 +203,14 @@ class ArchiveService:
                     "archiveId": str(best_cycle.archiveId),
                     "cropName": best_cycle.targetCropName,
                     "yieldEfficiency": best_cycle.yieldEfficiencyPercent,
-                    "plantedDate": best_cycle.plantedDate.isoformat()
+                    "plantedDate": best_cycle.plantedDate.isoformat(),
                 },
                 "worstCycle": {
                     "archiveId": str(worst_cycle.archiveId),
                     "cropName": worst_cycle.targetCropName,
                     "yieldEfficiency": worst_cycle.yieldEfficiencyPercent,
-                    "plantedDate": worst_cycle.plantedDate.isoformat()
-                }
+                    "plantedDate": worst_cycle.plantedDate.isoformat(),
+                },
             },
             "cropsGrown": crops_grown,
             "recentCycles": [
@@ -228,10 +220,10 @@ class ArchiveService:
                     "plantedDate": a.plantedDate.isoformat(),
                     "cycleDuration": a.cycleDurationDays,
                     "yieldEfficiency": a.yieldEfficiencyPercent,
-                    "actualYieldKg": a.actualYieldKg
+                    "actualYieldKg": a.actualYieldKg,
                 }
                 for a in archives[:10]  # Most recent 10
-            ]
+            ],
         }
 
     @staticmethod
@@ -246,7 +238,9 @@ class ArchiveService:
         if not success:
             raise HTTPException(404, f"Archive not found: {archive_id}")
 
-        logger.warning(f"[Archive Service] DELETED archive {archive_id} - historical data removed")
+        logger.warning(
+            f"[Archive Service] DELETED archive {archive_id} - historical data removed"
+        )
         return success
 
     @staticmethod
@@ -256,7 +250,9 @@ class ArchiveService:
         analytics = await ArchiveRepository.get_performance_analytics(farm_id=farm_id)
 
         # Get crop comparison
-        crop_comparison = await ArchiveRepository.get_crop_performance_comparison(farm_id)
+        crop_comparison = await ArchiveRepository.get_crop_performance_comparison(
+            farm_id
+        )
 
         # Get top performing blocks
         top_blocks = await ArchiveRepository.get_top_performing_blocks(farm_id, 5)
@@ -272,12 +268,14 @@ class ArchiveService:
                 monthly_performance[month_key] = {
                     "cycles": 0,
                     "totalYield": 0.0,
-                    "avgEfficiency": 0.0
+                    "avgEfficiency": 0.0,
                 }
 
             monthly_performance[month_key]["cycles"] += 1
             monthly_performance[month_key]["totalYield"] += archive.actualYieldKg
-            monthly_performance[month_key]["avgEfficiency"] += archive.yieldEfficiencyPercent
+            monthly_performance[month_key][
+                "avgEfficiency"
+            ] += archive.yieldEfficiencyPercent
 
         # Calculate monthly averages
         for month in monthly_performance:
@@ -291,7 +289,7 @@ class ArchiveService:
                 "totalCycles": analytics.totalCycles,
                 "averageYieldEfficiency": analytics.averageYieldEfficiency,
                 "averageCycleDuration": analytics.averageCycleDuration,
-                "totalYieldKg": analytics.totalYieldKg
+                "totalYieldKg": analytics.totalYieldKg,
             },
             "cropPerformance": [
                 {
@@ -299,10 +297,10 @@ class ArchiveService:
                     "totalCycles": crop.totalCycles,
                     "avgYieldEfficiency": crop.averageYieldEfficiency,
                     "avgYieldKg": crop.averageYieldKg,
-                    "totalYieldKg": crop.totalYieldKg
+                    "totalYieldKg": crop.totalYieldKg,
                 }
                 for crop in crop_comparison
             ],
             "topPerformingBlocks": top_blocks,
-            "monthlyTrends": monthly_performance
+            "monthlyTrends": monthly_performance,
         }

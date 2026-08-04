@@ -67,19 +67,16 @@ _SUPER_ADMIN_ONLY: FrozenSet[str] = frozenset({"super_admin"})
 PERMISSION_ROLES: Dict[str, FrozenSet[str]] = {
     # Read. Staff only — guest is deliberately excluded.
     "genetics.view": _BENCH,
-
     # Bench work — recording what happened at the bench.
-    "genetics.create": _BENCH,          # register founding material
-    "genetics.edit": _BENCH,            # update / split an accession
-    "genetics.propagate": _BENCH,       # clone or cross
-    "genetics.observe": _BENCH,         # record an observation
-    "genetics.media.manage": _BENCH,    # recipes and prepared batches
-
+    "genetics.create": _BENCH,  # register founding material
+    "genetics.edit": _BENCH,  # update / split an accession
+    "genetics.propagate": _BENCH,  # clone or cross
+    "genetics.observe": _BENCH,  # record an observation
+    "genetics.media.manage": _BENCH,  # recipes and prepared batches
     # Curation — defining the library rather than recording activity.
     "genetics.line.manage": _CURATION,  # create / edit a genetic line
-    "genetics.promote": _CURATION,      # promote a trait into a new line
-    "genetics.delete": _CURATION,       # deactivate a line / zero-dependent purge
-
+    "genetics.promote": _CURATION,  # promote a trait into a new line
+    "genetics.delete": _CURATION,  # deactivate a line / zero-dependent purge
     # T-809 — one tier above curation. `genetics.delete` alone is only ever
     # enough to deactivate a line or hard-delete one with zero dependents
     # (LineService.purge_line's own gate refuses otherwise) — it was never
@@ -88,7 +85,7 @@ PERMISSION_ROLES: Dict[str, FrozenSet[str]] = {
     # sit at the strictest tier in the namespace rather than piggybacking on
     # `genetics.delete`.
     "genetics.delete.cascade": _SUPER_ADMIN_ONLY,  # purge?cascade=true
-    "genetics.maintenance": _SUPER_ADMIN_ONLY,     # orphan sweep (GET is genetics.delete, DELETE is this)
+    "genetics.maintenance": _SUPER_ADMIN_ONLY,  # orphan sweep (GET is genetics.delete, DELETE is this)
 }
 
 
@@ -140,7 +137,7 @@ def require_permission(permission: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission denied: {permission} requires one of "
-                       f"{sorted(allowed)}",
+                f"{sorted(allowed)}",
             )
         return current_user
 
@@ -179,5 +176,5 @@ def require_super_admin_for(permission: str, current_user: CurrentUser) -> None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Permission denied: {permission} requires one of "
-                   f"{sorted(allowed)}",
+            f"{sorted(allowed)}",
         )

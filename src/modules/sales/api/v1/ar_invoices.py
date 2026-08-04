@@ -94,7 +94,7 @@ def _extract_auth_token(request: Request) -> Optional[str]:
     """
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 
@@ -143,8 +143,12 @@ async def list_ar_invoices_endpoint(
     organization_id: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
     customer_id: Optional[str] = Query(None),
-    date_from: Optional[date] = Query(None, description="Inclusive lower bound on doc_date"),
-    date_to: Optional[date] = Query(None, description="Inclusive upper bound on doc_date"),
+    date_from: Optional[date] = Query(
+        None, description="Inclusive lower bound on doc_date"
+    ),
+    date_to: Optional[date] = Query(
+        None, description="Inclusive upper bound on doc_date"
+    ),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=200),
     current_user: CurrentUser = Depends(get_current_active_user),
@@ -400,7 +404,9 @@ async def create_ar_invoice_from_delivery_endpoint(
             detail=err_msg,
         )
 
-    return SuccessResponse(data=ari, message="AR Invoice created from Delivery successfully")
+    return SuccessResponse(
+        data=ari, message="AR Invoice created from Delivery successfully"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -498,7 +504,9 @@ async def create_ar_invoice_from_so_endpoint(
             detail=err_msg,
         )
 
-    return SuccessResponse(data=ari, message="AR Invoice created from Sales Order successfully")
+    return SuccessResponse(
+        data=ari, message="AR Invoice created from Sales Order successfully"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,9 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-from src.services.deployment_settings_service import get_value as get_deployment_setting_value
+from src.services.deployment_settings_service import (
+    get_value as get_deployment_setting_value,
+)
 from src.services.user_service import UserService
 
 from ...middleware.auth import CurrentUser, require_view
@@ -69,7 +71,9 @@ _ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 _LINE1_FONT_NAME = "Helvetica-Bold"  # fallback until/unless the brand font registers
 try:
     pdfmetrics.registerFont(
-        TTFont("SpaceMono-Bold", str(_ASSETS_DIR / "fonts" / "ttf" / "SpaceMono-Bold.ttf"))
+        TTFont(
+            "SpaceMono-Bold", str(_ASSETS_DIR / "fonts" / "ttf" / "SpaceMono-Bold.ttf")
+        )
     )
     _LINE1_FONT_NAME = "SpaceMono-Bold"
 except Exception:
@@ -91,7 +95,10 @@ except Exception:
 _SUPPORTING_FONT_NAME = "Helvetica"
 try:
     pdfmetrics.registerFont(
-        TTFont("HankenGrotesk", str(_ASSETS_DIR / "fonts" / "ttf" / "HankenGrotesk-Variable.ttf"))
+        TTFont(
+            "HankenGrotesk",
+            str(_ASSETS_DIR / "fonts" / "ttf" / "HankenGrotesk-Variable.ttf"),
+        )
     )
     _SUPPORTING_FONT_NAME = "HankenGrotesk"
 except Exception:
@@ -122,9 +129,15 @@ if _BRAND_MARK_PATH.exists():
         _mark_w_px, _mark_h_px = _brand_mark_reader.getSize()
         _brand_mark_aspect = _mark_w_px / _mark_h_px
     except Exception:
-        logger.warning("Label PDF: could not load brand mark asset %s — mark will not be drawn.", _BRAND_MARK_PATH)
+        logger.warning(
+            "Label PDF: could not load brand mark asset %s — mark will not be drawn.",
+            _BRAND_MARK_PATH,
+        )
 else:
-    logger.warning("Label PDF: brand mark asset missing at %s — mark will not be drawn.", _BRAND_MARK_PATH)
+    logger.warning(
+        "Label PDF: brand mark asset missing at %s — mark will not be drawn.",
+        _BRAND_MARK_PATH,
+    )
 
 # Vertical glyph-box metrics of the ACTUALLY REGISTERED fonts — read via
 # reportlab's own `getAscentDescent`, not assumed. This matters because the
@@ -141,8 +154,12 @@ else:
 # top-baseline offset from these values (rather than hand-tuning a second
 # fixed constant for the new fonts) means the layout stays correct even if
 # the fallback path ever triggers and swaps back to Helvetica.
-_LINE1_ASCENT_FRAC, _LINE1_DESCENT_FRAC = pdfmetrics.getAscentDescent(_LINE1_FONT_NAME, 1.0)
-_SUPPORTING_ASCENT_FRAC, _SUPPORTING_DESCENT_FRAC = pdfmetrics.getAscentDescent(_SUPPORTING_FONT_NAME, 1.0)
+_LINE1_ASCENT_FRAC, _LINE1_DESCENT_FRAC = pdfmetrics.getAscentDescent(
+    _LINE1_FONT_NAME, 1.0
+)
+_SUPPORTING_ASCENT_FRAC, _SUPPORTING_DESCENT_FRAC = pdfmetrics.getAscentDescent(
+    _SUPPORTING_FONT_NAME, 1.0
+)
 
 
 # --- Printer geometry: printable area, NOT tape stock size --------------
@@ -365,7 +382,9 @@ def compute_qr_geometry(payload: str, target_size_mm: float) -> QRGeometry:
     )
 
 
-def build_label_payload(public_base_url: str, token: str, vessel_no: int, uppercase: bool) -> str:
+def build_label_payload(
+    public_base_url: str, token: str, vessel_no: int, uppercase: bool
+) -> str:
     """Build the QR payload URL for one vessel.
 
     29x90 and 62x20 use the URL as written (byte mode) — both have enough
@@ -548,8 +567,12 @@ def _draw_qr(c: canvas.Canvas, geometry: QRGeometry, x_mm: float, y_mm: float) -
 # registration ever fails and both roles land on the base-14 fonts (whose
 # combined worst case computes to ~0.98 + pad).
 _LEADING_SAFETY_PAD_EM = 0.05
-_SIZE1_LEADING_RATIO = abs(_LINE1_DESCENT_FRAC) + _SUPPORTING_ASCENT_FRAC * 0.875 + _LEADING_SAFETY_PAD_EM
-_TOP_MARGIN_FRACTION = 0.05  # proportional top inset — see "Round 3" above for the derivation
+_SIZE1_LEADING_RATIO = (
+    abs(_LINE1_DESCENT_FRAC) + _SUPPORTING_ASCENT_FRAC * 0.875 + _LEADING_SAFETY_PAD_EM
+)
+_TOP_MARGIN_FRACTION = (
+    0.05  # proportional top inset — see "Round 3" above for the derivation
+)
 # Bottom breathing room. Was a flat 0.5mm while the top inset was a FRACTION of
 # height — so the two were asymmetric by construction, and visibly so: on a 20mm
 # tape the top reserved 1.0mm against the bottom's 0.5mm, and the gap widened as
@@ -565,8 +588,12 @@ _BOTTOM_MARGIN_FRACTION = 0.05
 _BOTTOM_MARGIN_FLOOR_MM = 0.5
 _TOP_ASCENT_SAFETY_MM = 0.15  # small pad above line 1's own measured ascent (see _draw_label_page's y-start)
 _SIZE1_FLOOR_PT = 6.0  # never smaller than the old worst-case tier, regardless of tape
-_SIZE1_ABSOLUTE_CEILING_PT = 11.0  # never "absurdly large" just because a tape happens to be tall (29x90)
-_SIZE1_WIDTH_SAFETY_MARGIN_PT = 1.5  # absorbs the round(size1, 1) below so it can never tip a fitting line over
+_SIZE1_ABSOLUTE_CEILING_PT = (
+    11.0  # never "absurdly large" just because a tape happens to be tall (29x90)
+)
+_SIZE1_WIDTH_SAFETY_MARGIN_PT = (
+    1.5  # absorbs the round(size1, 1) below so it can never tip a fitting line over
+)
 
 # The realistic worst-case vessel line used to bound how large size1 may
 # grow horizontally (spec §6.1's own example). Font size must be identical
@@ -626,7 +653,9 @@ def _derive_text_sizes(
     size1_raw_pt = size1_mm * mm  # mm -> pt (reportlab's `mm` unit is pt-per-mm)
 
     reference_unit_width_pt = stringWidth(_SIZE1_REFERENCE_LINE, _LINE1_FONT_NAME, 1.0)
-    width_ceiling_pt = (available_pt - _SIZE1_WIDTH_SAFETY_MARGIN_PT) / reference_unit_width_pt
+    width_ceiling_pt = (
+        available_pt - _SIZE1_WIDTH_SAFETY_MARGIN_PT
+    ) / reference_unit_width_pt
     size1_ceiling_pt = min(width_ceiling_pt, _SIZE1_ABSOLUTE_CEILING_PT)
 
     size1 = max(_SIZE1_FLOOR_PT, min(size1_raw_pt, size1_ceiling_pt))
@@ -635,7 +664,9 @@ def _derive_text_sizes(
     size3 = round(size1 * 0.8125, 1)
     size4 = round(size1 * 0.75, 1)
 
-    line_gap_mm = (size1 / mm) * _SIZE1_LEADING_RATIO  # pt -> mm, then apply leading ratio
+    line_gap_mm = (
+        size1 / mm
+    ) * _SIZE1_LEADING_RATIO  # pt -> mm, then apply leading ratio
     return size1, size2, size3, size4, line_gap_mm
 
 
@@ -748,10 +779,16 @@ def _maybe_draw_brand_mark(
         return
 
     # --- Placement 1: below the last line (round 3, unchanged) ------------
-    _, last_descent_pt = pdfmetrics.getAscentDescent(_SUPPORTING_FONT_NAME, last_line_font_size)
-    last_line_bottom_mm = (last_line_baseline_pt + last_descent_pt) / mm  # descent_pt is negative
+    _, last_descent_pt = pdfmetrics.getAscentDescent(
+        _SUPPORTING_FONT_NAME, last_line_font_size
+    )
+    last_line_bottom_mm = (
+        last_line_baseline_pt + last_descent_pt
+    ) / mm  # descent_pt is negative
 
-    below_available_mm = last_line_bottom_mm - _BRAND_MARK_GAP_MM - _BRAND_MARK_EDGE_GAP_MM
+    below_available_mm = (
+        last_line_bottom_mm - _BRAND_MARK_GAP_MM - _BRAND_MARK_EDGE_GAP_MM
+    )
     mark_h_mm = min(below_available_mm, _BRAND_MARK_MAX_SIZE_MM)
     if mark_h_mm >= _BRAND_MARK_MIN_SIZE_MM:
         mark_w_mm = mark_h_mm * _brand_mark_aspect
@@ -776,10 +813,16 @@ def _maybe_draw_brand_mark(
             return
 
     # --- Placement 2 (round 4): horizontal slack beside lines 2/3 ---------
-    _first_ascent_pt, first_descent_pt = pdfmetrics.getAscentDescent(_LINE1_FONT_NAME, first_line_font_size)
-    row1_bottom_mm = (first_line_baseline_pt + first_descent_pt) / mm  # descent_pt is negative
+    _first_ascent_pt, first_descent_pt = pdfmetrics.getAscentDescent(
+        _LINE1_FONT_NAME, first_line_font_size
+    )
+    row1_bottom_mm = (
+        first_line_baseline_pt + first_descent_pt
+    ) / mm  # descent_pt is negative
 
-    last_ascent_pt, _ = pdfmetrics.getAscentDescent(_SUPPORTING_FONT_NAME, last_line_font_size)
+    last_ascent_pt, _ = pdfmetrics.getAscentDescent(
+        _SUPPORTING_FONT_NAME, last_line_font_size
+    )
     row_last_top_mm = (last_line_baseline_pt + last_ascent_pt) / mm
 
     band_bottom_mm = row_last_top_mm + _BRAND_MARK_GAP_MM
@@ -790,7 +833,9 @@ def _maybe_draw_brand_mark(
         return
 
     mark_w_mm = mark_h_mm * _brand_mark_aspect
-    avail_w_mm = right_edge_pt / mm - inner_lines_right_edge_pt / mm - _BRAND_MARK_GAP_MM
+    avail_w_mm = (
+        right_edge_pt / mm - inner_lines_right_edge_pt / mm - _BRAND_MARK_GAP_MM
+    )
     if mark_w_mm > avail_w_mm:
         mark_w_mm = avail_w_mm
         mark_h_mm = mark_w_mm / _brand_mark_aspect
@@ -863,7 +908,9 @@ def _draw_label_page(
     # and the constants above it for the full rationale) — not read off a
     # coarse height_mm tier, and not divided by a hardcoded 4 regardless of
     # how many lines have content.
-    size1, size2, size3, size4, line_gap_mm = _derive_text_sizes(height_mm, available_pt, line_count)
+    size1, size2, size3, size4, line_gap_mm = _derive_text_sizes(
+        height_mm, available_pt, line_count
+    )
 
     # Top padding (round 3, real hardware feedback: the accession code sat
     # too close to the top/feed edge). `top_margin_mm` here MUST match what
@@ -912,7 +959,10 @@ def _draw_label_page(
     line1 = base_line
     if source_vessel_no is not None:
         candidate = f"{base_line} <- #{source_vessel_no}"
-        if len(candidate) <= 40 and stringWidth(candidate, _LINE1_FONT_NAME, size1) <= available_pt:
+        if (
+            len(candidate) <= 40
+            and stringWidth(candidate, _LINE1_FONT_NAME, size1) <= available_pt
+        ):
             line1 = candidate
 
     # `first_line_baseline_pt` is captured before the first draw/decrement so
@@ -933,14 +983,18 @@ def _draw_label_page(
     # ACTUAL rendered width of what was just drawn (round 4 brand-mark
     # placement needs the real end x, not an estimate) — `stringWidth`
     # against the same font/size/text that was actually shown on the page.
-    inner_lines_right_edge_pt = text_x + stringWidth(line2_drawn, _SUPPORTING_FONT_NAME, size2)
+    inner_lines_right_edge_pt = text_x + stringWidth(
+        line2_drawn, _SUPPORTING_FONT_NAME, size2
+    )
 
     if has_batch_line:
         c.setFont(_SUPPORTING_FONT_NAME, size3)
         batch_code_drawn = batch_code[:40]
         c.drawString(text_x, y, batch_code_drawn)
         y -= line_gap_mm * mm
-        line3_right_edge_pt = text_x + stringWidth(batch_code_drawn, _SUPPORTING_FONT_NAME, size3)
+        line3_right_edge_pt = text_x + stringWidth(
+            batch_code_drawn, _SUPPORTING_FONT_NAME, size3
+        )
         inner_lines_right_edge_pt = max(inner_lines_right_edge_pt, line3_right_edge_pt)
 
     c.setFont(_SUPPORTING_FONT_NAME, size4)
@@ -972,9 +1026,21 @@ def _draw_label_page(
 )
 async def get_labels(
     accession_id: str,
-    from_: Optional[int] = Query(None, alias="from", ge=1, description="First vessel ordinal; defaults to the first never-printed one, or 1 if everything is already labelled (reprint)"),
-    to: Optional[int] = Query(None, ge=1, description="Last vessel ordinal; defaults to quantity, or to labelledVesselCount if everything is already labelled (reprint)"),
-    size: str = Query("29x90", description="Tape size: 29x90, 17x87 (fixed die-cut), or 62xN (continuous, N = length in mm, 12-100, e.g. 62x15, 62x20)"),
+    from_: Optional[int] = Query(
+        None,
+        alias="from",
+        ge=1,
+        description="First vessel ordinal; defaults to the first never-printed one, or 1 if everything is already labelled (reprint)",
+    ),
+    to: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Last vessel ordinal; defaults to quantity, or to labelledVesselCount if everything is already labelled (reprint)",
+    ),
+    size: str = Query(
+        "29x90",
+        description="Tape size: 29x90, 17x87 (fixed die-cut), or 62xN (continuous, N = length in mm, 12-100, e.g. 62x15, 62x20)",
+    ),
     current_user: CurrentUser = Depends(require_view),
 ) -> Response:
     # Resolves AND validates `size` in one place — 400 on anything invalid
@@ -1022,7 +1088,9 @@ async def get_labels(
         line = await LineService.get_line(accession.lineId)
         common_name = line.commonName
     except Exception:
-        logger.warning("Label PDF: could not resolve line %s for common name", accession.lineId)
+        logger.warning(
+            "Label PDF: could not resolve line %s for common name", accession.lineId
+        )
 
     batch_code = ""
     if accession.mediumBatchId:
@@ -1030,7 +1098,9 @@ async def get_labels(
             codes = await MediumService.get_batch_codes([accession.mediumBatchId])
             batch_code = codes.get(accession.mediumBatchId, "")
         except Exception:
-            logger.warning("Label PDF: could not resolve medium batch %s", accession.mediumBatchId)
+            logger.warning(
+                "Label PDF: could not resolve medium batch %s", accession.mediumBatchId
+            )
 
     operator_initials = "—"  # em dash — graceful fallback, never blocks the PDF
     if accession.createdBy:
@@ -1039,7 +1109,9 @@ async def get_labels(
             if user and user.firstName and user.lastName:
                 operator_initials = f"{user.firstName[0]}.{user.lastName[0]}."
         except Exception:
-            logger.warning("Label PDF: could not resolve operator %s", accession.createdBy)
+            logger.warning(
+                "Label PDF: could not resolve operator %s", accession.createdBy
+            )
 
     date_value = accession.acquiredAt or accession.createdAt
     date_str = date_value.strftime("%Y-%m-%d") if date_value else ""
@@ -1051,7 +1123,9 @@ async def get_labels(
     # first parent is the one already treated as primary elsewhere (e.g. the
     # lineage walk). None when parentage is unrecorded or that parent's
     # vessel was never noted — the line then renders exactly as before.
-    source_vessel_no: Optional[int] = accession.parents[0].vesselNo if accession.parents else None
+    source_vessel_no: Optional[int] = (
+        accession.parents[0].vesselNo if accession.parents else None
+    )
 
     # Fail loudly here, not at boot (see _require_public_base_url) — an
     # empty or loopback PUBLIC_BASE_URL means every QR below would be
@@ -1071,11 +1145,16 @@ async def get_labels(
     # count can in principle push a payload across a version boundary near
     # the byte/character capacity edge, and each page must stay correct even
     # if that happens rather than reuse a possibly-stale geometry.
-    sample_payload = build_label_payload(public_base_url, accession.publicToken, from_n, tape["uppercase"])
+    sample_payload = build_label_payload(
+        public_base_url, accession.publicToken, from_n, tape["uppercase"]
+    )
     sample_geometry = compute_qr_geometry(sample_payload, tape["qr_mm"])
     logger.info(
         "Label PDF: size=%s tape, QR version=%d, modules=%d, module_size=%.3fmm",
-        size, sample_geometry.version, sample_geometry.total_modules, sample_geometry.module_size_mm,
+        size,
+        sample_geometry.version,
+        sample_geometry.total_modules,
+        sample_geometry.module_size_mm,
     )
     if sample_geometry.module_size_mm < _LOW_DENSITY_WARNING_THRESHOLD_MM:
         # Not a rejection — a short 62mm length can be a deliberate,
@@ -1085,14 +1164,18 @@ async def get_labels(
         # block on generating the PDF.
         logger.warning(
             "Label PDF: size=%s QR module %.3fmm is below the %.2fmm comfort threshold — test-scan before a large run.",
-            size, sample_geometry.module_size_mm, _LOW_DENSITY_WARNING_THRESHOLD_MM,
+            size,
+            sample_geometry.module_size_mm,
+            _LOW_DENSITY_WARNING_THRESHOLD_MM,
         )
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(tape["width_mm"] * mm, tape["height_mm"] * mm))
 
     for vessel_no in range(from_n, to_n + 1):
-        payload = build_label_payload(public_base_url, accession.publicToken, vessel_no, tape["uppercase"])
+        payload = build_label_payload(
+            public_base_url, accession.publicToken, vessel_no, tape["uppercase"]
+        )
         geometry = compute_qr_geometry(payload, tape["qr_mm"])
         _draw_label_page(
             c,

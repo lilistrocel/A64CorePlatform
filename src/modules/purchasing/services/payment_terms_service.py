@@ -76,30 +76,35 @@ class PaymentTermsService:
             organization_id: The organisation to seed terms for.
             created_by: User UUID string to attribute the seed to.
         """
-        existing_count = await self._col.count_documents({"organizationId": organization_id})
+        existing_count = await self._col.count_documents(
+            {"organizationId": organization_id}
+        )
         if existing_count > 0:
             return
 
         now = datetime.now(tz=timezone.utc)
         docs = []
         for term in DEFAULT_PAYMENT_TERMS:
-            docs.append({
-                "termsId": str(uuid.uuid4()),
-                "organizationId": organization_id,
-                "termsCode": term["termsCode"],
-                "description": term["description"],
-                "netDays": term["netDays"],
-                "isActive": True,
-                "createdAt": now,
-                "createdBy": created_by,
-                "updatedAt": now,
-            })
+            docs.append(
+                {
+                    "termsId": str(uuid.uuid4()),
+                    "organizationId": organization_id,
+                    "termsCode": term["termsCode"],
+                    "description": term["description"],
+                    "netDays": term["netDays"],
+                    "isActive": True,
+                    "createdAt": now,
+                    "createdBy": created_by,
+                    "updatedAt": now,
+                }
+            )
 
         if docs:
             await self._col.insert_many(docs)
             logger.info(
                 "Seeded %d default payment terms for org=%s",
-                len(docs), organization_id,
+                len(docs),
+                organization_id,
             )
 
     async def list_terms(
@@ -172,7 +177,9 @@ class PaymentTermsService:
             {"organizationId": org_id, "termsCode": data.termsCode}
         )
         if existing:
-            raise ValueError(f"Terms code '{data.termsCode}' already exists in this organisation")
+            raise ValueError(
+                f"Terms code '{data.termsCode}' already exists in this organisation"
+            )
 
         now = datetime.now(tz=timezone.utc)
         terms_id = str(uuid.uuid4())
@@ -289,7 +296,9 @@ class PaymentTermsService:
             is_deleted=True,
         )
 
-        logger.info("Deactivated payment terms termsId=%s org=%s", terms_id, organization_id)
+        logger.info(
+            "Deactivated payment terms termsId=%s org=%s", terms_id, organization_id
+        )
         return True
 
     async def _emit_event(
@@ -327,5 +336,6 @@ class PaymentTermsService:
         except Exception as exc:
             logger.warning(
                 "Failed to emit payment_terms_changed event for terms %s: %s",
-                terms_id, exc,
+                terms_id,
+                exc,
             )

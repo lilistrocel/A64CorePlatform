@@ -98,7 +98,7 @@ def _extract_auth_token(request: Request) -> Optional[str]:
     """Extract the raw Bearer token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 
@@ -127,9 +127,15 @@ async def list_sales_orders_endpoint(
     organization_id: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
     customer_id: Optional[str] = Query(None),
-    date_from: Optional[date] = Query(None, description="Inclusive lower bound on doc_date"),
-    date_to: Optional[date] = Query(None, description="Inclusive upper bound on doc_date"),
-    has_open_lines: Optional[bool] = Query(None, description="Filter to SOs with open qty"),
+    date_from: Optional[date] = Query(
+        None, description="Inclusive lower bound on doc_date"
+    ),
+    date_to: Optional[date] = Query(
+        None, description="Inclusive upper bound on doc_date"
+    ),
+    has_open_lines: Optional[bool] = Query(
+        None, description="Filter to SOs with open qty"
+    ),
     has_service_open_lines: Optional[bool] = Query(
         None,
         alias="hasServiceOpenLines",
@@ -357,7 +363,9 @@ async def create_sales_order_from_quote_endpoint(
             detail=err_msg,
         )
 
-    return SuccessResponse(data=so, message="Sales Order created from Quote successfully")
+    return SuccessResponse(
+        data=so, message="Sales Order created from Quote successfully"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -212,7 +212,9 @@ If they want a formal report, suggest the Report tab."""
 
     else:
         # Fallback for unknown sections — safe read-only mode
-        logger.warning(f"Unknown AI Hub section '{section}' — falling back to monitor prompt")
+        logger.warning(
+            f"Unknown AI Hub section '{section}' — falling back to monitor prompt"
+        )
         role_prompt = (
             "You are a global farm monitoring AI assistant for A64 Core Platform. "
             "You have read-only access to all farms and blocks in the system."

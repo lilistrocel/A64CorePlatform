@@ -23,7 +23,9 @@ async def startup_hook():
     This connects to the database and performs any necessary initialization,
     including starting the weather cache background refresh.
     """
-    logger.info(f"[Farm Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Farm Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await farm_db.connect()
@@ -41,7 +43,9 @@ async def startup_hook():
 
         # Start background refresh (every hour = 3600 seconds)
         await weather_cache.start_background_refresh(interval_seconds=3600)
-        logger.info("[Farm Module] Weather cache service initialized with hourly refresh")
+        logger.info(
+            "[Farm Module] Weather cache service initialized with hourly refresh"
+        )
     except Exception as e:
         logger.error(f"[Farm Module] Failed to initialize weather cache: {e}")
         # Don't raise - weather cache is not critical for startup
@@ -94,6 +98,7 @@ async def shutdown_hook():
     # Stop weather cache background refresh
     try:
         from .services.weather.weather_cache_service import get_weather_cache_service
+
         weather_cache = get_weather_cache_service()
         await weather_cache.stop_background_refresh()
         logger.info("[Farm Module] Weather cache background refresh stopped")
@@ -103,6 +108,7 @@ async def shutdown_hook():
     # Stop AI Dashboard scheduler
     try:
         from .services.ai_dashboard.scheduler import AIDashboardScheduler
+
         ai_scheduler = AIDashboardScheduler.get_instance()
         await ai_scheduler.stop()
         logger.info("[Farm Module] AI Dashboard scheduler stopped")
@@ -112,6 +118,7 @@ async def shutdown_hook():
     # Stop Watchdog scheduler
     try:
         from .services.watchdog.scheduler import WatchdogScheduler
+
         watchdog_scheduler = WatchdogScheduler.get_instance()
         await watchdog_scheduler.stop()
         logger.info("[Farm Module] Watchdog scheduler stopped")
@@ -121,6 +128,7 @@ async def shutdown_hook():
     # Stop SenseHub sync service
     try:
         from .services.sensehub.sync_service import SenseHubSyncService
+
         sensehub_sync = SenseHubSyncService.get_instance()
         await sensehub_sync.stop_background_sync()
         logger.info("[Farm Module] SenseHub sync service stopped")
@@ -150,11 +158,7 @@ def register(app: FastAPI, prefix: Optional[str] = None) -> None:
     logger.info(f"[Farm Module] Registering routes with prefix: {route_prefix}")
 
     # Register API routes
-    app.include_router(
-        api_router,
-        prefix=route_prefix,
-        tags=["farm"]
-    )
+    app.include_router(api_router, prefix=route_prefix, tags=["farm"])
 
     # Register lifecycle hooks
     app.add_event_handler("startup", startup_hook)

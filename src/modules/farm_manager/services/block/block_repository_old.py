@@ -10,8 +10,13 @@ from datetime import datetime
 import logging
 
 from ...models.block import (
-    Block, BlockCreate, BlockUpdate, BlockStatus,
-    BlockStatusUpdate, StatusChange, BlockKPI
+    Block,
+    BlockCreate,
+    BlockUpdate,
+    BlockStatus,
+    BlockStatusUpdate,
+    StatusChange,
+    BlockKPI,
 )
 from ..database import farm_db
 
@@ -38,14 +43,13 @@ class BlockRepository:
         result = await db.farms.find_one_and_update(
             {"farmId": str(farm_id)},
             {"$inc": {"nextBlockSequence": 1}},
-            return_document=True
+            return_document=True,
         )
 
         if not result or "nextBlockSequence" not in result:
             # Initialize if not exists
             await db.farms.update_one(
-                {"farmId": str(farm_id)},
-                {"$set": {"nextBlockSequence": 2}}
+                {"farmId": str(farm_id)}, {"$set": {"nextBlockSequence": 2}}
             )
             return 1
 
@@ -78,7 +82,13 @@ class BlockRepository:
         return farm["farmCode"]
 
     @staticmethod
-    async def create(block_data: BlockCreate, farm_id: UUID, farm_code: str, user_id: UUID, user_email: str) -> Block:
+    async def create(
+        block_data: BlockCreate,
+        farm_id: UUID,
+        farm_code: str,
+        user_id: UUID,
+        user_email: str,
+    ) -> Block:
         """
         Create a new block with auto-generated block code
 
@@ -108,7 +118,7 @@ class BlockRepository:
             status=BlockStatus.EMPTY,
             changedBy=user_id,
             changedByEmail=user_email,
-            notes="Block created"
+            notes="Block created",
         )
 
         # Create block document
@@ -120,7 +130,7 @@ class BlockRepository:
             sequenceNumber=sequence,
             status=BlockStatus.EMPTY,
             kpi=BlockKPI(),
-            statusChanges=[initial_status_change]
+            statusChanges=[initial_status_change],
         )
 
         block_dict = block.model_dump()
@@ -137,8 +147,9 @@ class BlockRepository:
                 **change,
                 "status": change["status"],
                 "changedBy": str(change["changedBy"]),
-                "changedAt": change["changedAt"]
-            } for change in block_dict["statusChanges"]
+                "changedAt": change["changedAt"],
+            }
+            for change in block_dict["statusChanges"]
         ]
 
         # Convert KPI
@@ -177,7 +188,7 @@ class BlockRepository:
         farm_id: UUID,
         skip: int = 0,
         limit: int = 100,
-        state: Optional[BlockState] = None
+        state: Optional[BlockState] = None,
     ) -> tuple[List[Block], int]:
         """
         Get blocks by farm ID with pagination
@@ -211,9 +222,7 @@ class BlockRepository:
 
     @staticmethod
     async def get_all(
-        skip: int = 0,
-        limit: int = 100,
-        state: Optional[BlockState] = None
+        skip: int = 0, limit: int = 100, state: Optional[BlockState] = None
     ) -> tuple[List[Block], int]:
         """
         Get all blocks with pagination
@@ -260,7 +269,8 @@ class BlockRepository:
 
         # Only update fields that are provided
         update_dict = {
-            k: v for k, v in update_data.model_dump(exclude_unset=True).items()
+            k: v
+            for k, v in update_data.model_dump(exclude_unset=True).items()
             if v is not None
         }
 
@@ -272,8 +282,7 @@ class BlockRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await db.blocks.update_one(
-            {"blockId": str(block_id)},
-            {"$set": update_dict}
+            {"blockId": str(block_id)}, {"$set": update_dict}
         )
 
         if result.matched_count == 0:
@@ -288,7 +297,7 @@ class BlockRepository:
         new_state: BlockState,
         planting_id: Optional[UUID] = None,
         cycle_id: Optional[UUID] = None,
-        additional_data: Optional[dict] = None
+        additional_data: Optional[dict] = None,
     ) -> Optional[Block]:
         """
         Update block state and related fields
@@ -305,10 +314,7 @@ class BlockRepository:
         """
         db = farm_db.get_database()
 
-        update_dict = {
-            "state": new_state.value,
-            "updatedAt": datetime.utcnow()
-        }
+        update_dict = {"state": new_state.value, "updatedAt": datetime.utcnow()}
 
         # Set planting and cycle IDs
         if planting_id:
@@ -332,14 +338,15 @@ class BlockRepository:
             update_dict.update(additional_data)
 
         result = await db.blocks.update_one(
-            {"blockId": str(block_id)},
-            {"$set": update_dict}
+            {"blockId": str(block_id)}, {"$set": update_dict}
         )
 
         if result.matched_count == 0:
             return None
 
-        logger.info(f"[Block Repository] Updated block state: {block_id} -> {new_state.value}")
+        logger.info(
+            f"[Block Repository] Updated block state: {block_id} -> {new_state.value}"
+        )
         return await BlockRepository.get_by_id(block_id)
 
     @staticmethod
@@ -392,7 +399,7 @@ class BlockRepository:
 
         pipeline = [
             {"$match": {"farmId": str(farm_id)}},
-            {"$group": {"_id": "$state", "count": {"$sum": 1}}}
+            {"$group": {"_id": "$state", "count": {"$sum": 1}}},
         ]
 
         result = await db.blocks.aggregate(pipeline).to_list(length=10)
@@ -402,7 +409,7 @@ class BlockRepository:
             "planned": 0,
             "planted": 0,
             "harvesting": 0,
-            "alert": 0
+            "alert": 0,
         }
 
         for item in result:

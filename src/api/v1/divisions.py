@@ -8,7 +8,12 @@ switch their active division, and for admins to manage division details.
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 
-from ...models.division import DivisionResponse, DivisionSelectRequest, DivisionSelectResponse, DivisionUpdate
+from ...models.division import (
+    DivisionResponse,
+    DivisionSelectRequest,
+    DivisionSelectResponse,
+    DivisionUpdate,
+)
 from ...models.user import UserResponse, UserRole
 from ...middleware.auth import get_current_user
 from ...services.division_service import division_service

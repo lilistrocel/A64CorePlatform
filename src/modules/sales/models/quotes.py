@@ -155,7 +155,9 @@ class QuoteLineResponse(DocumentLineLinkMixin):
         target_doc_refs: Populated when an SO line consumes this quote line.
     """
 
-    line_id: str = Field(..., description="UUID for this line (stable cross-service ref)")
+    line_id: str = Field(
+        ..., description="UUID for this line (stable cross-service ref)"
+    )
     line_number: int = Field(..., description="1-indexed position")
     item_id: str
     item_code: str
@@ -165,7 +167,9 @@ class QuoteLineResponse(DocumentLineLinkMixin):
     uom: str
     unit_price: Decimal
     discount_percent: Decimal
-    line_net: Decimal = Field(..., description="quantity × unit_price × (1 − discount/100)")
+    line_net: Decimal = Field(
+        ..., description="quantity × unit_price × (1 − discount/100)"
+    )
     tax_code_id: Optional[str]
     tax_percent: Decimal
     line_tax: Decimal = Field(..., description="line_net × tax_percent / 100")
@@ -250,7 +254,9 @@ class QuoteCreate(BPReferenceMixin, JournalMemoMixin):
     sales_employee_id: Optional[str] = Field(
         None, description="FK to ops users; the assigned sales rep"
     )
-    notes: Optional[str] = Field(None, max_length=2000, description="Free-text header notes")
+    notes: Optional[str] = Field(
+        None, max_length=2000, description="Free-text header notes"
+    )
     lines: List[QuoteLineCreate] = Field(
         ..., min_length=1, description="Quote lines (at least one required)"
     )
@@ -411,7 +417,9 @@ class QuoteStatusTransitionRequest(BaseModel):
         reason:     Optional free-text reason (stored in audit log).
     """
 
-    new_status: DocumentStatus = Field(..., description="Target status for the transition")
+    new_status: DocumentStatus = Field(
+        ..., description="Target status for the transition"
+    )
     reason: Optional[str] = Field(
         None,
         max_length=500,

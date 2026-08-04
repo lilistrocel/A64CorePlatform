@@ -83,7 +83,9 @@ class SchemaService:
         schema = await self.get_schema(force_refresh)
         return json.dumps(schema, indent=2)
 
-    async def get_collection_info(self, collection_name: str) -> Optional[Dict[str, Any]]:
+    async def get_collection_info(
+        self, collection_name: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Get detailed information about a specific collection.
 
@@ -119,7 +121,7 @@ class SchemaService:
         schema = {
             "database": self.db_name,
             "discovered_at": datetime.utcnow().isoformat(),
-            "collections": {}
+            "collections": {},
         }
 
         # Get all collection names
@@ -137,7 +139,7 @@ class SchemaService:
                 schema["collections"][collection_name] = {
                     "error": str(e),
                     "fields": {},
-                    "indexes": []
+                    "indexes": [],
                 }
 
         return schema
@@ -171,7 +173,7 @@ class SchemaService:
             "document_count": doc_count,
             "fields": fields,
             "indexes": indexes,
-            "relationships": relationships
+            "relationships": relationships,
         }
 
     async def _infer_fields(self, collection) -> Dict[str, Dict[str, Any]]:
@@ -201,6 +203,7 @@ class SchemaService:
         # Calculate field statistics and convert sets to lists for JSON serialization
         from bson import ObjectId
         from datetime import datetime
+
         for field_name, info in field_info.items():
             info["appears_in_percent"] = round(
                 (info["count"] / len(documents)) * 100, 1
@@ -227,7 +230,7 @@ class SchemaService:
         self,
         doc: Dict[str, Any],
         field_info: Dict[str, Dict[str, Any]],
-        prefix: str = ""
+        prefix: str = "",
     ) -> None:
         """
         Recursively analyze document to extract field information.
@@ -248,7 +251,7 @@ class SchemaService:
                     "count": 0,
                     "sample_values": [],
                     "is_array": False,
-                    "is_nested": False
+                    "is_nested": False,
                 }
 
             info = field_info[field_path]
@@ -266,7 +269,9 @@ class SchemaService:
             elif isinstance(value, str):
                 info["type"].add("string")
                 # Check if it looks like an ObjectId
-                if len(value) == 24 and all(c in '0123456789abcdef' for c in value.lower()):
+                if len(value) == 24 and all(
+                    c in "0123456789abcdef" for c in value.lower()
+                ):
                     info["type"].add("ObjectId")
             elif isinstance(value, list):
                 info["is_array"] = True
@@ -302,18 +307,22 @@ class SchemaService:
         try:
             indexes = []
             async for index in collection.list_indexes():
-                indexes.append({
-                    "name": index.get("name"),
-                    "keys": dict(index.get("key", {})),
-                    "unique": index.get("unique", False),
-                    "sparse": index.get("sparse", False)
-                })
+                indexes.append(
+                    {
+                        "name": index.get("name"),
+                        "keys": dict(index.get("key", {})),
+                        "unique": index.get("unique", False),
+                        "sparse": index.get("sparse", False),
+                    }
+                )
             return indexes
         except Exception as e:
             logger.error(f"Failed to get indexes: {e}")
             return []
 
-    def _infer_relationships(self, fields: Dict[str, Dict[str, Any]]) -> List[Dict[str, str]]:
+    def _infer_relationships(
+        self, fields: Dict[str, Dict[str, Any]]
+    ) -> List[Dict[str, str]]:
         """
         Infer relationships between collections based on field names.
 
@@ -333,12 +342,14 @@ class SchemaService:
                 ref_field = field_path.replace("_id", "")
                 potential_collection = f"{ref_field}s"  # Simple pluralization
 
-                relationships.append({
-                    "field": field_path,
-                    "references": potential_collection,
-                    "type": "ObjectId",
-                    "note": "Inferred relationship (might need verification)"
-                })
+                relationships.append(
+                    {
+                        "field": field_path,
+                        "references": potential_collection,
+                        "type": "ObjectId",
+                        "note": "Inferred relationship (might need verification)",
+                    }
+                )
 
         return relationships
 
@@ -353,7 +364,9 @@ class SchemaService:
 _schema_service: Optional[SchemaService] = None
 
 
-def get_schema_service(mongodb_client: AsyncIOMotorClient, db_name: str) -> SchemaService:
+def get_schema_service(
+    mongodb_client: AsyncIOMotorClient, db_name: str
+) -> SchemaService:
     """
     Get singleton instance of SchemaService.
 

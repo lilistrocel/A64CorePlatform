@@ -14,26 +14,38 @@ from pydantic import BaseModel, Field
 
 class IndustryType(str, Enum):
     """Supported industry types (extensible)"""
+
     VEGETABLE_FRUITS = "vegetable_fruits"
     MUSHROOM = "mushroom"
 
 
 class DivisionBase(BaseModel):
     """Base division fields"""
+
     name: str = Field(..., min_length=1, max_length=200, description="Division name")
-    divisionCode: str = Field(..., min_length=1, max_length=20, description="Short code (e.g., VEG-01)")
-    industryType: IndustryType = Field(..., description="Industry type for this division")
-    description: Optional[str] = Field(None, max_length=500, description="Division description")
-    settings: Dict[str, Any] = Field(default_factory=dict, description="Division-specific settings")
+    divisionCode: str = Field(
+        ..., min_length=1, max_length=20, description="Short code (e.g., VEG-01)"
+    )
+    industryType: IndustryType = Field(
+        ..., description="Industry type for this division"
+    )
+    description: Optional[str] = Field(
+        None, max_length=500, description="Division description"
+    )
+    settings: Dict[str, Any] = Field(
+        default_factory=dict, description="Division-specific settings"
+    )
 
 
 class DivisionCreate(DivisionBase):
     """Schema for creating a new division"""
+
     organizationId: str = Field(..., description="Parent organization ID")
 
 
 class DivisionUpdate(BaseModel):
     """Schema for updating a division"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     divisionCode: Optional[str] = Field(None, min_length=1, max_length=20)
     description: Optional[str] = Field(None, max_length=500)
@@ -43,7 +55,10 @@ class DivisionUpdate(BaseModel):
 
 class Division(DivisionBase):
     """Complete division model with all fields"""
-    divisionId: str = Field(default_factory=lambda: str(uuid4()), description="Unique division identifier")
+
+    divisionId: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique division identifier"
+    )
     organizationId: str = Field(..., description="Parent organization ID")
     isActive: bool = Field(True, description="Is division active")
     createdAt: datetime = Field(default_factory=datetime.utcnow)
@@ -61,13 +76,14 @@ class Division(DivisionBase):
                 "settings": {},
                 "isActive": True,
                 "createdAt": "2026-01-01T00:00:00Z",
-                "updatedAt": "2026-01-01T00:00:00Z"
+                "updatedAt": "2026-01-01T00:00:00Z",
             }
         }
 
 
 class DivisionResponse(DivisionBase):
     """Division response model (public-facing)"""
+
     divisionId: str
     organizationId: str
     isActive: bool
@@ -80,11 +96,13 @@ class DivisionResponse(DivisionBase):
 
 class DivisionSelectRequest(BaseModel):
     """Request to select/switch active division"""
+
     divisionId: str = Field(..., description="Division ID to select")
 
 
 class DivisionSelectResponse(BaseModel):
     """Response after selecting a division"""
+
     divisionId: str
     divisionName: str
     industryType: IndustryType

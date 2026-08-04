@@ -27,9 +27,7 @@ class PlantDataEnhancedService:
 
     @staticmethod
     async def create_plant_data(
-        plant_data: PlantDataEnhancedCreate,
-        user_id: UUID,
-        user_email: str
+        plant_data: PlantDataEnhancedCreate, user_id: UUID, user_email: str
     ) -> PlantDataEnhanced:
         """
         Create new enhanced plant data with validation.
@@ -50,38 +48,44 @@ class PlantDataEnhancedService:
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Plant data for '{plant_data.plantName}' already exists"
+                detail=f"Plant data for '{plant_data.plantName}' already exists",
             )
 
         # Validate growth cycle totals match (skip if individual stages are all 0)
         calculated_total = (
-            plant_data.growthCycle.germinationDays +
-            plant_data.growthCycle.vegetativeDays +
-            plant_data.growthCycle.floweringDays +
-            plant_data.growthCycle.fruitingDays +
-            plant_data.growthCycle.harvestDurationDays
+            plant_data.growthCycle.germinationDays
+            + plant_data.growthCycle.vegetativeDays
+            + plant_data.growthCycle.floweringDays
+            + plant_data.growthCycle.fruitingDays
+            + plant_data.growthCycle.harvestDurationDays
         )
 
-        if calculated_total > 0 and calculated_total != plant_data.growthCycle.totalCycleDays:
+        if (
+            calculated_total > 0
+            and calculated_total != plant_data.growthCycle.totalCycleDays
+        ):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Growth cycle mismatch: sum of stages ({calculated_total}) "
-                       f"does not match totalCycleDays ({plant_data.growthCycle.totalCycleDays})"
+                f"does not match totalCycleDays ({plant_data.growthCycle.totalCycleDays})",
             )
 
         # Validate temperature range (only if environmentalRequirements provided)
-        if plant_data.environmentalRequirements and plant_data.environmentalRequirements.temperature:
+        if (
+            plant_data.environmentalRequirements
+            and plant_data.environmentalRequirements.temperature
+        ):
             temp = plant_data.environmentalRequirements.temperature
             if temp.minCelsius > temp.maxCelsius:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Temperature range invalid: minCelsius must be <= maxCelsius"
+                    detail="Temperature range invalid: minCelsius must be <= maxCelsius",
                 )
 
             if not (temp.minCelsius <= temp.optimalCelsius <= temp.maxCelsius):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Optimal temperature must be within min-max range"
+                    detail="Optimal temperature must be within min-max range",
                 )
 
             # Validate humidity if provided
@@ -90,13 +94,15 @@ class PlantDataEnhancedService:
                 if hum.minPercentage > hum.maxPercentage:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail="Humidity range invalid: minPercentage must be <= maxPercentage"
+                        detail="Humidity range invalid: minPercentage must be <= maxPercentage",
                     )
 
-                if not (hum.minPercentage <= hum.optimalPercentage <= hum.maxPercentage):
+                if not (
+                    hum.minPercentage <= hum.optimalPercentage <= hum.maxPercentage
+                ):
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail="Optimal humidity must be within min-max range"
+                        detail="Optimal humidity must be within min-max range",
                     )
 
         # Validate pH range (only if soilRequirements provided)
@@ -105,20 +111,18 @@ class PlantDataEnhancedService:
             if ph.minPH > ph.maxPH:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="pH range invalid: minPH must be <= maxPH"
+                    detail="pH range invalid: minPH must be <= maxPH",
                 )
 
             if not (ph.minPH <= ph.optimalPH <= ph.maxPH):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Optimal pH must be within min-max range"
+                    detail="Optimal pH must be within min-max range",
                 )
 
         # Create plant data
         plant = await PlantDataEnhancedRepository.create(
-            plant_data,
-            user_id,
-            user_email
+            plant_data, user_id, user_email
         )
 
         logger.info(
@@ -145,8 +149,7 @@ class PlantDataEnhancedService:
 
         if not plant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plant data not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Plant data not found"
             )
 
         return plant
@@ -162,7 +165,7 @@ class PlantDataEnhancedService:
         tags: Optional[List[str]] = None,
         contributor: Optional[str] = None,
         target_region: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> Tuple[List[PlantDataEnhanced], int, int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -201,7 +204,7 @@ class PlantDataEnhancedService:
             include_deleted=False,
             contributor=contributor,
             target_region=target_region,
-            is_active=is_active
+            is_active=is_active,
         )
 
         # Calculate total pages
@@ -231,9 +234,7 @@ class PlantDataEnhancedService:
 
     @staticmethod
     async def update_plant_data(
-        plant_data_id: UUID,
-        update_data: PlantDataEnhancedUpdate,
-        user_id: UUID
+        plant_data_id: UUID, update_data: PlantDataEnhancedUpdate, user_id: UUID
     ) -> PlantDataEnhanced:
         """
         Update plant data (increments version).
@@ -253,8 +254,7 @@ class PlantDataEnhancedService:
         plant = await PlantDataEnhancedRepository.get_by_id(plant_data_id)
         if not plant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plant data not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Plant data not found"
             )
 
         # Validate temperature range if updating
@@ -263,13 +263,13 @@ class PlantDataEnhancedService:
             if temp.minCelsius > temp.maxCelsius:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Temperature range invalid: minCelsius must be <= maxCelsius"
+                    detail="Temperature range invalid: minCelsius must be <= maxCelsius",
                 )
 
             if not (temp.minCelsius <= temp.optimalCelsius <= temp.maxCelsius):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Optimal temperature must be within min-max range"
+                    detail="Optimal temperature must be within min-max range",
                 )
 
         # Validate pH range if updating
@@ -278,43 +278,44 @@ class PlantDataEnhancedService:
             if ph.minPH > ph.maxPH:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="pH range invalid: minPH must be <= maxPH"
+                    detail="pH range invalid: minPH must be <= maxPH",
                 )
 
             if not (ph.minPH <= ph.optimalPH <= ph.maxPH):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Optimal pH must be within min-max range"
+                    detail="Optimal pH must be within min-max range",
                 )
 
         # Validate growth cycle if updating (skip if individual stages are all 0)
         if update_data.growthCycle:
             calculated_total = (
-                update_data.growthCycle.germinationDays +
-                update_data.growthCycle.vegetativeDays +
-                update_data.growthCycle.floweringDays +
-                update_data.growthCycle.fruitingDays +
-                update_data.growthCycle.harvestDurationDays
+                update_data.growthCycle.germinationDays
+                + update_data.growthCycle.vegetativeDays
+                + update_data.growthCycle.floweringDays
+                + update_data.growthCycle.fruitingDays
+                + update_data.growthCycle.harvestDurationDays
             )
 
-            if calculated_total > 0 and calculated_total != update_data.growthCycle.totalCycleDays:
+            if (
+                calculated_total > 0
+                and calculated_total != update_data.growthCycle.totalCycleDays
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Growth cycle mismatch: sum of stages ({calculated_total}) "
-                           f"does not match totalCycleDays ({update_data.growthCycle.totalCycleDays})"
+                    f"does not match totalCycleDays ({update_data.growthCycle.totalCycleDays})",
                 )
 
         # Update plant data (increments version)
         updated_plant = await PlantDataEnhancedRepository.update(
-            plant_data_id,
-            update_data,
-            increment_version=True
+            plant_data_id, update_data, increment_version=True
         )
 
         if not updated_plant:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plant data not found or already deleted"
+                detail="Plant data not found or already deleted",
             )
 
         logger.info(
@@ -324,10 +325,7 @@ class PlantDataEnhancedService:
         return updated_plant
 
     @staticmethod
-    async def delete_plant_data(
-        plant_data_id: UUID,
-        user_id: UUID
-    ) -> bool:
+    async def delete_plant_data(plant_data_id: UUID, user_id: UUID) -> bool:
         """
         Delete plant data (soft delete).
 
@@ -345,8 +343,7 @@ class PlantDataEnhancedService:
         plant = await PlantDataEnhancedRepository.get_by_id(plant_data_id)
         if not plant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plant data not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Plant data not found"
             )
 
         # Soft delete
@@ -361,10 +358,7 @@ class PlantDataEnhancedService:
 
     @staticmethod
     async def clone_plant_data(
-        plant_data_id: UUID,
-        new_name: str,
-        user_id: UUID,
-        user_email: str
+        plant_data_id: UUID, new_name: str, user_id: UUID, user_email: str
     ) -> PlantDataEnhanced:
         """
         Clone existing plant data with a new name.
@@ -386,21 +380,18 @@ class PlantDataEnhancedService:
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Plant data for '{new_name}' already exists"
+                detail=f"Plant data for '{new_name}' already exists",
             )
 
         # Clone
         cloned = await PlantDataEnhancedRepository.clone(
-            plant_data_id,
-            new_name,
-            user_id,
-            user_email
+            plant_data_id, new_name, user_id, user_email
         )
 
         if not cloned:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Source plant data not found"
+                detail="Source plant data not found",
             )
 
         logger.info(
@@ -441,7 +432,7 @@ class PlantDataEnhancedService:
             "yieldPerPlant",
             "yieldUnit",
             "tags",
-            "notes"
+            "notes",
         ]
         writer.writerow(headers)
 
@@ -461,7 +452,7 @@ class PlantDataEnhancedService:
             "5.0",
             "kg",
             "vegetable,fruit,summer",
-            "Requires staking for support. Prune suckers for better yield."
+            "Requires staking for support. Prune suckers for better yield.",
         ]
         writer.writerow(example)
 
@@ -469,9 +460,7 @@ class PlantDataEnhancedService:
 
     @staticmethod
     async def get_by_farm_type(
-        farm_type: FarmTypeEnum,
-        page: int = 1,
-        per_page: int = 20
+        farm_type: FarmTypeEnum, page: int = 1, per_page: int = 20
     ) -> Tuple[List[PlantDataEnhanced], int, int]:
         """
         Get plant data compatible with specific farm type.
@@ -487,9 +476,7 @@ class PlantDataEnhancedService:
         skip = (page - 1) * per_page
 
         plants, total = await PlantDataEnhancedRepository.get_by_farm_type(
-            farm_type,
-            skip=skip,
-            limit=per_page
+            farm_type, skip=skip, limit=per_page
         )
 
         total_pages = (total + per_page - 1) // per_page
@@ -498,9 +485,7 @@ class PlantDataEnhancedService:
 
     @staticmethod
     async def get_by_tags(
-        tags: List[str],
-        page: int = 1,
-        per_page: int = 20
+        tags: List[str], page: int = 1, per_page: int = 20
     ) -> Tuple[List[PlantDataEnhanced], int, int]:
         """
         Get plant data by tags (any match).
@@ -516,9 +501,7 @@ class PlantDataEnhancedService:
         skip = (page - 1) * per_page
 
         plants, total = await PlantDataEnhancedRepository.get_by_tags(
-            tags,
-            skip=skip,
-            limit=per_page
+            tags, skip=skip, limit=per_page
         )
 
         total_pages = (total + per_page - 1) // per_page
@@ -559,7 +542,7 @@ class PlantDataEnhancedService:
             "yieldPerPlant",
             "yieldUnit",
             "tags",
-            "notes"
+            "notes",
         ]
         writer.writerow(headers)
 
@@ -582,7 +565,11 @@ class PlantDataEnhancedService:
             optimal_ph = ph.optimalPH
 
             # Extract watering frequency (simplified)
-            watering_freq = plant.wateringRequirements.frequencyDays if plant.wateringRequirements else 0
+            watering_freq = (
+                plant.wateringRequirements.frequencyDays
+                if plant.wateringRequirements
+                else 0
+            )
 
             # Extract yield data
             yield_per_plant = plant.yieldInfo.yieldPerPlant if plant.yieldInfo else 0
@@ -603,19 +590,21 @@ class PlantDataEnhancedService:
                 yield_per_plant,
                 yield_unit,
                 tags_str,
-                plant.additionalInfo.notes if plant.additionalInfo and plant.additionalInfo.notes else ""
+                (
+                    plant.additionalInfo.notes
+                    if plant.additionalInfo and plant.additionalInfo.notes
+                    else ""
+                ),
             ]
             writer.writerow(row)
 
-        logger.info(f"[PlantData Enhanced Service] Exported {len(plants)} plants to CSV")
+        logger.info(
+            f"[PlantData Enhanced Service] Exported {len(plants)} plants to CSV"
+        )
         return output.getvalue()
 
     @staticmethod
-    async def import_from_csv(
-        csv_content: str,
-        user_id: UUID,
-        user_email: str
-    ) -> dict:
+    async def import_from_csv(csv_content: str, user_id: UUID, user_email: str) -> dict:
         """
         Import plant data from CSV content.
 
@@ -680,11 +669,15 @@ class PlantDataEnhancedService:
                         try:
                             farm_types.append(FarmTypeEnum(ft_clean))
                         except ValueError:
-                            errors.append(f"Row {row_num}: Invalid farm type '{ft_clean}'")
+                            errors.append(
+                                f"Row {row_num}: Invalid farm type '{ft_clean}'"
+                            )
 
                 # Parse tags
                 tags_str = row.get("tags", "")
-                tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] or None
+                tags = [
+                    tag.strip() for tag in tags_str.split(",") if tag.strip()
+                ] or None
 
                 # Parse numeric fields with defaults
                 growth_cycle_days = int(row.get("growthCycleDays", 0) or 0)
@@ -700,49 +693,61 @@ class PlantDataEnhancedService:
 
                 # Build nested structures from CSV flat fields
                 growth_cycle = GrowthCycleDuration(
-                    germinationDays=max(int(growth_cycle_days * 0.1), 1) if growth_cycle_days > 0 else 1,
-                    vegetativeDays=max(int(growth_cycle_days * 0.5), 1) if growth_cycle_days > 0 else 1,
+                    germinationDays=(
+                        max(int(growth_cycle_days * 0.1), 1)
+                        if growth_cycle_days > 0
+                        else 1
+                    ),
+                    vegetativeDays=(
+                        max(int(growth_cycle_days * 0.5), 1)
+                        if growth_cycle_days > 0
+                        else 1
+                    ),
                     floweringDays=int(growth_cycle_days * 0.2),
                     fruitingDays=int(growth_cycle_days * 0.15),
-                    harvestDurationDays=max(int(growth_cycle_days * 0.05), 1) if growth_cycle_days > 0 else 1,
-                    totalCycleDays=max(growth_cycle_days, 1)
+                    harvestDurationDays=(
+                        max(int(growth_cycle_days * 0.05), 1)
+                        if growth_cycle_days > 0
+                        else 1
+                    ),
+                    totalCycleDays=max(growth_cycle_days, 1),
                 )
 
                 environmental_reqs = EnvironmentalRequirements(
                     temperature=TemperatureRange(
                         minCelsius=min_temp,
                         maxCelsius=max_temp,
-                        optimalCelsius=optimal_temp
+                        optimalCelsius=optimal_temp,
                     ),
                     humidity=None,
                     co2RequirementPpm=None,
-                    airCirculation=None
+                    airCirculation=None,
                 )
 
                 soil_reqs = SoilRequirements(
                     phRequirements=PHRequirements(
-                        minPH=min_ph,
-                        maxPH=max_ph,
-                        optimalPH=optimal_ph
+                        minPH=min_ph, maxPH=max_ph, optimalPH=optimal_ph
                     ),
-                    soilTypes=[SoilTypeEnum.LOAMY]
+                    soilTypes=[SoilTypeEnum.LOAMY],
                 )
 
                 watering_reqs = WateringRequirements(
                     frequencyDays=watering_freq,
                     waterType=WaterTypeEnum.TAP,
                     amountPerPlantLiters=None,
-                    droughtTolerance=ToleranceLevelEnum.MEDIUM
+                    droughtTolerance=ToleranceLevelEnum.MEDIUM,
                 )
 
                 yield_info = YieldInfo(
                     yieldPerPlant=yield_per_plant,
                     yieldUnit=yield_unit,
-                    expectedWastePercentage=0.0
+                    expectedWastePercentage=0.0,
                 )
 
                 # Check if plant already exists
-                existing = await PlantDataEnhancedRepository.get_by_name(row["plantName"])
+                existing = await PlantDataEnhancedRepository.get_by_name(
+                    row["plantName"]
+                )
 
                 if existing:
                     # Update existing plant with CSV fields only
@@ -754,13 +759,11 @@ class PlantDataEnhancedService:
                         soilRequirements=soil_reqs,
                         wateringRequirements=watering_reqs,
                         yieldInfo=yield_info,
-                        tags=tags
+                        tags=tags,
                     )
 
                     await PlantDataEnhancedRepository.update(
-                        existing.plantDataId,
-                        update_data,
-                        increment_version=True
+                        existing.plantDataId, update_data, increment_version=True
                     )
                     updated_count += 1
                 else:
@@ -768,7 +771,9 @@ class PlantDataEnhancedService:
                     plant_data = PlantDataEnhancedCreate(
                         plantName=row["plantName"],
                         scientificName=row.get("scientificName") or None,
-                        farmTypeCompatibility=farm_types if farm_types else [FarmTypeEnum.OPEN_FIELD],
+                        farmTypeCompatibility=(
+                            farm_types if farm_types else [FarmTypeEnum.OPEN_FIELD]
+                        ),
                         growthCycle=growth_cycle,
                         yieldInfo=yield_info,
                         environmentalRequirements=environmental_reqs,
@@ -792,13 +797,11 @@ class PlantDataEnhancedService:
                                 betweenRowsCm=60.0,
                             ),
                         ),
-                        tags=tags
+                        tags=tags,
                     )
 
                     await PlantDataEnhancedRepository.create(
-                        plant_data,
-                        user_id,
-                        user_email
+                        plant_data, user_id, user_email
                     )
                     created_count += 1
 
@@ -813,8 +816,8 @@ class PlantDataEnhancedService:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail={
                     "message": "CSV import failed",
-                    "errors": errors[:10]  # Limit to first 10 errors
-                }
+                    "errors": errors[:10],  # Limit to first 10 errors
+                },
             )
 
         logger.info(
@@ -825,5 +828,5 @@ class PlantDataEnhancedService:
         return {
             "created": created_count,
             "updated": updated_count,
-            "errors": errors if errors else None
+            "errors": errors if errors else None,
         }

@@ -25,6 +25,7 @@ security = HTTPBearer()
 
 class CurrentUser:
     """Current authenticated user"""
+
     def __init__(
         self,
         userId: str,
@@ -34,7 +35,7 @@ class CurrentUser:
         role: str,
         isActive: bool,
         isEmailVerified: bool,
-        organizationId: Optional[str] = None
+        organizationId: Optional[str] = None,
     ):
         self.userId = userId
         self.email = email
@@ -47,7 +48,7 @@ class CurrentUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> CurrentUser:
     """
     Get current authenticated user from JWT token
@@ -73,9 +74,7 @@ async def get_current_user(
         # Decode JWT token using core API's SECRET_KEY
         token = credentials.credentials
         payload = jwt.decode(
-            token,
-            core_settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            token, core_settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
 
         user_id: str = payload.get("userId")
@@ -101,8 +100,7 @@ async def get_current_user(
     # Verify user is active
     if not user_doc.get("isActive", False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
 
     return CurrentUser(
@@ -113,12 +111,12 @@ async def get_current_user(
         role=user_doc["role"],
         isActive=user_doc["isActive"],
         isEmailVerified=user_doc.get("isEmailVerified", False),
-        organizationId=user_doc.get("organizationId")
+        organizationId=user_doc.get("organizationId"),
     )
 
 
 async def get_current_active_user(
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> CurrentUser:
     """
     Get current active user
@@ -136,16 +134,14 @@ async def get_current_active_user(
     """
     if not current_user.isActive:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
 
     return current_user
 
 
 async def require_farm_access(
-    farm_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    farm_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ) -> CurrentUser:
     """
     Require user to have access to a specific farm
@@ -169,16 +165,14 @@ async def require_farm_access(
 
     # Check farm assignment
     db = farm_db.get_database()
-    assignment = await db.farm_assignments.find_one({
-        "userId": current_user.userId,
-        "farmId": str(farm_id),
-        "isActive": True
-    })
+    assignment = await db.farm_assignments.find_one(
+        {"userId": current_user.userId, "farmId": str(farm_id), "isActive": True}
+    )
 
     if not assignment:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Not assigned to this farm"
+            detail="Access denied: Not assigned to this farm",
         )
 
     return current_user
@@ -194,8 +188,9 @@ def require_permission(permission: str):
     Returns:
         Dependency function
     """
+
     async def permission_checker(
-        current_user: CurrentUser = Depends(get_current_active_user)
+        current_user: CurrentUser = Depends(get_current_active_user),
     ) -> CurrentUser:
         # For now, simple role-based checks
         # TODO: Implement proper permission system
@@ -204,25 +199,25 @@ def require_permission(permission: str):
             if current_user.role not in ["admin", "super_admin", "moderator"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}"
+                    detail=f"Permission denied: Missing {permission}",
                 )
         elif permission == "farm.operate":
             if current_user.role not in ["admin", "super_admin", "moderator", "user"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}"
+                    detail=f"Permission denied: Missing {permission}",
                 )
         elif permission == "agronomist":
             if current_user.role not in ["admin", "super_admin", "moderator"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: Agronomist role required"
+                    detail="Permission denied: Agronomist role required",
                 )
         elif permission == "admin":
             if current_user.role not in ["admin", "super_admin"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: Admin access required"
+                    detail="Permission denied: Admin access required",
                 )
 
         return current_user

@@ -46,7 +46,9 @@ class PlantingRepository:
 
         await farm_db.get_database().plantings.insert_one(planting_dict)
 
-        logger.info(f"[Planting Repository] Created planting {planting.plantingId} for block {planting.blockId}")
+        logger.info(
+            f"[Planting Repository] Created planting {planting.plantingId} for block {planting.blockId}"
+        )
         return planting
 
     @staticmethod
@@ -60,7 +62,9 @@ class PlantingRepository:
         Returns:
             Planting if found, None otherwise
         """
-        result = await farm_db.get_database().plantings.find_one({"plantingId": str(planting_id)})
+        result = await farm_db.get_database().plantings.find_one(
+            {"plantingId": str(planting_id)}
+        )
         if not result:
             return None
 
@@ -93,10 +97,12 @@ class PlantingRepository:
         Returns:
             Active planting if found, None otherwise
         """
-        result = await farm_db.get_database().plantings.find_one({
-            "blockId": str(block_id),
-            "status": {"$in": ["planned", "planted", "harvesting"]}
-        })
+        result = await farm_db.get_database().plantings.find_one(
+            {
+                "blockId": str(block_id),
+                "status": {"$in": ["planned", "planted", "harvesting"]},
+            }
+        )
 
         if not result:
             return None
@@ -136,7 +142,7 @@ class PlantingRepository:
         result = await farm_db.get_database().plantings.find_one_and_update(
             {"plantingId": str(planting_id)},
             {"$set": update_data},
-            return_document=True
+            return_document=True,
         )
 
         if not result:
@@ -163,10 +169,7 @@ class PlantingRepository:
 
     @staticmethod
     async def get_farm_plantings(
-        farm_id: UUID,
-        page: int = 1,
-        per_page: int = 20,
-        status: Optional[str] = None
+        farm_id: UUID, page: int = 1, per_page: int = 20, status: Optional[str] = None
     ) -> Tuple[List[Planting], int]:
         """
         Get plantings for a farm with pagination.
@@ -189,7 +192,13 @@ class PlantingRepository:
         total = await farm_db.get_database().plantings.count_documents(query)
 
         # Get paginated results
-        cursor = farm_db.get_database().plantings.find(query).sort("createdAt", -1).skip((page - 1) * per_page).limit(per_page)
+        cursor = (
+            farm_db.get_database()
+            .plantings.find(query)
+            .sort("createdAt", -1)
+            .skip((page - 1) * per_page)
+            .limit(per_page)
+        )
 
         plantings = []
         async for result in cursor:

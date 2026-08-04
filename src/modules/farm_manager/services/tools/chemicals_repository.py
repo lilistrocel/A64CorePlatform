@@ -62,13 +62,20 @@ class ChemicalsRepository:
         db = farm_db.get_database()
 
         # Reason: case-insensitive uniqueness check
-        existing = await db[COLLECTION].find_one({
-            "organizationId": str(organization_id),
-            "archivedAt": None,
-            "name": {"$regex": f"^{_escape_regex(data.name.strip())}$", "$options": "i"},
-        })
+        existing = await db[COLLECTION].find_one(
+            {
+                "organizationId": str(organization_id),
+                "archivedAt": None,
+                "name": {
+                    "$regex": f"^{_escape_regex(data.name.strip())}$",
+                    "$options": "i",
+                },
+            }
+        )
         if existing:
-            raise ValueError(f"A chemical named '{data.name}' already exists in this organisation")
+            raise ValueError(
+                f"A chemical named '{data.name}' already exists in this organisation"
+            )
 
         now = datetime.utcnow()
         chemical = FertilizerChemical(
@@ -140,10 +147,12 @@ class ChemicalsRepository:
             FertilizerChemical or None if not found.
         """
         db = farm_db.get_database()
-        doc = await db[COLLECTION].find_one({
-            "chemicalId": str(chemical_id),
-            "organizationId": str(organization_id),
-        })
+        doc = await db[COLLECTION].find_one(
+            {
+                "chemicalId": str(chemical_id),
+                "organizationId": str(organization_id),
+            }
+        )
         return _from_doc(doc) if doc else None
 
     @staticmethod
@@ -235,12 +244,14 @@ class ChemicalsRepository:
         if data.name is not None:
             new_name = data.name.strip()
             # Reason: prevent name collision (case-insensitive)
-            conflict = await db[COLLECTION].find_one({
-                "organizationId": str(organization_id),
-                "archivedAt": None,
-                "chemicalId": {"$ne": str(chemical_id)},
-                "name": {"$regex": f"^{_escape_regex(new_name)}$", "$options": "i"},
-            })
+            conflict = await db[COLLECTION].find_one(
+                {
+                    "organizationId": str(organization_id),
+                    "archivedAt": None,
+                    "chemicalId": {"$ne": str(chemical_id)},
+                    "name": {"$regex": f"^{_escape_regex(new_name)}$", "$options": "i"},
+                }
+            )
             if conflict:
                 raise ValueError(f"A chemical named '{new_name}' already exists")
             updates["name"] = new_name
@@ -307,7 +318,11 @@ class ChemicalsRepository:
                         "rules": {
                             "$elemMatch": {
                                 "$or": [
-                                    {"ingredients": {"$elemMatch": {"name": name_match}}},
+                                    {
+                                        "ingredients": {
+                                            "$elemMatch": {"name": name_match}
+                                        }
+                                    },
                                     {
                                         "applications": {
                                             "$elemMatch": {
@@ -326,7 +341,9 @@ class ChemicalsRepository:
             {"plantDataId": 1, "plantName": 1},
         )
         docs = await cursor.to_list(length=None)
-        return [{"plantDataId": d["plantDataId"], "plantName": d["plantName"]} for d in docs]
+        return [
+            {"plantDataId": d["plantDataId"], "plantName": d["plantName"]} for d in docs
+        ]
 
     @staticmethod
     async def archive(
@@ -378,6 +395,7 @@ class ChemicalsRepository:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _escape_regex(text: str) -> str:
     """Escape special regex characters in a string for safe use in $regex."""

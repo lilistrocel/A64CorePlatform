@@ -24,9 +24,7 @@ class CustomerService:
         self.repository = CustomerRepository()
 
     async def create_customer(
-        self,
-        customer_data: CustomerCreate,
-        created_by: UUID
+        self, customer_data: CustomerCreate, created_by: UUID
     ) -> Customer:
         """
         Create a new customer
@@ -46,7 +44,7 @@ class CustomerService:
             if not customer_data.name or not customer_data.name.strip():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Customer name is required"
+                    detail="Customer name is required",
                 )
 
             customer = await self.repository.create(customer_data, created_by)
@@ -59,7 +57,7 @@ class CustomerService:
             logger.error(f"Error creating customer: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create customer"
+                detail="Failed to create customer",
             )
 
     async def get_customer(self, customer_id: UUID) -> Customer:
@@ -79,7 +77,7 @@ class CustomerService:
         if not customer:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Customer {customer_id} not found"
+                detail=f"Customer {customer_id} not found",
             )
         return customer
 
@@ -88,7 +86,7 @@ class CustomerService:
         page: int = 1,
         per_page: int = 20,
         status: Optional[CustomerStatus] = None,
-        customer_type: Optional[str] = None
+        customer_type: Optional[str] = None,
     ) -> tuple[List[Customer], int, int]:
         """
         Get all customers with pagination
@@ -108,17 +106,16 @@ class CustomerService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        customers, total = await self.repository.get_all(skip, per_page, status, customer_type)
+        customers, total = await self.repository.get_all(
+            skip, per_page, status, customer_type
+        )
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 
         return customers, total, total_pages
 
     async def search_customers(
-        self,
-        search_term: str,
-        page: int = 1,
-        per_page: int = 20
+        self, search_term: str, page: int = 1, per_page: int = 20
     ) -> tuple[List[Customer], int, int]:
         """
         Search customers by name, email, or company
@@ -144,9 +141,7 @@ class CustomerService:
         return customers, total, total_pages
 
     async def update_customer(
-        self,
-        customer_id: UUID,
-        update_data: CustomerUpdate
+        self, customer_id: UUID, update_data: CustomerUpdate
     ) -> Customer:
         """
         Update a customer with cascading updates to related entities.
@@ -171,20 +166,20 @@ class CustomerService:
         if update_data.name is not None and not update_data.name.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Customer name cannot be empty"
+                detail="Customer name cannot be empty",
             )
 
         # Check if name is being updated (for cascading)
         name_changed = (
-            update_data.name is not None and
-            update_data.name.strip() != current_customer.name
+            update_data.name is not None
+            and update_data.name.strip() != current_customer.name
         )
 
         updated_customer = await self.repository.update(customer_id, update_data)
         if not updated_customer:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Customer {customer_id} not found"
+                detail=f"Customer {customer_id} not found",
             )
 
         # Cascade name update to related sales orders
@@ -195,9 +190,7 @@ class CustomerService:
         return updated_customer
 
     async def _cascade_customer_name_update(
-        self,
-        customer_id: UUID,
-        new_name: str
+        self, customer_id: UUID, new_name: str
     ) -> int:
         """
         Cascade customer name update to all related sales orders.
@@ -215,8 +208,7 @@ class CustomerService:
         db = mongodb.get_database()
 
         result = await db.sales_orders.update_many(
-            {"customerId": str(customer_id)},
-            {"$set": {"customerName": new_name}}
+            {"customerId": str(customer_id)}, {"$set": {"customerName": new_name}}
         )
 
         if result.modified_count > 0:
@@ -258,16 +250,22 @@ class CustomerService:
 
         if all_orders_count > 0:
             # Check for active orders (not cancelled or delivered)
-            active_statuses = ["draft", "confirmed", "processing", "assigned", "in_transit", "shipped"]
-            active_orders_count = await db.sales_orders.count_documents({
-                "customerId": str(customer_id),
-                "status": {"$in": active_statuses}
-            })
+            active_statuses = [
+                "draft",
+                "confirmed",
+                "processing",
+                "assigned",
+                "in_transit",
+                "shipped",
+            ]
+            active_orders_count = await db.sales_orders.count_documents(
+                {"customerId": str(customer_id), "status": {"$in": active_statuses}}
+            )
 
             if active_orders_count > 0:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Cannot delete customer '{customer.name}': {active_orders_count} active sales order(s) exist. Cancel or complete all orders before deleting this customer."
+                    detail=f"Cannot delete customer '{customer.name}': {active_orders_count} active sales order(s) exist. Cancel or complete all orders before deleting this customer.",
                 )
 
             # All orders are completed/cancelled - cascade delete them
@@ -275,7 +273,9 @@ class CustomerService:
                 {"customerId": str(customer_id)}
             )
             orders_deleted = delete_result.deleted_count
-            logger.info(f"Cascade deleted {orders_deleted} sales orders for customer {customer_id}")
+            logger.info(
+                f"Cascade deleted {orders_deleted} sales orders for customer {customer_id}"
+            )
         else:
             orders_deleted = 0
 
@@ -284,13 +284,13 @@ class CustomerService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Customer {customer_id} not found"
+                detail=f"Customer {customer_id} not found",
             )
 
-        logger.info(f"Customer deleted: {customer_id} (cascade: {orders_deleted} orders)")
+        logger.info(
+            f"Customer deleted: {customer_id} (cascade: {orders_deleted} orders)"
+        )
         return {
             "message": "Customer deleted successfully",
-            "relatedRecordsDeleted": {
-                "salesOrders": orders_deleted
-            }
+            "relatedRecordsDeleted": {"salesOrders": orders_deleted},
         }

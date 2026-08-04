@@ -46,7 +46,9 @@ class TimingMiddleware(BaseHTTPMiddleware):
     # Paths to skip logging (high-frequency health checks)
     SKIP_LOGGING_PATHS = ["/api/health", "/api/ready", "/health"]
 
-    def __init__(self, app, slow_threshold_ms: int = 1000, skip_health_logging: bool = True):
+    def __init__(
+        self, app, slow_threshold_ms: int = 1000, skip_health_logging: bool = True
+    ):
         """
         Initialize timing middleware.
 
@@ -112,9 +114,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
                 )
             else:
                 # Log all requests at INFO level for debugging/monitoring
-                logger.info(
-                    f"{method} {path} {status_code} - {duration_ms:.2f}ms"
-                )
+                logger.info(f"{method} {path} {status_code} - {duration_ms:.2f}ms")
 
         return response
 
@@ -143,7 +143,9 @@ class ResponseTimeCollector:
         self._error_count = 0
         self._slow_threshold_ms = 1000
 
-    def record(self, method: str, path: str, status_code: int, duration_ms: float) -> None:
+    def record(
+        self, method: str, path: str, status_code: int, duration_ms: float
+    ) -> None:
         """
         Record a request's response time.
 
@@ -160,27 +162,31 @@ class ResponseTimeCollector:
             self._error_count += 1
 
         # Store recent response times (circular buffer)
-        self._response_times.append({
-            "method": method,
-            "path": path,
-            "status": status_code,
-            "duration_ms": duration_ms,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-
-        # Trim to window size
-        if len(self._response_times) > self.window_size:
-            self._response_times = self._response_times[-self.window_size:]
-
-        # Track slow requests separately
-        if duration_ms > self._slow_threshold_ms:
-            self._slow_requests.append({
+        self._response_times.append(
+            {
                 "method": method,
                 "path": path,
                 "status": status_code,
                 "duration_ms": duration_ms,
-                "timestamp": datetime.utcnow().isoformat()
-            })
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
+
+        # Trim to window size
+        if len(self._response_times) > self.window_size:
+            self._response_times = self._response_times[-self.window_size :]
+
+        # Track slow requests separately
+        if duration_ms > self._slow_threshold_ms:
+            self._slow_requests.append(
+                {
+                    "method": method,
+                    "path": path,
+                    "status": status_code,
+                    "duration_ms": duration_ms,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            )
 
             # Keep only last 100 slow requests
             if len(self._slow_requests) > 100:
@@ -214,7 +220,7 @@ class ResponseTimeCollector:
                 "p50_response_time_ms": 0,
                 "p95_response_time_ms": 0,
                 "p99_response_time_ms": 0,
-                "slow_request_count": len(self._slow_requests)
+                "slow_request_count": len(self._slow_requests),
             }
 
         durations = [r["duration_ms"] for r in self._response_times]
@@ -236,7 +242,7 @@ class ResponseTimeCollector:
             "p50_response_time_ms": round(percentile(50), 2),
             "p95_response_time_ms": round(percentile(95), 2),
             "p99_response_time_ms": round(percentile(99), 2),
-            "slow_request_count": len(self._slow_requests)
+            "slow_request_count": len(self._slow_requests),
         }
 
     def get_slow_requests(self) -> list:
@@ -263,17 +269,12 @@ class ResponseTimeCollector:
         for req in self._response_times:
             path = req["path"]
             if path not in endpoint_stats:
-                endpoint_stats[path] = {
-                    "count": 0,
-                    "total_ms": 0,
-                    "max_ms": 0
-                }
+                endpoint_stats[path] = {"count": 0, "total_ms": 0, "max_ms": 0}
 
             endpoint_stats[path]["count"] += 1
             endpoint_stats[path]["total_ms"] += req["duration_ms"]
             endpoint_stats[path]["max_ms"] = max(
-                endpoint_stats[path]["max_ms"],
-                req["duration_ms"]
+                endpoint_stats[path]["max_ms"], req["duration_ms"]
             )
 
         # Calculate averages
@@ -282,7 +283,7 @@ class ResponseTimeCollector:
             result[path] = {
                 "count": stats["count"],
                 "avg_ms": round(stats["total_ms"] / stats["count"], 2),
-                "max_ms": round(stats["max_ms"], 2)
+                "max_ms": round(stats["max_ms"], 2),
             }
 
         return result
@@ -301,7 +302,9 @@ class TimingMiddlewareWithCollector(BaseHTTPMiddleware):
 
     SKIP_LOGGING_PATHS = ["/api/health", "/api/ready", "/health"]
 
-    def __init__(self, app, slow_threshold_ms: int = 1000, skip_health_logging: bool = True):
+    def __init__(
+        self, app, slow_threshold_ms: int = 1000, skip_health_logging: bool = True
+    ):
         super().__init__(app)
         self.slow_threshold_ms = slow_threshold_ms
         self.skip_health_logging = skip_health_logging
@@ -316,7 +319,9 @@ class TimingMiddlewareWithCollector(BaseHTTPMiddleware):
             status_code = response.status_code
         except Exception as e:
             duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(f"ERROR {method} {path} - {duration_ms:.2f}ms - Exception: {str(e)}")
+            logger.error(
+                f"ERROR {method} {path} - {duration_ms:.2f}ms - Exception: {str(e)}"
+            )
             raise
 
         duration_ms = (time.perf_counter() - start_time) * 1000

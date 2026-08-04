@@ -13,6 +13,7 @@ from enum import Enum
 
 class CampaignStatus(str, Enum):
     """Campaign status enumeration"""
+
     DRAFT = "draft"
     ACTIVE = "active"
     PAUSED = "paused"
@@ -21,6 +22,7 @@ class CampaignStatus(str, Enum):
 
 class CampaignMetrics(BaseModel):
     """Campaign performance metrics"""
+
     impressions: int = Field(0, ge=0, description="Number of impressions")
     clicks: int = Field(0, ge=0, description="Number of clicks")
     conversions: int = Field(0, ge=0, description="Number of conversions")
@@ -29,27 +31,38 @@ class CampaignMetrics(BaseModel):
 
 class CampaignBase(BaseModel):
     """Base campaign fields"""
+
     name: str = Field(..., min_length=1, max_length=200, description="Campaign name")
-    description: Optional[str] = Field(None, max_length=1000, description="Campaign description")
+    description: Optional[str] = Field(
+        None, max_length=1000, description="Campaign description"
+    )
     budgetId: Optional[UUID] = Field(None, description="Associated budget ID")
-    channelIds: List[UUID] = Field(default_factory=list, description="List of marketing channel IDs")
+    channelIds: List[UUID] = Field(
+        default_factory=list, description="List of marketing channel IDs"
+    )
     startDate: date = Field(..., description="Campaign start date")
     endDate: date = Field(..., description="Campaign end date")
-    targetAudience: Optional[str] = Field(None, max_length=500, description="Target audience description")
+    targetAudience: Optional[str] = Field(
+        None, max_length=500, description="Target audience description"
+    )
     goals: List[str] = Field(default_factory=list, description="Campaign goals")
     status: CampaignStatus = Field(CampaignStatus.DRAFT, description="Campaign status")
     budget: float = Field(..., ge=0, description="Campaign budget amount")
     spent: float = Field(0, ge=0, description="Amount spent on campaign")
-    metrics: CampaignMetrics = Field(default_factory=CampaignMetrics, description="Campaign metrics")
+    metrics: CampaignMetrics = Field(
+        default_factory=CampaignMetrics, description="Campaign metrics"
+    )
 
 
 class CampaignCreate(CampaignBase):
     """Schema for creating a new campaign"""
+
     pass
 
 
 class CampaignUpdate(BaseModel):
     """Schema for updating a campaign"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
     budgetId: Optional[UUID] = None
@@ -66,8 +79,13 @@ class CampaignUpdate(BaseModel):
 
 class Campaign(CampaignBase):
     """Complete campaign model with all fields"""
-    campaignId: UUID = Field(default_factory=uuid4, description="Unique campaign identifier")
-    campaignCode: Optional[str] = Field(None, description="Human-readable campaign code (e.g., MC001)")
+
+    campaignId: UUID = Field(
+        default_factory=uuid4, description="Unique campaign identifier"
+    )
+    campaignCode: Optional[str] = Field(
+        None, description="Human-readable campaign code (e.g., MC001)"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
@@ -98,10 +116,10 @@ class Campaign(CampaignBase):
                     "impressions": 50000,
                     "clicks": 2500,
                     "conversions": 150,
-                    "roi": 15.5
+                    "roi": 15.5,
                 },
                 "createdBy": "d4e5f6a7-b8c9-0123-def1-234567890123",
                 "createdAt": "2025-01-20T10:00:00Z",
-                "updatedAt": "2025-01-20T10:00:00Z"
+                "updatedAt": "2025-01-20T10:00:00Z",
             }
         }

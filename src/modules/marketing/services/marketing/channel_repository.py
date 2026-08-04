@@ -44,7 +44,7 @@ class ChannelRepository:
             **channel_dict,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         channel_doc = channel.model_dump(by_alias=True)
@@ -79,7 +79,7 @@ class ChannelRepository:
         skip: int = 0,
         limit: int = 20,
         channel_type: Optional[ChannelType] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> tuple[List[Channel], int]:
         """
         Get all channels with pagination and filters
@@ -114,7 +114,9 @@ class ChannelRepository:
 
         return channels, total
 
-    async def update(self, channel_id: UUID, update_data: ChannelUpdate) -> Optional[Channel]:
+    async def update(
+        self, channel_id: UUID, update_data: ChannelUpdate
+    ) -> Optional[Channel]:
         """
         Update a channel
 
@@ -134,8 +136,7 @@ class ChannelRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"channelId": str(channel_id)},
-            {"$set": update_dict}
+            {"channelId": str(channel_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

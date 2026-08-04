@@ -32,28 +32,32 @@ class FertilizerChemical(BaseModel):
         createdAt / updatedAt: Audit timestamps.
     """
 
-    chemicalId: UUID = Field(default_factory=uuid4, description="Unique chemical identifier")
+    chemicalId: UUID = Field(
+        default_factory=uuid4, description="Unique chemical identifier"
+    )
     name: str = Field(..., min_length=1, max_length=128, description="Canonical name")
     aliases: List[str] = Field(
         default_factory=list,
         max_length=20,
-        description="Alternative names for schedule matching (max 20)"
+        description="Alternative names for schedule matching (max 20)",
     )
     category: IngredientCategoryEnum = Field(
-        IngredientCategoryEnum.OTHER,
-        description="Ingredient category"
+        IngredientCategoryEnum.OTHER, description="Ingredient category"
     )
     defaultUnit: Literal["kg", "L"] = Field(
-        "kg",
-        description="Pricing unit: 'kg' for solids, 'L' for liquids"
+        "kg", description="Pricing unit: 'kg' for solids, 'L' for liquids"
     )
     notes: Optional[str] = Field(None, description="Optional notes")
 
     # Lifecycle
-    archivedAt: Optional[datetime] = Field(None, description="Soft-delete timestamp; None means active")
+    archivedAt: Optional[datetime] = Field(
+        None, description="Soft-delete timestamp; None means active"
+    )
 
     # Scoping
-    organizationId: UUID = Field(..., description="Organisation this chemical belongs to")
+    organizationId: UUID = Field(
+        ..., description="Organisation this chemical belongs to"
+    )
 
     # Audit
     createdBy: UUID = Field(..., description="User who created this record")

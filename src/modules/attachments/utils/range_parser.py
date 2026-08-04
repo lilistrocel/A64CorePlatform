@@ -9,9 +9,7 @@ Used by the file download endpoint to support in-browser PDF viewing
 from typing import Optional
 
 
-def parse_range_header(
-    range_header: str, total_size: int
-) -> Optional[tuple[int, int]]:
+def parse_range_header(range_header: str, total_size: int) -> Optional[tuple[int, int]]:
     """
     Parse an HTTP Range header and return (start, end) byte offsets.
 
@@ -30,7 +28,7 @@ def parse_range_header(
     if not range_header.startswith("bytes="):
         return None
 
-    ranges_spec = range_header[len("bytes="):]
+    ranges_spec = range_header[len("bytes=") :]
 
     # Reason: multi-range not supported — return None to serve full content
     if "," in ranges_spec:

@@ -16,6 +16,7 @@ class OrganismKind(str, Enum):
     The repo is shared across every department, so a single line collection
     holds plants, fungi and animals side by side.
     """
+
     PLANT = "plant"
     FUNGUS = "fungus"
     ANIMAL = "animal"
@@ -24,6 +25,7 @@ class OrganismKind(str, Enum):
 
 class ProvenanceType(str, Enum):
     """How material entered the lab when there is no parent accession on file."""
+
     WILD_COLLECTED = "wild_collected"
     PURCHASED = "purchased"
     GIFTED = "gifted"
@@ -33,12 +35,13 @@ class ProvenanceType(str, Enum):
 
 class DerivationType(str, Enum):
     """How a genetic line came to exist relative to its parent line."""
-    ORIGINAL = "original"          # No parent line — first entry for this genetics
-    MUTATION = "mutation"          # Spontaneous/induced mutant
-    SECTOR = "sector"              # Sectoring isolate off a plate
-    SELECTION = "selection"        # Phenotype-selected sub-line
-    CROSS = "cross"                # Product of a deliberate cross
-    ISOLATE = "isolate"            # Single-spore / single-colony isolate
+
+    ORIGINAL = "original"  # No parent line — first entry for this genetics
+    MUTATION = "mutation"  # Spontaneous/induced mutant
+    SECTOR = "sector"  # Sectoring isolate off a plate
+    SELECTION = "selection"  # Phenotype-selected sub-line
+    CROSS = "cross"  # Product of a deliberate cross
+    ISOLATE = "isolate"  # Single-spore / single-colony isolate
 
 
 class VesselForm(str, Enum):
@@ -47,6 +50,7 @@ class VesselForm(str, Enum):
     Spans all three domains — an animal accession uses ``ANIMAL`` and carries
     a head count in ``quantity``.
     """
+
     PETRI_DISH = "petri_dish"
     SLANT = "slant"
     LIQUID_CULTURE = "liquid_culture"
@@ -70,6 +74,7 @@ class VesselForm(str, Enum):
 
 class AccessionStatus(str, Enum):
     """Lifecycle state of a physical accession."""
+
     ACTIVE = "active"
     CONTAMINATED = "contaminated"
     SENESCENT = "senescent"
@@ -80,13 +85,14 @@ class AccessionStatus(str, Enum):
 
 class ParentRole(str, Enum):
     """Role a parent accession played in producing a child accession."""
-    CLONE_SOURCE = "clone_source"      # Asexual — the single donor
-    SEED_PARENT = "seed_parent"        # Plant cross — ovule donor (mother)
-    POLLEN_PARENT = "pollen_parent"    # Plant cross — pollen donor (father)
-    DAM = "dam"                        # Animal — mother
-    SIRE = "sire"                      # Animal — father
-    SPORE_SOURCE = "spore_source"      # Fungal — fruit body the print came from
-    UNKNOWN = "unknown"                # Known to exist, identity not recorded
+
+    CLONE_SOURCE = "clone_source"  # Asexual — the single donor
+    SEED_PARENT = "seed_parent"  # Plant cross — ovule donor (mother)
+    POLLEN_PARENT = "pollen_parent"  # Plant cross — pollen donor (father)
+    DAM = "dam"  # Animal — mother
+    SIRE = "sire"  # Animal — father
+    SPORE_SOURCE = "spore_source"  # Fungal — fruit body the print came from
+    UNKNOWN = "unknown"  # Known to exist, identity not recorded
 
 
 class ReproductionMode(str, Enum):
@@ -94,8 +100,9 @@ class ReproductionMode(str, Enum):
 
     This is the axis that decides which generation counter moves.
     """
-    ASEXUAL = "asexual"    # Genome preserved  -> clone generation (G) increments
-    SEXUAL = "sexual"      # Genome recombined -> filial generation (F) increments, G resets
+
+    ASEXUAL = "asexual"  # Genome preserved  -> clone generation (G) increments
+    SEXUAL = "sexual"  # Genome recombined -> filial generation (F) increments, G resets
 
 
 class PropagationMethod(str, Enum):
@@ -172,34 +179,40 @@ class PropagationMethod(str, Enum):
 # CRYO_REVIVAL is included deliberately: the whole point of cryogenic storage
 # is to preserve a generation, so reviving material restores it at the depth it
 # went in rather than adding one.
-_EXPANSION_METHODS = frozenset({
-    PropagationMethod.LC_INOCULATION,
-    PropagationMethod.GRAIN_TRANSFER,
-    PropagationMethod.BULK_INOCULATION,
-    PropagationMethod.CRYO_REVIVAL,
-})
+_EXPANSION_METHODS = frozenset(
+    {
+        PropagationMethod.LC_INOCULATION,
+        PropagationMethod.GRAIN_TRANSFER,
+        PropagationMethod.BULK_INOCULATION,
+        PropagationMethod.CRYO_REVIVAL,
+    }
+)
 
 # Methods that recombine the genome. Membership here is the single source of
 # truth for sexual/asexual classification — add new sexual methods to this set.
-_SEXUAL_METHODS = frozenset({
-    PropagationMethod.SPORE_PRINT,
-    PropagationMethod.MULTISPORE,
-    PropagationMethod.SINGLE_SPORE,
-    PropagationMethod.SEED_FROM_CROSS,
-    PropagationMethod.SELF_POLLINATION,
-    PropagationMethod.BREEDING,
-    PropagationMethod.ARTIFICIAL_INSEMINATION,
-    PropagationMethod.EMBRYO_TRANSFER,
-})
+_SEXUAL_METHODS = frozenset(
+    {
+        PropagationMethod.SPORE_PRINT,
+        PropagationMethod.MULTISPORE,
+        PropagationMethod.SINGLE_SPORE,
+        PropagationMethod.SEED_FROM_CROSS,
+        PropagationMethod.SELF_POLLINATION,
+        PropagationMethod.BREEDING,
+        PropagationMethod.ARTIFICIAL_INSEMINATION,
+        PropagationMethod.EMBRYO_TRANSFER,
+    }
+)
 
 # Methods that may name two distinct parents. Self-pollination and spore
 # prints are sexual but single-parent; breeding and crosses take two.
-_TWO_PARENT_METHODS = frozenset({
-    PropagationMethod.SEED_FROM_CROSS,
-    PropagationMethod.BREEDING,
-    PropagationMethod.ARTIFICIAL_INSEMINATION,
-    PropagationMethod.EMBRYO_TRANSFER,
-})
+_TWO_PARENT_METHODS = frozenset(
+    {
+        PropagationMethod.SEED_FROM_CROSS,
+        PropagationMethod.BREEDING,
+        PropagationMethod.ARTIFICIAL_INSEMINATION,
+        PropagationMethod.EMBRYO_TRANSFER,
+    }
+)
 
 
 class IngredientUnit(str, Enum):
@@ -242,6 +255,7 @@ class IngredientUnit(str, Enum):
 
 class MediumType(str, Enum):
     """Category of growth medium / substrate."""
+
     AGAR = "agar"
     LIQUID_CULTURE = "liquid_culture"
     GRAIN = "grain"
@@ -254,6 +268,7 @@ class MediumType(str, Enum):
 
 class SterilizationMethod(str, Enum):
     """How a medium batch was sterilised or pasteurised."""
+
     AUTOCLAVE = "autoclave"
     PRESSURE_COOKER = "pressure_cooker"
     PASTEURIZATION = "pasteurization"
@@ -264,6 +279,7 @@ class SterilizationMethod(str, Enum):
 
 class MediumBatchStatus(str, Enum):
     """Lifecycle state of a prepared medium batch."""
+
     PREPARED = "prepared"
     IN_USE = "in_use"
     CONSUMED = "consumed"
@@ -273,6 +289,7 @@ class MediumBatchStatus(str, Enum):
 
 class ObservationType(str, Enum):
     """Kind of observation recorded against an accession."""
+
     GROWTH = "growth"
     MORPHOLOGY = "morphology"
     CONTAMINATION = "contamination"

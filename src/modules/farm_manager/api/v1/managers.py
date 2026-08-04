@@ -20,6 +20,7 @@ router = APIRouter()
 
 class ManagerResponse(BaseModel):
     """Manager user information for farm assignment"""
+
     userId: str = Field(..., description="User unique identifier")
     name: str = Field(..., description="User full name (firstName + lastName)")
     email: str = Field(..., description="User email address")
@@ -31,14 +32,17 @@ class ManagerResponse(BaseModel):
                 "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "name": "John Doe",
                 "email": "john.doe@example.com",
-                "role": "admin"
+                "role": "admin",
             }
         }
 
 
 class ManagersListResponse(BaseModel):
     """Response containing list of manager users"""
-    managers: List[ManagerResponse] = Field(..., description="List of users who can be assigned as farm managers")
+
+    managers: List[ManagerResponse] = Field(
+        ..., description="List of users who can be assigned as farm managers"
+    )
 
 
 @router.get(
@@ -46,11 +50,9 @@ class ManagersListResponse(BaseModel):
     response_model=SuccessResponse[ManagersListResponse],
     status_code=status.HTTP_200_OK,
     summary="Get list of users who can be farm managers",
-    description="Fetch users with manager role (admin, super_admin, moderator) who can be assigned as farm managers"
+    description="Fetch users with manager role (admin, super_admin, moderator) who can be assigned as farm managers",
 )
-async def get_managers(
-    current_user: CurrentUser = Depends(get_current_active_user)
-):
+async def get_managers(current_user: CurrentUser = Depends(get_current_active_user)):
     """
     Get list of users who can be assigned as farm managers
 
@@ -76,19 +78,15 @@ async def get_managers(
 
         # Fetch active users with manager roles
         cursor = db.users.find(
-            {
-                "role": {"$in": manager_roles},
-                "isActive": True,
-                "deletedAt": None
-            },
+            {"role": {"$in": manager_roles}, "isActive": True, "deletedAt": None},
             {
                 "_id": 0,
                 "userId": 1,
                 "firstName": 1,
                 "lastName": 1,
                 "email": 1,
-                "role": 1
-            }
+                "role": 1,
+            },
         ).sort("firstName", 1)
 
         # Build manager list
@@ -99,20 +97,22 @@ async def get_managers(
                     userId=user_doc["userId"],
                     name=f"{user_doc['firstName']} {user_doc['lastName']}",
                     email=user_doc["email"],
-                    role=user_doc["role"]
+                    role=user_doc["role"],
                 )
             )
 
-        logger.info(f"[Managers API] Retrieved {len(managers)} manager users for user {current_user.userId}")
+        logger.info(
+            f"[Managers API] Retrieved {len(managers)} manager users for user {current_user.userId}"
+        )
 
         return SuccessResponse(
             data=ManagersListResponse(managers=managers),
-            message=f"Retrieved {len(managers)} manager users"
+            message=f"Retrieved {len(managers)} manager users",
         )
 
     except Exception as e:
         logger.error(f"[Managers API] Error fetching managers: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch manager users: {str(e)}"
+            detail=f"Failed to fetch manager users: {str(e)}",
         )

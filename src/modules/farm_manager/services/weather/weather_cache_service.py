@@ -32,20 +32,20 @@ class WeatherCacheService:
     COLLECTION_NAME = "weather_cache"
     CACHE_TTL_HOURS = 1  # Cache valid for 1 hour
 
-    _instance: Optional['WeatherCacheService'] = None
+    _instance: Optional["WeatherCacheService"] = None
     _db = None
     _refresh_task: Optional[asyncio.Task] = None
     _is_running = False
 
     @classmethod
-    def get_instance(cls) -> 'WeatherCacheService':
+    def get_instance(cls) -> "WeatherCacheService":
         """Get singleton instance"""
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
 
     @classmethod
-    async def initialize(cls, db) -> 'WeatherCacheService':
+    async def initialize(cls, db) -> "WeatherCacheService":
         """
         Initialize the weather cache service with database connection
 
@@ -83,9 +83,7 @@ class WeatherCacheService:
 
             # TTL index to auto-expire old entries (2 hours - gives buffer beyond refresh)
             await collection.create_index(
-                "updatedAt",
-                expireAfterSeconds=7200,  # 2 hours
-                name="ttl_updatedAt"
+                "updatedAt", expireAfterSeconds=7200, name="ttl_updatedAt"  # 2 hours
             )
 
             logger.info("Weather cache indexes created")
@@ -129,7 +127,9 @@ class WeatherCacheService:
             if data:
                 # Convert lastUpdated back to datetime if stored as string
                 if isinstance(data.get("lastUpdated"), str):
-                    data["lastUpdated"] = datetime.fromisoformat(data["lastUpdated"].replace("Z", "+00:00"))
+                    data["lastUpdated"] = datetime.fromisoformat(
+                        data["lastUpdated"].replace("Z", "+00:00")
+                    )
 
                 logger.debug(f"Cache hit for farm {farm_id}")
                 return AgriWeatherData(**data)
@@ -169,10 +169,10 @@ class WeatherCacheService:
                         "farmId": str(farm_id),
                         "farmName": data.farmName,
                         "data": data_dict,
-                        "updatedAt": datetime.utcnow()
+                        "updatedAt": datetime.utcnow(),
                     }
                 },
-                upsert=True
+                upsert=True,
             )
 
             logger.debug(f"Cached weather data for farm {farm_id}")
@@ -218,15 +218,19 @@ class WeatherCacheService:
             farms_with_locations = []
             for farm in farms:
                 # Check if farm has valid coordinates
-                if (farm.location and
-                    farm.location.latitude is not None and
-                    farm.location.longitude is not None):
-                    farms_with_locations.append({
-                        "farmId": farm.farmId,
-                        "name": farm.name,
-                        "latitude": farm.location.latitude,
-                        "longitude": farm.location.longitude
-                    })
+                if (
+                    farm.location
+                    and farm.location.latitude is not None
+                    and farm.location.longitude is not None
+                ):
+                    farms_with_locations.append(
+                        {
+                            "farmId": farm.farmId,
+                            "name": farm.name,
+                            "latitude": farm.location.latitude,
+                            "longitude": farm.location.longitude,
+                        }
+                    )
 
             return farms_with_locations
 
@@ -273,12 +277,7 @@ class WeatherCacheService:
 
         if not farms:
             logger.info("No farms with locations found to refresh")
-            return {
-                "total": 0,
-                "success": 0,
-                "failed": 0,
-                "farms": []
-            }
+            return {"total": 0, "success": 0, "failed": 0, "farms": []}
 
         logger.info(f"Found {len(farms)} farms with locations")
 
@@ -295,14 +294,25 @@ class WeatherCacheService:
 
                 if success:
                     success_count += 1
-                    results.append({"farmId": str(farm_id), "name": farm_name, "status": "success"})
+                    results.append(
+                        {"farmId": str(farm_id), "name": farm_name, "status": "success"}
+                    )
                 else:
                     failed_count += 1
-                    results.append({"farmId": str(farm_id), "name": farm_name, "status": "failed"})
+                    results.append(
+                        {"farmId": str(farm_id), "name": farm_name, "status": "failed"}
+                    )
 
             except Exception as e:
                 failed_count += 1
-                results.append({"farmId": str(farm_id), "name": farm_name, "status": "error", "error": str(e)})
+                results.append(
+                    {
+                        "farmId": str(farm_id),
+                        "name": farm_name,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
 
             # Small delay between API calls to avoid rate limiting
             await asyncio.sleep(0.5)
@@ -312,10 +322,12 @@ class WeatherCacheService:
             "success": success_count,
             "failed": failed_count,
             "refreshedAt": datetime.utcnow().isoformat(),
-            "farms": results
+            "farms": results,
         }
 
-        logger.info(f"Weather cache refresh complete: {success_count}/{len(farms)} farms updated")
+        logger.info(
+            f"Weather cache refresh complete: {success_count}/{len(farms)} farms updated"
+        )
 
         return summary
 
@@ -334,7 +346,9 @@ class WeatherCacheService:
 
         async def refresh_loop():
             """Background loop that runs refresh at intervals"""
-            logger.info(f"Weather cache background refresh started (interval: {interval_seconds}s)")
+            logger.info(
+                f"Weather cache background refresh started (interval: {interval_seconds}s)"
+            )
 
             # Initial refresh on startup
             await asyncio.sleep(10)  # Wait for app to fully start
@@ -394,7 +408,9 @@ class WeatherCacheService:
 
             # Count entries updated in last hour
             one_hour_ago = datetime.utcnow() - timedelta(hours=1)
-            fresh = await collection.count_documents({"updatedAt": {"$gte": one_hour_ago}})
+            fresh = await collection.count_documents(
+                {"updatedAt": {"$gte": one_hour_ago}}
+            )
 
             # Get oldest and newest entries
             oldest = await collection.find_one(sort=[("updatedAt", 1)])
@@ -404,10 +420,18 @@ class WeatherCacheService:
                 "totalEntries": total,
                 "freshEntries": fresh,
                 "staleEntries": total - fresh,
-                "oldestUpdate": oldest.get("updatedAt").isoformat() if oldest and oldest.get("updatedAt") else None,
-                "newestUpdate": newest.get("updatedAt").isoformat() if newest and newest.get("updatedAt") else None,
+                "oldestUpdate": (
+                    oldest.get("updatedAt").isoformat()
+                    if oldest and oldest.get("updatedAt")
+                    else None
+                ),
+                "newestUpdate": (
+                    newest.get("updatedAt").isoformat()
+                    if newest and newest.get("updatedAt")
+                    else None
+                ),
                 "backgroundRefreshRunning": self._is_running,
-                "cacheCollectionName": self.COLLECTION_NAME
+                "cacheCollectionName": self.COLLECTION_NAME,
             }
 
         except Exception as e:

@@ -160,7 +160,9 @@ class ApprovalEngine:
         try:
             import httpx
 
-            url = f"{_FINANCE_BASE_URL}/api/v1/finance/master-data/approval-rules/resolve"
+            url = (
+                f"{_FINANCE_BASE_URL}/api/v1/finance/master-data/approval-rules/resolve"
+            )
             params = {
                 "companyCode": company_code,
                 "docType": doc_type,
@@ -194,12 +196,15 @@ class ApprovalEngine:
                 return ApprovalDecision(required=required, next_step=step)
 
             logger.warning(
-                "[ApprovalEngine] finance returned %s for approval resolve", resp.status_code
+                "[ApprovalEngine] finance returned %s for approval resolve",
+                resp.status_code,
             )
             return None
 
         except Exception as exc:
-            logger.warning("[ApprovalEngine] finance call raised %s: %s", type(exc).__name__, exc)
+            logger.warning(
+                "[ApprovalEngine] finance call raised %s: %s", type(exc).__name__, exc
+            )
             return None
 
     def _fallback_rules(
@@ -226,14 +231,18 @@ class ApprovalEngine:
         if doc_type == "PR":
             return ApprovalDecision(
                 required=True,
-                next_step=ApprovalStep(step_number=1, required_role="procurement_manager"),
+                next_step=ApprovalStep(
+                    step_number=1, required_role="procurement_manager"
+                ),
             )
 
         if doc_type == "PO":
             if amount > _PO_APPROVAL_THRESHOLD_AED:
                 return ApprovalDecision(
                     required=True,
-                    next_step=ApprovalStep(step_number=1, required_role="procurement_manager"),
+                    next_step=ApprovalStep(
+                        step_number=1, required_role="procurement_manager"
+                    ),
                 )
             return ApprovalDecision(required=False)
 

@@ -27,7 +27,7 @@ from ...models.user import (
     MFAStatusResponse,
     MFALoginResponse,
     MFAVerifyLoginRequest,
-    MFARegenerateBackupCodesRequest
+    MFARegenerateBackupCodesRequest,
 )
 from ...models.mfa import MFALoginRequired
 from ...services import deployment_settings_service
@@ -46,9 +46,12 @@ router = APIRouter()
 class CFAccessStatusResponse(BaseModel):
     """Response for GET /auth/cf-access/status — public, nothing secret."""
 
-    enabled: bool = Field(..., description="Whether Cloudflare Access login is available")
+    enabled: bool = Field(
+        ..., description="Whether Cloudflare Access login is available"
+    )
     exclusive: bool = Field(
-        ..., description="Whether password login/registration are restricted to local requests"
+        ...,
+        description="Whether password login/registration are restricted to local requests",
     )
 
 
@@ -58,10 +61,13 @@ class UserMeResponse(UserResponse):
     capability bootstrap so the frontend gets module-status on login
     without a second round-trip.
     """
+
     capabilities: CapabilitiesResponse
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(user_data: UserCreate, request: Request) -> TokenResponse:
     """
     Register a new user and return JWT tokens (auto-login)
@@ -100,7 +106,9 @@ async def register(user_data: UserCreate, request: Request) -> TokenResponse:
     # that did not arrive through the Cloudflare tunnel (see
     # middleware.cf_access.is_local_request for why headers, not source IP,
     # are the discriminator).
-    cf_access_exclusive = await deployment_settings_service.get_value("CF_ACCESS_EXCLUSIVE")
+    cf_access_exclusive = await deployment_settings_service.get_value(
+        "CF_ACCESS_EXCLUSIVE"
+    )
     if cf_access_exclusive and not is_local_request(request):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -116,14 +124,19 @@ async def register(user_data: UserCreate, request: Request) -> TokenResponse:
         # Log error but don't fail registration if email fails
         # Reason: User is registered, email can be resent later
         import logging
+
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to send verification email to {token_response.user.email}: {e}")
+        logger.error(
+            f"Failed to send verification email to {token_response.user.email}: {e}"
+        )
 
     return token_response
 
 
 @router.post("/login", response_model=None)
-async def login(credentials: UserLogin, request: Request) -> Union[TokenResponse, MFALoginResponse]:
+async def login(
+    credentials: UserLogin, request: Request
+) -> Union[TokenResponse, MFALoginResponse]:
     """
     Authenticate user and return JWT tokens (or MFA challenge if MFA enabled)
 
@@ -171,7 +184,9 @@ async def login(credentials: UserLogin, request: Request) -> Union[TokenResponse
     """
     # Break-glass gate (Phase 2 of the Cloudflare Access rollout) — see
     # register() above for the identical rationale.
-    cf_access_exclusive = await deployment_settings_service.get_value("CF_ACCESS_EXCLUSIVE")
+    cf_access_exclusive = await deployment_settings_service.get_value(
+        "CF_ACCESS_EXCLUSIVE"
+    )
     if cf_access_exclusive and not is_local_request(request):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -294,7 +309,7 @@ async def cf_access_session(request: Request) -> Union[TokenResponse, MFALoginRe
 @router.post("/logout")
 async def logout(
     current_user: UserResponse = Depends(get_current_user),
-    refresh_token: str = Body(None, embed=True)
+    refresh_token: str = Body(None, embed=True),
 ) -> Dict[str, str]:
     """
     Logout user by revoking refresh token(s)
@@ -349,7 +364,7 @@ async def refresh_token(refresh_token: str = Body(..., embed=True)) -> TokenResp
 
 @router.get("/me", response_model=UserMeResponse)
 async def get_current_user_info(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> UserMeResponse:
     """
     Get current authenticated user's information.
@@ -377,8 +392,7 @@ async def get_current_user_info(
 
 @router.patch("/me", response_model=UserResponse)
 async def update_current_user_profile(
-    update_data: UserUpdate,
-    current_user: UserResponse = Depends(get_current_user)
+    update_data: UserUpdate, current_user: UserResponse = Depends(get_current_user)
 ) -> UserResponse:
     """
     Update current authenticated user's profile
@@ -412,7 +426,7 @@ async def update_current_user_profile(
 
 @router.post("/send-verification-email")
 async def send_verification_email(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> Dict[str, str]:
     """
     Send or resend email verification link
@@ -484,7 +498,9 @@ async def request_password_reset(request: PasswordResetRequest) -> Dict[str, str
     ```
     """
     await auth_service.request_password_reset(request.email)
-    return {"message": "If your email is registered, you will receive a password reset link"}
+    return {
+        "message": "If your email is registered, you will receive a password reset link"
+    }
 
 
 @router.post("/reset-password")
@@ -550,15 +566,14 @@ async def verify_mfa_login(request: MFAVerifyLoginRequest) -> TokenResponse:
     ```
     """
     token_response = await auth_service.verify_mfa_and_login(
-        mfa_token=request.mfaToken,
-        code=request.code
+        mfa_token=request.mfaToken, code=request.code
     )
     return token_response
 
 
 @router.get("/mfa/status", response_model=MFAStatusResponse)
 async def get_mfa_status(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> MFAStatusResponse:
     """
     Get current MFA status for authenticated user
@@ -588,7 +603,7 @@ async def get_mfa_status(
 
 @router.post("/mfa/setup", response_model=MFASetupResponse)
 async def setup_mfa(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> MFASetupResponse:
     """
     Initialize MFA setup for current user
@@ -610,8 +625,7 @@ async def setup_mfa(
 
 @router.post("/mfa/enable", response_model=MFAEnableResponse)
 async def enable_mfa(
-    request: MFAEnableRequest,
-    current_user: UserResponse = Depends(get_current_user)
+    request: MFAEnableRequest, current_user: UserResponse = Depends(get_current_user)
 ) -> MFAEnableResponse:
     """
     Enable MFA by verifying TOTP code from authenticator app
@@ -633,8 +647,7 @@ async def enable_mfa(
 
 @router.post("/mfa/disable")
 async def disable_mfa(
-    request: MFADisableRequest,
-    current_user: UserResponse = Depends(get_current_user)
+    request: MFADisableRequest, current_user: UserResponse = Depends(get_current_user)
 ) -> Dict[str, str]:
     """
     Disable MFA for current user
@@ -653,14 +666,14 @@ async def disable_mfa(
     return await mfa_service.disable_mfa(
         user_id=current_user.userId,
         totp_code=request.totpCode,
-        password=request.password
+        password=request.password,
     )
 
 
 @router.post("/mfa/backup-codes", response_model=MFAEnableResponse)
 async def regenerate_backup_codes(
     request: MFARegenerateBackupCodesRequest,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> MFAEnableResponse:
     """
     Regenerate MFA backup codes (invalidates old ones)
@@ -684,14 +697,14 @@ async def regenerate_backup_codes(
     return await mfa_service.regenerate_backup_codes(
         user_id=current_user.userId,
         totp_code=request.totpCode,
-        password=request.password
+        password=request.password,
     )
 
 
 @router.post("/mfa/backup-codes/regenerate", response_model=MFAEnableResponse)
 async def regenerate_backup_codes_alt(
     request: MFARegenerateBackupCodesRequest,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> MFAEnableResponse:
     """
     Regenerate MFA backup codes (alternative path)
@@ -701,5 +714,5 @@ async def regenerate_backup_codes_alt(
     return await mfa_service.regenerate_backup_codes(
         user_id=current_user.userId,
         totp_code=request.totpCode,
-        password=request.password
+        password=request.password,
     )

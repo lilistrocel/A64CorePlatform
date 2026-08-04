@@ -39,11 +39,11 @@ class MongoDBManager:
                 settings.MONGODB_URL,
                 maxPoolSize=50,
                 minPoolSize=10,
-                serverSelectionTimeoutMS=5000
+                serverSelectionTimeoutMS=5000,
             )
 
             # Verify connection
-            await cls.client.admin.command('ping')
+            await cls.client.admin.command("ping")
 
             cls.db = cls.client[settings.MONGODB_DB_NAME]
             logger.info(f"Connected to MongoDB database: {settings.MONGODB_DB_NAME}")
@@ -72,8 +72,7 @@ class MongoDBManager:
             await cls.db.refresh_tokens.create_index("tokenId", unique=True)
             await cls.db.refresh_tokens.create_index("userId")
             await cls.db.refresh_tokens.create_index(
-                "expiresAt",
-                expireAfterSeconds=0  # TTL index for automatic deletion
+                "expiresAt", expireAfterSeconds=0  # TTL index for automatic deletion
             )
 
             # Verification tokens collection indexes
@@ -82,8 +81,7 @@ class MongoDBManager:
             await cls.db.verification_tokens.create_index("email")
             await cls.db.verification_tokens.create_index("tokenType")
             await cls.db.verification_tokens.create_index(
-                "expiresAt",
-                expireAfterSeconds=0  # TTL index for automatic deletion
+                "expiresAt", expireAfterSeconds=0  # TTL index for automatic deletion
             )
 
             # Installed modules collection indexes (Module Management System)
@@ -103,7 +101,7 @@ class MongoDBManager:
             await cls.db.module_audit_log.create_index([("timestamp", -1)])
             await cls.db.module_audit_log.create_index(
                 "timestamp",
-                expireAfterSeconds=7776000  # TTL index: 90 days (90*24*60*60)
+                expireAfterSeconds=7776000,  # TTL index: 90 days (90*24*60*60)
             )
 
             # AI query log collection indexes (AI Analytics cost tracking)
@@ -134,7 +132,7 @@ class MongoDBManager:
             # TTL index: automatically delete used backup codes after 90 days
             await cls.db.mfa_backup_codes.create_index(
                 "expiresAt",
-                expireAfterSeconds=0  # TTL uses expiresAt field value directly
+                expireAfterSeconds=0,  # TTL uses expiresAt field value directly
             )
             logger.info("MFA mfa_backup_codes collection indexes created")
 
@@ -145,7 +143,9 @@ class MongoDBManager:
             await cls.db.mfa_audit_log.create_index([("timestamp", -1)])
             await cls.db.mfa_audit_log.create_index([("userId", 1), ("timestamp", -1)])
             await cls.db.mfa_audit_log.create_index([("userId", 1), ("action", 1)])
-            await cls.db.mfa_audit_log.create_index("performedBy")  # For admin action lookups
+            await cls.db.mfa_audit_log.create_index(
+                "performedBy"
+            )  # For admin action lookups
             # Optional: TTL index for log retention (keep 1 year = 31536000 seconds)
             # Uncomment if you want automatic log cleanup:
             # await cls.db.mfa_audit_log.create_index(
@@ -183,7 +183,7 @@ class MongoDBManager:
         """
         try:
             if cls.client:
-                await cls.client.admin.command('ping')
+                await cls.client.admin.command("ping")
                 return True
             return False
         except Exception as e:

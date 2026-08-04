@@ -42,12 +42,14 @@ class FarmRepository:
             {"_id": "farm_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
 
-    async def create(self, farm_data: FarmCreate, manager_id: UUID, manager_email: str) -> Farm:
+    async def create(
+        self, farm_data: FarmCreate, manager_id: UUID, manager_email: str
+    ) -> Farm:
         """
         Create a new farm with auto-generated farmCode
 
@@ -72,11 +74,13 @@ class FarmRepository:
             managerId=manager_id,
             managerEmail=manager_email,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         farm_doc = farm.model_dump(by_alias=True)
-        farm_doc["farmId"] = str(farm_doc["farmId"])  # Convert UUID to string for MongoDB
+        farm_doc["farmId"] = str(
+            farm_doc["farmId"]
+        )  # Convert UUID to string for MongoDB
         farm_doc["managerId"] = str(farm_doc["managerId"])
         # Initialize block sequence counter for this farm
         farm_doc["nextBlockSequence"] = 1
@@ -104,7 +108,9 @@ class FarmRepository:
             return Farm(**farm_doc)
         return None
 
-    async def get_by_manager(self, manager_id: UUID, is_active: Optional[bool] = None) -> List[Farm]:
+    async def get_by_manager(
+        self, manager_id: UUID, is_active: Optional[bool] = None
+    ) -> List[Farm]:
         """
         Get farms by manager ID
 
@@ -131,10 +137,7 @@ class FarmRepository:
         return farms
 
     async def get_all(
-        self,
-        skip: int = 0,
-        limit: int = 20,
-        is_active: Optional[bool] = None
+        self, skip: int = 0, limit: int = 20, is_active: Optional[bool] = None
     ) -> tuple[List[Farm], int]:
         """
         Get all farms with pagination
@@ -190,8 +193,7 @@ class FarmRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"farmId": str(farm_id)},
-            {"$set": update_dict}
+            {"farmId": str(farm_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:
@@ -214,7 +216,7 @@ class FarmRepository:
 
         result = await collection.update_one(
             {"farmId": str(farm_id)},
-            {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}}
+            {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}},
         )
 
         if result.modified_count > 0:

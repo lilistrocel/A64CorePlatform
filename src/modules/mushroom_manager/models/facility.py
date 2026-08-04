@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 class FacilityType(str, Enum):
     """Type of mushroom growing facility — matches frontend FacilityType union"""
+
     INDOOR = "indoor"
     GREENHOUSE = "greenhouse"
     OUTDOOR = "outdoor"
@@ -24,6 +25,7 @@ class FacilityType(str, Enum):
 
 class FacilityStatus(str, Enum):
     """Facility operational status — matches frontend FacilityStatus union"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     MAINTENANCE = "maintenance"
@@ -38,6 +40,7 @@ class FacilityLocation(BaseModel):
     in FacilityBase.  Kept here so existing data that contains structured
     location objects can still be decoded without crashing.
     """
+
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
     address: Optional[str] = None
@@ -47,20 +50,27 @@ class FacilityLocation(BaseModel):
 
 class FacilityBase(BaseModel):
     """Base facility fields — mirrors CreateFacilityPayload from the frontend"""
+
     name: str = Field(..., min_length=1, max_length=200, description="Facility name")
-    location: Optional[str] = Field(None, max_length=500, description="Location text (e.g. 'Building B, Zone 3')")
-    facilityType: FacilityType = Field(FacilityType.INDOOR, description="Type of facility")
+    location: Optional[str] = Field(
+        None, max_length=500, description="Location text (e.g. 'Building B, Zone 3')"
+    )
+    facilityType: FacilityType = Field(
+        FacilityType.INDOOR, description="Type of facility"
+    )
     status: Optional[FacilityStatus] = Field(None, description="Operational status")
     description: Optional[str] = Field(None, max_length=500)
 
 
 class FacilityCreate(FacilityBase):
     """Schema for creating a new facility"""
+
     pass
 
 
 class FacilityUpdate(BaseModel):
     """Schema for partially updating a facility"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=500)
     facilityType: Optional[FacilityType] = None
@@ -77,7 +87,9 @@ class Facility(FacilityBase):
     id <-> facilityId when reading/writing MongoDB.
     """
 
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique facility ID")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique facility ID"
+    )
     # Override: status is required on the document (defaults to ACTIVE)
     status: FacilityStatus = Field(FacilityStatus.ACTIVE)
 

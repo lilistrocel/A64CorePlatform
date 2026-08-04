@@ -110,9 +110,7 @@ class AIDashboardScheduler:
                 service = AIDashboardService(self._db)
                 await service.run_inspection(triggered_by="scheduler_startup")
             except Exception as exc:
-                logger.error(
-                    f"[AIDashboardScheduler] Initial inspection failed: {exc}"
-                )
+                logger.error(f"[AIDashboardScheduler] Initial inspection failed: {exc}")
 
             while self._is_running:
                 try:
@@ -128,9 +126,7 @@ class AIDashboardScheduler:
                     logger.info("[AIDashboardScheduler] Task cancelled")
                     break
                 except Exception as exc:
-                    logger.error(
-                        f"[AIDashboardScheduler] Inspection error: {exc}"
-                    )
+                    logger.error(f"[AIDashboardScheduler] Inspection error: {exc}")
                     # Reason: Wait before retrying to avoid tight failure loops
                     await asyncio.sleep(300)
 

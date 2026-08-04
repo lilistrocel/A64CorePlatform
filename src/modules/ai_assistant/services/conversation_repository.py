@@ -16,7 +16,12 @@ from typing import List, Optional
 
 from src.services.database import mongodb
 
-from ..models.conversation import Conversation, ConversationSummary, Message, MessageRole
+from ..models.conversation import (
+    Conversation,
+    ConversationSummary,
+    Message,
+    MessageRole,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +85,9 @@ class ConversationRepository:
 
         doc = conversation.model_dump()
         await collection.insert_one(doc)
-        logger.debug("Created conversation %s for user %s", conversation.conversation_id, user_id)
+        logger.debug(
+            "Created conversation %s for user %s", conversation.conversation_id, user_id
+        )
         return conversation
 
     # ------------------------------------------------------------------
@@ -220,7 +227,9 @@ class ConversationRepository:
         )
         deleted = result.deleted_count > 0
         if deleted:
-            logger.debug("Deleted conversation %s for user %s", conversation_id, user_id)
+            logger.debug(
+                "Deleted conversation %s for user %s", conversation_id, user_id
+            )
         return deleted
 
     # ------------------------------------------------------------------
@@ -255,7 +264,9 @@ class ConversationRepository:
             )
             logger.debug(
                 "Evicted conversation %s for user %s (limit=%d)",
-                old_id, user_id, limit,
+                old_id,
+                user_id,
+                limit,
             )
 
     @staticmethod

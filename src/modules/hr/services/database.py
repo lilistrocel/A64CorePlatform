@@ -68,8 +68,13 @@ class HRDatabaseManager:
             await db.employees.create_index([("createdAt", -1)])
             # Text search index for firstName, lastName, email, department
             await db.employees.create_index(
-                [("firstName", "text"), ("lastName", "text"), ("email", "text"), ("department", "text")],
-                name="employee_search_text"
+                [
+                    ("firstName", "text"),
+                    ("lastName", "text"),
+                    ("email", "text"),
+                    ("department", "text"),
+                ],
+                name="employee_search_text",
             )
 
             # Employee contracts collection

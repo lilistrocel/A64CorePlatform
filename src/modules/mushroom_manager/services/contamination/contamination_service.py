@@ -39,10 +39,7 @@ class ContaminationService:
 
     @staticmethod
     async def create_report(
-        facility_id: str,
-        room_id: str,
-        data: ContaminationReportCreate,
-        current_user
+        facility_id: str, room_id: str, data: ContaminationReportCreate, current_user
     ) -> ContaminationReport:
         """
         Create a contamination report for a growing room.
@@ -73,7 +70,7 @@ class ContaminationService:
         if not room_doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Room '{room_id}' not found in facility '{facility_id}'"
+                detail=f"Room '{room_id}' not found in facility '{facility_id}'",
             )
 
         report = ContaminationReport(
@@ -95,7 +92,7 @@ class ContaminationService:
             logger.error(f"[ContaminationService] insert_one failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create contamination report"
+                detail="Failed to create contamination report",
             )
 
         # Reason: Quarantine takes precedence over normal lifecycle transitions
@@ -119,8 +116,8 @@ class ContaminationService:
                                 f"{report.reportId}: {data.contaminationType}"
                             ),
                         }
-                    }
-                }
+                    },
+                },
             )
             logger.info(
                 f"[ContaminationService] Room {room_id} auto-quarantined "
@@ -139,10 +136,7 @@ class ContaminationService:
     # ---------------------------------------------------------------------------
 
     @staticmethod
-    async def list_reports(
-        facility_id: str,
-        room_id: str
-    ) -> List[ContaminationReport]:
+    async def list_reports(facility_id: str, room_id: str) -> List[ContaminationReport]:
         """
         Return all contamination reports for a specific growing room, newest first.
 
@@ -154,11 +148,9 @@ class ContaminationService:
             List of ContaminationReport documents ordered by reportedAt descending.
         """
         db = mushroom_db.get_database()
-        cursor = (
-            db.contamination_reports
-            .find({"roomId": room_id, "facilityId": facility_id})
-            .sort("reportedAt", -1)
-        )
+        cursor = db.contamination_reports.find(
+            {"roomId": room_id, "facilityId": facility_id}
+        ).sort("reportedAt", -1)
 
         reports: List[ContaminationReport] = []
         async for doc in cursor:
@@ -173,9 +165,7 @@ class ContaminationService:
 
     @staticmethod
     async def resolve_report(
-        report_id: str,
-        data: ContaminationResolveRequest,
-        current_user
+        report_id: str, data: ContaminationResolveRequest, current_user
     ) -> ContaminationReport:
         """
         Mark a contamination report as resolved.
@@ -201,13 +191,13 @@ class ContaminationService:
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Contamination report '{report_id}' not found"
+                detail=f"Contamination report '{report_id}' not found",
             )
 
         if doc.get("isResolved", False):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Report '{report_id}' is already resolved"
+                detail=f"Report '{report_id}' is already resolved",
             )
 
         resolved_at = datetime.utcnow()
@@ -223,8 +213,7 @@ class ContaminationService:
             update_fields["actionTaken"] = data.actionTaken.value
 
         await db.contamination_reports.update_one(
-            {"reportId": report_id},
-            {"$set": update_fields}
+            {"reportId": report_id}, {"$set": update_fields}
         )
 
         logger.info(

@@ -105,7 +105,9 @@ def _extract_due_date(raw: Dict[str, Any]) -> Optional[date]:
     try:
         return date.fromisoformat(str(due)[:10])
     except (ValueError, TypeError):
-        logger.warning("Unparseable dueDate for docEntry=%s: %r", raw.get("docEntry"), due)
+        logger.warning(
+            "Unparseable dueDate for docEntry=%s: %r", raw.get("docEntry"), due
+        )
         return None
 
 
@@ -247,11 +249,7 @@ async def compute_ar_aging(
     customer_rows: List[ARAgingCustomerRow] = []
     for (cid, cname, curr), b in buckets.items():
         row_total = (
-            b["current"]
-            + b["1_to_30"]
-            + b["31_to_60"]
-            + b["61_to_90"]
-            + b["over_90"]
+            b["current"] + b["1_to_30"] + b["31_to_60"] + b["61_to_90"] + b["over_90"]
         ).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
 
         customer_rows.append(
@@ -261,8 +259,12 @@ async def compute_ar_aging(
                 currency=curr,
                 current=b["current"].quantize(_TWOPLACES, rounding=ROUND_HALF_UP),
                 days_1_to_30=b["1_to_30"].quantize(_TWOPLACES, rounding=ROUND_HALF_UP),
-                days_31_to_60=b["31_to_60"].quantize(_TWOPLACES, rounding=ROUND_HALF_UP),
-                days_61_to_90=b["61_to_90"].quantize(_TWOPLACES, rounding=ROUND_HALF_UP),
+                days_31_to_60=b["31_to_60"].quantize(
+                    _TWOPLACES, rounding=ROUND_HALF_UP
+                ),
+                days_61_to_90=b["61_to_90"].quantize(
+                    _TWOPLACES, rounding=ROUND_HALF_UP
+                ),
                 over_90=b["over_90"].quantize(_TWOPLACES, rounding=ROUND_HALF_UP),
                 total=row_total,
                 invoice_count=int(b["invoice_count"]),

@@ -38,7 +38,7 @@ class CascadeDeletionService:
         user_id: UUID,
         user_email: str,
         reason: Optional[str] = None,
-        deleted_with_farm: bool = False
+        deleted_with_farm: bool = False,
     ) -> Dict[str, Any]:
         """
         Delete a block and move all its data to deleted collections.
@@ -72,44 +72,70 @@ class CascadeDeletionService:
         child_block_ids = block.get("childBlockIds", [])
         virtual_children_deleted = 0
         if child_block_ids:
-            logger.info(f"[Cascade Delete] Block {block_id} has {len(child_block_ids)} virtual children to delete")
+            logger.info(
+                f"[Cascade Delete] Block {block_id} has {len(child_block_ids)} virtual children to delete"
+            )
             for child_id in child_block_ids:
                 try:
-                    child_result = await CascadeDeletionService.delete_block_with_cascade(
-                        block_id=UUID(child_id),
-                        user_id=user_id,
-                        user_email=user_email,
-                        reason=f"Deleted with parent block: {reason}" if reason else "Deleted with parent block",
-                        deleted_with_farm=deleted_with_farm
+                    child_result = (
+                        await CascadeDeletionService.delete_block_with_cascade(
+                            block_id=UUID(child_id),
+                            user_id=user_id,
+                            user_email=user_email,
+                            reason=(
+                                f"Deleted with parent block: {reason}"
+                                if reason
+                                else "Deleted with parent block"
+                            ),
+                            deleted_with_farm=deleted_with_farm,
+                        )
                     )
                     if child_result.get("success"):
                         virtual_children_deleted += 1
                 except Exception as e:
-                    logger.error(f"[Cascade Delete] Failed to delete child block {child_id}: {e}")
+                    logger.error(
+                        f"[Cascade Delete] Failed to delete child block {child_id}: {e}"
+                    )
 
-            logger.info(f"[Cascade Delete] Deleted {virtual_children_deleted} virtual children")
+            logger.info(
+                f"[Cascade Delete] Deleted {virtual_children_deleted} virtual children"
+            )
 
         # Also find any orphaned virtual blocks that reference this as parent but aren't in childBlockIds
-        orphaned_children = await db.blocks.find({"parentBlockId": block_id_str}).to_list(None)
+        orphaned_children = await db.blocks.find(
+            {"parentBlockId": block_id_str}
+        ).to_list(None)
         for orphan in orphaned_children:
             orphan_id = orphan.get("blockId")
             if orphan_id not in child_block_ids:
                 try:
-                    orphan_result = await CascadeDeletionService.delete_block_with_cascade(
-                        block_id=UUID(orphan_id),
-                        user_id=user_id,
-                        user_email=user_email,
-                        reason=f"Deleted with parent block: {reason}" if reason else "Deleted with parent block",
-                        deleted_with_farm=deleted_with_farm
+                    orphan_result = (
+                        await CascadeDeletionService.delete_block_with_cascade(
+                            block_id=UUID(orphan_id),
+                            user_id=user_id,
+                            user_email=user_email,
+                            reason=(
+                                f"Deleted with parent block: {reason}"
+                                if reason
+                                else "Deleted with parent block"
+                            ),
+                            deleted_with_farm=deleted_with_farm,
+                        )
                     )
                     if orphan_result.get("success"):
                         virtual_children_deleted += 1
                 except Exception as e:
-                    logger.error(f"[Cascade Delete] Failed to delete orphaned child block {orphan_id}: {e}")
+                    logger.error(
+                        f"[Cascade Delete] Failed to delete orphaned child block {orphan_id}: {e}"
+                    )
 
         # 2. Count related records
-        archives_count = await db.block_archives.count_documents({"blockId": block_id_str})
-        harvests_count = await db.block_harvests.count_documents({"blockId": block_id_str})
+        archives_count = await db.block_archives.count_documents(
+            {"blockId": block_id_str}
+        )
+        harvests_count = await db.block_harvests.count_documents(
+            {"blockId": block_id_str}
+        )
         alerts_count = await db.alerts.count_documents({"blockId": block_id_str})
         tasks_count = await db.farm_tasks.count_documents({"blockId": block_id_str})
 
@@ -158,7 +184,7 @@ class CascadeDeletionService:
             "deletedBy": str(user_id),
             "deletedByEmail": user_email,
             "deletedWithFarm": deleted_with_farm,
-            "deletionReason": reason
+            "deletionReason": reason,
         }
 
         await db.deleted_blocks.insert_one(deleted_block)
@@ -166,10 +192,14 @@ class CascadeDeletionService:
 
         # 5. Move block_archives to deleted_block_archives
         if archives_count > 0:
-            archives = await db.block_archives.find({"blockId": block_id_str}).to_list(None)
+            archives = await db.block_archives.find({"blockId": block_id_str}).to_list(
+                None
+            )
             for archive in archives:
                 archive["movedToDeletedAt"] = datetime.utcnow()
-                archive["movedReason"] = "farm_deleted" if deleted_with_farm else "block_deleted"
+                archive["movedReason"] = (
+                    "farm_deleted" if deleted_with_farm else "block_deleted"
+                )
                 archive["originalCollection"] = "block_archives"
 
             await db.deleted_block_archives.insert_many(archives)
@@ -178,10 +208,14 @@ class CascadeDeletionService:
 
         # 6. Move block_harvests to deleted_block_harvests
         if harvests_count > 0:
-            harvests = await db.block_harvests.find({"blockId": block_id_str}).to_list(None)
+            harvests = await db.block_harvests.find({"blockId": block_id_str}).to_list(
+                None
+            )
             for harvest in harvests:
                 harvest["movedToDeletedAt"] = datetime.utcnow()
-                harvest["movedReason"] = "farm_deleted" if deleted_with_farm else "block_deleted"
+                harvest["movedReason"] = (
+                    "farm_deleted" if deleted_with_farm else "block_deleted"
+                )
 
             await db.deleted_block_harvests.insert_many(harvests)
             await db.block_harvests.delete_many({"blockId": block_id_str})
@@ -232,11 +266,17 @@ class CascadeDeletionService:
                     update["availableArea"] = total_area
                 has_children = bool(parent.get("childBlockIds"))
                 has_direct_crop = parent.get("targetCrop") is not None
-                if not has_children and not has_direct_crop and parent.get("state") != "empty":
+                if (
+                    not has_children
+                    and not has_direct_crop
+                    and parent.get("state") != "empty"
+                ):
                     update["state"] = "empty"
                 if update:
                     update["updatedAt"] = datetime.utcnow()
-                    await db.blocks.update_one({"blockId": parent_id_str}, {"$set": update})
+                    await db.blocks.update_one(
+                        {"blockId": parent_id_str}, {"$set": update}
+                    )
 
         return {
             "success": True,
@@ -248,16 +288,13 @@ class CascadeDeletionService:
                 "alertsDeleted": alerts_count,
                 "tasksDeleted": tasks_count,
                 "totalYieldKg": total_yield,
-                "totalCycles": total_cycles
-            }
+                "totalCycles": total_cycles,
+            },
         }
 
     @staticmethod
     async def delete_farm_with_cascade(
-        farm_id: UUID,
-        user_id: UUID,
-        user_email: str,
-        reason: Optional[str] = None
+        farm_id: UUID, user_id: UUID, user_email: str, reason: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Delete a farm and ALL its blocks with full data archival.
@@ -297,7 +334,7 @@ class CascadeDeletionService:
             "alertsDeleted": 0,
             "tasksDeleted": 0,
             "totalYieldKg": 0.0,
-            "totalCycles": 0
+            "totalCycles": 0,
         }
 
         for block in blocks:
@@ -306,14 +343,18 @@ class CascadeDeletionService:
                 block_id=block_id,
                 user_id=user_id,
                 user_email=user_email,
-                reason=f"Deleted with farm: {reason}" if reason else "Deleted with farm",
-                deleted_with_farm=True
+                reason=(
+                    f"Deleted with farm: {reason}" if reason else "Deleted with farm"
+                ),
+                deleted_with_farm=True,
             )
 
             if result.get("success"):
                 stats = result.get("statistics", {})
                 total_stats["blocksMoved"] += 1
-                total_stats["virtualChildrenDeleted"] += stats.get("virtualChildrenDeleted", 0)
+                total_stats["virtualChildrenDeleted"] += stats.get(
+                    "virtualChildrenDeleted", 0
+                )
                 total_stats["archivesMoved"] += stats.get("archivesMoved", 0)
                 total_stats["harvestsMoved"] += stats.get("harvestsMoved", 0)
                 total_stats["alertsDeleted"] += stats.get("alertsDeleted", 0)
@@ -324,7 +365,9 @@ class CascadeDeletionService:
         # 4. Count archives directly linked to farm (if any orphaned)
         farm_archives = await db.block_archives.count_documents({"farmId": farm_id_str})
         if farm_archives > 0:
-            archives = await db.block_archives.find({"farmId": farm_id_str}).to_list(None)
+            archives = await db.block_archives.find({"farmId": farm_id_str}).to_list(
+                None
+            )
             for archive in archives:
                 archive["movedToDeletedAt"] = datetime.utcnow()
                 archive["movedReason"] = "farm_deleted"
@@ -333,7 +376,9 @@ class CascadeDeletionService:
             await db.deleted_block_archives.insert_many(archives)
             await db.block_archives.delete_many({"farmId": farm_id_str})
             total_stats["archivesMoved"] += farm_archives
-            logger.info(f"[Cascade Delete] Moved {farm_archives} orphaned farm archives")
+            logger.info(
+                f"[Cascade Delete] Moved {farm_archives} orphaned farm archives"
+            )
 
         # 5. Create deleted farm record
         deleted_farm = {
@@ -356,7 +401,7 @@ class CascadeDeletionService:
             "deletionReason": reason,
             "blockCount": block_count,
             "archiveCount": total_stats["archivesMoved"],
-            "harvestCount": total_stats["harvestsMoved"]
+            "harvestCount": total_stats["harvestsMoved"],
         }
 
         await db.deleted_farms.insert_one(deleted_farm)
@@ -370,7 +415,7 @@ class CascadeDeletionService:
             "success": True,
             "farmId": farm_id_str,
             "farmName": farm.get("name"),
-            "statistics": total_stats
+            "statistics": total_stats,
         }
 
     @staticmethod
@@ -402,13 +447,15 @@ class CascadeDeletionService:
         async for block in db.blocks.find({}, {"blockId": 1}):
             valid_block_ids.add(block["blockId"])
 
-        logger.info(f"[Cleanup] Found {len(valid_farm_ids)} farms, {len(valid_block_ids)} blocks")
+        logger.info(
+            f"[Cleanup] Found {len(valid_farm_ids)} farms, {len(valid_block_ids)} blocks"
+        )
 
         stats = {
             "orphanedArchivesMoved": 0,
             "orphanedHarvestsMoved": 0,
             "orphanedAlertsCleaned": 0,
-            "orphanedTasksCleaned": 0
+            "orphanedTasksCleaned": 0,
         }
 
         # 1. Find orphaned block_archives (farmId not in valid farms OR blockId not in valid blocks)
@@ -449,21 +496,25 @@ class CascadeDeletionService:
             logger.info(f"[Cleanup] Moved {len(orphaned_harvests)} orphaned harvests")
 
         # 3. Delete orphaned alerts (don't need preservation)
-        result = await db.alerts.delete_many({
-            "$or": [
-                {"farmId": {"$nin": list(valid_farm_ids)}},
-                {"blockId": {"$nin": list(valid_block_ids)}}
-            ]
-        })
+        result = await db.alerts.delete_many(
+            {
+                "$or": [
+                    {"farmId": {"$nin": list(valid_farm_ids)}},
+                    {"blockId": {"$nin": list(valid_block_ids)}},
+                ]
+            }
+        )
         stats["orphanedAlertsCleaned"] = result.deleted_count
 
         # 4. Delete orphaned tasks
-        result = await db.farm_tasks.delete_many({
-            "$or": [
-                {"farmId": {"$nin": list(valid_farm_ids)}},
-                {"blockId": {"$nin": list(valid_block_ids)}}
-            ]
-        })
+        result = await db.farm_tasks.delete_many(
+            {
+                "$or": [
+                    {"farmId": {"$nin": list(valid_farm_ids)}},
+                    {"blockId": {"$nin": list(valid_block_ids)}},
+                ]
+            }
+        )
         stats["orphanedTasksCleaned"] = result.deleted_count
 
         logger.info(f"[Cleanup] Complete: {stats}")
@@ -472,5 +523,5 @@ class CascadeDeletionService:
             "success": True,
             "cleanedBy": user_email,
             "cleanedAt": datetime.utcnow().isoformat(),
-            "statistics": stats
+            "statistics": stats,
         }

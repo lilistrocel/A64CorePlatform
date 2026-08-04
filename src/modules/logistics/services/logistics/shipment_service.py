@@ -12,11 +12,20 @@ from fastapi import HTTPException, status
 import logging
 
 from src.modules.logistics.models.shipment import (
-    Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus,
-    OrderAssignmentResponse, ShipmentTrackingData, TrackingLocation
+    Shipment,
+    ShipmentCreate,
+    ShipmentUpdate,
+    ShipmentStatus,
+    OrderAssignmentResponse,
+    ShipmentTrackingData,
+    TrackingLocation,
 )
-from src.modules.logistics.services.logistics.shipment_repository import ShipmentRepository
-from src.modules.logistics.services.logistics.vehicle_repository import VehicleRepository
+from src.modules.logistics.services.logistics.shipment_repository import (
+    ShipmentRepository,
+)
+from src.modules.logistics.services.logistics.vehicle_repository import (
+    VehicleRepository,
+)
 from src.modules.logistics.services.logistics.route_repository import RouteRepository
 from src.modules.sales.models.sales_order import SalesOrderStatus
 from src.modules.sales.services.database import sales_db
@@ -34,9 +43,7 @@ class ShipmentService:
         self.route_repository = RouteRepository()
 
     async def create_shipment(
-        self,
-        shipment_data: ShipmentCreate,
-        created_by: UUID
+        self, shipment_data: ShipmentCreate, created_by: UUID
     ) -> Shipment:
         """
         Create a new shipment
@@ -57,22 +64,24 @@ class ShipmentService:
             if not route_exists:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Route {shipment_data.routeId} not found"
+                    detail=f"Route {shipment_data.routeId} not found",
                 )
 
             # Validate that vehicle exists
-            vehicle_exists = await self.vehicle_repository.exists(shipment_data.vehicleId)
+            vehicle_exists = await self.vehicle_repository.exists(
+                shipment_data.vehicleId
+            )
             if not vehicle_exists:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Vehicle {shipment_data.vehicleId} not found"
+                    detail=f"Vehicle {shipment_data.vehicleId} not found",
                 )
 
             # Validate cargo
             if not shipment_data.cargo or len(shipment_data.cargo) == 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="At least one cargo item is required"
+                    detail="At least one cargo item is required",
                 )
 
             shipment = await self.repository.create(shipment_data, created_by)
@@ -85,7 +94,7 @@ class ShipmentService:
             logger.error(f"Error creating shipment: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create shipment"
+                detail="Failed to create shipment",
             )
 
     async def get_shipment(self, shipment_id: UUID) -> Shipment:
@@ -105,7 +114,7 @@ class ShipmentService:
         if not shipment:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Shipment {shipment_id} not found"
+                detail=f"Shipment {shipment_id} not found",
             )
         return shipment
 
@@ -116,7 +125,7 @@ class ShipmentService:
         status: Optional[ShipmentStatus] = None,
         vehicle_id: Optional[UUID] = None,
         route_id: Optional[UUID] = None,
-        farming_year: Optional[int] = None
+        farming_year: Optional[int] = None,
     ) -> tuple[List[Shipment], int, int]:
         """
         Get all shipments with pagination
@@ -138,16 +147,16 @@ class ShipmentService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        shipments, total = await self.repository.get_all(skip, per_page, status, vehicle_id, route_id, farming_year)
+        shipments, total = await self.repository.get_all(
+            skip, per_page, status, vehicle_id, route_id, farming_year
+        )
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 
         return shipments, total, total_pages
 
     async def update_shipment(
-        self,
-        shipment_id: UUID,
-        update_data: ShipmentUpdate
+        self, shipment_id: UUID, update_data: ShipmentUpdate
     ) -> Shipment:
         """
         Update a shipment
@@ -171,7 +180,7 @@ class ShipmentService:
             if not route_exists:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Route {update_data.routeId} not found"
+                    detail=f"Route {update_data.routeId} not found",
                 )
 
         # Validate vehicle if being updated
@@ -180,30 +189,28 @@ class ShipmentService:
             if not vehicle_exists:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Vehicle {update_data.vehicleId} not found"
+                    detail=f"Vehicle {update_data.vehicleId} not found",
                 )
 
         # Validate cargo if being updated
         if update_data.cargo is not None and len(update_data.cargo) == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="At least one cargo item is required"
+                detail="At least one cargo item is required",
             )
 
         updated_shipment = await self.repository.update(shipment_id, update_data)
         if not updated_shipment:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Shipment {shipment_id} not found"
+                detail=f"Shipment {shipment_id} not found",
             )
 
         logger.info(f"Shipment updated: {shipment_id}")
         return updated_shipment
 
     async def update_shipment_status(
-        self,
-        shipment_id: UUID,
-        new_status: ShipmentStatus
+        self, shipment_id: UUID, new_status: ShipmentStatus
     ) -> Shipment:
         """
         Update shipment status
@@ -223,25 +230,39 @@ class ShipmentService:
 
         # Validate status transition
         valid_transitions = {
-            ShipmentStatus.PENDING: [ShipmentStatus.SCHEDULED, ShipmentStatus.LOADING, ShipmentStatus.CANCELLED],
-            ShipmentStatus.SCHEDULED: [ShipmentStatus.LOADING, ShipmentStatus.IN_TRANSIT, ShipmentStatus.CANCELLED],
-            ShipmentStatus.LOADING: [ShipmentStatus.IN_TRANSIT, ShipmentStatus.CANCELLED],
-            ShipmentStatus.IN_TRANSIT: [ShipmentStatus.DELIVERED, ShipmentStatus.CANCELLED],
+            ShipmentStatus.PENDING: [
+                ShipmentStatus.SCHEDULED,
+                ShipmentStatus.LOADING,
+                ShipmentStatus.CANCELLED,
+            ],
+            ShipmentStatus.SCHEDULED: [
+                ShipmentStatus.LOADING,
+                ShipmentStatus.IN_TRANSIT,
+                ShipmentStatus.CANCELLED,
+            ],
+            ShipmentStatus.LOADING: [
+                ShipmentStatus.IN_TRANSIT,
+                ShipmentStatus.CANCELLED,
+            ],
+            ShipmentStatus.IN_TRANSIT: [
+                ShipmentStatus.DELIVERED,
+                ShipmentStatus.CANCELLED,
+            ],
             ShipmentStatus.DELIVERED: [],
-            ShipmentStatus.CANCELLED: []
+            ShipmentStatus.CANCELLED: [],
         }
 
         if new_status not in valid_transitions.get(shipment.status, []):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid status transition from {shipment.status} to {new_status}"
+                detail=f"Invalid status transition from {shipment.status} to {new_status}",
             )
 
         updated_shipment = await self.repository.update_status(shipment_id, new_status)
         if not updated_shipment:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Shipment {shipment_id} not found"
+                detail=f"Shipment {shipment_id} not found",
             )
 
         logger.info(f"Shipment status updated: {shipment_id} to {new_status.value}")
@@ -267,17 +288,14 @@ class ShipmentService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Shipment {shipment_id} not found"
+                detail=f"Shipment {shipment_id} not found",
             )
 
         logger.info(f"Shipment deleted: {shipment_id}")
         return {"message": "Shipment deleted successfully"}
 
     async def assign_orders_to_shipment(
-        self,
-        shipment_id: UUID,
-        order_ids: List[UUID],
-        assigned_by: UUID
+        self, shipment_id: UUID, order_ids: List[UUID], assigned_by: UUID
     ) -> OrderAssignmentResponse:
         """
         Assign multiple sales orders to a shipment.
@@ -297,10 +315,14 @@ class ShipmentService:
         shipment = await self.get_shipment(shipment_id)
 
         # Validate shipment status allows assignment
-        if shipment.status not in [ShipmentStatus.PENDING, ShipmentStatus.SCHEDULED, ShipmentStatus.LOADING]:
+        if shipment.status not in [
+            ShipmentStatus.PENDING,
+            ShipmentStatus.SCHEDULED,
+            ShipmentStatus.LOADING,
+        ]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot assign orders to shipment with status: {shipment.status.value}"
+                detail=f"Cannot assign orders to shipment with status: {shipment.status.value}",
             )
 
         # Get sales orders and validate
@@ -314,21 +336,23 @@ class ShipmentService:
             if not order_doc:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Sales order {order_id} not found"
+                    detail=f"Sales order {order_id} not found",
                 )
 
             # Validate order status - must be CONFIRMED
             if order_doc.get("status") != SalesOrderStatus.CONFIRMED.value:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Order {order_id} is not in CONFIRMED status. Current: {order_doc.get('status')}"
+                    detail=f"Order {order_id} is not in CONFIRMED status. Current: {order_doc.get('status')}",
                 )
 
             # Check order not already assigned to another shipment
-            if order_doc.get("shipmentId") and order_doc.get("shipmentId") != str(shipment_id):
+            if order_doc.get("shipmentId") and order_doc.get("shipmentId") != str(
+                shipment_id
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Order {order_id} is already assigned to shipment {order_doc.get('shipmentId')}"
+                    detail=f"Order {order_id} is already assigned to shipment {order_doc.get('shipmentId')}",
                 )
 
             # Calculate weight from order items (estimate: quantity as weight)
@@ -343,12 +367,7 @@ class ShipmentService:
 
         await self.repository._get_collection().update_one(
             {"shipmentId": str(shipment_id)},
-            {
-                "$set": {
-                    "orderIds": new_order_ids,
-                    "updatedAt": datetime.utcnow()
-                }
-            }
+            {"$set": {"orderIds": new_order_ids, "updatedAt": datetime.utcnow()}},
         )
 
         # Update each order with shipment ID and status to ASSIGNED
@@ -359,9 +378,9 @@ class ShipmentService:
                     "$set": {
                         "shipmentId": str(shipment_id),
                         "status": SalesOrderStatus.ASSIGNED.value,
-                        "updatedAt": datetime.utcnow()
+                        "updatedAt": datetime.utcnow(),
                     }
-                }
+                },
             )
 
         # Get updated shipment
@@ -371,16 +390,14 @@ class ShipmentService:
 
         return OrderAssignmentResponse(
             shipment=updated_shipment.model_dump(mode="json"),
-            assignedOrders=[{k: v for k, v in o.items() if k != "_id"} for o in assigned_orders],
+            assignedOrders=[
+                {k: v for k, v in o.items() if k != "_id"} for o in assigned_orders
+            ],
             totalCargoWeight=total_weight,
-            message=f"Successfully assigned {len(order_ids)} orders to shipment"
+            message=f"Successfully assigned {len(order_ids)} orders to shipment",
         )
 
-    async def start_delivery(
-        self,
-        shipment_id: UUID,
-        started_by: UUID
-    ) -> Shipment:
+    async def start_delivery(self, shipment_id: UUID, started_by: UUID) -> Shipment:
         """
         Start delivery for shipment and update all linked orders to IN_TRANSIT.
 
@@ -397,11 +414,13 @@ class ShipmentService:
         if shipment.status not in [ShipmentStatus.SCHEDULED, ShipmentStatus.LOADING]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot start delivery for shipment with status: {shipment.status.value}"
+                detail=f"Cannot start delivery for shipment with status: {shipment.status.value}",
             )
 
         # Update shipment status
-        updated_shipment = await self.update_shipment_status(shipment_id, ShipmentStatus.IN_TRANSIT)
+        updated_shipment = await self.update_shipment_status(
+            shipment_id, ShipmentStatus.IN_TRANSIT
+        )
 
         # Update all linked orders to IN_TRANSIT
         if shipment.orderIds:
@@ -412,20 +431,18 @@ class ShipmentService:
                     {
                         "$set": {
                             "status": SalesOrderStatus.IN_TRANSIT.value,
-                            "updatedAt": datetime.utcnow()
+                            "updatedAt": datetime.utcnow(),
                         }
-                    }
+                    },
                 )
 
-            logger.info(f"Updated {len(shipment.orderIds)} orders to IN_TRANSIT for shipment {shipment_id}")
+            logger.info(
+                f"Updated {len(shipment.orderIds)} orders to IN_TRANSIT for shipment {shipment_id}"
+            )
 
         return updated_shipment
 
-    async def complete_delivery(
-        self,
-        shipment_id: UUID,
-        completed_by: UUID
-    ) -> dict:
+    async def complete_delivery(self, shipment_id: UUID, completed_by: UUID) -> dict:
         """
         Complete delivery for shipment and update all linked orders to DELIVERED.
 
@@ -445,11 +462,13 @@ class ShipmentService:
         if shipment.status != ShipmentStatus.IN_TRANSIT:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot complete delivery for shipment with status: {shipment.status.value}"
+                detail=f"Cannot complete delivery for shipment with status: {shipment.status.value}",
             )
 
         # Update shipment status
-        updated_shipment = await self.update_shipment_status(shipment_id, ShipmentStatus.DELIVERED)
+        updated_shipment = await self.update_shipment_status(
+            shipment_id, ShipmentStatus.DELIVERED
+        )
 
         # Update all linked orders to DELIVERED using OrderService
         # This triggers inventory fulfillment (deducts sold quantities)
@@ -461,16 +480,19 @@ class ShipmentService:
                 try:
                     # Use OrderService to update status - this triggers inventory fulfillment
                     await order_service.update_order_status(
-                        UUID(str(order_id)),
-                        SalesOrderStatus.DELIVERED
+                        UUID(str(order_id)), SalesOrderStatus.DELIVERED
                     )
                     orders_updated += 1
-                    logger.info(f"Order {order_id} marked as DELIVERED with inventory fulfilled")
+                    logger.info(
+                        f"Order {order_id} marked as DELIVERED with inventory fulfilled"
+                    )
                 except Exception as e:
                     logger.error(f"Failed to update order {order_id} to DELIVERED: {e}")
                     orders_failed.append(str(order_id))
 
-            logger.info(f"Updated {orders_updated} orders to DELIVERED for shipment {shipment_id}")
+            logger.info(
+                f"Updated {orders_updated} orders to DELIVERED for shipment {shipment_id}"
+            )
             if orders_failed:
                 logger.warning(f"Failed to update orders: {orders_failed}")
 
@@ -478,7 +500,7 @@ class ShipmentService:
             "shipment": updated_shipment.model_dump(mode="json"),
             "ordersUpdated": orders_updated,
             "ordersFailed": orders_failed,
-            "message": f"Delivery completed. {orders_updated} orders marked as delivered."
+            "message": f"Delivery completed. {orders_updated} orders marked as delivered.",
         }
 
     async def get_shipment_orders(self, shipment_id: UUID) -> List[dict]:
@@ -544,7 +566,7 @@ class ShipmentService:
                         lat=coords.lat if coords else 24.4539,
                         lng=coords.lng if coords else 54.3773,
                         name=route.origin.name,
-                        address=route.origin.address
+                        address=route.origin.address,
                     )
 
                 # Extract destination GPS from route
@@ -554,10 +576,12 @@ class ShipmentService:
                         lat=coords.lat if coords else 24.2075,
                         lng=coords.lng if coords else 55.7447,
                         name=route.destination.name,
-                        address=route.destination.address
+                        address=route.destination.address,
                     )
         except Exception as e:
-            logger.warning(f"Could not fetch route data for shipment {shipment_id}: {e}")
+            logger.warning(
+                f"Could not fetch route data for shipment {shipment_id}: {e}"
+            )
 
         # Calculate progress and current location based on status
         progress_percent = 0.0
@@ -570,15 +594,22 @@ class ShipmentService:
         elif shipment.status == ShipmentStatus.IN_TRANSIT:
             # Estimate progress based on time elapsed since departure
             if shipment.actualDepartureDate and route_distance:
-                elapsed = (datetime.utcnow() - shipment.actualDepartureDate).total_seconds()
+                elapsed = (
+                    datetime.utcnow() - shipment.actualDepartureDate
+                ).total_seconds()
                 # Assume average speed of 60 km/h for estimation
                 estimated_total_seconds = (route_distance / 60.0) * 3600
                 if estimated_total_seconds > 0:
-                    progress_percent = min(95.0, (elapsed / estimated_total_seconds) * 100.0)
+                    progress_percent = min(
+                        95.0, (elapsed / estimated_total_seconds) * 100.0
+                    )
                     # Estimate arrival
                     remaining_seconds = max(0, estimated_total_seconds - elapsed)
                     from datetime import timedelta
-                    estimated_arrival = datetime.utcnow() + timedelta(seconds=remaining_seconds)
+
+                    estimated_arrival = datetime.utcnow() + timedelta(
+                        seconds=remaining_seconds
+                    )
                 else:
                     progress_percent = 50.0
 
@@ -586,10 +617,12 @@ class ShipmentService:
                 if origin_location and destination_location:
                     fraction = progress_percent / 100.0
                     current_location = TrackingLocation(
-                        lat=origin_location.lat + (destination_location.lat - origin_location.lat) * fraction,
-                        lng=origin_location.lng + (destination_location.lng - origin_location.lng) * fraction,
+                        lat=origin_location.lat
+                        + (destination_location.lat - origin_location.lat) * fraction,
+                        lng=origin_location.lng
+                        + (destination_location.lng - origin_location.lng) * fraction,
                         name="En Route",
-                        address=f"Estimated {progress_percent:.0f}% of journey"
+                        address=f"Estimated {progress_percent:.0f}% of journey",
                     )
             else:
                 progress_percent = 10.0
@@ -614,5 +647,5 @@ class ShipmentService:
             actualDepartureDate=shipment.actualDepartureDate,
             actualArrivalDate=shipment.actualArrivalDate,
             estimatedArrival=estimated_arrival,
-            lastUpdated=datetime.utcnow()
+            lastUpdated=datetime.utcnow(),
         )

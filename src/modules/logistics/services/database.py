@@ -45,7 +45,9 @@ class LogisticsDatabaseManager:
             logger.info("[Logistics Module] Logistics indexes initialized")
 
         except Exception as e:
-            logger.error(f"[Logistics Module] Error initializing Logistics indexes: {e}")
+            logger.error(
+                f"[Logistics Module] Error initializing Logistics indexes: {e}"
+            )
             raise
 
     @classmethod
@@ -66,8 +68,7 @@ class LogisticsDatabaseManager:
             await db.vehicles.create_index([("createdAt", -1)])
             # Text search index for name, licensePlate
             await db.vehicles.create_index(
-                [("name", "text"), ("licensePlate", "text")],
-                name="vehicle_search_text"
+                [("name", "text"), ("licensePlate", "text")], name="vehicle_search_text"
             )
 
             # Routes collection
@@ -78,8 +79,12 @@ class LogisticsDatabaseManager:
             await db.routes.create_index([("createdAt", -1)])
             # Text search index for name, origin, destination
             await db.routes.create_index(
-                [("name", "text"), ("origin.name", "text"), ("destination.name", "text")],
-                name="route_search_text"
+                [
+                    ("name", "text"),
+                    ("origin.name", "text"),
+                    ("destination.name", "text"),
+                ],
+                name="route_search_text",
             )
 
             # Shipments collection
@@ -109,7 +114,9 @@ class LogisticsDatabaseManager:
         to the shared MongoDB connection from src.services.database.
         The actual disconnection is handled by core services during shutdown.
         """
-        logger.info("[Logistics Module] Logistics module shutdown (database managed by core)")
+        logger.info(
+            "[Logistics Module] Logistics module shutdown (database managed by core)"
+        )
         # No action needed - core services handle disconnection
 
     @classmethod

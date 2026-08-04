@@ -42,7 +42,7 @@ class EventRepository:
             {"_id": "marketing_event_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
@@ -70,7 +70,7 @@ class EventRepository:
             eventCode=event_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         event_doc = event.model_dump(by_alias=True)
@@ -110,7 +110,7 @@ class EventRepository:
         limit: int = 20,
         status: Optional[EventStatus] = None,
         event_type: Optional[EventType] = None,
-        campaign_id: Optional[UUID] = None
+        campaign_id: Optional[UUID] = None,
     ) -> tuple[List[Event], int]:
         """
         Get all events with pagination and filters
@@ -172,8 +172,7 @@ class EventRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"eventId": str(event_id)},
-            {"$set": update_dict}
+            {"eventId": str(event_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

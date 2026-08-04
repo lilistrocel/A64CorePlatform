@@ -16,10 +16,10 @@ import re
 from datetime import datetime, timezone
 from typing import List
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _strip_bold_italic(text: str) -> str:
     """Remove markdown bold/italic markers, returning plain text."""
@@ -63,6 +63,7 @@ def _parse_markdown_table(lines: List[str], start: int) -> tuple[List[List[str]]
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 class ReportExporter:
     """Converts markdown report text to downloadable PDF or Excel format."""
@@ -357,7 +358,9 @@ class ReportExporter:
 
             # Unordered bullet
             elif line.startswith("- ") or line.startswith("* "):
-                ws.cell(row=row, column=1, value=f"  \u2022 {clean[2:]}").font = body_font
+                ws.cell(row=row, column=1, value=f"  \u2022 {clean[2:]}").font = (
+                    body_font
+                )
                 row += 1
 
             # Ordered list

@@ -9,8 +9,13 @@ from typing import Optional, List, Literal
 from uuid import UUID
 
 from ...models.block import (
-    Block, BlockCreate, BlockUpdate, BlockStatus,
-    BlockStatusUpdate, AddVirtualCropRequest, IoTControllerUpdate,
+    Block,
+    BlockCreate,
+    BlockUpdate,
+    BlockStatus,
+    BlockStatusUpdate,
+    AddVirtualCropRequest,
+    IoTControllerUpdate,
     BlockWithStaleness,
 )
 from ...models.block_analytics import BlockAnalyticsResponse, TimePeriod
@@ -27,12 +32,12 @@ router = APIRouter(prefix="/farms/{farm_id}/blocks", tags=["blocks"])
     "",
     response_model=SuccessResponse[Block],
     status_code=status.HTTP_201_CREATED,
-    summary="Create a new block"
+    summary="Create a new block",
 )
 async def create_block(
     farm_id: UUID,
     block_data: BlockCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Create a new block in a farm.
@@ -44,33 +49,32 @@ async def create_block(
     - Block name must be unique within farm
     """
     block = await BlockService.create_block(
-        farm_id,
-        block_data,
-        current_user.userId,
-        current_user.email
+        farm_id, block_data, current_user.userId, current_user.email
     )
 
-    return SuccessResponse(
-        data=block,
-        message="Block created successfully"
-    )
+    return SuccessResponse(data=block, message="Block created successfully")
 
 
 @router.get(
-    "",
-    response_model=PaginatedResponse[Block],
-    summary="List blocks in a farm"
+    "", response_model=PaginatedResponse[Block], summary="List blocks in a farm"
 )
 async def list_blocks(
     farm_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    status_filter: Optional[BlockStatus] = Query(None, alias="status", description="Filter by status"),
+    status_filter: Optional[BlockStatus] = Query(
+        None, alias="status", description="Filter by status"
+    ),
     blockType: Optional[str] = Query(None, description="Filter by block type"),
     targetCrop: Optional[UUID] = Query(None, description="Filter by target crop"),
-    blockCategory: Optional[Literal['physical', 'virtual', 'all']] = Query('all', description="Filter by block category"),
-    farmingYear: Optional[int] = Query(None, description="Filter by farming year planted (e.g., 2025 for Aug 2025 - Jul 2026)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    blockCategory: Optional[Literal["physical", "virtual", "all"]] = Query(
+        "all", description="Filter by block category"
+    ),
+    farmingYear: Optional[int] = Query(
+        None,
+        description="Filter by farming year planted (e.g., 2025 for Aug 2025 - Jul 2026)",
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of blocks in a farm with pagination.
@@ -92,29 +96,26 @@ async def list_blocks(
         block_type=blockType,
         target_crop=targetCrop,
         block_category=blockCategory,
-        farming_year=farmingYear
+        farming_year=farmingYear,
     )
 
     return PaginatedResponse(
         data=blocks,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
 @router.get(
     "/{block_id}",
     response_model=SuccessResponse[BlockWithStaleness],
-    summary="Get block by ID"
+    summary="Get block by ID",
 )
 async def get_block(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get a specific block by ID.
@@ -138,8 +139,7 @@ async def get_block(
     # Verify block belongs to the specified farm
     if str(block.farmId) != str(farm_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Compute staleness fields
@@ -168,15 +168,13 @@ async def get_block(
 
 
 @router.patch(
-    "/{block_id}",
-    response_model=SuccessResponse[Block],
-    summary="Update a block"
+    "/{block_id}", response_model=SuccessResponse[Block], summary="Update a block"
 )
 async def update_block(
     farm_id: UUID,
     block_id: UUID,
     update_data: BlockUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Update block information.
@@ -191,32 +189,26 @@ async def update_block(
     # Verify block belongs to the specified farm
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
-    updated_block = await BlockService.update_block(
-        block_id,
-        update_data
-    )
+    updated_block = await BlockService.update_block(block_id, update_data)
 
-    return SuccessResponse(
-        data=updated_block,
-        message="Block updated successfully"
-    )
+    return SuccessResponse(data=updated_block, message="Block updated successfully")
 
 
 @router.delete(
     "/{block_id}",
     response_model=SuccessResponse[dict],
-    summary="Delete a block with cascade"
+    summary="Delete a block with cascade",
 )
 async def delete_block(
     farm_id: UUID,
     block_id: UUID,
     reason: Optional[str] = Query(None, description="Deletion reason"),
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Delete a block with CASCADE deletion.
@@ -230,8 +222,7 @@ async def delete_block(
 
     if str(block.farmId) != str(farm_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     result = await CascadeDeletionService.delete_block_with_cascade(
@@ -239,33 +230,30 @@ async def delete_block(
         user_id=UUID(current_user.userId),
         user_email=current_user.email,
         reason=reason,
-        deleted_with_farm=False
+        deleted_with_farm=False,
     )
 
     if not result.get("success"):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result.get("error", "Failed to delete block")
+            detail=result.get("error", "Failed to delete block"),
         )
 
     return SuccessResponse(
-        data={
-            "blockId": str(block_id),
-            "statistics": result.get("statistics")
-        },
-        message="Block deleted with cascade"
+        data={"blockId": str(block_id), "statistics": result.get("statistics")},
+        message="Block deleted with cascade",
     )
 
 
 @router.get(
     "/{block_id}/kpi",
     response_model=SuccessResponse[dict],
-    summary="Get block KPI dashboard"
+    summary="Get block KPI dashboard",
 )
 async def get_block_kpi(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get comprehensive KPI dashboard data for a block.
@@ -282,9 +270,9 @@ async def get_block_kpi(
     # Verify block belongs to the specified farm
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     kpi_data = await BlockService.get_block_kpi(block_id)
@@ -296,13 +284,13 @@ async def get_block_kpi(
 @router.patch(
     "/{block_id}/status",
     response_model=SuccessResponse[Block],
-    summary="Change block status"
+    summary="Change block status",
 )
 async def change_block_status(
     farm_id: UUID,
     block_id: UUID,
     status_update: BlockStatusUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+    current_user: CurrentUser = Depends(require_permission("farm.operate")),
 ):
     """
     Change block status with validation and automatic archival.
@@ -330,6 +318,7 @@ async def change_block_status(
     - Archives completed cycles when transitioning from cleaning to empty
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     logger.info(f"[Block API] Received status change request for block {block_id}")
@@ -340,21 +329,18 @@ async def change_block_status(
     # Verify block belongs to the specified farm
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     updated_block = await BlockService.change_status(
-        block_id,
-        status_update,
-        current_user.userId,
-        current_user.email
+        block_id, status_update, current_user.userId, current_user.email
     )
 
     return SuccessResponse(
         data=updated_block,
-        message=f"Block status changed to '{status_update.newStatus.value}'"
+        message=f"Block status changed to '{status_update.newStatus.value}'",
     )
 
 
@@ -362,12 +348,12 @@ async def change_block_status(
 @router.get(
     "/{block_id}/valid-transitions",
     response_model=SuccessResponse[dict],
-    summary="Get valid status transitions"
+    summary="Get valid status transitions",
 )
 async def get_valid_status_transitions(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of valid status transitions for a block's current status.
@@ -383,9 +369,9 @@ async def get_valid_status_transitions(
     # Verify block belongs to the specified farm
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Get valid transitions based on block's plant data
@@ -394,7 +380,7 @@ async def get_valid_status_transitions(
     return SuccessResponse(
         data={
             "currentStatus": block.state.value,
-            "validTransitions": [state.value for state in valid_transitions]
+            "validTransitions": [state.value for state in valid_transitions],
         }
     )
 
@@ -403,7 +389,7 @@ async def get_valid_status_transitions(
 @router.get(
     "/{block_id}/analytics",
     response_model=SuccessResponse[BlockAnalyticsResponse],
-    summary="Get block analytics and statistics"
+    summary="Get block analytics and statistics",
 )
 async def get_block_analytics(
     farm_id: UUID,
@@ -411,7 +397,7 @@ async def get_block_analytics(
     period: TimePeriod = Query(TimePeriod.ALL, description="Time period to analyze"),
     startDate: Optional[str] = Query(None, description="Custom start date (ISO 8601)"),
     endDate: Optional[str] = Query(None, description="Custom end date (ISO 8601)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get comprehensive analytics for a block.
@@ -454,9 +440,9 @@ async def get_block_analytics(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Parse custom dates if provided
@@ -465,22 +451,24 @@ async def get_block_analytics(
 
     if startDate:
         try:
-            parsed_start_date = datetime.fromisoformat(startDate.replace('Z', '+00:00'))
+            parsed_start_date = datetime.fromisoformat(startDate.replace("Z", "+00:00"))
         except ValueError:
             from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid startDate format. Use ISO 8601 format (e.g., 2025-01-01T00:00:00Z)"
+                detail="Invalid startDate format. Use ISO 8601 format (e.g., 2025-01-01T00:00:00Z)",
             )
 
     if endDate:
         try:
-            parsed_end_date = datetime.fromisoformat(endDate.replace('Z', '+00:00'))
+            parsed_end_date = datetime.fromisoformat(endDate.replace("Z", "+00:00"))
         except ValueError:
             from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid endDate format. Use ISO 8601 format (e.g., 2025-12-31T23:59:59Z)"
+                detail="Invalid endDate format. Use ISO 8601 format (e.g., 2025-12-31T23:59:59Z)",
             )
 
     # Generate analytics
@@ -488,28 +476,28 @@ async def get_block_analytics(
         block_id=block_id,
         period=period,
         start_date=parsed_start_date,
-        end_date=parsed_end_date
+        end_date=parsed_end_date,
     )
 
     return SuccessResponse(
-        data=analytics,
-        message="Block analytics generated successfully"
+        data=analytics, message="Block analytics generated successfully"
     )
 
 
 # ==================== VIRTUAL BLOCK ENDPOINTS ====================
 
+
 @router.post(
     "/{block_id}/add-virtual-crop",
     response_model=SuccessResponse[Block],
     status_code=status.HTTP_201_CREATED,
-    summary="Add a virtual crop to a physical block"
+    summary="Add a virtual crop to a physical block",
 )
 async def add_virtual_crop(
     farm_id: UUID,
     block_id: UUID,
     request: AddVirtualCropRequest,
-    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+    current_user: CurrentUser = Depends(require_permission("farm.operate")),
 ):
     """
     Create a virtual block with a new crop as a child of this physical block.
@@ -541,9 +529,9 @@ async def add_virtual_crop(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Create virtual block
@@ -551,24 +539,24 @@ async def add_virtual_crop(
         block_id=block_id,
         request=request,
         user_id=current_user.userId,
-        user_email=current_user.email
+        user_email=current_user.email,
     )
 
     return SuccessResponse(
         data=virtual_block,
-        message=f"Virtual crop added successfully as {virtual_block.blockCode}"
+        message=f"Virtual crop added successfully as {virtual_block.blockCode}",
     )
 
 
 @router.get(
     "/{block_id}/children",
     response_model=SuccessResponse[List[Block]],
-    summary="Get virtual children of a physical block"
+    summary="Get virtual children of a physical block",
 )
 async def get_block_children(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get all active virtual blocks that are children of this physical block.
@@ -585,29 +573,28 @@ async def get_block_children(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Get children
     children = await VirtualBlockService.get_virtual_children(block_id)
 
     return SuccessResponse(
-        data=children,
-        message=f"Retrieved {len(children)} virtual child block(s)"
+        data=children, message=f"Retrieved {len(children)} virtual child block(s)"
     )
 
 
 @router.post(
     "/{block_id}/empty-virtual",
     response_model=SuccessResponse[dict],
-    summary="Empty a virtual block and transfer history to parent"
+    summary="Empty a virtual block and transfer history to parent",
 )
 async def empty_virtual_block(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+    current_user: CurrentUser = Depends(require_permission("farm.operate")),
 ):
     """
     Empty a virtual block, transfer all history to parent, and delete it.
@@ -651,33 +638,33 @@ async def empty_virtual_block(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Empty the virtual block
     result = await VirtualBlockService.empty_virtual_block(
         virtual_block_id=block_id,
         user_id=current_user.userId,
-        user_email=current_user.email
+        user_email=current_user.email,
     )
 
     return SuccessResponse(
         data=result,
-        message=f"Virtual block {result['virtualBlockCode']} emptied successfully"
+        message=f"Virtual block {result['virtualBlockCode']} emptied successfully",
     )
 
 
 @router.get(
     "/{block_id}/empty-virtual/preview",
     response_model=SuccessResponse[dict],
-    summary="Preview what will happen when emptying virtual block"
+    summary="Preview what will happen when emptying virtual block",
 )
 async def preview_empty_virtual_block(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Preview the effects of emptying a virtual block without actually doing it.
@@ -712,51 +699,52 @@ async def preview_empty_virtual_block(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
-    if block.blockCategory != 'virtual':
+    if block.blockCategory != "virtual":
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Block {block.blockCode} is not a virtual block"
+            detail=f"Block {block.blockCode} is not a virtual block",
         )
 
     # Get parent block
     from ...services.block.block_repository_new import BlockRepository
-    parent_block_id = block.parentBlockId if isinstance(block.parentBlockId, UUID) else UUID(str(block.parentBlockId))
+
+    parent_block_id = (
+        block.parentBlockId
+        if isinstance(block.parentBlockId, UUID)
+        else UUID(str(block.parentBlockId))
+    )
     parent_block = await BlockRepository.get_by_id(parent_block_id)
     if not parent_block:
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Parent block not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Parent block not found"
         )
 
     # Count tasks
     db = farm_db.get_database()
 
-    completed_count = await db.farm_tasks.count_documents({
-        "blockId": str(block_id),
-        "status": "completed"
-    })
+    completed_count = await db.farm_tasks.count_documents(
+        {"blockId": str(block_id), "status": "completed"}
+    )
 
-    in_progress_count = await db.farm_tasks.count_documents({
-        "blockId": str(block_id),
-        "status": "in_progress"
-    })
+    in_progress_count = await db.farm_tasks.count_documents(
+        {"blockId": str(block_id), "status": "in_progress"}
+    )
 
-    pending_count = await db.farm_tasks.count_documents({
-        "blockId": str(block_id),
-        "status": "pending"
-    })
+    pending_count = await db.farm_tasks.count_documents(
+        {"blockId": str(block_id), "status": "pending"}
+    )
 
     # Count harvests
-    harvest_count = await db.block_harvests.count_documents({
-        "blockId": str(block_id)
-    })
+    harvest_count = await db.block_harvests.count_documents({"blockId": str(block_id)})
 
     tasks_to_transfer = completed_count + in_progress_count
 
@@ -767,26 +755,24 @@ async def preview_empty_virtual_block(
         "tasksToDelete": pending_count,
         "harvestsToTransfer": harvest_count,
         "areaToReturn": block.area,
-        "warningPendingTasks": pending_count > 0
+        "warningPendingTasks": pending_count > 0,
     }
 
-    return SuccessResponse(
-        data=preview,
-        message="Preview of virtual block cleanup"
-    )
+    return SuccessResponse(data=preview, message="Preview of virtual block cleanup")
 
 
 # ==================== PLANT DATA REFRESH ENDPOINT ====================
 
+
 @router.post(
     "/{block_id}/refresh-plant-data",
     response_model=SuccessResponse[BlockWithStaleness],
-    summary="Refresh block snapshot to latest plant-library version"
+    summary="Refresh block snapshot to latest plant-library version",
 )
 async def refresh_plant_data(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+    current_user: CurrentUser = Depends(require_permission("farm.operate")),
 ):
     """
     Re-snapshot the plant library record onto the block and recompute KPIs.
@@ -823,22 +809,20 @@ async def refresh_plant_data(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Validate crop assigned
     if block.targetCrop is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Block has no crop assigned"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Block has no crop assigned"
         )
 
     # Gate: only refreshable before harvesting begins
     if block.state not in REFRESHABLE_STATES:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Plant data can only be refreshed before harvesting begins."
+            detail="Plant data can only be refreshed before harvesting begins.",
         )
 
     # Load current plant data
@@ -846,21 +830,26 @@ async def refresh_plant_data(
     if not plant_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Plant data not found for crop {block.targetCrop}"
+            detail=f"Plant data not found for crop {block.targetCrop}",
         )
 
     # Recompute predicted yield (waste-aware)
     plant_count = block.actualPlantCount or 0
-    yield_per_plant = plant_data.yieldInfo.yieldPerPlant or 0.0 if plant_data.yieldInfo else 0.0
+    yield_per_plant = (
+        plant_data.yieldInfo.yieldPerPlant or 0.0 if plant_data.yieldInfo else 0.0
+    )
     waste_pct = (
         plant_data.yieldInfo.expectedWastePercentage or 0.0
-        if plant_data.yieldInfo else 0.0
+        if plant_data.yieldInfo
+        else 0.0
     )
     new_predicted_kg = yield_per_plant * plant_count * (1 - waste_pct / 100)
 
     # Recompute efficiency from stored actualYieldKg
     actual_kg = block.kpi.actualYieldKg if block.kpi else 0.0
-    new_efficiency = (actual_kg / new_predicted_kg * 100) if new_predicted_kg > 0 else 0.0
+    new_efficiency = (
+        (actual_kg / new_predicted_kg * 100) if new_predicted_kg > 0 else 0.0
+    )
 
     # Recompute expected dates from original planting date
     planting_date = block.plantedDate
@@ -868,16 +857,22 @@ async def refresh_plant_data(
     new_expected_status_changes = None
     if planting_date is not None:
         new_expected_harvest_date, new_expected_status_changes = (
-            await _BlockService.calculate_expected_dates(block.targetCrop, planting_date)
+            await _BlockService.calculate_expected_dates(
+                block.targetCrop, planting_date
+            )
         )
 
     # Build fresh snapshot
     snapshot = PlantDataSnapshot(
         plantName=plant_data.plantName,
-        yieldPerPlant=plant_data.yieldInfo.yieldPerPlant if plant_data.yieldInfo else None,
+        yieldPerPlant=(
+            plant_data.yieldInfo.yieldPerPlant if plant_data.yieldInfo else None
+        ),
         yieldUnit=plant_data.yieldInfo.yieldUnit if plant_data.yieldInfo else None,
         expectedWastePercentage=(
-            plant_data.yieldInfo.expectedWastePercentage if plant_data.yieldInfo else None
+            plant_data.yieldInfo.expectedWastePercentage
+            if plant_data.yieldInfo
+            else None
         ),
         totalCycleDays=(
             plant_data.growthCycle.totalCycleDays if plant_data.growthCycle else None
@@ -886,6 +881,7 @@ async def refresh_plant_data(
 
     # Persist all updates
     from ...services.database import farm_db as _farm_db
+
     db_obj = _farm_db.get_database()
 
     from datetime import datetime as _dt
@@ -903,15 +899,16 @@ async def refresh_plant_data(
         set_fields["expectedStatusChanges"] = new_expected_status_changes
 
     await db_obj.blocks.update_one(
-        {"blockId": str(block_id), "isActive": True},
-        {"$set": set_fields}
+        {"blockId": str(block_id), "isActive": True}, {"$set": set_fields}
     )
 
     # Reload fresh block
     refreshed = await BlockRepository.get_by_id(block_id)
     if not refreshed:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="Failed to reload block after refresh")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reload block after refresh",
+        )
 
     # After refresh, staleness is always False (version just synced)
     result = BlockWithStaleness(
@@ -921,23 +918,23 @@ async def refresh_plant_data(
     )
 
     return SuccessResponse(
-        data=result,
-        message="Block plant data refreshed to latest version"
+        data=result, message="Block plant data refreshed to latest version"
     )
 
 
 # ==================== IOT CONTROLLER ENDPOINTS ====================
 
+
 @router.patch(
     "/{block_id}/iot-controller",
     response_model=SuccessResponse[Block],
-    summary="Update IoT controller configuration for a block"
+    summary="Update IoT controller configuration for a block",
 )
 async def update_iot_controller(
     farm_id: UUID,
     block_id: UUID,
     controller_config: IoTControllerUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Update or set the IoT controller configuration for a block.
@@ -972,41 +969,41 @@ async def update_iot_controller(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Create IoTController object with all fields from config
     from ...models.block import IoTController
+
     iot_controller = IoTController(
         address=controller_config.address,
         port=controller_config.port,
         enabled=controller_config.enabled,
         apiKey=controller_config.apiKey,
         relayLabels=controller_config.relayLabels or {},
-        lastConnected=None  # Will be updated when frontend successfully connects
+        lastConnected=None,  # Will be updated when frontend successfully connects
     )
 
     # Update block with new IoT controller configuration
     from ...models.block import BlockUpdate
+
     update_data = BlockUpdate(iotController=iot_controller)
     updated_block = await BlockService.update_block(block_id, update_data)
 
     return SuccessResponse(
-        data=updated_block,
-        message="IoT controller configuration updated successfully"
+        data=updated_block, message="IoT controller configuration updated successfully"
     )
 
 
 @router.get(
     "/{block_id}/iot-controller",
     response_model=SuccessResponse[dict],
-    summary="Get IoT controller configuration for a block"
+    summary="Get IoT controller configuration for a block",
 )
 async def get_iot_controller(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get the current IoT controller configuration for a block.
@@ -1038,15 +1035,14 @@ async def get_iot_controller(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Return IoT controller configuration or 404 if not configured
     if not block.iotController:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No IoT controller configured for this block"
+            detail="No IoT controller configured for this block",
         )
 
     controller_data = {
@@ -1055,24 +1051,28 @@ async def get_iot_controller(
         "enabled": block.iotController.enabled,
         "apiKey": block.iotController.apiKey,
         "relayLabels": block.iotController.relayLabels or {},
-        "lastConnected": block.iotController.lastConnected.isoformat() if block.iotController.lastConnected else None
+        "lastConnected": (
+            block.iotController.lastConnected.isoformat()
+            if block.iotController.lastConnected
+            else None
+        ),
     }
 
     return SuccessResponse(
         data=controller_data,
-        message="IoT controller configuration retrieved successfully"
+        message="IoT controller configuration retrieved successfully",
     )
 
 
 @router.delete(
     "/{block_id}/iot-controller",
     response_model=SuccessResponse[dict],
-    summary="Remove IoT controller configuration from a block"
+    summary="Remove IoT controller configuration from a block",
 )
 async def delete_iot_controller(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Remove the IoT controller configuration from a block.
@@ -1097,16 +1097,16 @@ async def delete_iot_controller(
     block = await BlockService.get_block(block_id)
     if str(block.farmId) != str(farm_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Block not found in this farm"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Block not found in this farm"
         )
 
     # Update block to remove IoT controller
     from ...models.block import BlockUpdate
+
     update_data = BlockUpdate(iotController=None)
     await BlockService.update_block(block_id, update_data)
 
     return SuccessResponse(
         data={"blockId": str(block_id)},
-        message="IoT controller configuration removed successfully"
+        message="IoT controller configuration removed successfully",
     )

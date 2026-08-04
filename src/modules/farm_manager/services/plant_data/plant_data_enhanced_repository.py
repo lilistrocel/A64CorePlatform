@@ -28,9 +28,7 @@ class PlantDataEnhancedRepository:
 
     @staticmethod
     async def create(
-        plant_data: PlantDataEnhancedCreate,
-        created_by: UUID,
-        created_by_email: str
+        plant_data: PlantDataEnhancedCreate, created_by: UUID, created_by_email: str
     ) -> PlantDataEnhanced:
         """
         Create new enhanced plant data.
@@ -56,7 +54,7 @@ class PlantDataEnhancedRepository:
             dataVersion=1,
             createdAt=datetime.utcnow(),
             updatedAt=datetime.utcnow(),
-            deletedAt=None
+            deletedAt=None,
         )
 
         # Convert to dict and convert UUID fields to strings for MongoDB
@@ -78,8 +76,7 @@ class PlantDataEnhancedRepository:
 
     @staticmethod
     async def get_by_id(
-        plant_data_id: UUID,
-        include_deleted: bool = False
+        plant_data_id: UUID, include_deleted: bool = False
     ) -> Optional[PlantDataEnhanced]:
         """
         Get plant data by ID.
@@ -109,8 +106,7 @@ class PlantDataEnhancedRepository:
 
     @staticmethod
     async def get_by_name(
-        plant_name: str,
-        include_deleted: bool = False
+        plant_name: str, include_deleted: bool = False
     ) -> Optional[PlantDataEnhanced]:
         """
         Get plant data by plant name.
@@ -152,7 +148,7 @@ class PlantDataEnhancedRepository:
         created_by: Optional[UUID] = None,
         contributor: Optional[str] = None,
         target_region: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> tuple[List[PlantDataEnhanced], int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -193,7 +189,7 @@ class PlantDataEnhancedRepository:
             query["$or"] = [
                 {"plantName": {"$regex": search_pattern, "$options": "i"}},
                 {"scientificName": {"$regex": search_pattern, "$options": "i"}},
-                {"tags": {"$regex": search_pattern, "$options": "i"}}
+                {"tags": {"$regex": search_pattern, "$options": "i"}},
             ]
 
         # Farm type compatibility filter
@@ -222,11 +218,17 @@ class PlantDataEnhancedRepository:
 
         # Contributor filter (case-insensitive)
         if contributor:
-            query["contributor"] = {"$regex": f"^{re.escape(contributor)}$", "$options": "i"}
+            query["contributor"] = {
+                "$regex": f"^{re.escape(contributor)}$",
+                "$options": "i",
+            }
 
         # Target region filter (case-insensitive)
         if target_region:
-            query["targetRegion"] = {"$regex": f"^{re.escape(target_region)}$", "$options": "i"}
+            query["targetRegion"] = {
+                "$regex": f"^{re.escape(target_region)}$",
+                "$options": "i",
+            }
 
         # Active status filter
         if is_active is not None:
@@ -254,7 +256,7 @@ class PlantDataEnhancedRepository:
     async def update(
         plant_data_id: UUID,
         update_data: PlantDataEnhancedUpdate,
-        increment_version: bool = True
+        increment_version: bool = True,
     ) -> Optional[PlantDataEnhanced]:
         """
         Update plant data (increments version).
@@ -283,7 +285,8 @@ class PlantDataEnhancedRepository:
 
         # Only update fields that are provided
         update_dict = {
-            k: v for k, v in update_data.model_dump(exclude_unset=True).items()
+            k: v
+            for k, v in update_data.model_dump(exclude_unset=True).items()
             if v is not None
         }
 
@@ -301,7 +304,7 @@ class PlantDataEnhancedRepository:
         # Reason: Parameterized update prevents injection
         result = await db[PlantDataEnhancedRepository.COLLECTION].update_one(
             {"plantDataId": str(plant_data_id), "deletedAt": None},
-            {"$set": update_dict}
+            {"$set": update_dict},
         )
 
         if result.matched_count == 0:
@@ -329,16 +332,15 @@ class PlantDataEnhancedRepository:
         # Reason: Parameterized update with timestamp prevents injection
         result = await db[PlantDataEnhancedRepository.COLLECTION].update_one(
             {"plantDataId": str(plant_data_id), "deletedAt": None},
-            {"$set": {
-                "deletedAt": datetime.utcnow(),
-                "updatedAt": datetime.utcnow()
-            }}
+            {"$set": {"deletedAt": datetime.utcnow(), "updatedAt": datetime.utcnow()}},
         )
 
         if result.matched_count == 0:
             return False
 
-        logger.info(f"[PlantData Enhanced Repository] Soft deleted plant data: {plant_data_id}")
+        logger.info(
+            f"[PlantData Enhanced Repository] Soft deleted plant data: {plant_data_id}"
+        )
         return True
 
     @staticmethod
@@ -354,16 +356,11 @@ class PlantDataEnhancedRepository:
         # Query for active, non-deleted plants
         # Use $ne: false to include documents where isActive is true, null, or missing
         # This handles legacy data that doesn't have isActive field
-        query = {
-            "deletedAt": None,
-            "isActive": {"$ne": False}
-        }
+        query = {"deletedAt": None, "isActive": {"$ne": False}}
 
         # Get all active plants sorted by name
         cursor = (
-            db[PlantDataEnhancedRepository.COLLECTION]
-            .find(query)
-            .sort("plantName", 1)
+            db[PlantDataEnhancedRepository.COLLECTION].find(query).sort("plantName", 1)
         )
 
         plant_docs = await cursor.to_list(length=1000)  # Max 1000 for dropdown
@@ -399,10 +396,7 @@ class PlantDataEnhancedRepository:
 
     @staticmethod
     async def clone(
-        plant_data_id: UUID,
-        new_name: str,
-        created_by: UUID,
-        created_by_email: str
+        plant_data_id: UUID, new_name: str, created_by: UUID, created_by_email: str
     ) -> Optional[PlantDataEnhanced]:
         """
         Clone existing plant data with a new name.
@@ -436,21 +430,17 @@ class PlantDataEnhancedRepository:
             gradingStandards=source.gradingStandards,
             economicsAndLabor=source.economicsAndLabor,
             additionalInfo=source.additionalInfo,
-            tags=source.tags
+            tags=source.tags,
         )
 
         # Create the clone
         return await PlantDataEnhancedRepository.create(
-            cloned_data,
-            created_by,
-            created_by_email
+            cloned_data, created_by, created_by_email
         )
 
     @staticmethod
     async def bulk_create(
-        plants: List[PlantDataEnhancedCreate],
-        created_by: UUID,
-        created_by_email: str
+        plants: List[PlantDataEnhancedCreate], created_by: UUID, created_by_email: str
     ) -> List[PlantDataEnhanced]:
         """
         Bulk create plant data (for CSV import).
@@ -483,7 +473,7 @@ class PlantDataEnhancedRepository:
                 dataVersion=1,
                 createdAt=datetime.utcnow(),
                 updatedAt=datetime.utcnow(),
-                deletedAt=None
+                deletedAt=None,
             )
             plant_objects.append(plant)
 
@@ -493,7 +483,9 @@ class PlantDataEnhancedRepository:
             plant_dicts.append(plant_dict)
 
         # Reason: Bulk insert with parameterized documents prevents injection
-        result = await db[PlantDataEnhancedRepository.COLLECTION].insert_many(plant_dicts)
+        result = await db[PlantDataEnhancedRepository.COLLECTION].insert_many(
+            plant_dicts
+        )
 
         if not result.inserted_ids:
             raise Exception("Bulk insert failed")
@@ -524,9 +516,7 @@ class PlantDataEnhancedRepository:
 
     @staticmethod
     async def get_by_farm_type(
-        farm_type: FarmTypeEnum,
-        skip: int = 0,
-        limit: int = 100
+        farm_type: FarmTypeEnum, skip: int = 0, limit: int = 100
     ) -> tuple[List[PlantDataEnhanced], int]:
         """
         Get plant data compatible with specific farm type.
@@ -540,17 +530,12 @@ class PlantDataEnhancedRepository:
             Tuple of (list of plant data, total count)
         """
         return await PlantDataEnhancedRepository.search(
-            skip=skip,
-            limit=limit,
-            farm_type=farm_type.value,
-            include_deleted=False
+            skip=skip, limit=limit, farm_type=farm_type.value, include_deleted=False
         )
 
     @staticmethod
     async def get_by_tags(
-        tags: List[str],
-        skip: int = 0,
-        limit: int = 100
+        tags: List[str], skip: int = 0, limit: int = 100
     ) -> tuple[List[PlantDataEnhanced], int]:
         """
         Get plant data by tags (any match).
@@ -564,18 +549,12 @@ class PlantDataEnhancedRepository:
             Tuple of (list of plant data, total count)
         """
         return await PlantDataEnhancedRepository.search(
-            skip=skip,
-            limit=limit,
-            tags=tags,
-            include_deleted=False
+            skip=skip, limit=limit, tags=tags, include_deleted=False
         )
 
     @staticmethod
     async def get_by_growth_cycle_range(
-        min_days: int,
-        max_days: int,
-        skip: int = 0,
-        limit: int = 100
+        min_days: int, max_days: int, skip: int = 0, limit: int = 100
     ) -> tuple[List[PlantDataEnhanced], int]:
         """
         Get plant data by growth cycle duration range.
@@ -594,7 +573,7 @@ class PlantDataEnhancedRepository:
             limit=limit,
             min_growth_cycle=min_days,
             max_growth_cycle=max_days,
-            include_deleted=False
+            include_deleted=False,
         )
 
     @staticmethod
@@ -609,14 +588,12 @@ class PlantDataEnhancedRepository:
 
         # Get distinct contributors (non-null, non-deleted)
         contributors = await db[PlantDataEnhancedRepository.COLLECTION].distinct(
-            "contributor",
-            {"deletedAt": None, "contributor": {"$ne": None}}
+            "contributor", {"deletedAt": None, "contributor": {"$ne": None}}
         )
 
         # Get distinct target regions (non-null, non-deleted)
         target_regions = await db[PlantDataEnhancedRepository.COLLECTION].distinct(
-            "targetRegion",
-            {"deletedAt": None, "targetRegion": {"$ne": None}}
+            "targetRegion", {"deletedAt": None, "targetRegion": {"$ne": None}}
         )
 
         # Get distinct tags (flatten arrays, non-deleted)
@@ -624,14 +601,16 @@ class PlantDataEnhancedRepository:
             {"$match": {"deletedAt": None}},
             {"$unwind": "$tags"},
             {"$group": {"_id": "$tags"}},
-            {"$sort": {"_id": 1}}
+            {"$sort": {"_id": 1}},
         ]
-        tags_cursor = db[PlantDataEnhancedRepository.COLLECTION].aggregate(tags_pipeline)
+        tags_cursor = db[PlantDataEnhancedRepository.COLLECTION].aggregate(
+            tags_pipeline
+        )
         tags_docs = await tags_cursor.to_list(length=100)
         tags = [doc["_id"] for doc in tags_docs if doc["_id"]]
 
         return {
             "contributors": sorted([c for c in contributors if c]),
             "targetRegions": sorted([r for r in target_regions if r]),
-            "tags": tags
+            "tags": tags,
         }

@@ -170,7 +170,11 @@ async def _get_moving_avg_cost(
         )
         return Decimal("0.00")
 
-    raw_cost = record.get("avgCost") or record.get("avg_cost") or record.get("movingAvgCost", 0)
+    raw_cost = (
+        record.get("avgCost")
+        or record.get("avg_cost")
+        or record.get("movingAvgCost", 0)
+    )
     return Decimal(str(raw_cost)).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
 
 
@@ -485,18 +489,22 @@ def _build_outbox_payload(
         return str(val)[:10]
 
     lines_payload = []
-    for ln in sorted(delivery_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)):
-        lines_payload.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln["itemId"],
-            "itemCode": ln.get("itemCode", ""),
-            "quantity": str(ln.get("quantity", 0)),
-            "unitCost": str(ln.get("unitCost", 0)),
-            "lineCogs": str(ln.get("lineCogs", 0)),
-            "warehouseId": ln.get("warehouseId", ""),
-            "costCenterId": ln.get("costCenterId"),
-            "sourceSoLineNumber": ln.get("sourceSoLineNumber", 0),
-        })
+    for ln in sorted(
+        delivery_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)
+    ):
+        lines_payload.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln["itemId"],
+                "itemCode": ln.get("itemCode", ""),
+                "quantity": str(ln.get("quantity", 0)),
+                "unitCost": str(ln.get("unitCost", 0)),
+                "lineCogs": str(ln.get("lineCogs", 0)),
+                "warehouseId": ln.get("warehouseId", ""),
+                "costCenterId": ln.get("costCenterId"),
+                "sourceSoLineNumber": ln.get("sourceSoLineNumber", 0),
+            }
+        )
 
     base_ref = delivery_raw.get("baseDocRef", {}) or {}
 
@@ -508,7 +516,8 @@ def _build_outbox_payload(
         "customerId": delivery_raw.get("customerId", ""),
         "customerName": delivery_raw.get("customerName", ""),
         "sourceSoDocEntry": base_ref.get("docId") or base_ref.get("doc_id", ""),
-        "sourceSoDocNumber": base_ref.get("docNumber") or base_ref.get("doc_number", ""),
+        "sourceSoDocNumber": base_ref.get("docNumber")
+        or base_ref.get("doc_number", ""),
         "totalCogs": str(delivery_raw.get("totalCogs", 0)),
         "lines": lines_payload,
     }
@@ -651,7 +660,8 @@ async def create_delivery_from_so(
 
         # Raise if SO has lines but ALL are service lines (no stock to deliver).
         stock_lines_in_so = [
-            ln for ln in so_raw.get("lines", [])
+            ln
+            for ln in so_raw.get("lines", [])
             if all_stock_flags.get(ln.get("itemId", ""), True)
         ]
         if payload.lines and not stock_lines_in_so:
@@ -695,9 +705,9 @@ async def create_delivery_from_so(
         )
         computed_lines.append(line_doc)
 
-    total_cogs = sum(
-        Decimal(str(ln["lineCogs"])) for ln in computed_lines
-    ).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+    total_cogs = sum(Decimal(str(ln["lineCogs"])) for ln in computed_lines).quantize(
+        _TWOPLACES, rounding=ROUND_HALF_UP
+    )
 
     # Step 4: Generate doc_number.
     doc_entry = str(uuid.uuid4())
@@ -797,9 +807,7 @@ async def get_delivery(
     Returns:
         DeliveryResponse if found, None otherwise.
     """
-    raw = await db[_DN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_DN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
     raw.pop("_id", None)
@@ -861,13 +869,7 @@ async def list_deliveries(
     total = await db[_DN_COL].count_documents(query)
     skip = (page - 1) * size
 
-    cursor = (
-        db[_DN_COL]
-        .find(query)
-        .sort("docDate", -1)
-        .skip(skip)
-        .limit(size)
-    )
+    cursor = db[_DN_COL].find(query).sort("docDate", -1).skip(skip).limit(size)
     raw_docs = await cursor.to_list(length=size)
 
     items = [_doc_to_list_item(doc) for doc in raw_docs]
@@ -907,9 +909,7 @@ async def update_delivery(
     Raises:
         ValueError: If the Delivery status is not DRAFT.
     """
-    raw = await db[_DN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_DN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -939,7 +939,9 @@ async def update_delivery(
     if payload.lines is not None:
         # Reload SO and re-validate open_qty constraints for the new line set.
         base_ref = raw.get("baseDocRef", {})
-        so_doc_entry = base_ref.get("docId") or base_ref.get("doc_id") if base_ref else None
+        so_doc_entry = (
+            base_ref.get("docId") or base_ref.get("doc_id") if base_ref else None
+        )
         if not so_doc_entry:
             raise ValueError(
                 f"Delivery '{doc_entry}' has no baseDocRef — cannot replace lines"
@@ -982,9 +984,9 @@ async def update_delivery(
             )
             new_lines.append(line_doc)
 
-        new_total_cogs = sum(
-            Decimal(str(ln["lineCogs"])) for ln in new_lines
-        ).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+        new_total_cogs = sum(Decimal(str(ln["lineCogs"])) for ln in new_lines).quantize(
+            _TWOPLACES, rounding=ROUND_HALF_UP
+        )
 
         updates["lines"] = new_lines
         updates["totalCogs"] = float(new_total_cogs)
@@ -1034,9 +1036,7 @@ async def delete_delivery(
     Raises:
         ValueError: If the Delivery status is not DRAFT.
     """
-    raw = await db[_DN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_DN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return False
 
@@ -1055,9 +1055,7 @@ async def delete_delivery(
         detail={"docNumber": raw.get("docNumber")},
     )
 
-    await db[_DN_COL].delete_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    await db[_DN_COL].delete_one({"docEntry": doc_entry, "organizationId": org_id})
     return True
 
 
@@ -1112,9 +1110,7 @@ async def transition_status(
     Raises:
         ValueError: If the transition is illegal.
     """
-    raw = await db[_DN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_DN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -1129,9 +1125,11 @@ async def transition_status(
     # Retrieve source SO for SO-side updates.
     base_ref = raw.get("baseDocRef", {}) or {}
     so_doc_entry = base_ref.get("docId") or base_ref.get("doc_id", "")
-    so_raw = await db[_SO_COL].find_one(
-        {"docEntry": so_doc_entry, "organizationId": org_id}
-    ) if so_doc_entry else None
+    so_raw = (
+        await db[_SO_COL].find_one({"docEntry": so_doc_entry, "organizationId": org_id})
+        if so_doc_entry
+        else None
+    )
 
     # -----------------------------------------------------------------------
     # DRAFT → OPEN: primary accounting event
@@ -1148,9 +1146,9 @@ async def transition_status(
                 warehouse_id=ln["warehouseId"],
                 org_id=org_id,
             )
-            final_line_cogs = (
-                Decimal(str(ln["quantity"])) * final_cost
-            ).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+            final_line_cogs = (Decimal(str(ln["quantity"])) * final_cost).quantize(
+                _TWOPLACES, rounding=ROUND_HALF_UP
+            )
             updated_ln = dict(ln)
             updated_ln["unitCost"] = float(final_cost)
             updated_ln["lineCogs"] = float(final_line_cogs)
@@ -1170,7 +1168,9 @@ async def transition_status(
                 "warehouseId": ln["warehouseId"],
                 "quantity": -float(Decimal(str(ln["quantity"]))),  # Negative = outgoing
                 "unitCost": float(ln["unitCost"]),
-                "totalCost": -float(Decimal(str(ln["lineCogs"]))),  # Negative = value out
+                "totalCost": -float(
+                    Decimal(str(ln["lineCogs"]))
+                ),  # Negative = value out
                 "movementType": "delivery",
                 "sourceDocType": "DELIVERY",
                 "sourceDocEntry": doc_entry,
@@ -1188,8 +1188,8 @@ async def transition_status(
         if so_raw:
             for ln in updated_lines:
                 base_doc_ref = ln.get("baseDocRef") or {}
-                so_line_id = (
-                    base_doc_ref.get("lineId") or base_doc_ref.get("line_id", "")
+                so_line_id = base_doc_ref.get("lineId") or base_doc_ref.get(
+                    "line_id", ""
                 )
                 if not so_line_id:
                     continue
@@ -1239,13 +1239,15 @@ async def transition_status(
         if so_raw and so_lines_after:
             so_current_status = DocumentStatus(so_raw["status"])
             all_lines_closed = all(
-                _so_line_open_qty(sl) <= _OUTBOX_TOLERANCE
-                for sl in so_lines_after
+                _so_line_open_qty(sl) <= _OUTBOX_TOLERANCE for sl in so_lines_after
             )
 
             if all_lines_closed:
                 # All SO lines now fully delivered → close the SO.
-                if so_current_status in {DocumentStatus.OPEN, DocumentStatus.PARTLY_CLOSED}:
+                if so_current_status in {
+                    DocumentStatus.OPEN,
+                    DocumentStatus.PARTLY_CLOSED,
+                }:
                     await db[_SO_COL].update_one(
                         {"docEntry": so_doc_entry, "organizationId": org_id},
                         {
@@ -1288,11 +1290,15 @@ async def transition_status(
         delivery_for_payload["lines"] = updated_lines
         delivery_for_payload["totalCogs"] = float(final_total_cogs)
 
-        event_payload = _build_outbox_payload(delivery_for_payload, event_type="delivery_posted")
+        event_payload = _build_outbox_payload(
+            delivery_for_payload, event_type="delivery_posted"
+        )
         emitted_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             emitted_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1355,9 +1361,11 @@ async def transition_status(
                 "itemId": ln["itemId"],
                 "itemCode": ln.get("itemCode", ""),
                 "warehouseId": ln["warehouseId"],
-                "quantity": float(Decimal(str(ln["quantity"]))),   # Positive = restore
+                "quantity": float(Decimal(str(ln["quantity"]))),  # Positive = restore
                 "unitCost": float(ln.get("unitCost", 0)),
-                "totalCost": float(Decimal(str(ln.get("lineCogs", 0)))),  # Positive = value in
+                "totalCost": float(
+                    Decimal(str(ln.get("lineCogs", 0)))
+                ),  # Positive = value in
                 "movementType": "delivery_reversal",
                 "sourceDocType": "DELIVERY",
                 "sourceDocEntry": doc_entry,
@@ -1376,8 +1384,8 @@ async def transition_status(
             original_so_status = so_raw["status"]
             for ln in delivery_lines:
                 base_doc_ref = ln.get("baseDocRef") or {}
-                so_line_id = (
-                    base_doc_ref.get("lineId") or base_doc_ref.get("line_id", "")
+                so_line_id = base_doc_ref.get("lineId") or base_doc_ref.get(
+                    "line_id", ""
                 )
                 if not so_line_id:
                     continue
@@ -1426,7 +1434,9 @@ async def transition_status(
         cancelled_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             cancelled_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1463,7 +1473,9 @@ async def transition_status(
                 "from": current_status.value,
                 "to": new_status.value,
                 "reason": request_body.reason,
-                "cancelledOutboxEventId": str(cancelled_event_id) if cancelled_event_id else None,
+                "cancelledOutboxEventId": (
+                    str(cancelled_event_id) if cancelled_event_id else None
+                ),
                 "originalOutboxEventId": original_event_id,
             },
         )

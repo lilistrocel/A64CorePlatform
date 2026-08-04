@@ -103,7 +103,9 @@ class WatchdogScheduler:
                     if config.enabled:
                         # Acquire distributed lock so only 1 worker runs per cycle
                         if not await self._acquire_lock(interval):
-                            logger.debug("[WatchdogScheduler] Another worker holds the lock, skipping")
+                            logger.debug(
+                                "[WatchdogScheduler] Another worker holds the lock, skipping"
+                            )
                         else:
                             service = WatchdogService(self._db)
                             result = await service.run_check(triggered_by="scheduler")

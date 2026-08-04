@@ -52,7 +52,9 @@ async def list_protocols(
     perPage: int = Query(20, ge=1, le=100),
     category: Optional[str] = Query(None),
     status_: Optional[str] = Query(None, alias="status"),
-    appliesTo: Optional[str] = Query(None, description="Scope tag, e.g. propagation:agar_to_agar"),
+    appliesTo: Optional[str] = Query(
+        None, description="Scope tag, e.g. propagation:agar_to_agar"
+    ),
     tag: Optional[str] = Query(None),
     search: Optional[str] = Query(None, description="Match title, code or purpose"),
     current_user: CurrentUser = Depends(require_view),

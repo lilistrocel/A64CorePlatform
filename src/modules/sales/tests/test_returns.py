@@ -58,7 +58,6 @@ from src.modules.sales.services.rtn_service import (
     update_return,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fake DB implementation (embedded-line aware)
 # ---------------------------------------------------------------------------
@@ -109,9 +108,7 @@ class _FakeCollection:
 
     async def update_one(self, query, update, **kwargs):
         for doc in self._docs:
-            top_matches = all(
-                doc.get(k) == v for k, v in query.items() if "." not in k
-            )
+            top_matches = all(doc.get(k) == v for k, v in query.items() if "." not in k)
             if not top_matches:
                 continue
             # Support positional operator on lines array
@@ -128,7 +125,7 @@ class _FakeCollection:
             if "$inc" in update:
                 for field, delta in update["$inc"].items():
                     if field.startswith("lines.$."):
-                        sub_field = field[len("lines.$."):]
+                        sub_field = field[len("lines.$.") :]
                         if line_id_query:
                             for line in doc.get("lines", []):
                                 if line.get("lineId") == line_id_query:
@@ -358,8 +355,11 @@ async def test_create_from_rr_happy_path():
     db["inventory_balances"]._add(_make_inv_balance())
 
     rtn = await create_return_from_request(
-        db, rr_doc_entry=_RR_ID, payload=_make_rtn_from_rr_payload(),
-        org_id=_ORG, user_id=_USER
+        db,
+        rr_doc_entry=_RR_ID,
+        payload=_make_rtn_from_rr_payload(),
+        org_id=_ORG,
+        user_id=_USER,
     )
 
     assert rtn.status == DocumentStatus.DRAFT
@@ -376,8 +376,11 @@ async def test_create_from_rr_wrong_status_raises():
 
     with pytest.raises(ValueError, match="must be 'open'"):
         await create_return_from_request(
-            db, rr_doc_entry=_RR_ID, payload=_make_rtn_from_rr_payload(),
-            org_id=_ORG, user_id=_USER
+            db,
+            rr_doc_entry=_RR_ID,
+            payload=_make_rtn_from_rr_payload(),
+            org_id=_ORG,
+            user_id=_USER,
         )
 
 
@@ -394,8 +397,11 @@ async def test_create_from_rr_qty_exceeded_raises():
     # Trying to return 5 but only 2 available
     with pytest.raises(ValueError, match="exceeds"):
         await create_return_from_request(
-            db, rr_doc_entry=_RR_ID, payload=_make_rtn_from_rr_payload(),
-            org_id=_ORG, user_id=_USER
+            db,
+            rr_doc_entry=_RR_ID,
+            payload=_make_rtn_from_rr_payload(),
+            org_id=_ORG,
+            user_id=_USER,
         )
 
 
@@ -521,7 +527,9 @@ async def test_delete_draft_return():
         db, payload=_make_rtn_direct_payload(), org_id=_ORG, user_id=_USER
     )
 
-    deleted = await delete_return(db, doc_entry=created.doc_entry, org_id=_ORG, user_id=_USER)
+    deleted = await delete_return(
+        db, doc_entry=created.doc_entry, org_id=_ORG, user_id=_USER
+    )
     assert deleted is True
     assert await get_return(db, doc_entry=created.doc_entry, org_id=_ORG) is None
 
@@ -624,8 +632,11 @@ async def test_transition_draft_to_open_increments_rr_consumed_qty():
     db["inventory_balances"]._add(_make_inv_balance())
     db["deliveries_v2"]._add(_make_dn_doc())
     created = await create_return_from_request(
-        db, rr_doc_entry=_RR_ID, payload=_make_rtn_from_rr_payload(),
-        org_id=_ORG, user_id=_USER
+        db,
+        rr_doc_entry=_RR_ID,
+        payload=_make_rtn_from_rr_payload(),
+        org_id=_ORG,
+        user_id=_USER,
     )
 
     with patch(
@@ -657,8 +668,11 @@ async def test_rr_auto_closed_when_fully_consumed():
     db["inventory_balances"]._add(_make_inv_balance())
     db["deliveries_v2"]._add(_make_dn_doc())
     created = await create_return_from_request(
-        db, rr_doc_entry=_RR_ID, payload=_make_rtn_from_rr_payload(),
-        org_id=_ORG, user_id=_USER
+        db,
+        rr_doc_entry=_RR_ID,
+        payload=_make_rtn_from_rr_payload(),
+        org_id=_ORG,
+        user_id=_USER,
     )
 
     with patch(
@@ -710,7 +724,9 @@ async def test_transition_open_to_cancelled_reverses_inventory():
         result = await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ReturnStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+            request_body=ReturnStatusTransitionRequest(
+                new_status=DocumentStatus.CANCELLED
+            ),
             org_id=_ORG,
             user_id=_USER,
         )

@@ -9,10 +9,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Request
 # ---------------------------------------------------------------------------
+
 
 class CalculateItem(BaseModel):
     """
@@ -24,7 +24,9 @@ class CalculateItem(BaseModel):
     """
 
     plantDataId: UUID = Field(..., description="Plant data reference")
-    points: int = Field(..., ge=1, le=10_000_000, description="Irrigation points (1 – 10 000 000)")
+    points: int = Field(
+        ..., ge=1, le=10_000_000, description="Irrigation points (1 – 10 000 000)"
+    )
 
 
 class CalculateRequest(BaseModel):
@@ -36,15 +38,14 @@ class CalculateRequest(BaseModel):
     """
 
     items: List[CalculateItem] = Field(
-        ...,
-        min_length=1,
-        description="Crop entries — at least one item required"
+        ..., min_length=1, description="Crop entries — at least one item required"
     )
 
 
 # ---------------------------------------------------------------------------
 # Response fragments
 # ---------------------------------------------------------------------------
+
 
 class IngredientResult(BaseModel):
     """
@@ -59,12 +60,18 @@ class IngredientResult(BaseModel):
         totalCost: qty * unitPrice (None when unitPrice is None).
     """
 
-    chemicalId: Optional[UUID] = Field(None, description="Matched chemical ID; None if unmatched")
+    chemicalId: Optional[UUID] = Field(
+        None, description="Matched chemical ID; None if unmatched"
+    )
     name: str = Field(..., description="Chemical / ingredient name")
     qty: float = Field(..., ge=0, description="Total quantity needed")
     unit: str = Field(..., description="Unit after conversion (kg or L)")
-    unitPrice: Optional[float] = Field(None, ge=0, description="AED per unit; None if no price")
-    totalCost: Optional[float] = Field(None, ge=0, description="qty × unitPrice; None if no price")
+    unitPrice: Optional[float] = Field(
+        None, ge=0, description="AED per unit; None if no price"
+    )
+    totalCost: Optional[float] = Field(
+        None, ge=0, description="qty × unitPrice; None if no price"
+    )
 
 
 class CropResult(BaseModel):
@@ -85,13 +92,12 @@ class CropResult(BaseModel):
     points: int = Field(..., ge=1, description="Irrigation points")
     cycleDays: int = Field(..., ge=0, description="Full growth cycle in days")
     ingredients: List[IngredientResult] = Field(
-        default_factory=list,
-        description="Per-chemical quantities and costs"
+        default_factory=list, description="Per-chemical quantities and costs"
     )
     subtotalCost: Optional[float] = Field(
         None,
         ge=0,
-        description="Total cost for this crop; None if any ingredient has no price"
+        description="Total cost for this crop; None if any ingredient has no price",
     )
 
 
@@ -109,20 +115,19 @@ class CalculateResponse(BaseModel):
 
     perCrop: List[CropResult] = Field(default_factory=list)
     grandTotalCost: Optional[float] = Field(
-        None,
-        ge=0,
-        description="Grand total; None if any ingredient lacks a price"
+        None, ge=0, description="Grand total; None if any ingredient lacks a price"
     )
     warnings: List[str] = Field(default_factory=list)
     discoveredChemicals: List[dict] = Field(
         default_factory=list,
-        description="Newly auto-discovered FertilizerChemical documents"
+        description="Newly auto-discovered FertilizerChemical documents",
     )
 
 
 # ---------------------------------------------------------------------------
 # Excel import result
 # ---------------------------------------------------------------------------
+
 
 class SkippedRow(BaseModel):
     """

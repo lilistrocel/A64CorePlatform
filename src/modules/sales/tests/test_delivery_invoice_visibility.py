@@ -216,7 +216,7 @@ def _apply_update_embedded(
     if "$inc" in update:
         for field, delta in update["$inc"].items():
             if field.startswith("lines.$."):
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
@@ -228,7 +228,7 @@ def _apply_update_embedded(
     if "$push" in update:
         for field, val in update["$push"].items():
             if field.startswith("lines.$."):
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
@@ -245,23 +245,19 @@ def _apply_update_embedded(
         for field, match_spec in update["$pull"].items():
             if field.startswith("lines.$."):
                 # Pull matching items from an embedded array on the matched line.
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
                             arr = line.get(sub_field, [])
                             line[sub_field] = [
-                                item for item in arr
-                                if not _matches(item, match_spec)
+                                item for item in arr if not _matches(item, match_spec)
                             ]
                             break
             else:
                 # Pull matching items from a top-level array field.
                 arr = doc.get(field, [])
-                doc[field] = [
-                    item for item in arr
-                    if not _matches(item, match_spec)
-                ]
+                doc[field] = [item for item in arr if not _matches(item, match_spec)]
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +302,9 @@ _ITEM_FIN_EXT_DATA_2 = {
 def _patch_item_ext_multi() -> Any:
     """Patch _get_item_finance_ext to handle item 1 and item 2."""
 
-    async def _side_effect(item_id: str, org_id: str, auth_token: Any) -> Dict[str, Any]:
+    async def _side_effect(
+        item_id: str, org_id: str, auth_token: Any
+    ) -> Dict[str, Any]:
         if item_id == ITEM_1_ID:
             return dict(_ITEM_FIN_EXT_DATA_1)
         if item_id == ITEM_2_ID:
@@ -384,26 +382,28 @@ def _make_delivery(
         },
     ]
     if include_line2:
-        lines.append({
-            "lineId": DN_LINE_2_ID,
-            "lineNumber": 2,
-            "itemId": ITEM_2_ID,
-            "itemCode": "ITEM-VIS-002",
-            "itemName": "Visibility Test Item 2",
-            "description": "Visibility Test Item 2",
-            "quantity": line2_qty,
-            "uom": "kg",
-            "warehouseId": "WH-VIS",
-            "unitCost": 30.0,
-            "lineCogs": line2_qty * 30.0,
-            "costCenterId": None,
-            "orderedQty": line2_qty,
-            "invoicedQty": line2_invoiced,
-            "creditedQty": line2_credited,
-            "cancelledQty": line2_cancelled,
-            "targetDocRefs": [],
-            "baseDocRef": None,
-        })
+        lines.append(
+            {
+                "lineId": DN_LINE_2_ID,
+                "lineNumber": 2,
+                "itemId": ITEM_2_ID,
+                "itemCode": "ITEM-VIS-002",
+                "itemName": "Visibility Test Item 2",
+                "description": "Visibility Test Item 2",
+                "quantity": line2_qty,
+                "uom": "kg",
+                "warehouseId": "WH-VIS",
+                "unitCost": 30.0,
+                "lineCogs": line2_qty * 30.0,
+                "costCenterId": None,
+                "orderedQty": line2_qty,
+                "invoicedQty": line2_invoiced,
+                "creditedQty": line2_credited,
+                "cancelledQty": line2_cancelled,
+                "targetDocRefs": [],
+                "baseDocRef": None,
+            }
+        )
 
     return {
         "docEntry": entry,
@@ -525,7 +525,9 @@ async def test_list_deliveries_open_invoice_qty_sums_across_lines() -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_deliveries_open_invoice_qty_decreases_after_partial_invoice() -> None:
+async def test_list_deliveries_open_invoice_qty_decreases_after_partial_invoice() -> (
+    None
+):
     """
     After partially invoicing, open_invoice_qty reflects the remaining qty.
 
@@ -648,7 +650,9 @@ async def test_list_deliveries_pagination_total_count_correct() -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_deliveries_open_invoice_qty_updates_after_create_from_delivery() -> None:
+async def test_list_deliveries_open_invoice_qty_updates_after_create_from_delivery() -> (
+    None
+):
     """
     Integration: open_invoice_qty reported by list_deliveries decreases after
     an AR Invoice is created from the Delivery.
@@ -760,7 +764,9 @@ async def test_partial_then_full_invoice_closes_delivery() -> None:
         )
 
     dn_docs = [d for d in db["deliveries_v2"]._docs if d.get("docEntry") == doc_entry]
-    assert dn_docs[0]["status"] == DocumentStatus.OPEN.value, "Should still be OPEN after partial"
+    assert (
+        dn_docs[0]["status"] == DocumentStatus.OPEN.value
+    ), "Should still be OPEN after partial"
 
     # Second invoice: remaining 4 units.
     payload2 = _make_from_delivery_payload(qty1=4.0)
@@ -774,7 +780,9 @@ async def test_partial_then_full_invoice_closes_delivery() -> None:
         )
 
     dn_docs = [d for d in db["deliveries_v2"]._docs if d.get("docEntry") == doc_entry]
-    assert dn_docs[0]["status"] == DocumentStatus.CLOSED.value, "Should be CLOSED after full invoice"
+    assert (
+        dn_docs[0]["status"] == DocumentStatus.CLOSED.value
+    ), "Should be CLOSED after full invoice"
 
 
 @pytest.mark.asyncio
@@ -805,9 +813,9 @@ async def test_multiline_partial_one_line_does_not_close() -> None:
         )
 
     dn_docs = [d for d in db["deliveries_v2"]._docs if d.get("docEntry") == doc_entry]
-    assert dn_docs[0]["status"] == DocumentStatus.OPEN.value, (
-        "Delivery must stay OPEN when line 2 is not yet invoiced"
-    )
+    assert (
+        dn_docs[0]["status"] == DocumentStatus.OPEN.value
+    ), "Delivery must stay OPEN when line 2 is not yet invoiced"
 
 
 @pytest.mark.asyncio
@@ -863,7 +871,8 @@ async def test_auto_close_writes_audit_entry() -> None:
 
     audit_entries = db["deliveries_v2_audit"]._docs
     auto_close_entries = [
-        e for e in audit_entries
+        e
+        for e in audit_entries
         if e.get("action") == "auto_close_on_full_invoice"
         and e.get("docEntry") == doc_entry
     ]
@@ -895,8 +904,7 @@ async def test_auto_close_audit_references_ari_doc_number() -> None:
 
     audit_entries = db["deliveries_v2_audit"]._docs
     entry = next(
-        e for e in audit_entries
-        if e.get("action") == "auto_close_on_full_invoice"
+        e for e in audit_entries if e.get("action") == "auto_close_on_full_invoice"
     )
     # The triggering AR Invoice doc_entry must be recorded.
     assert entry["detail"]["triggeredByAriDocEntry"] == ari.doc_entry
@@ -924,8 +932,7 @@ async def test_partial_invoice_does_not_write_auto_close_audit() -> None:
 
     audit_entries = db["deliveries_v2_audit"]._docs
     auto_close_entries = [
-        e for e in audit_entries
-        if e.get("action") == "auto_close_on_full_invoice"
+        e for e in audit_entries if e.get("action") == "auto_close_on_full_invoice"
     ]
     assert len(auto_close_entries) == 0
 
@@ -966,8 +973,7 @@ async def test_already_closed_delivery_not_re_closed() -> None:
     # No auto_close_on_full_invoice audit entry should be written.
     audit_entries = db["deliveries_v2_audit"]._docs
     auto_close_entries = [
-        e for e in audit_entries
-        if e.get("action") == "auto_close_on_full_invoice"
+        e for e in audit_entries if e.get("action") == "auto_close_on_full_invoice"
     ]
     assert len(auto_close_entries) == 0
 
@@ -1080,9 +1086,7 @@ async def test_update_increases_qty_reconciles_dn_counter() -> None:
         qty=80.0,
     )
     with _patch_item_ext_multi():
-        await update_ar_invoice(
-            db, ari.doc_entry, update_payload, ORG_ID, USER_ID
-        )
+        await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
     # DN invoicedQty must be 80; status must still be OPEN (not fully invoiced).
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
@@ -1118,9 +1122,7 @@ async def test_update_decreases_qty_reconciles_dn_counter() -> None:
         qty=40.0,
     )
     with _patch_item_ext_multi():
-        await update_ar_invoice(
-            db, ari.doc_entry, update_payload, ORG_ID, USER_ID
-        )
+        await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     assert dn_doc["lines"][0]["invoicedQty"] == pytest.approx(40.0)
@@ -1170,9 +1172,7 @@ async def test_update_removes_line_releases_dn_counter() -> None:
         qty=60.0,
     )
     with _patch_item_ext_multi():
-        await update_ar_invoice(
-            db, ari.doc_entry, update_payload, ORG_ID, USER_ID
-        )
+        await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     # Line 1 unchanged (still 60).
@@ -1214,9 +1214,7 @@ async def test_update_exceeds_open_qty_raises_value_error() -> None:
         qty=110.0,
     )
     with _patch_item_ext_multi(), pytest.raises(ValueError, match="open_invoice_qty"):
-        await update_ar_invoice(
-            db, ari.doc_entry, update_payload, ORG_ID, USER_ID
-        )
+        await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
 
 @pytest.mark.asyncio
@@ -1253,9 +1251,7 @@ async def test_update_full_to_partial_reopens_dn() -> None:
         qty=70.0,
     )
     with _patch_item_ext_multi():
-        await update_ar_invoice(
-            db, ari.doc_entry, update_payload, ORG_ID, USER_ID
-        )
+        await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     assert dn_doc["status"] == DocumentStatus.OPEN.value
@@ -1263,7 +1259,8 @@ async def test_update_full_to_partial_reopens_dn() -> None:
 
     # Audit entry with auto_reopen_on_invoice_release must exist.
     reopen_entries = [
-        e for e in db["deliveries_v2_audit"]._docs
+        e
+        for e in db["deliveries_v2_audit"]._docs
         if e.get("action") == "auto_reopen_on_invoice_release"
         and e.get("docEntry") == dn_entry
     ]
@@ -1305,9 +1302,7 @@ async def test_update_partial_to_full_closes_dn() -> None:
         qty=100.0,
     )
     with _patch_item_ext_multi():
-        await update_ar_invoice(
-            db, ari.doc_entry, update_payload, ORG_ID, USER_ID
-        )
+        await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     assert dn_doc["status"] == DocumentStatus.CLOSED.value
@@ -1350,7 +1345,8 @@ async def test_delete_after_auto_close_reopens_dn() -> None:
 
     # Reopen audit entry must reference the deleted ARI.
     reopen_entries = [
-        e for e in db["deliveries_v2_audit"]._docs
+        e
+        for e in db["deliveries_v2_audit"]._docs
         if e.get("action") == "auto_reopen_on_invoice_release"
         and e.get("docEntry") == dn_entry
     ]
@@ -1421,7 +1417,8 @@ async def test_cancel_after_auto_close_reopens_dn() -> None:
 
     # Reopen audit entry must exist.
     reopen_entries = [
-        e for e in db["deliveries_v2_audit"]._docs
+        e
+        for e in db["deliveries_v2_audit"]._docs
         if e.get("action") == "auto_reopen_on_invoice_release"
         and e.get("docEntry") == dn_entry
     ]
@@ -1495,9 +1492,7 @@ async def test_update_multiline_reduce_one_line_reopens_dn() -> None:
         ]
     )
     with _patch_item_ext_multi():
-        await update_ar_invoice(
-            db, ari.doc_entry, update_payload, ORG_ID, USER_ID
-        )
+        await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     # DN must now be OPEN (line 1 is no longer fully invoiced).
@@ -1507,7 +1502,8 @@ async def test_update_multiline_reduce_one_line_reopens_dn() -> None:
 
     # Reopen audit entry must exist.
     reopen_entries = [
-        e for e in db["deliveries_v2_audit"]._docs
+        e
+        for e in db["deliveries_v2_audit"]._docs
         if e.get("action") == "auto_reopen_on_invoice_release"
         and e.get("docEntry") == dn_entry
     ]
@@ -1542,9 +1538,9 @@ async def test_update_noop_header_only_leaves_dn_targetdocrefs_unchanged() -> No
     # Delivery header targetDocRefs must still contain the ARI ref.
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     header_refs = dn_doc.get("targetDocRefs", [])
-    assert any(r.get("docId") == ari.doc_entry for r in header_refs), (
-        "Header targetDocRefs must not be cleared by a header-only edit"
-    )
+    assert any(
+        r.get("docId") == ari.doc_entry for r in header_refs
+    ), "Header targetDocRefs must not be cleared by a header-only edit"
 
 
 @pytest.mark.asyncio
@@ -1578,9 +1574,7 @@ async def test_update_noop_header_only_leaves_dn_unchanged() -> None:
 
     # Header-only edit (notes only, no lines payload).
     header_only_update = ARInvoiceUpdate(notes="Updated note — no lines change")
-    await update_ar_invoice(
-        db, ari.doc_entry, header_only_update, ORG_ID, USER_ID
-    )
+    await update_ar_invoice(db, ari.doc_entry, header_only_update, ORG_ID, USER_ID)
 
     # DN counters must be unchanged.
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
@@ -1591,8 +1585,10 @@ async def test_update_noop_header_only_leaves_dn_unchanged() -> None:
     # The only audit entries that exist should be those from the initial create
     # (which writes no DN audit because it was partial).
     reopen_entries = [
-        e for e in db["deliveries_v2_audit"]._docs
-        if e.get("action") in ("auto_reopen_on_invoice_release", "auto_close_on_full_invoice")
+        e
+        for e in db["deliveries_v2_audit"]._docs
+        if e.get("action")
+        in ("auto_reopen_on_invoice_release", "auto_close_on_full_invoice")
     ]
     assert len(reopen_entries) == 0
 
@@ -1636,9 +1632,9 @@ async def test_delete_cleans_header_target_doc_ref() -> None:
     # Delivery.targetDocRefs must now be empty.
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     header_refs_after = dn_doc.get("targetDocRefs", [])
-    assert len(header_refs_after) == 0, (
-        f"Expected 0 header targetDocRefs after delete, got {header_refs_after}"
-    )
+    assert (
+        len(header_refs_after) == 0
+    ), f"Expected 0 header targetDocRefs after delete, got {header_refs_after}"
 
 
 @pytest.mark.asyncio
@@ -1678,12 +1674,12 @@ async def test_delete_cleans_per_line_target_doc_refs() -> None:
 
     # Assert both DN lines have 0 targetDocRefs.
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
-    assert len(dn_doc["lines"][0].get("targetDocRefs", [])) == 0, (
-        "DN line 1 still has stale targetDocRefs after ARI delete"
-    )
-    assert len(dn_doc["lines"][1].get("targetDocRefs", [])) == 0, (
-        "DN line 2 still has stale targetDocRefs after ARI delete"
-    )
+    assert (
+        len(dn_doc["lines"][0].get("targetDocRefs", [])) == 0
+    ), "DN line 1 still has stale targetDocRefs after ARI delete"
+    assert (
+        len(dn_doc["lines"][1].get("targetDocRefs", [])) == 0
+    ), "DN line 2 still has stale targetDocRefs after ARI delete"
 
 
 @pytest.mark.asyncio
@@ -1730,9 +1726,9 @@ async def test_delete_partial_leaves_sibling_ari_ref_intact() -> None:
     # Assert 1 header ref and it is B's docEntry.
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
     header_refs = dn_doc.get("targetDocRefs", [])
-    assert len(header_refs) == 1, (
-        f"Expected 1 header targetDocRef after deleting ARI A, got {len(header_refs)}"
-    )
+    assert (
+        len(header_refs) == 1
+    ), f"Expected 1 header targetDocRef after deleting ARI A, got {len(header_refs)}"
     assert header_refs[0]["docId"] == ari_b.doc_entry, (
         f"Remaining ref should be B ({ari_b.doc_entry}), "
         f"got {header_refs[0]['docId']}"
@@ -1790,9 +1786,9 @@ async def test_update_reconciles_per_line_target_doc_refs() -> None:
 
     # The old UUID must be gone.
     new_ari_line_id = new_line_refs[0]["lineId"]
-    assert new_ari_line_id != old_ari_line_id, (
-        "Expected a fresh lineId UUID after the line set was replaced wholesale"
-    )
+    assert (
+        new_ari_line_id != old_ari_line_id
+    ), "Expected a fresh lineId UUID after the line set was replaced wholesale"
 
     # The docId must still point to the same AR Invoice (docEntry is stable).
     assert new_line_refs[0]["docId"] == ari.doc_entry
@@ -1841,9 +1837,9 @@ async def test_update_then_delete_leaves_zero_refs() -> None:
 
     # Final state: zero refs everywhere.
     dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
-    assert len(dn_doc.get("targetDocRefs", [])) == 0, (
-        "Header targetDocRefs must be empty after update + delete"
-    )
-    assert len(dn_doc["lines"][0].get("targetDocRefs", [])) == 0, (
-        "Per-line targetDocRefs must be empty after update + delete"
-    )
+    assert (
+        len(dn_doc.get("targetDocRefs", [])) == 0
+    ), "Header targetDocRefs must be empty after update + delete"
+    assert (
+        len(dn_doc["lines"][0].get("targetDocRefs", [])) == 0
+    ), "Per-line targetDocRefs must be empty after update + delete"

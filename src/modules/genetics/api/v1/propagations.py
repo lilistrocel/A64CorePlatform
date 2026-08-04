@@ -34,12 +34,14 @@ router = APIRouter()
 
 class PropagationOutcome(BaseModel):
     """The event plus the accessions it created."""
+
     event: PropagationEvent
     accessions: List[Accession]
 
 
 class MethodInfo(BaseModel):
     """Describes one propagation method for the clone/cross UI."""
+
     value: str
     reproductionMode: ReproductionMode
     maxParents: int
@@ -77,9 +79,7 @@ async def list_methods(
             advancesFilialGeneration=(
                 method.reproduction_mode == ReproductionMode.SEXUAL
             ),
-            resetsCloneGeneration=(
-                method.reproduction_mode == ReproductionMode.SEXUAL
-            ),
+            resetsCloneGeneration=(method.reproduction_mode == ReproductionMode.SEXUAL),
         )
         for method in PropagationMethod
     ]
@@ -105,8 +105,7 @@ async def create_propagation(
     return SuccessResponse(
         data=PropagationOutcome(event=event, accessions=accessions),
         message=(
-            f"Created {len(accessions)} accession(s), "
-            f"{event.vesselCount} vessel(s)"
+            f"Created {len(accessions)} accession(s), " f"{event.vesselCount} vessel(s)"
         ),
     )
 
@@ -121,7 +120,9 @@ async def list_propagations(
     page: int = Query(1, ge=1),
     perPage: int = Query(20, ge=1, le=100),
     lineId: Optional[str] = Query(None),
-    accessionId: Optional[str] = Query(None, description="Events touching this accession"),
+    accessionId: Optional[str] = Query(
+        None, description="Events touching this accession"
+    ),
     method: Optional[str] = Query(None),
     mediumBatchId: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(require_view),

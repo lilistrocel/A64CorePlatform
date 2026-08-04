@@ -13,8 +13,7 @@ from ..models.dashboard import BlockCalculated
 
 
 async def calculate_block_metrics(
-    block: Block,
-    plant_data: Optional[Dict] = None
+    block: Block, plant_data: Optional[Dict] = None
 ) -> BlockCalculated:
     """
     Calculate all dashboard metrics for a block
@@ -27,6 +26,7 @@ async def calculate_block_metrics(
         BlockCalculated with all metrics
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     now = datetime.utcnow()
@@ -50,7 +50,9 @@ async def calculate_block_metrics(
             # Handle string dates from migration (ISO format)
             if isinstance(current_state_date, str):
                 try:
-                    current_state_date = datetime.fromisoformat(current_state_date.replace('Z', '+00:00'))
+                    current_state_date = datetime.fromisoformat(
+                        current_state_date.replace("Z", "+00:00")
+                    )
                 except ValueError:
                     current_state_date = None
 
@@ -69,7 +71,14 @@ async def calculate_block_metrics(
 
     if block.expectedStatusChanges:
         # State order for progression
-        state_order = ["planned", "planted", "growing", "fruiting", "harvesting", "cleaning"]
+        state_order = [
+            "planned",
+            "planted",
+            "growing",
+            "fruiting",
+            "harvesting",
+            "cleaning",
+        ]
 
         # Find current state index
         try:
@@ -86,7 +95,9 @@ async def calculate_block_metrics(
                 # Handle string dates from migration (ISO format)
                 if isinstance(expected_next_date, str):
                     try:
-                        expected_next_date = datetime.fromisoformat(expected_next_date.replace('Z', '+00:00'))
+                        expected_next_date = datetime.fromisoformat(
+                            expected_next_date.replace("Z", "+00:00")
+                        )
                     except ValueError:
                         expected_next_date = None
 
@@ -125,9 +136,7 @@ async def calculate_block_metrics(
 
     if block.state == BlockStatus.HARVESTING and block.kpi.predictedYieldKg > 0:
         # Calculate current yield progress
-        yield_progress = (
-            block.kpi.actualYieldKg / block.kpi.predictedYieldKg * 100
-        )
+        yield_progress = block.kpi.actualYieldKg / block.kpi.predictedYieldKg * 100
 
         # Determine yield status
         if yield_progress >= 100:
@@ -146,7 +155,9 @@ async def calculate_block_metrics(
 
                 # Get expected harvest duration from plant data
                 if plant_data and "growthCycle" in plant_data:
-                    total_harvest_days = plant_data["growthCycle"].get("harvestDurationDays", 30)
+                    total_harvest_days = plant_data["growthCycle"].get(
+                        "harvestDurationDays", 30
+                    )
                     estimated_final_yield = avg_yield_per_day * total_harvest_days
                 else:
                     # Default estimate: 30 days harvest period
@@ -174,7 +185,7 @@ async def calculate_block_metrics(
         estimatedFinalYield=round(estimated_final_yield, 1),
         performanceCategory=performance_category,
         nextAction=next_action,
-        nextActionDate=expected_next_date
+        nextActionDate=expected_next_date,
     )
 
 
@@ -218,19 +229,18 @@ def calculate_farm_summary(blocks: list[Block]) -> Dict:
     """
     summary = {
         "totalBlocks": len(blocks),
-        "physicalBlocks": sum(1 for b in blocks if getattr(b, "blockCategory", None) == "physical"),
-        "virtualBlocks": sum(1 for b in blocks if getattr(b, "blockCategory", None) == "virtual"),
+        "physicalBlocks": sum(
+            1 for b in blocks if getattr(b, "blockCategory", None) == "physical"
+        ),
+        "virtualBlocks": sum(
+            1 for b in blocks if getattr(b, "blockCategory", None) == "virtual"
+        ),
         "blocksByState": {},
         "totalActivePlantings": 0,
         "totalPredictedYieldKg": 0.0,
         "totalActualYieldKg": 0.0,
         "avgYieldEfficiency": 0.0,
-        "activeAlerts": {
-            "critical": 0,
-            "high": 0,
-            "medium": 0,
-            "low": 0
-        }
+        "activeAlerts": {"critical": 0, "high": 0, "medium": 0, "low": 0},
     }
 
     # Initialize state counts
@@ -249,7 +259,7 @@ def calculate_farm_summary(blocks: list[Block]) -> Dict:
         if block.state in [
             BlockStatus.GROWING,
             BlockStatus.FRUITING,
-            BlockStatus.HARVESTING
+            BlockStatus.HARVESTING,
         ]:
             summary["totalActivePlantings"] += 1
 
@@ -266,6 +276,8 @@ def calculate_farm_summary(blocks: list[Block]) -> Dict:
 
     # Calculate average efficiency (only from blocks that have harvested)
     if blocks_with_efficiency > 0:
-        summary["avgYieldEfficiency"] = round(total_efficiency / blocks_with_efficiency, 1)
+        summary["avgYieldEfficiency"] = round(
+            total_efficiency / blocks_with_efficiency, 1
+        )
 
     return summary

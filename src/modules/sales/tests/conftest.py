@@ -44,7 +44,7 @@ def _pkg_stub(dotted_name: str) -> MagicMock:
 
     stub = MagicMock()
     stub.__name__ = dotted_name
-    stub.__path__ = [dotted_name]    # marks as a package for sub-import resolution
+    stub.__path__ = [dotted_name]  # marks as a package for sub-import resolution
     stub.__package__ = dotted_name
     sys.modules[dotted_name] = stub
     return stub
@@ -160,7 +160,9 @@ _sales_auth_module.CurrentUser = MagicMock
 # Stub middleware package
 _sales_middleware_module = _pkg_stub("src.modules.sales.middleware")
 _sales_middleware_module.require_permission = _sales_auth_module.require_permission
-_sales_middleware_module.get_current_active_user = _sales_auth_module.get_current_active_user
+_sales_middleware_module.get_current_active_user = (
+    _sales_auth_module.get_current_active_user
+)
 _sales_middleware_module.get_current_user = _sales_auth_module.get_current_user
 _sales_middleware_module.CurrentUser = _sales_auth_module.CurrentUser
 

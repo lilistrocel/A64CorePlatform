@@ -232,7 +232,7 @@ def _apply_update_embedded(
     if "$inc" in update:
         for field, delta in update["$inc"].items():
             if field.startswith("lines.$."):
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
@@ -244,7 +244,7 @@ def _apply_update_embedded(
     if "$push" in update:
         for field, val in update["$push"].items():
             if field.startswith("lines.$."):
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
@@ -363,7 +363,9 @@ def _patch_item_ext_multi(
     if items is None:
         items = {ITEM_1_ID: REVENUE_ACCOUNT_ID, ITEM_2_ID: REVENUE_ACCOUNT_ID}
 
-    async def _side_effect(item_id: str, org_id: str, auth_token: Any) -> Dict[str, Any]:
+    async def _side_effect(
+        item_id: str, org_id: str, auth_token: Any
+    ) -> Dict[str, Any]:
         if item_id not in items:
             raise ValueError(f"Item '{item_id}' has no sale_item_finance_ext record")
         rev = items[item_id]
@@ -449,26 +451,28 @@ def _make_delivery(
         },
     ]
     if include_line2:
-        lines.append({
-            "lineId": DN_LINE_2_ID,
-            "lineNumber": 2,
-            "itemId": ITEM_2_ID,
-            "itemCode": "ITEM-ARI-002",
-            "itemName": "Test Item ARI 2",
-            "description": "Test Item ARI 2",
-            "quantity": line2_ordered,
-            "uom": "kg",
-            "warehouseId": "WH-MAIN",
-            "unitCost": 30.0,
-            "lineCogs": line2_ordered * 30.0,
-            "costCenterId": None,
-            "orderedQty": line2_ordered,
-            "invoicedQty": line2_invoiced,
-            "creditedQty": 0.0,
-            "cancelledQty": 0.0,
-            "targetDocRefs": [],
-            "baseDocRef": None,
-        })
+        lines.append(
+            {
+                "lineId": DN_LINE_2_ID,
+                "lineNumber": 2,
+                "itemId": ITEM_2_ID,
+                "itemCode": "ITEM-ARI-002",
+                "itemName": "Test Item ARI 2",
+                "description": "Test Item ARI 2",
+                "quantity": line2_ordered,
+                "uom": "kg",
+                "warehouseId": "WH-MAIN",
+                "unitCost": 30.0,
+                "lineCogs": line2_ordered * 30.0,
+                "costCenterId": None,
+                "orderedQty": line2_ordered,
+                "invoicedQty": line2_invoiced,
+                "creditedQty": 0.0,
+                "cancelledQty": 0.0,
+                "targetDocRefs": [],
+                "baseDocRef": None,
+            }
+        )
 
     return {
         "docEntry": DN_DOC_ENTRY,
@@ -484,7 +488,12 @@ def _make_delivery(
         "deliveredByUserId": None,
         "notes": None,
         "totalCogs": 500.0,
-        "baseDocRef": {"docType": "SO", "docId": "so-001", "docNumber": "SO-2026-0001", "lineId": None},
+        "baseDocRef": {
+            "docType": "SO",
+            "docId": "so-001",
+            "docNumber": "SO-2026-0001",
+            "lineId": None,
+        },
         "targetDocRefs": [],
         "outboxEventId": None,
         "outboxEventEmittedAt": None,
@@ -516,27 +525,29 @@ def _make_direct_create_payload(
 
     if use_camel_case:
         # Reason: exercise the camelCase alias path — mirrors what the frontend sends.
-        return ARInvoiceCreate.model_validate({
-            "organizationId": ORG_ID,
-            "companyCode": COMPANY_CODE,
-            "customerId": CUSTOMER_ID,
-            "customerName": CUSTOMER_NAME,
-            "docDate": str(_doc_date),
-            "dateOfSupply": str(_date_of_supply),
-            "invoiceDate": str(_invoice_date),
-            "lines": [
-                {
-                    "itemId": ITEM_1_ID,
-                    "itemCode": "ITEM-ARI-001",
-                    "itemName": "Test Item ARI 1",
-                    "quantity": "5",
-                    "uom": "pcs",
-                    "unitPrice": "100",
-                    "discountPercent": "0",
-                    "taxCodeId": tax_code_id,
-                }
-            ],
-        })
+        return ARInvoiceCreate.model_validate(
+            {
+                "organizationId": ORG_ID,
+                "companyCode": COMPANY_CODE,
+                "customerId": CUSTOMER_ID,
+                "customerName": CUSTOMER_NAME,
+                "docDate": str(_doc_date),
+                "dateOfSupply": str(_date_of_supply),
+                "invoiceDate": str(_invoice_date),
+                "lines": [
+                    {
+                        "itemId": ITEM_1_ID,
+                        "itemCode": "ITEM-ARI-001",
+                        "itemName": "Test Item ARI 1",
+                        "quantity": "5",
+                        "uom": "pcs",
+                        "unitPrice": "100",
+                        "discountPercent": "0",
+                        "taxCodeId": tax_code_id,
+                    }
+                ],
+            }
+        )
 
     return ARInvoiceCreate(
         organization_id=ORG_ID,
@@ -612,7 +623,9 @@ async def test_direct_create_happy_path() -> None:
             date_of_supply=date(2026, 1, 15),
             invoice_date=date(2026, 2, 1),
         )
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
     assert ari.status == DocumentStatus.DRAFT
     assert ari.doc_number.startswith("ARI-")
@@ -644,7 +657,9 @@ async def test_direct_create_with_tax_code() -> None:
 
     with _patch_item_ext(), _patch_customer_ext(), _patch_tax_percent(Decimal("5.00")):
         payload = _make_direct_create_payload(tax_code_id=TAX_CODE_ID)
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
     line = ari.lines[0]
     # qty=5, price=100, 5% tax → net=500, tax=25, gross=525
@@ -696,7 +711,9 @@ async def test_tax_date_supply_before_invoice() -> None:
             date_of_supply=date(2026, 1, 10),
             invoice_date=date(2026, 2, 1),
         )
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
     assert ari.tax_date == date(2026, 1, 10)
 
 
@@ -713,7 +730,9 @@ async def test_tax_date_invoice_before_supply() -> None:
             invoice_date=date(2026, 2, 1),
             doc_date=date(2026, 2, 1),
         )
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
     assert ari.tax_date == date(2026, 2, 1)
 
 
@@ -730,7 +749,9 @@ async def test_direct_create_cross_org_isolation() -> None:
     with _patch_item_ext(raise_not_found=True), _patch_customer_ext(present=False):
         payload = _make_direct_create_payload()
         with pytest.raises(ValueError, match="sale_item_finance_ext"):
-            await create_ar_invoice(db, payload=payload, org_id=OTHER_ORG_ID, user_id=USER_ID)
+            await create_ar_invoice(
+                db, payload=payload, org_id=OTHER_ORG_ID, user_id=USER_ID
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -750,7 +771,9 @@ async def test_camelcase_payload_accepted() -> None:
 
     with _patch_item_ext(), _patch_customer_ext():
         payload = _make_direct_create_payload(use_camel_case=True)
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
     assert ari.status == DocumentStatus.DRAFT
     assert ari.customer_id == CUSTOMER_ID
@@ -769,7 +792,9 @@ async def test_snakecase_payload_still_accepted() -> None:
     with _patch_item_ext(), _patch_customer_ext():
         # Standard snake_case payload (legacy path).
         payload = _make_direct_create_payload(use_camel_case=False)
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
     assert ari.status == DocumentStatus.DRAFT
 
@@ -806,7 +831,9 @@ async def test_org_id_from_query_string_only() -> None:
             ],
         )
         # org_id comes from query string (passed as separate arg to service)
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
     assert ari.organization_id == ORG_ID
 
@@ -859,7 +886,9 @@ async def test_t202_valid_tax_code_stamps_tax_percent() -> None:
 
     with _patch_item_ext(), _patch_customer_ext(), _patch_tax_percent(Decimal("5.00")):
         payload = _make_direct_create_payload(tax_code_id="S")
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
     line = ari.lines[0]
     # qty=5, price=100, 5% tax → net=500, tax=25, gross=525
@@ -926,7 +955,9 @@ async def test_t202_exempt_line_zero_tax_no_http_call() -> None:
         with patch("httpx.AsyncClient") as mock_client:
             # tax_code_id=None → exempt line
             payload = _make_direct_create_payload(tax_code_id=None)
-            ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+            ari = await create_ar_invoice(
+                db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+            )
 
     line = ari.lines[0]
     assert line.tax_percent == Decimal("0.00")
@@ -935,8 +966,7 @@ async def test_t202_exempt_line_zero_tax_no_http_call() -> None:
     # (It may still be used for item finance ext lookup — verify tax-specific
     # path by checking the call had nothing to do with tax-codes URL.)
     tax_code_calls = [
-        call for call in mock_client.call_args_list
-        if "tax-codes" in str(call)
+        call for call in mock_client.call_args_list if "tax-codes" in str(call)
     ]
     assert tax_code_calls == [], (
         "httpx.AsyncClient should not be called for exempt (None) tax code, "
@@ -960,7 +990,11 @@ async def test_from_delivery_happy_path() -> None:
     with _patch_item_ext(), _patch_customer_ext():
         payload = _make_from_delivery_payload(qty=5.0)
         ari = await create_ar_invoice_from_delivery(
-            db, delivery_doc_entry=DN_DOC_ENTRY, payload=payload, org_id=ORG_ID, user_id=USER_ID
+            db,
+            delivery_doc_entry=DN_DOC_ENTRY,
+            payload=payload,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     assert ari.status == DocumentStatus.DRAFT
@@ -976,7 +1010,9 @@ async def test_from_delivery_happy_path() -> None:
     assert dn_line["invoicedQty"] == pytest.approx(5.0)
 
     # Check Delivery header gained a target_doc_ref.
-    assert any(ref.get("docType") == "AR_INVOICE" for ref in dn_doc.get("targetDocRefs", []))
+    assert any(
+        ref.get("docType") == "AR_INVOICE" for ref in dn_doc.get("targetDocRefs", [])
+    )
 
 
 @pytest.mark.asyncio
@@ -991,7 +1027,11 @@ async def test_from_delivery_inherits_dates() -> None:
     with _patch_item_ext(), _patch_customer_ext():
         payload = _make_from_delivery_payload(qty=5.0, date_of_supply=None)
         ari = await create_ar_invoice_from_delivery(
-            db, delivery_doc_entry=DN_DOC_ENTRY, payload=payload, org_id=ORG_ID, user_id=USER_ID
+            db,
+            delivery_doc_entry=DN_DOC_ENTRY,
+            payload=payload,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
     # Delivery.actualDeliveryDate = 2026-01-15, invoice_date = 2026-02-01
     # tax_date = min(2026-01-15, 2026-02-01) = 2026-01-15
@@ -1006,13 +1046,19 @@ async def test_from_delivery_line_qty_exceeds_open_raises() -> None:
     """
     db = _FakeDB()
     # 10 ordered, 8 already invoiced → open = 2.
-    db["deliveries_v2"]._add(_make_delivery(status="open", line1_ordered=10.0, line1_invoiced=8.0))
+    db["deliveries_v2"]._add(
+        _make_delivery(status="open", line1_ordered=10.0, line1_invoiced=8.0)
+    )
 
     with _patch_item_ext(), _patch_customer_ext():
         payload = _make_from_delivery_payload(qty=5.0)  # Only 2 available.
         with pytest.raises(ValueError, match="open_invoice_qty"):
             await create_ar_invoice_from_delivery(
-                db, delivery_doc_entry=DN_DOC_ENTRY, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                delivery_doc_entry=DN_DOC_ENTRY,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
 
@@ -1028,7 +1074,11 @@ async def test_from_delivery_draft_status_raises() -> None:
         payload = _make_from_delivery_payload()
         with pytest.raises(ValueError, match="status is 'draft'"):
             await create_ar_invoice_from_delivery(
-                db, delivery_doc_entry=DN_DOC_ENTRY, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                delivery_doc_entry=DN_DOC_ENTRY,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
 
@@ -1044,7 +1094,11 @@ async def test_from_delivery_cancelled_status_raises() -> None:
         payload = _make_from_delivery_payload()
         with pytest.raises(ValueError, match="status is 'cancelled'"):
             await create_ar_invoice_from_delivery(
-                db, delivery_doc_entry=DN_DOC_ENTRY, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                delivery_doc_entry=DN_DOC_ENTRY,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
 
@@ -1059,7 +1113,11 @@ async def test_from_delivery_closed_status_succeeds() -> None:
     with _patch_item_ext(), _patch_customer_ext():
         payload = _make_from_delivery_payload(qty=5.0)
         ari = await create_ar_invoice_from_delivery(
-            db, delivery_doc_entry=DN_DOC_ENTRY, payload=payload, org_id=ORG_ID, user_id=USER_ID
+            db,
+            delivery_doc_entry=DN_DOC_ENTRY,
+            payload=payload,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
     assert ari.status == DocumentStatus.DRAFT
 
@@ -1075,7 +1133,11 @@ async def test_from_delivery_missing_delivery_raises() -> None:
         payload = _make_from_delivery_payload()
         with pytest.raises(ValueError, match="not found"):
             await create_ar_invoice_from_delivery(
-                db, delivery_doc_entry="no-such-dn", payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                delivery_doc_entry="no-such-dn",
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
 
@@ -1100,7 +1162,9 @@ async def _create_draft_ari(db: _FakeDB, from_delivery: bool = False) -> str:
     else:
         with _patch_item_ext(), _patch_customer_ext():
             payload = _make_direct_create_payload()
-            ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+            ari = await create_ar_invoice(
+                db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+            )
     return ari.doc_entry
 
 
@@ -1163,7 +1227,11 @@ async def test_open_transition_revalidates_revenue_account() -> None:
         req = ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.OPEN)
         with pytest.raises(ValueError, match="revenueAccountId"):
             await transition_status(
-                db, doc_entry=doc_entry, request_body=req, org_id=ORG_ID, user_id=USER_ID
+                db,
+                doc_entry=doc_entry,
+                request_body=req,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
 
@@ -1248,9 +1316,15 @@ async def test_cancel_open_invoice_emits_cancelled_event() -> None:
         new_callable=AsyncMock,
         return_value=cancel_event_id,
     ) as mock_cancel:
-        cancel_req = ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.CANCELLED)
+        cancel_req = ARInvoiceStatusTransitionRequest(
+            new_status=DocumentStatus.CANCELLED
+        )
         ari = await transition_status(
-            db, doc_entry=doc_entry, request_body=cancel_req, org_id=ORG_ID, user_id=USER_ID
+            db,
+            doc_entry=doc_entry,
+            request_body=cancel_req,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     assert ari.status == DocumentStatus.CANCELLED
@@ -1286,7 +1360,9 @@ async def test_cancel_open_from_delivery_decrements_invoiced_qty() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ARInvoiceStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -1300,7 +1376,9 @@ async def test_cancel_open_from_delivery_decrements_invoiced_qty() -> None:
         await transition_status(
             db,
             doc_entry=doc_entry,
-            request_body=ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+            request_body=ARInvoiceStatusTransitionRequest(
+                new_status=DocumentStatus.CANCELLED
+            ),
             org_id=ORG_ID,
             user_id=USER_ID,
         )
@@ -1380,7 +1458,9 @@ async def test_delete_draft_invoice_succeeds() -> None:
     db = _FakeDB()
     doc_entry = await _create_draft_ari(db)
 
-    deleted = await delete_ar_invoice(db, doc_entry=doc_entry, org_id=ORG_ID, user_id=USER_ID)
+    deleted = await delete_ar_invoice(
+        db, doc_entry=doc_entry, org_id=ORG_ID, user_id=USER_ID
+    )
     assert deleted is True
 
     result = await get_ar_invoice(db, doc_entry=doc_entry, org_id=ORG_ID)
@@ -1511,11 +1591,13 @@ async def test_due_date_computed_from_payment_terms() -> None:
     """
     db = _FakeDB()
     # Override with a 60-day term in the DB.
-    db["payment_terms"]._add({
-        "_id": "net60",
-        "organizationId": ORG_ID,
-        "netDays": 60,
-    })
+    db["payment_terms"]._add(
+        {
+            "_id": "net60",
+            "organizationId": ORG_ID,
+            "netDays": 60,
+        }
+    )
 
     doc_date = date(2026, 3, 1)
     with _patch_item_ext(), _patch_customer_ext():
@@ -1539,7 +1621,9 @@ async def test_due_date_computed_from_payment_terms() -> None:
                 )
             ],
         )
-        ari = await create_ar_invoice(db, payload=payload2, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload2, org_id=ORG_ID, user_id=USER_ID
+        )
     assert ari.due_date == doc_date + __import__("datetime").timedelta(days=60)
 
 
@@ -1599,7 +1683,9 @@ async def test_create_direct_stores_datetime_not_date() -> None:
             invoice_date=date(2026, 2, 1),
             doc_date=date(2026, 2, 1),
         )
-        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        ari = await create_ar_invoice(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
     # Fetch the raw document directly from the in-memory collection to inspect
     # the types stored — the response model re-parses dates through Pydantic.
@@ -1616,12 +1702,12 @@ async def test_create_direct_stores_datetime_not_date() -> None:
             "Bug #4: PyMongo cannot encode bare datetime.date."
         )
         # Reason: all dates should be stored at midnight UTC.
-        assert value.hour == 0 and value.minute == 0, (
-            f"Field '{field}' should be midnight UTC, got {value}"
-        )
-        assert value.tzinfo is not None, (
-            f"Field '{field}' should be timezone-aware, got naive datetime"
-        )
+        assert (
+            value.hour == 0 and value.minute == 0
+        ), f"Field '{field}' should be midnight UTC, got {value}"
+        assert (
+            value.tzinfo is not None
+        ), f"Field '{field}' should be timezone-aware, got naive datetime"
 
     # Sanity: docDate stored as 2026-02-01 midnight UTC.
     assert raw["docDate"] == datetime(2026, 2, 1, 0, 0, 0, tzinfo=timezone.utc)

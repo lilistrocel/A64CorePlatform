@@ -25,6 +25,7 @@ router = APIRouter(
 # Sync Status & Management
 # =============================================================================
 
+
 @router.get("/status", summary="Get SenseHub sync service status")
 async def get_sync_status(
     current_user: CurrentUser = Depends(get_current_active_user),
@@ -83,6 +84,7 @@ async def trigger_manual_sync(
 # Cached Equipment
 # =============================================================================
 
+
 @router.get(
     "/blocks/{block_id}/equipment",
     summary="Get cached equipment for a block",
@@ -104,6 +106,7 @@ async def get_cached_equipment(
 # =============================================================================
 # Cached Lab Data
 # =============================================================================
+
 
 @router.get(
     "/blocks/{block_id}/lab/latest",
@@ -148,6 +151,7 @@ async def get_cached_lab_readings(
 # Cached Alerts
 # =============================================================================
 
+
 @router.get(
     "/blocks/{block_id}/alerts",
     summary="Get cached alerts for a block",
@@ -158,6 +162,4 @@ async def get_cached_alerts(
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Return cached alerts for a block."""
-    return await SenseHubCacheQueryService.get_alerts(
-        str(block_id), severity=severity
-    )
+    return await SenseHubCacheQueryService.get_alerts(str(block_id), severity=severity)

@@ -231,7 +231,7 @@ def _apply_update_embedded(
     if "$inc" in update:
         for field, delta in update["$inc"].items():
             if field.startswith("lines.$."):
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
@@ -243,7 +243,7 @@ def _apply_update_embedded(
     if "$push" in update:
         for field, val in update["$push"].items():
             if field.startswith("lines.$."):
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
@@ -259,22 +259,18 @@ def _apply_update_embedded(
     if "$pull" in update:
         for field, match_spec in update["$pull"].items():
             if field.startswith("lines.$."):
-                sub_field = field[len("lines.$."):]
+                sub_field = field[len("lines.$.") :]
                 if line_id_query is not None:
                     for line in doc.get("lines", []):
                         if line.get("lineId") == line_id_query:
                             arr = line.get(sub_field, [])
                             line[sub_field] = [
-                                item for item in arr
-                                if not _matches(item, match_spec)
+                                item for item in arr if not _matches(item, match_spec)
                             ]
                             break
             else:
                 arr = doc.get(field, [])
-                doc[field] = [
-                    item for item in arr
-                    if not _matches(item, match_spec)
-                ]
+                doc[field] = [item for item in arr if not _matches(item, match_spec)]
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +340,10 @@ def _patch_item_ext_isstock(by_item_id: Dict[str, bool]) -> Any:
                     to isStock=False (service item).  All items return
                     revenueAccountId so the invoice flow doesn't fail on that.
     """
-    async def _side_effect(item_id: str, org_id: str, auth_token: Any) -> Dict[str, Any]:
+
+    async def _side_effect(
+        item_id: str, org_id: str, auth_token: Any
+    ) -> Dict[str, Any]:
         is_stock = by_item_id.get(item_id, False)
         base = {
             "itemId": item_id,
@@ -669,10 +668,24 @@ class TestServiceOnlySOEndToEnd:
         db = _FakeDB()
         so_entry = str(uuid.uuid4())
         lines = [
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=10.0, invoiced_qty=0.0, line_number=1),
-            _make_so_line(SO_SVC_LINE_2_ID, SVC_ITEM_2_ID, "SVC-002", "Service Item 2",
-                          quantity=5.0, invoiced_qty=0.0, line_number=2),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=10.0,
+                invoiced_qty=0.0,
+                line_number=1,
+            ),
+            _make_so_line(
+                SO_SVC_LINE_2_ID,
+                SVC_ITEM_2_ID,
+                "SVC-002",
+                "Service Item 2",
+                quantity=5.0,
+                invoiced_qty=0.0,
+                line_number=2,
+            ),
         ]
         so = _make_so_doc(lines, status="draft", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -680,9 +693,9 @@ class TestServiceOnlySOEndToEnd:
         doc = db["sales_orders_v2"]._docs[0]
         assert doc["status"] == "draft"
         for ln in doc["lines"]:
-            assert ln["invoicedQty"] == pytest.approx(0.0), (
-                f"Line {ln['lineId']} must start with invoicedQty=0"
-            )
+            assert ln["invoicedQty"] == pytest.approx(
+                0.0
+            ), f"Line {ln['lineId']} must start with invoicedQty=0"
 
     @pytest.mark.asyncio
     async def test_service_only_so_transition_draft_to_open(self) -> None:
@@ -694,13 +707,21 @@ class TestServiceOnlySOEndToEnd:
         from src.modules.sales.services.sales_order_service import (
             transition_status as so_transition,
         )
-        from src.modules.sales.models.sales_orders import SalesOrderStatusTransitionRequest
+        from src.modules.sales.models.sales_orders import (
+            SalesOrderStatusTransitionRequest,
+        )
 
         db = _FakeDB()
         so_entry = str(uuid.uuid4())
         lines = [
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=10.0, line_number=1),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=10.0,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="draft", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -731,11 +752,15 @@ class TestServiceOnlySOEndToEnd:
         assert result is not None
         assert result.status == DocumentStatus.OPEN
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         assert so_doc["status"] == DocumentStatus.OPEN.value
 
     @pytest.mark.asyncio
-    async def test_create_from_so_full_invoicing_sets_invoiced_qty_and_refs(self) -> None:
+    async def test_create_from_so_full_invoicing_sets_invoiced_qty_and_refs(
+        self,
+    ) -> None:
         """
         Create a from-SO ARI that invoices all lines of a service-only OPEN SO.
 
@@ -750,10 +775,22 @@ class TestServiceOnlySOEndToEnd:
         line_1_qty = 10.0
         line_2_qty = 5.0
         lines = [
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=line_1_qty, line_number=1),
-            _make_so_line(SO_SVC_LINE_2_ID, SVC_ITEM_2_ID, "SVC-002", "Service Item 2",
-                          quantity=line_2_qty, line_number=2),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=line_1_qty,
+                line_number=1,
+            ),
+            _make_so_line(
+                SO_SVC_LINE_2_ID,
+                SVC_ITEM_2_ID,
+                "SVC-002",
+                "Service Item 2",
+                quantity=line_2_qty,
+                line_number=2,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -776,22 +813,24 @@ class TestServiceOnlySOEndToEnd:
 
         assert ari.status == DocumentStatus.DRAFT
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
 
         # SO line invoicedQty must equal orderedQty for both lines.
         ln_map = {ln["lineId"]: ln for ln in so_doc["lines"]}
-        assert ln_map[SO_SVC_LINE_1_ID]["invoicedQty"] == pytest.approx(line_1_qty), (
-            "SO line 1 invoicedQty must equal orderedQty after full invoicing"
-        )
-        assert ln_map[SO_SVC_LINE_2_ID]["invoicedQty"] == pytest.approx(line_2_qty), (
-            "SO line 2 invoicedQty must equal orderedQty after full invoicing"
-        )
+        assert ln_map[SO_SVC_LINE_1_ID]["invoicedQty"] == pytest.approx(
+            line_1_qty
+        ), "SO line 1 invoicedQty must equal orderedQty after full invoicing"
+        assert ln_map[SO_SVC_LINE_2_ID]["invoicedQty"] == pytest.approx(
+            line_2_qty
+        ), "SO line 2 invoicedQty must equal orderedQty after full invoicing"
 
         # SO header targetDocRefs must contain the ARI.
         header_refs = so_doc.get("targetDocRefs", [])
-        assert any(r.get("docId") == ari.doc_entry for r in header_refs), (
-            "SO header targetDocRefs must contain the ARI docEntry"
-        )
+        assert any(
+            r.get("docId") == ari.doc_entry for r in header_refs
+        ), "SO header targetDocRefs must contain the ARI docEntry"
 
         # Each SO line targetDocRefs must contain the per-line ARI ref.
         for so_line in so_doc["lines"]:
@@ -814,8 +853,14 @@ class TestServiceOnlySOEndToEnd:
         db = _FakeDB()
         so_entry = str(uuid.uuid4())
         lines = [
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=10.0, line_number=1),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=10.0,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -833,21 +878,24 @@ class TestServiceOnlySOEndToEnd:
             )
 
         # SO should auto-close at DRAFT creation since all lines are fully invoiced.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.CLOSED.value, (
-            "SO must auto-close when all service lines are fully invoiced (DRAFT creation)"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        assert (
+            so_doc["status"] == DocumentStatus.CLOSED.value
+        ), "SO must auto-close when all service lines are fully invoiced (DRAFT creation)"
 
         # Audit entry must exist.
         audit_entries = db["sales_orders_v2_audit"]._docs
         auto_close_entries = [
-            e for e in audit_entries
+            e
+            for e in audit_entries
             if e.get("action") == "auto_close_on_full_invoice"
             and e.get("docEntry") == so_entry
         ]
-        assert len(auto_close_entries) >= 1, (
-            "SO audit must contain auto_close_on_full_invoice after full invoicing"
-        )
+        assert (
+            len(auto_close_entries) >= 1
+        ), "SO audit must contain auto_close_on_full_invoice after full invoicing"
 
         # Now transition ARI DRAFT → OPEN.
         with _patch_item_ext_isstock(is_stock_map), _patch_customer_ext():
@@ -881,8 +929,14 @@ class TestServiceOnlySOEndToEnd:
         so_entry = str(uuid.uuid4())
         full_qty = 10.0
         lines = [
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=full_qty, line_number=1),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=full_qty,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -900,12 +954,14 @@ class TestServiceOnlySOEndToEnd:
                 user_id=USER_ID,
             )
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
 
         # SO must still be OPEN (not fully invoiced).
-        assert so_doc["status"] == DocumentStatus.OPEN.value, (
-            "SO must stay OPEN when only partial invoicing has occurred"
-        )
+        assert (
+            so_doc["status"] == DocumentStatus.OPEN.value
+        ), "SO must stay OPEN when only partial invoicing has occurred"
 
         # SO line invoicedQty == half_qty.
         ln = next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)
@@ -913,10 +969,15 @@ class TestServiceOnlySOEndToEnd:
 
         # open_invoice_qty == full_qty - half_qty (= half_qty).
         # Computed as: orderedQty - invoicedQty - creditedQty - cancelledQty
-        open_qty = ln["orderedQty"] - ln["invoicedQty"] - ln.get("creditedQty", 0.0) - ln.get("cancelledQty", 0.0)
-        assert open_qty == pytest.approx(half_qty), (
-            f"open_invoice_qty must be {half_qty} after partial invoicing"
+        open_qty = (
+            ln["orderedQty"]
+            - ln["invoicedQty"]
+            - ln.get("creditedQty", 0.0)
+            - ln.get("cancelledQty", 0.0)
         )
+        assert open_qty == pytest.approx(
+            half_qty
+        ), f"open_invoice_qty must be {half_qty} after partial invoicing"
 
     @pytest.mark.asyncio
     async def test_two_partial_invoices_close_so_on_second(self) -> None:
@@ -930,8 +991,14 @@ class TestServiceOnlySOEndToEnd:
         so_entry = str(uuid.uuid4())
         full_qty = 10.0
         lines = [
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=full_qty, line_number=1),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=full_qty,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -941,26 +1008,42 @@ class TestServiceOnlySOEndToEnd:
         payload_1 = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=6.0)
         with _patch_item_ext_isstock(is_stock_map), _patch_customer_ext():
             await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=payload_1, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=payload_1,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.OPEN.value, "SO must stay OPEN after first partial"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
+        assert (
+            so_doc["status"] == DocumentStatus.OPEN.value
+        ), "SO must stay OPEN after first partial"
 
         # Second invoice: remaining 4 units.
         payload_2 = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=4.0)
         with _patch_item_ext_isstock(is_stock_map), _patch_customer_ext():
             await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=payload_2, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=payload_2,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.CLOSED.value, (
-            "SO must auto-close after second ARI completes full invoicing"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        assert (
+            so_doc["status"] == DocumentStatus.CLOSED.value
+        ), "SO must auto-close after second ARI completes full invoicing"
 
     @pytest.mark.asyncio
-    async def test_create_delivery_from_service_only_so_raises_value_error(self) -> None:
+    async def test_create_delivery_from_service_only_so_raises_value_error(
+        self,
+    ) -> None:
         """
         Calling create_delivery_from_so on a service-only SO raises ValueError.
 
@@ -971,8 +1054,14 @@ class TestServiceOnlySOEndToEnd:
         so_entry = str(uuid.uuid4())
         so_line_1_id = str(uuid.uuid4())
         lines = [
-            _make_so_line(so_line_1_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=10.0, line_number=1),
+            _make_so_line(
+                so_line_1_id,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=10.0,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -1040,12 +1129,30 @@ class TestMixedSOAutoClose:
         """Seed a 2-stock + 1-service SO in OPEN status. Returns so_entry."""
         so_entry = str(uuid.uuid4())
         lines = [
-            _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                          quantity=stock_qty, line_number=1),
-            _make_so_line(SO_STOCK_LINE_2_ID, STOCK_ITEM_2_ID, "STK-002", "Stock Item 2",
-                          quantity=stock_qty, line_number=2),
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=svc_qty, line_number=3),
+            _make_so_line(
+                SO_STOCK_LINE_1_ID,
+                STOCK_ITEM_1_ID,
+                "STK-001",
+                "Stock Item 1",
+                quantity=stock_qty,
+                line_number=1,
+            ),
+            _make_so_line(
+                SO_STOCK_LINE_2_ID,
+                STOCK_ITEM_2_ID,
+                "STK-002",
+                "Stock Item 2",
+                quantity=stock_qty,
+                line_number=2,
+            ),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=svc_qty,
+                line_number=3,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -1062,14 +1169,22 @@ class TestMixedSOAutoClose:
         dn_entry = str(uuid.uuid4())
         dn_lines = [
             _make_dn_line(
-                DN_STOCK_LINE_1_ID, SO_STOCK_LINE_1_ID,
-                STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                quantity=stock_qty, line_number=1,
+                DN_STOCK_LINE_1_ID,
+                SO_STOCK_LINE_1_ID,
+                STOCK_ITEM_1_ID,
+                "STK-001",
+                "Stock Item 1",
+                quantity=stock_qty,
+                line_number=1,
             ),
             _make_dn_line(
-                DN_STOCK_LINE_2_ID, SO_STOCK_LINE_2_ID,
-                STOCK_ITEM_2_ID, "STK-002", "Stock Item 2",
-                quantity=stock_qty, line_number=2,
+                DN_STOCK_LINE_2_ID,
+                SO_STOCK_LINE_2_ID,
+                STOCK_ITEM_2_ID,
+                "STK-002",
+                "Stock Item 2",
+                quantity=stock_qty,
+                line_number=2,
             ),
         ]
         dn = _make_dn_doc(
@@ -1091,11 +1206,13 @@ class TestMixedSOAutoClose:
         db = _FakeDB()
         so_entry = self._make_mixed_so(db)
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         for ln in so_doc["lines"]:
-            assert ln["invoicedQty"] == pytest.approx(0.0), (
-                f"Line {ln['lineId']} must start with invoicedQty=0"
-            )
+            assert ln["invoicedQty"] == pytest.approx(
+                0.0
+            ), f"Line {ln['lineId']} must start with invoicedQty=0"
 
     @pytest.mark.asyncio
     async def test_dn_from_mixed_so_contains_only_stock_lines(self) -> None:
@@ -1117,12 +1234,14 @@ class TestMixedSOAutoClose:
         dn_item_ids = {ln["itemId"] for ln in dn_doc["lines"]}
         assert STOCK_ITEM_1_ID in dn_item_ids
         assert STOCK_ITEM_2_ID in dn_item_ids
-        assert SVC_ITEM_1_ID not in dn_item_ids, (
-            "Service item must NOT appear on the DN"
-        )
+        assert (
+            SVC_ITEM_1_ID not in dn_item_ids
+        ), "Service item must NOT appear on the DN"
 
         # SO stock-line invoicedQty is still 0 (DN creation doesn't invoice).
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         ln_map = {ln["lineId"]: ln for ln in so_doc["lines"]}
         assert ln_map[SO_STOCK_LINE_1_ID]["invoicedQty"] == pytest.approx(0.0)
         assert ln_map[SO_STOCK_LINE_2_ID]["invoicedQty"] == pytest.approx(0.0)
@@ -1180,27 +1299,29 @@ class TestMixedSOAutoClose:
         # DN lines invoicedQty == quantity.
         dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
         dn_ln_map = {ln["lineId"]: ln for ln in dn_doc["lines"]}
-        assert dn_ln_map[DN_STOCK_LINE_1_ID]["invoicedQty"] == pytest.approx(10.0), (
-            "DN stock line 1 invoicedQty must be 10 after full invoicing"
-        )
-        assert dn_ln_map[DN_STOCK_LINE_2_ID]["invoicedQty"] == pytest.approx(10.0), (
-            "DN stock line 2 invoicedQty must be 10 after full invoicing"
-        )
+        assert dn_ln_map[DN_STOCK_LINE_1_ID]["invoicedQty"] == pytest.approx(
+            10.0
+        ), "DN stock line 1 invoicedQty must be 10 after full invoicing"
+        assert dn_ln_map[DN_STOCK_LINE_2_ID]["invoicedQty"] == pytest.approx(
+            10.0
+        ), "DN stock line 2 invoicedQty must be 10 after full invoicing"
 
         # SO stock-line invoicedQty must have been bubbled up.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         so_ln_map = {ln["lineId"]: ln for ln in so_doc["lines"]}
-        assert so_ln_map[SO_STOCK_LINE_1_ID]["invoicedQty"] == pytest.approx(10.0), (
-            "SO stock line 1 invoicedQty must bubble up from DN line"
-        )
-        assert so_ln_map[SO_STOCK_LINE_2_ID]["invoicedQty"] == pytest.approx(10.0), (
-            "SO stock line 2 invoicedQty must bubble up from DN line"
-        )
+        assert so_ln_map[SO_STOCK_LINE_1_ID]["invoicedQty"] == pytest.approx(
+            10.0
+        ), "SO stock line 1 invoicedQty must bubble up from DN line"
+        assert so_ln_map[SO_STOCK_LINE_2_ID]["invoicedQty"] == pytest.approx(
+            10.0
+        ), "SO stock line 2 invoicedQty must bubble up from DN line"
 
         # SO service line is still at invoicedQty=0.
-        assert so_ln_map[SO_SVC_LINE_1_ID]["invoicedQty"] == pytest.approx(0.0), (
-            "SO service line must still have invoicedQty=0 — not yet invoiced via from-SO"
-        )
+        assert so_ln_map[SO_SVC_LINE_1_ID]["invoicedQty"] == pytest.approx(
+            0.0
+        ), "SO service line must still have invoicedQty=0 — not yet invoiced via from-SO"
 
     @pytest.mark.asyncio
     async def test_dn_ari_open_does_not_close_so_with_open_service_line(self) -> None:
@@ -1248,18 +1369,22 @@ class TestMixedSOAutoClose:
 
         # DN should auto-close (all DN lines fully invoiced).
         dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
-        assert dn_doc["status"] == DocumentStatus.CLOSED.value, (
-            "DN must auto-close when all its stock lines are fully invoiced"
-        )
+        assert (
+            dn_doc["status"] == DocumentStatus.CLOSED.value
+        ), "DN must auto-close when all its stock lines are fully invoiced"
 
         # SO must NOT auto-close: service line still open.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.OPEN.value, (
-            "SO must NOT auto-close — service line still has open_invoice_qty > 0"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        assert (
+            so_doc["status"] == DocumentStatus.OPEN.value
+        ), "SO must NOT auto-close — service line still has open_invoice_qty > 0"
 
     @pytest.mark.asyncio
-    async def test_from_so_ari_invoices_service_line_sets_so_line_invoiced_qty(self) -> None:
+    async def test_from_so_ari_invoices_service_line_sets_so_line_invoiced_qty(
+        self,
+    ) -> None:
         """
         After full DN→ARI invoicing of stock lines, invoice the service line via from-SO.
 
@@ -1296,7 +1421,11 @@ class TestMixedSOAutoClose:
         stock_map = {STOCK_ITEM_1_ID: True, STOCK_ITEM_2_ID: True}
         with _patch_item_ext_isstock(stock_map), _patch_customer_ext():
             await create_ar_invoice_from_delivery(
-                db, delivery_doc_entry=dn_entry, payload=dn_payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                delivery_doc_entry=dn_entry,
+                payload=dn_payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
         # Now invoice the service line via from-SO.
@@ -1304,31 +1433,39 @@ class TestMixedSOAutoClose:
         svc_map = {SVC_ITEM_1_ID: False}
         with _patch_item_ext_isstock(svc_map), _patch_customer_ext():
             ari_svc = await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=svc_payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=svc_payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         so_ln_map = {ln["lineId"]: ln for ln in so_doc["lines"]}
 
         # Service line invoicedQty must be fully set.
-        assert so_ln_map[SO_SVC_LINE_1_ID]["invoicedQty"] == pytest.approx(5.0), (
-            "SO service line invoicedQty must be 5 after from-SO ARI creation"
-        )
+        assert so_ln_map[SO_SVC_LINE_1_ID]["invoicedQty"] == pytest.approx(
+            5.0
+        ), "SO service line invoicedQty must be 5 after from-SO ARI creation"
 
         # SO header targetDocRefs must include the from-SO ARI.
         header_refs = so_doc.get("targetDocRefs", [])
-        assert any(r.get("docId") == ari_svc.doc_entry for r in header_refs), (
-            "SO header targetDocRefs must contain the from-SO ARI"
-        )
+        assert any(
+            r.get("docId") == ari_svc.doc_entry for r in header_refs
+        ), "SO header targetDocRefs must contain the from-SO ARI"
 
         # SO service line targetDocRefs must include the from-SO ARI.
         svc_line_refs = so_ln_map[SO_SVC_LINE_1_ID].get("targetDocRefs", [])
-        assert any(r.get("docId") == ari_svc.doc_entry for r in svc_line_refs), (
-            "SO service line targetDocRefs must contain the from-SO ARI"
-        )
+        assert any(
+            r.get("docId") == ari_svc.doc_entry for r in svc_line_refs
+        ), "SO service line targetDocRefs must contain the from-SO ARI"
 
     @pytest.mark.asyncio
-    async def test_from_so_ari_open_closes_mixed_so_when_all_lines_invoiced(self) -> None:
+    async def test_from_so_ari_open_closes_mixed_so_when_all_lines_invoiced(
+        self,
+    ) -> None:
         """
         The Option B spec test: mixed SO auto-closes only after BOTH paths complete.
 
@@ -1369,39 +1506,52 @@ class TestMixedSOAutoClose:
         stock_map = {STOCK_ITEM_1_ID: True, STOCK_ITEM_2_ID: True}
         with _patch_item_ext_isstock(stock_map), _patch_customer_ext():
             await create_ar_invoice_from_delivery(
-                db, delivery_doc_entry=dn_entry, payload=dn_payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                delivery_doc_entry=dn_entry,
+                payload=dn_payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
         # SO must still be OPEN after stock lines are invoiced.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.OPEN.value, (
-            "SO must stay OPEN after stock invoicing — service line still open"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        assert (
+            so_doc["status"] == DocumentStatus.OPEN.value
+        ), "SO must stay OPEN after stock invoicing — service line still open"
 
         # Step 2: Invoice service line via from-SO.
         svc_payload = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=5.0)
         svc_map = {SVC_ITEM_1_ID: False}
         with _patch_item_ext_isstock(svc_map), _patch_customer_ext():
             ari_svc = await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=svc_payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=svc_payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
         # SO must now be CLOSED (all lines fully invoiced).
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.CLOSED.value, (
-            "SO must auto-close after service line is fully invoiced via from-SO ARI"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        assert (
+            so_doc["status"] == DocumentStatus.CLOSED.value
+        ), "SO must auto-close after service line is fully invoiced via from-SO ARI"
 
         # Audit entry must exist.
         audit_entries = db["sales_orders_v2_audit"]._docs
         auto_close_entries = [
-            e for e in audit_entries
+            e
+            for e in audit_entries
             if e.get("action") == "auto_close_on_full_invoice"
             and e.get("docEntry") == so_entry
         ]
-        assert len(auto_close_entries) >= 1, (
-            "SO audit must contain auto_close_on_full_invoice after all lines are invoiced"
-        )
+        assert (
+            len(auto_close_entries) >= 1
+        ), "SO audit must contain auto_close_on_full_invoice after all lines are invoiced"
         # Most recent entry must reference the from-SO ARI.
         latest = auto_close_entries[-1]
         assert latest["detail"]["triggeredByAriDocEntry"] == ari_svc.doc_entry
@@ -1424,8 +1574,14 @@ class TestFromSOCounterReconciliation:
         """Seed a service-only SO (OPEN) with one line. Returns so_entry."""
         so_entry = str(uuid.uuid4())
         lines = [
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=qty, line_number=1),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=qty,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -1445,11 +1601,19 @@ class TestFromSOCounterReconciliation:
         payload = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=60.0)
         with _patch_item_ext_isstock(svc_map), _patch_customer_ext():
             ari = await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)["invoicedQty"] == pytest.approx(60.0)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
+        assert next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)[
+            "invoicedQty"
+        ] == pytest.approx(60.0)
 
         # Edit DRAFT down to 40.
         update_payload = _make_update_payload_for_so_line(
@@ -1462,9 +1626,13 @@ class TestFromSOCounterReconciliation:
         with _patch_item_ext_isstock(svc_map):
             await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         ln = next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)
-        assert ln["invoicedQty"] == pytest.approx(40.0), "SO line invoicedQty must be 40 after edit down"
+        assert ln["invoicedQty"] == pytest.approx(
+            40.0
+        ), "SO line invoicedQty must be 40 after edit down"
         assert so_doc["status"] == DocumentStatus.OPEN.value
 
     @pytest.mark.asyncio
@@ -1483,7 +1651,11 @@ class TestFromSOCounterReconciliation:
         payload = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=60.0)
         with _patch_item_ext_isstock(svc_map), _patch_customer_ext():
             ari = await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
         # Attempt to edit up to 110 (exceeds capacity).
@@ -1494,18 +1666,24 @@ class TestFromSOCounterReconciliation:
             item_id=SVC_ITEM_1_ID,
             qty=110.0,
         )
-        with _patch_item_ext_isstock(svc_map), pytest.raises(ValueError, match="open_invoice_qty"):
+        with _patch_item_ext_isstock(svc_map), pytest.raises(
+            ValueError, match="open_invoice_qty"
+        ):
             await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
         # SO line invoicedQty must be unchanged at 60.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        ln = next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)
-        assert ln["invoicedQty"] == pytest.approx(60.0), (
-            "SO line invoicedQty must remain unchanged when edit raises ValueError"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        ln = next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)
+        assert ln["invoicedQty"] == pytest.approx(
+            60.0
+        ), "SO line invoicedQty must remain unchanged when edit raises ValueError"
 
     @pytest.mark.asyncio
-    async def test_edit_draft_ari_qty_up_within_open_qty_reconciles_counter(self) -> None:
+    async def test_edit_draft_ari_qty_up_within_open_qty_reconciles_counter(
+        self,
+    ) -> None:
         """
         Edit DRAFT from-SO ARI qty up within the open_invoice_qty band (60 → 80).
 
@@ -1519,7 +1697,11 @@ class TestFromSOCounterReconciliation:
         payload = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=60.0)
         with _patch_item_ext_isstock(svc_map), _patch_customer_ext():
             ari = await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
         update_payload = _make_update_payload_for_so_line(
@@ -1532,13 +1714,19 @@ class TestFromSOCounterReconciliation:
         with _patch_item_ext_isstock(svc_map):
             await update_ar_invoice(db, ari.doc_entry, update_payload, ORG_ID, USER_ID)
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         ln = next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)
-        assert ln["invoicedQty"] == pytest.approx(80.0), "SO line invoicedQty must be 80 after valid edit up"
+        assert ln["invoicedQty"] == pytest.approx(
+            80.0
+        ), "SO line invoicedQty must be 80 after valid edit up"
         assert so_doc["status"] == DocumentStatus.OPEN.value
 
     @pytest.mark.asyncio
-    async def test_delete_draft_ari_releases_so_line_counter_and_pulls_refs(self) -> None:
+    async def test_delete_draft_ari_releases_so_line_counter_and_pulls_refs(
+        self,
+    ) -> None:
         """
         Delete a DRAFT from-SO ARI → SO line invoicedQty released back.
 
@@ -1556,53 +1744,66 @@ class TestFromSOCounterReconciliation:
         payload = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=10.0)
         with _patch_item_ext_isstock(svc_map), _patch_customer_ext():
             ari = await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.CLOSED.value, "SO should be CLOSED before delete"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
+        assert (
+            so_doc["status"] == DocumentStatus.CLOSED.value
+        ), "SO should be CLOSED before delete"
 
         # Delete the DRAFT invoice.
         deleted = await delete_ar_invoice(db, ari.doc_entry, ORG_ID, USER_ID)
         assert deleted is True
 
         # SO must be OPEN again.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.OPEN.value, (
-            "SO must auto-reopen when from-SO DRAFT ARI is deleted"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        assert (
+            so_doc["status"] == DocumentStatus.OPEN.value
+        ), "SO must auto-reopen when from-SO DRAFT ARI is deleted"
 
         # SO line invoicedQty must be released to 0.
         ln = next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)
-        assert ln["invoicedQty"] == pytest.approx(0.0), (
-            "SO line invoicedQty must be 0 after DRAFT ARI delete"
-        )
+        assert ln["invoicedQty"] == pytest.approx(
+            0.0
+        ), "SO line invoicedQty must be 0 after DRAFT ARI delete"
 
         # SO header targetDocRefs must be empty.
         header_refs = so_doc.get("targetDocRefs", [])
-        assert len(header_refs) == 0, (
-            "SO header targetDocRefs must be empty after DRAFT ARI delete"
-        )
+        assert (
+            len(header_refs) == 0
+        ), "SO header targetDocRefs must be empty after DRAFT ARI delete"
 
         # SO line targetDocRefs must be empty.
         ln_refs = ln.get("targetDocRefs", [])
-        assert len(ln_refs) == 0, (
-            "SO line targetDocRefs must be empty after DRAFT ARI delete"
-        )
+        assert (
+            len(ln_refs) == 0
+        ), "SO line targetDocRefs must be empty after DRAFT ARI delete"
 
         # SO audit entry 'auto_reopen_on_invoice_release' must exist.
         reopen_entries = [
-            e for e in db["sales_orders_v2_audit"]._docs
+            e
+            for e in db["sales_orders_v2_audit"]._docs
             if e.get("action") == "auto_reopen_on_invoice_release"
             and e.get("docEntry") == so_entry
         ]
-        assert len(reopen_entries) == 1, (
-            "SO audit must contain auto_reopen_on_invoice_release after DRAFT delete"
-        )
+        assert (
+            len(reopen_entries) == 1
+        ), "SO audit must contain auto_reopen_on_invoice_release after DRAFT delete"
         assert reopen_entries[0]["detail"]["triggeredByAriDocEntry"] == ari.doc_entry
 
     @pytest.mark.asyncio
-    async def test_cancel_open_from_so_ari_releases_so_counter_and_reopens(self) -> None:
+    async def test_cancel_open_from_so_ari_releases_so_counter_and_reopens(
+        self,
+    ) -> None:
         """
         Cancel an OPEN from-SO ARI (OPEN → CANCELLED) → SO line invoicedQty released.
 
@@ -1617,10 +1818,16 @@ class TestFromSOCounterReconciliation:
         payload = _make_from_so_payload(so_line_id=SO_SVC_LINE_1_ID, qty=10.0)
         with _patch_item_ext_isstock(svc_map), _patch_customer_ext():
             ari = await create_ar_invoice_from_so(
-                db, so_doc_entry=so_entry, payload=payload, org_id=ORG_ID, user_id=USER_ID
+                db,
+                so_doc_entry=so_entry,
+                payload=payload,
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
+        )
         assert so_doc["status"] == DocumentStatus.CLOSED.value
 
         # Post DRAFT → OPEN.
@@ -1656,26 +1863,29 @@ class TestFromSOCounterReconciliation:
             )
 
         # SO must be OPEN again.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        assert so_doc["status"] == DocumentStatus.OPEN.value, (
-            "SO must auto-reopen when OPEN from-SO ARI is cancelled"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        assert (
+            so_doc["status"] == DocumentStatus.OPEN.value
+        ), "SO must auto-reopen when OPEN from-SO ARI is cancelled"
 
         # SO line invoicedQty released to 0.
         ln = next(ln for ln in so_doc["lines"] if ln["lineId"] == SO_SVC_LINE_1_ID)
-        assert ln["invoicedQty"] == pytest.approx(0.0), (
-            "SO line invoicedQty must be 0 after OPEN ARI cancellation"
-        )
+        assert ln["invoicedQty"] == pytest.approx(
+            0.0
+        ), "SO line invoicedQty must be 0 after OPEN ARI cancellation"
 
         # Reopen audit entry must exist.
         reopen_entries = [
-            e for e in db["sales_orders_v2_audit"]._docs
+            e
+            for e in db["sales_orders_v2_audit"]._docs
             if e.get("action") == "auto_reopen_on_invoice_release"
             and e.get("docEntry") == so_entry
         ]
-        assert len(reopen_entries) >= 1, (
-            "SO audit must contain auto_reopen_on_invoice_release after cancellation"
-        )
+        assert (
+            len(reopen_entries) >= 1
+        ), "SO audit must contain auto_reopen_on_invoice_release after cancellation"
         assert reopen_entries[-1]["detail"]["triggeredByAriDocEntry"] == ari.doc_entry
 
 
@@ -1704,10 +1914,22 @@ class TestStockLineUnreachableFromSO:
         db = _FakeDB()
         so_entry = str(uuid.uuid4())
         lines = [
-            _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                          quantity=10.0, line_number=1),
-            _make_so_line(SO_SVC_LINE_1_ID, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                          quantity=5.0, line_number=2),
+            _make_so_line(
+                SO_STOCK_LINE_1_ID,
+                STOCK_ITEM_1_ID,
+                "STK-001",
+                "Stock Item 1",
+                quantity=10.0,
+                line_number=1,
+            ),
+            _make_so_line(
+                SO_SVC_LINE_1_ID,
+                SVC_ITEM_1_ID,
+                "SVC-001",
+                "Service Item 1",
+                quantity=5.0,
+                line_number=2,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -1720,7 +1942,9 @@ class TestStockLineUnreachableFromSO:
 
         is_stock_map = {STOCK_ITEM_1_ID: True, SVC_ITEM_1_ID: False}
         with _patch_item_ext_isstock(is_stock_map):
-            with pytest.raises(ValueError, match="invoice via the Delivery Note flow, not from-SO"):
+            with pytest.raises(
+                ValueError, match="invoice via the Delivery Note flow, not from-SO"
+            ):
                 await create_ar_invoice_from_so(
                     db,
                     so_doc_entry=so_entry,
@@ -1731,16 +1955,18 @@ class TestStockLineUnreachableFromSO:
 
         # ARI must NOT have been created.
         aris = db["ar_invoices_v2"]._docs
-        assert len(aris) == 0, (
-            "No ARI must be created when from-SO is called for a stock line"
-        )
+        assert (
+            len(aris) == 0
+        ), "No ARI must be created when from-SO is called for a stock line"
 
         # SO must be unchanged.
-        so_doc = next(d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry)
-        so_ln_map = {ln["lineId"]: ln for ln in so_doc["lines"]}
-        assert so_ln_map[SO_STOCK_LINE_1_ID]["invoicedQty"] == pytest.approx(0.0), (
-            "SO stock line invoicedQty must be unchanged after rejected from-SO call"
+        so_doc = next(
+            d for d in db["sales_orders_v2"]._docs if d["docEntry"] == so_entry
         )
+        so_ln_map = {ln["lineId"]: ln for ln in so_doc["lines"]}
+        assert so_ln_map[SO_STOCK_LINE_1_ID]["invoicedQty"] == pytest.approx(
+            0.0
+        ), "SO stock line invoicedQty must be unchanged after rejected from-SO call"
 
     @pytest.mark.asyncio
     async def test_stock_line_on_stock_only_so_rejected_by_from_so(self) -> None:
@@ -1752,8 +1978,14 @@ class TestStockLineUnreachableFromSO:
         db = _FakeDB()
         so_entry = str(uuid.uuid4())
         lines = [
-            _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                          quantity=20.0, line_number=1),
+            _make_so_line(
+                SO_STOCK_LINE_1_ID,
+                STOCK_ITEM_1_ID,
+                "STK-001",
+                "Stock Item 1",
+                quantity=20.0,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -1762,7 +1994,9 @@ class TestStockLineUnreachableFromSO:
 
         is_stock_map = {STOCK_ITEM_1_ID: True}
         with _patch_item_ext_isstock(is_stock_map):
-            with pytest.raises(ValueError, match="invoice via the Delivery Note flow, not from-SO"):
+            with pytest.raises(
+                ValueError, match="invoice via the Delivery Note flow, not from-SO"
+            ):
                 await create_ar_invoice_from_so(
                     db,
                     so_doc_entry=so_entry,
@@ -1771,9 +2005,9 @@ class TestStockLineUnreachableFromSO:
                     user_id=USER_ID,
                 )
 
-        assert len(db["ar_invoices_v2"]._docs) == 0, (
-            "No ARI must be created for a stock-only SO via from-SO endpoint"
-        )
+        assert (
+            len(db["ar_invoices_v2"]._docs) == 0
+        ), "No ARI must be created for a stock-only SO via from-SO endpoint"
 
     @pytest.mark.asyncio
     async def test_from_dn_ari_for_stock_line_still_works_as_sanity_check(self) -> None:
@@ -1788,8 +2022,14 @@ class TestStockLineUnreachableFromSO:
 
         # Seed stock-only SO.
         lines = [
-            _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                          quantity=10.0, line_number=1),
+            _make_so_line(
+                SO_STOCK_LINE_1_ID,
+                STOCK_ITEM_1_ID,
+                "STK-001",
+                "Stock Item 1",
+                quantity=10.0,
+                line_number=1,
+            ),
         ]
         so = _make_so_doc(lines, status="open", doc_entry=so_entry)
         db["sales_orders_v2"]._add(so)
@@ -1797,9 +2037,13 @@ class TestStockLineUnreachableFromSO:
         # Seed a DN referencing the SO stock line.
         dn_lines = [
             _make_dn_line(
-                DN_STOCK_LINE_1_ID, SO_STOCK_LINE_1_ID,
-                STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                quantity=10.0, line_number=1,
+                DN_STOCK_LINE_1_ID,
+                SO_STOCK_LINE_1_ID,
+                STOCK_ITEM_1_ID,
+                "STK-001",
+                "Stock Item 1",
+                quantity=10.0,
+                line_number=1,
             ),
         ]
         dn = _make_dn_doc(
@@ -1840,9 +2084,9 @@ class TestStockLineUnreachableFromSO:
                 user_id=USER_ID,
             )
 
-        assert ari.status == DocumentStatus.DRAFT, (
-            "from-Delivery ARI must succeed for a stock line (isStock gate is from-SO only)"
-        )
+        assert (
+            ari.status == DocumentStatus.DRAFT
+        ), "from-Delivery ARI must succeed for a stock line (isStock gate is from-SO only)"
 
         # DN line invoicedQty updated.
         dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
@@ -1870,7 +2114,10 @@ class TestSOListServiceOpenInvoiceQty:
 
         Different import alias from the ar_invoice_service patch above.
         """
-        async def _side_effect(item_id: str, org_id: str, auth_token: Any) -> Dict[str, Any]:
+
+        async def _side_effect(
+            item_id: str, org_id: str, auth_token: Any
+        ) -> Dict[str, Any]:
             is_stock = by_item_id.get(item_id, False)
             return {
                 "itemId": item_id,
@@ -1888,7 +2135,9 @@ class TestSOListServiceOpenInvoiceQty:
         )
 
     @pytest.mark.asyncio
-    async def test_service_only_so_with_zero_invoiced_qty_returns_full_qty(self) -> None:
+    async def test_service_only_so_with_zero_invoiced_qty_returns_full_qty(
+        self,
+    ) -> None:
         """
         Service-only SO with one line, qty=10, invoicedQty=0.
 
@@ -1901,8 +2150,15 @@ class TestSOListServiceOpenInvoiceQty:
         so_line_id = str(uuid.uuid4())
         so_raw = _make_so_doc(
             lines=[
-                _make_so_line(so_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                              quantity=10.0, invoiced_qty=0.0, line_number=1),
+                _make_so_line(
+                    so_line_id,
+                    SVC_ITEM_1_ID,
+                    "SVC-001",
+                    "Service Item 1",
+                    quantity=10.0,
+                    invoiced_qty=0.0,
+                    line_number=1,
+                ),
             ],
             status="open",
         )
@@ -1913,9 +2169,9 @@ class TestSOListServiceOpenInvoiceQty:
                 so_raw, ORG_ID, auth_token="dummy-token"
             )
 
-        assert result == Decimal("10"), (
-            "Service-only SO with invoicedQty=0 must return qty=10 as open qty"
-        )
+        assert result == Decimal(
+            "10"
+        ), "Service-only SO with invoicedQty=0 must return qty=10 as open qty"
 
     @pytest.mark.asyncio
     async def test_service_only_so_fully_invoiced_returns_zero(self) -> None:
@@ -1931,8 +2187,15 @@ class TestSOListServiceOpenInvoiceQty:
         so_line_id = str(uuid.uuid4())
         so_raw = _make_so_doc(
             lines=[
-                _make_so_line(so_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                              quantity=10.0, invoiced_qty=10.0, line_number=1),
+                _make_so_line(
+                    so_line_id,
+                    SVC_ITEM_1_ID,
+                    "SVC-001",
+                    "Service Item 1",
+                    quantity=10.0,
+                    invoiced_qty=10.0,
+                    line_number=1,
+                ),
             ],
             status="open",
         )
@@ -1943,9 +2206,9 @@ class TestSOListServiceOpenInvoiceQty:
                 so_raw, ORG_ID, auth_token="dummy-token"
             )
 
-        assert result == Decimal("0"), (
-            "Fully-invoiced service line must contribute 0 to service_open_invoice_qty"
-        )
+        assert result == Decimal(
+            "0"
+        ), "Fully-invoiced service line must contribute 0 to service_open_invoice_qty"
 
     @pytest.mark.asyncio
     async def test_mixed_so_only_service_lines_contribute(self) -> None:
@@ -1966,12 +2229,33 @@ class TestSOListServiceOpenInvoiceQty:
         # Stock lines: each qty=10, invoicedQty=10 (fully invoiced via DN path).
         so_raw = _make_so_doc(
             lines=[
-                _make_so_line(stk_line_1_id, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                              quantity=10.0, invoiced_qty=10.0, line_number=1),
-                _make_so_line(stk_line_2_id, STOCK_ITEM_2_ID, "STK-002", "Stock Item 2",
-                              quantity=10.0, invoiced_qty=10.0, line_number=2),
-                _make_so_line(svc_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                              quantity=10.0, invoiced_qty=4.0, line_number=3),
+                _make_so_line(
+                    stk_line_1_id,
+                    STOCK_ITEM_1_ID,
+                    "STK-001",
+                    "Stock Item 1",
+                    quantity=10.0,
+                    invoiced_qty=10.0,
+                    line_number=1,
+                ),
+                _make_so_line(
+                    stk_line_2_id,
+                    STOCK_ITEM_2_ID,
+                    "STK-002",
+                    "Stock Item 2",
+                    quantity=10.0,
+                    invoiced_qty=10.0,
+                    line_number=2,
+                ),
+                _make_so_line(
+                    svc_line_id,
+                    SVC_ITEM_1_ID,
+                    "SVC-001",
+                    "Service Item 1",
+                    quantity=10.0,
+                    invoiced_qty=4.0,
+                    line_number=3,
+                ),
             ],
             status="open",
         )
@@ -1987,9 +2271,9 @@ class TestSOListServiceOpenInvoiceQty:
             )
 
         # Only service line contributes: 10 - 4 = 6.
-        assert result == Decimal("6"), (
-            "Stock lines must NOT contribute; only the service line's open qty (6) counts"
-        )
+        assert result == Decimal(
+            "6"
+        ), "Stock lines must NOT contribute; only the service line's open qty (6) counts"
 
     @pytest.mark.asyncio
     async def test_stock_only_so_returns_zero(self) -> None:
@@ -2004,8 +2288,15 @@ class TestSOListServiceOpenInvoiceQty:
 
         so_raw = _make_so_doc(
             lines=[
-                _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                              quantity=10.0, invoiced_qty=0.0, line_number=1),
+                _make_so_line(
+                    SO_STOCK_LINE_1_ID,
+                    STOCK_ITEM_1_ID,
+                    "STK-001",
+                    "Stock Item 1",
+                    quantity=10.0,
+                    invoiced_qty=0.0,
+                    line_number=1,
+                ),
             ],
             status="open",
         )
@@ -2016,9 +2307,9 @@ class TestSOListServiceOpenInvoiceQty:
                 so_raw, ORG_ID, auth_token="dummy-token"
             )
 
-        assert result == Decimal("0"), (
-            "Stock-only SO must return 0 — no service lines to aggregate"
-        )
+        assert result == Decimal(
+            "0"
+        ), "Stock-only SO must return 0 — no service lines to aggregate"
 
     @pytest.mark.asyncio
     async def test_list_filter_has_service_open_lines_true_returns_only_matching_sos(
@@ -2043,8 +2334,15 @@ class TestSOListServiceOpenInvoiceQty:
         db["sales_orders_v2"]._add(
             _make_so_doc(
                 lines=[
-                    _make_so_line(svc_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
-                                  quantity=5.0, invoiced_qty=0.0, line_number=1),
+                    _make_so_line(
+                        svc_line_id,
+                        SVC_ITEM_1_ID,
+                        "SVC-001",
+                        "Service Item 1",
+                        quantity=5.0,
+                        invoiced_qty=0.0,
+                        line_number=1,
+                    ),
                 ],
                 status="open",
                 doc_entry=svc_so_entry,
@@ -2055,8 +2353,15 @@ class TestSOListServiceOpenInvoiceQty:
         db["sales_orders_v2"]._add(
             _make_so_doc(
                 lines=[
-                    _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
-                                  quantity=10.0, invoiced_qty=0.0, line_number=1),
+                    _make_so_line(
+                        SO_STOCK_LINE_1_ID,
+                        STOCK_ITEM_1_ID,
+                        "STK-001",
+                        "Stock Item 1",
+                        quantity=10.0,
+                        invoiced_qty=0.0,
+                        line_number=1,
+                    ),
                 ],
                 status="open",
                 doc_entry=stk_so_entry,
@@ -2073,13 +2378,13 @@ class TestSOListServiceOpenInvoiceQty:
                 auth_token="dummy-token",
             )
 
-        assert result["total"] == 1, (
-            "Only 1 SO must be returned when has_service_open_lines=True"
-        )
+        assert (
+            result["total"] == 1
+        ), "Only 1 SO must be returned when has_service_open_lines=True"
         assert len(result["items"]) == 1
-        assert result["items"][0].doc_entry == svc_so_entry, (
-            "The returned SO must be the service-only one"
-        )
+        assert (
+            result["items"][0].doc_entry == svc_so_entry
+        ), "The returned SO must be the service-only one"
         assert result["items"][0].service_open_invoice_qty == Decimal("5")
 
     @pytest.mark.asyncio
@@ -2096,9 +2401,15 @@ class TestSOListServiceOpenInvoiceQty:
             db["sales_orders_v2"]._add(
                 _make_so_doc(
                     lines=[
-                        _make_so_line(str(uuid.uuid4()), SVC_ITEM_1_ID, "SVC-001",
-                                      "Service Item 1", quantity=float(i + 1),
-                                      invoiced_qty=0.0, line_number=1),
+                        _make_so_line(
+                            str(uuid.uuid4()),
+                            SVC_ITEM_1_ID,
+                            "SVC-001",
+                            "Service Item 1",
+                            quantity=float(i + 1),
+                            invoiced_qty=0.0,
+                            line_number=1,
+                        ),
                     ],
                     status="open",
                     doc_entry=str(uuid.uuid4()),
@@ -2115,9 +2426,9 @@ class TestSOListServiceOpenInvoiceQty:
                 auth_token="dummy-token",
             )
 
-        assert result["total"] == 3, (
-            "All 3 SOs must be returned when has_service_open_lines is not set"
-        )
+        assert (
+            result["total"] == 3
+        ), "All 3 SOs must be returned when has_service_open_lines is not set"
         assert len(result["items"]) == 3
 
     @pytest.mark.asyncio
@@ -2140,13 +2451,25 @@ class TestSOListServiceOpenInvoiceQty:
         so_raw = _make_so_doc(
             lines=[
                 # Finance unreachable — must be treated as stock (excluded).
-                _make_so_line(unreachable_line_id, UNREACHABLE_ITEM_ID, "UNREACH-001",
-                              "Unreachable Item", quantity=10.0, invoiced_qty=0.0,
-                              line_number=1),
+                _make_so_line(
+                    unreachable_line_id,
+                    UNREACHABLE_ITEM_ID,
+                    "UNREACH-001",
+                    "Unreachable Item",
+                    quantity=10.0,
+                    invoiced_qty=0.0,
+                    line_number=1,
+                ),
                 # Reachable service item — must contribute its open qty.
-                _make_so_line(reachable_svc_line_id, SVC_ITEM_1_ID, "SVC-001",
-                              "Service Item 1", quantity=7.0, invoiced_qty=2.0,
-                              line_number=2),
+                _make_so_line(
+                    reachable_svc_line_id,
+                    SVC_ITEM_1_ID,
+                    "SVC-001",
+                    "Service Item 1",
+                    quantity=7.0,
+                    invoiced_qty=2.0,
+                    line_number=2,
+                ),
             ],
             status="open",
         )

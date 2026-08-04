@@ -10,7 +10,6 @@ from typing import Optional
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field, field_validator
 
-
 # Default farming year start month (August = 8)
 # Common in agricultural contexts where the farming year starts after summer
 DEFAULT_FARMING_YEAR_START_MONTH = 8
@@ -22,28 +21,37 @@ class FarmingYearConfig(BaseModel):
 
     Stored in the system_config collection with configType='farming_year_config'.
     """
-    configId: UUID = Field(default_factory=uuid4, description="Unique configuration identifier")
-    configType: str = Field("farming_year_config", description="Configuration type identifier")
+
+    configId: UUID = Field(
+        default_factory=uuid4, description="Unique configuration identifier"
+    )
+    configType: str = Field(
+        "farming_year_config", description="Configuration type identifier"
+    )
 
     # Farming year configuration
     farmingYearStartMonth: int = Field(
         default=DEFAULT_FARMING_YEAR_START_MONTH,
         ge=1,
         le=12,
-        description="Month when the farming year starts (1-12, where 1=January, 8=August)"
+        description="Month when the farming year starts (1-12, where 1=January, 8=August)",
     )
 
     # Metadata
-    updatedAt: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
+    updatedAt: datetime = Field(
+        default_factory=datetime.utcnow, description="Last update timestamp"
+    )
     updatedBy: Optional[UUID] = Field(None, description="User who last updated")
-    updatedByEmail: Optional[str] = Field(None, description="Email of user who last updated")
+    updatedByEmail: Optional[str] = Field(
+        None, description="Email of user who last updated"
+    )
 
-    @field_validator('farmingYearStartMonth')
+    @field_validator("farmingYearStartMonth")
     @classmethod
     def validate_month(cls, v: int) -> int:
         """Ensure month is between 1 and 12."""
         if not 1 <= v <= 12:
-            raise ValueError('farmingYearStartMonth must be between 1 and 12')
+            raise ValueError("farmingYearStartMonth must be between 1 and 12")
         return v
 
     class Config:
@@ -54,30 +62,31 @@ class FarmingYearConfig(BaseModel):
                 "farmingYearStartMonth": 8,
                 "updatedAt": "2025-11-27T10:00:00Z",
                 "updatedBy": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                "updatedByEmail": "admin@example.com"
+                "updatedByEmail": "admin@example.com",
             }
         }
 
 
 class FarmingYearConfigUpdate(BaseModel):
     """Schema for updating farming year configuration."""
+
     farmingYearStartMonth: int = Field(
         ...,
         ge=1,
         le=12,
-        description="Month when the farming year starts (1-12, where 1=January, 8=August)"
+        description="Month when the farming year starts (1-12, where 1=January, 8=August)",
     )
 
 
 class FarmingYearConfigResponse(BaseModel):
     """Response for farming year configuration."""
+
     data: FarmingYearConfig
     message: Optional[str] = None
 
 
 def get_farming_year(
-    date: datetime,
-    start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
+    date: datetime, start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
 ) -> int:
     """
     Get the farming year for a given date.
@@ -102,8 +111,7 @@ def get_farming_year(
 
 
 def get_farming_year_date_range(
-    farming_year: int,
-    start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
+    farming_year: int, start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
 ) -> tuple[datetime, datetime]:
     """
     Get the date range for a farming year.
@@ -128,6 +136,7 @@ def get_farming_year_date_range(
         end_date = datetime(farming_year + 1, start_month - 1, 1, 23, 59, 59)
         # Get last day of the previous month
         import calendar
+
         last_day = calendar.monthrange(farming_year + 1, start_month - 1)[1]
         end_date = datetime(farming_year + 1, start_month - 1, last_day, 23, 59, 59)
 

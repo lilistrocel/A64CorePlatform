@@ -19,8 +19,10 @@ from .customer_receipts import router as customer_receipts_router
 from .return_requests import router as return_requests_router
 from .returns_v2 import router as returns_v2_router
 from .ar_credit_notes import router as ar_credit_notes_router
+
 # T-200.2: Sales reports (AR Aging)
 from .reports import router as reports_router
+
 # T-200.x: Sales audit history endpoint
 from .audit import router as audit_router
 
@@ -30,20 +32,28 @@ api_router = APIRouter()
 # Reason: sales-side purchase orders were removed (T-070.0) — the dedicated
 # purchasing module at src/modules/purchasing/ owns POs now (/api/v1/purchasing/po).
 api_router.include_router(config_router, prefix="", tags=["sales-config"])
-api_router.include_router(dashboard_router, prefix="/dashboard", tags=["sales-dashboard"])
+api_router.include_router(
+    dashboard_router, prefix="/dashboard", tags=["sales-dashboard"]
+)
 # T-100.6: Sales Quote — Wave 3 Phase 2, first document in quote-to-cash chain
 api_router.include_router(quotes_router, prefix="/quotes", tags=["Sales — Quotes"])
 # T-100.7: Sales Order (SO) — Wave 3 Phase 2, second document in quote-to-cash chain.
 # Prefix is /orders-v2 to avoid colliding with the legacy /orders route (sales_orders collection).
 # Rename to /orders when the legacy module is deprecated (see T-100.7.2 follow-up).
-api_router.include_router(sales_orders_v2_router, prefix="/orders-v2", tags=["Sales — Orders v2"])
+api_router.include_router(
+    sales_orders_v2_router, prefix="/orders-v2", tags=["Sales — Orders v2"]
+)
 # T-100.8: Delivery Note (DN) — Wave 3 Phase 2, third document in quote-to-cash chain.
 # Emits delivery_posted event to finance outbox on DRAFT → OPEN (finance posts COGS JE in T-100.8.1).
-api_router.include_router(deliveries_router, prefix="/deliveries", tags=["Sales — Deliveries"])
+api_router.include_router(
+    deliveries_router, prefix="/deliveries", tags=["Sales — Deliveries"]
+)
 # T-100.9a: AR Invoice (ARI) — Wave 3 Phase 2, fourth document in quote-to-cash chain.
 # Revenue-recognition document. Emits sales_invoice_posted event to finance outbox on
 # DRAFT → OPEN (finance posts DR AR / CR Revenue / CR Output VAT JE in T-100.9b).
-api_router.include_router(ar_invoices_router, prefix="/ar-invoices", tags=["Sales — AR Invoices"])
+api_router.include_router(
+    ar_invoices_router, prefix="/ar-invoices", tags=["Sales — AR Invoices"]
+)
 # T-100.10: Customer Receipt (IPAY) — Wave 3 Phase 2, fifth document in quote-to-cash chain.
 # Records customer payment against one or more AR Invoices.
 # Emits customer_payment_received event to finance outbox on DRAFT → OPEN

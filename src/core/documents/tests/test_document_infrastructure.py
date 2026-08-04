@@ -58,7 +58,6 @@ from src.core.documents.open_quantity import (
     get_quantity_state,
 )
 
-
 # ===========================================================================
 # Helpers: build a minimal in-memory fake Motor DB for async tests
 # ===========================================================================
@@ -76,7 +75,9 @@ class _FakeCollection:
                 return doc
         return None
 
-    def find(self, query: Dict[str, Any] = None, *args: Any, **kwargs: Any) -> "_FakeCursor":
+    def find(
+        self, query: Dict[str, Any] = None, *args: Any, **kwargs: Any
+    ) -> "_FakeCursor":
         query = query or {}
         return _FakeCursor([d for d in self._docs if _matches(d, query)])
 
@@ -237,8 +238,12 @@ class TestDocumentLineLinkMixin:
             pass
 
         refs = [
-            DocumentLinkRef(doc_type="DN", doc_id="dn-1", doc_number="DN-2026-0001", line_id="l1"),
-            DocumentLinkRef(doc_type="DN", doc_id="dn-2", doc_number="DN-2026-0002", line_id="l2"),
+            DocumentLinkRef(
+                doc_type="DN", doc_id="dn-1", doc_number="DN-2026-0001", line_id="l1"
+            ),
+            DocumentLinkRef(
+                doc_type="DN", doc_id="dn-2", doc_number="DN-2026-0002", line_id="l2"
+            ),
         ]
         line = MyLine(target_doc_refs=refs)
         assert len(line.target_doc_refs) == 2
@@ -305,11 +310,18 @@ async def test_find_broken_links_returns_empty_when_source_exists() -> None:
     # Source line exists
     db["document_lines"]._add({"lineId": src_line_id})
     # Target doc line that references the source
-    db["document_lines"]._add({
-        "docId": "dn-doc-1",
-        "lineId": target_line_id,
-        "baseDocRef": {"doc_type": "SO", "doc_id": "so-1", "doc_number": "SO-2026-0001", "line_id": src_line_id},
-    })
+    db["document_lines"]._add(
+        {
+            "docId": "dn-doc-1",
+            "lineId": target_line_id,
+            "baseDocRef": {
+                "doc_type": "SO",
+                "doc_id": "so-1",
+                "doc_number": "SO-2026-0001",
+                "line_id": src_line_id,
+            },
+        }
+    )
 
     broken = await find_broken_links(db, lines_collection="document_lines", doc_id="dn-doc-1")  # type: ignore[arg-type]
     assert broken == []
@@ -322,11 +334,18 @@ async def test_find_broken_links_detects_missing_source() -> None:
     missing_line_id = str(uuid.uuid4())
     target_line_id = str(uuid.uuid4())
 
-    db["document_lines"]._add({
-        "docId": "dn-doc-2",
-        "lineId": target_line_id,
-        "baseDocRef": {"doc_type": "SO", "doc_id": "so-2", "doc_number": "SO-2026-0002", "line_id": missing_line_id},
-    })
+    db["document_lines"]._add(
+        {
+            "docId": "dn-doc-2",
+            "lineId": target_line_id,
+            "baseDocRef": {
+                "doc_type": "SO",
+                "doc_id": "so-2",
+                "doc_number": "SO-2026-0002",
+                "line_id": missing_line_id,
+            },
+        }
+    )
 
     broken = await find_broken_links(db, lines_collection="document_lines", doc_id="dn-doc-2")  # type: ignore[arg-type]
     assert missing_line_id in broken
@@ -340,7 +359,9 @@ async def test_find_broken_links_detects_missing_source() -> None:
 class TestLineQuantityState:
     def test_open_qty_derived_correctly(self) -> None:
         """open_qty = ordered_qty - consumed_qty."""
-        state = LineQuantityState(ordered_qty=Decimal("100"), consumed_qty=Decimal("40"))
+        state = LineQuantityState(
+            ordered_qty=Decimal("100"), consumed_qty=Decimal("40")
+        )
         assert state.open_qty == Decimal("60")
 
     def test_is_closed_when_fully_consumed(self) -> None:
@@ -358,12 +379,16 @@ class TestLineQuantityState:
 
     def test_is_not_closed_when_open(self) -> None:
         """is_closed is False when meaningful open qty remains."""
-        state = LineQuantityState(ordered_qty=Decimal("100"), consumed_qty=Decimal("60"))
+        state = LineQuantityState(
+            ordered_qty=Decimal("100"), consumed_qty=Decimal("60")
+        )
         assert state.is_closed is False
 
     def test_is_over_consumed_flag(self) -> None:
         """is_over_consumed is True when consumed > ordered + tolerance."""
-        state = LineQuantityState(ordered_qty=Decimal("10"), consumed_qty=Decimal("10.5"))
+        state = LineQuantityState(
+            ordered_qty=Decimal("10"), consumed_qty=Decimal("10.5")
+        )
         assert state.is_over_consumed is True
 
     def test_is_not_over_consumed_within_tolerance(self) -> None:
@@ -380,12 +405,14 @@ async def test_increment_consumed_qty_basic() -> None:
     """increment_consumed_qty decrements openQuantity and increments closedQuantity."""
     db = _FakeDB()
     line_id = str(uuid.uuid4())
-    db["document_lines"]._add({
-        "lineId": line_id,
-        "quantity": 100.0,
-        "openQuantity": 100.0,
-        "closedQuantity": 0.0,
-    })
+    db["document_lines"]._add(
+        {
+            "lineId": line_id,
+            "quantity": 100.0,
+            "openQuantity": 100.0,
+            "closedQuantity": 0.0,
+        }
+    )
 
     state = await increment_consumed_qty(
         db,  # type: ignore[arg-type]
@@ -404,12 +431,14 @@ async def test_increment_consumed_qty_partial_closure() -> None:
     """Two partial increments update state correctly; line becomes closed after second."""
     db = _FakeDB()
     line_id = str(uuid.uuid4())
-    db["document_lines"]._add({
-        "lineId": line_id,
-        "quantity": 50.0,
-        "openQuantity": 50.0,
-        "closedQuantity": 0.0,
-    })
+    db["document_lines"]._add(
+        {
+            "lineId": line_id,
+            "quantity": 50.0,
+            "openQuantity": 50.0,
+            "closedQuantity": 0.0,
+        }
+    )
 
     await increment_consumed_qty(
         db,  # type: ignore[arg-type]
@@ -432,12 +461,14 @@ async def test_increment_consumed_qty_over_consumption_raises() -> None:
     """increment_consumed_qty raises ValueError when delta exceeds open quantity."""
     db = _FakeDB()
     line_id = str(uuid.uuid4())
-    db["document_lines"]._add({
-        "lineId": line_id,
-        "quantity": 10.0,
-        "openQuantity": 5.0,
-        "closedQuantity": 5.0,
-    })
+    db["document_lines"]._add(
+        {
+            "lineId": line_id,
+            "quantity": 10.0,
+            "openQuantity": 5.0,
+            "closedQuantity": 5.0,
+        }
+    )
 
     with pytest.raises(ValueError, match="open quantity would go negative"):
         await increment_consumed_qty(
@@ -546,12 +577,14 @@ async def test_assert_no_gaps_returns_empty_when_complete() -> None:
     db = _FakeDB()
     col = db["document_headers"]
     for i in range(1, 4):
-        col._add({
-            "organizationId": "org-1",
-            "docType": "PO",
-            "docNumber": f"PO-2026-{i:04d}",
-            "deletedAt": None,
-        })
+        col._add(
+            {
+                "organizationId": "org-1",
+                "docType": "PO",
+                "docNumber": f"PO-2026-{i:04d}",
+                "deletedAt": None,
+            }
+        )
 
     gaps = await assert_no_gaps(  # type: ignore[arg-type]
         db,
@@ -569,12 +602,14 @@ async def test_assert_no_gaps_detects_missing_number() -> None:
     db = _FakeDB()
     col = db["document_headers"]
     for i in (1, 2, 4):
-        col._add({
-            "organizationId": "org-1",
-            "docType": "PO",
-            "docNumber": f"PO-2026-{i:04d}",
-            "deletedAt": None,
-        })
+        col._add(
+            {
+                "organizationId": "org-1",
+                "docType": "PO",
+                "docNumber": f"PO-2026-{i:04d}",
+                "deletedAt": None,
+            }
+        )
 
     gaps = await assert_no_gaps(  # type: ignore[arg-type]
         db,
@@ -674,7 +709,10 @@ class TestFormatJournalMemo:
     def test_full_memo_all_segments(self) -> None:
         """All four segments compose correctly."""
         memo = format_journal_memo(
-            "AR Invoice", "ARI-2026-0042", bp_ref="PO-CUST-88", freetext="early delivery"
+            "AR Invoice",
+            "ARI-2026-0042",
+            bp_ref="PO-CUST-88",
+            freetext="early delivery",
         )
         assert "ARI-2026-0042" in memo
         assert "Cust PO #PO-CUST-88" in memo
@@ -723,7 +761,9 @@ class TestAssertLegalTransition:
 
     def test_pr_draft_to_pending_approval_is_legal(self) -> None:
         """PR: Draft → PendingApproval is allowed."""
-        assert_legal_transition("PR", DocumentStatus.DRAFT, DocumentStatus.PENDING_APPROVAL)
+        assert_legal_transition(
+            "PR", DocumentStatus.DRAFT, DocumentStatus.PENDING_APPROVAL
+        )
 
     def test_pr_closed_to_anything_is_illegal(self) -> None:
         """PR: Closed is a terminal state."""
@@ -737,15 +777,21 @@ class TestAssertLegalTransition:
     def test_unknown_doc_type_raises(self) -> None:
         """assert_legal_transition raises ValueError for unknown doc types."""
         with pytest.raises(ValueError, match="Unknown doc_type"):
-            assert_legal_transition("UNKNOWN", DocumentStatus.DRAFT, DocumentStatus.OPEN)
+            assert_legal_transition(
+                "UNKNOWN", DocumentStatus.DRAFT, DocumentStatus.OPEN
+            )
 
     def test_delivery_open_to_partly_closed(self) -> None:
         """DELIVERY: Open → PartlyClosed is allowed."""
-        assert_legal_transition("DELIVERY", DocumentStatus.OPEN, DocumentStatus.PARTLY_CLOSED)
+        assert_legal_transition(
+            "DELIVERY", DocumentStatus.OPEN, DocumentStatus.PARTLY_CLOSED
+        )
 
     def test_ar_invoice_partly_closed_to_closed(self) -> None:
         """AR_INVOICE: PartlyClosed → Closed is allowed (full payment received)."""
-        assert_legal_transition("AR_INVOICE", DocumentStatus.PARTLY_CLOSED, DocumentStatus.CLOSED)
+        assert_legal_transition(
+            "AR_INVOICE", DocumentStatus.PARTLY_CLOSED, DocumentStatus.CLOSED
+        )
 
     def test_gr_draft_to_open_is_legal(self) -> None:
         """GR: Draft → Open (post) is allowed."""
@@ -793,14 +839,16 @@ async def test_so_line_to_delivery_integration() -> None:
     dn_line_id = str(uuid.uuid4())
 
     # Set up SO line with 100 units
-    db["document_lines"]._add({
-        "lineId": so_line_id,
-        "docId": "so-doc-1",
-        "quantity": 100.0,
-        "openQuantity": 100.0,
-        "closedQuantity": 0.0,
-        "targetDocRefs": [],
-    })
+    db["document_lines"]._add(
+        {
+            "lineId": so_line_id,
+            "docId": "so-doc-1",
+            "quantity": 100.0,
+            "openQuantity": 100.0,
+            "closedQuantity": 0.0,
+            "targetDocRefs": [],
+        }
+    )
 
     # Delivery consumes 60 units
     state = await increment_consumed_qty(

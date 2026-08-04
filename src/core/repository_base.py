@@ -32,7 +32,9 @@ class DivisionScopedRepository:
         """
         self.collection = collection
 
-    def _scoped_filter(self, filter_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _scoped_filter(
+        self, filter_dict: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Wrap a query filter with division scoping.
 
@@ -68,9 +70,13 @@ class DivisionScopedRepository:
             doc["divisionId"] = division_id
         return doc
 
-    async def find_one(self, filter_dict: Dict[str, Any], **kwargs) -> Optional[Dict[str, Any]]:
+    async def find_one(
+        self, filter_dict: Dict[str, Any], **kwargs
+    ) -> Optional[Dict[str, Any]]:
         """Find a single document with division scoping."""
-        return await self.collection.find_one(self._scoped_filter(filter_dict), **kwargs)
+        return await self.collection.find_one(
+            self._scoped_filter(filter_dict), **kwargs
+        )
 
     async def find_many(
         self,
@@ -98,19 +104,29 @@ class DivisionScopedRepository:
         """Insert a document with division context."""
         return await self.collection.insert_one(self._with_division(doc))
 
-    async def update_one(self, filter_dict: Dict[str, Any], update: Dict[str, Any], **kwargs) -> Any:
+    async def update_one(
+        self, filter_dict: Dict[str, Any], update: Dict[str, Any], **kwargs
+    ) -> Any:
         """Update a document with division scoping on the filter."""
-        return await self.collection.update_one(self._scoped_filter(filter_dict), update, **kwargs)
+        return await self.collection.update_one(
+            self._scoped_filter(filter_dict), update, **kwargs
+        )
 
-    async def update_many(self, filter_dict: Dict[str, Any], update: Dict[str, Any], **kwargs) -> Any:
+    async def update_many(
+        self, filter_dict: Dict[str, Any], update: Dict[str, Any], **kwargs
+    ) -> Any:
         """Update multiple documents with division scoping."""
-        return await self.collection.update_many(self._scoped_filter(filter_dict), update, **kwargs)
+        return await self.collection.update_many(
+            self._scoped_filter(filter_dict), update, **kwargs
+        )
 
     async def delete_one(self, filter_dict: Dict[str, Any]) -> Any:
         """Delete a document with division scoping."""
         return await self.collection.delete_one(self._scoped_filter(filter_dict))
 
-    async def aggregate(self, pipeline: List[Dict[str, Any]], **kwargs) -> List[Dict[str, Any]]:
+    async def aggregate(
+        self, pipeline: List[Dict[str, Any]], **kwargs
+    ) -> List[Dict[str, Any]]:
         """
         Run an aggregation pipeline with division scoping.
 

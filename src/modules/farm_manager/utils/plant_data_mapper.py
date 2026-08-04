@@ -101,72 +101,70 @@ class PlantDataMigrationMapper:
             plantName=legacy.plantName,
             scientificName=legacy.scientificName or f"{legacy.plantName} sp.",
             farmTypeCompatibility=farm_types,
-
             # Growth cycle (simplified from single total to stages)
             growthCycle=GrowthCycleDuration(
-                germinationDays=max(int(legacy.growthCycleDays * 0.05), 3),  # ~5% for germination
+                germinationDays=max(
+                    int(legacy.growthCycleDays * 0.05), 3
+                ),  # ~5% for germination
                 vegetativeDays=int(legacy.growthCycleDays * 0.40),  # ~40% vegetative
                 floweringDays=int(legacy.growthCycleDays * 0.15),  # ~15% flowering
                 fruitingDays=int(legacy.growthCycleDays * 0.30),  # ~30% fruiting
                 harvestDurationDays=int(legacy.growthCycleDays * 0.10),  # ~10% harvest
-                totalCycleDays=legacy.growthCycleDays
+                totalCycleDays=legacy.growthCycleDays,
             ),
-
             # Yield information
             yieldInfo=YieldInfo(
                 yieldPerPlant=legacy.expectedYieldPerPlant,
                 yieldUnit=legacy.yieldUnit,
-                expectedWastePercentage=10.0  # Default 10% waste
+                expectedWastePercentage=10.0,  # Default 10% waste
             ),
-
             # Environmental requirements
             environmentalRequirements=EnvironmentalRequirements(
                 temperature=TemperatureRange(
                     minCelsius=legacy.minTemperatureCelsius or 15.0,
                     maxCelsius=legacy.maxTemperatureCelsius or 30.0,
                     optimalCelsius=(
-                        (legacy.minTemperatureCelsius or 15.0) +
-                        (legacy.maxTemperatureCelsius or 30.0)
-                    ) / 2
+                        (legacy.minTemperatureCelsius or 15.0)
+                        + (legacy.maxTemperatureCelsius or 30.0)
+                    )
+                    / 2,
                 ),
-                humidity=HumidityRange(
-                    minPercentage=50.0,
-                    maxPercentage=80.0,
-                    optimalPercentage=65.0
-                ) if legacy.minTemperatureCelsius else None,
+                humidity=(
+                    HumidityRange(
+                        minPercentage=50.0, maxPercentage=80.0, optimalPercentage=65.0
+                    )
+                    if legacy.minTemperatureCelsius
+                    else None
+                ),
                 co2RequirementPpm=None,
-                airCirculation=None
+                airCirculation=None,
             ),
-
             # Watering requirements
             wateringRequirements=WateringRequirements(
                 frequencyDays=legacy.wateringFrequencyDays or 3,
                 waterType=WaterTypeEnum.TAP,
                 amountPerPlantLiters=None,
                 droughtTolerance=ToleranceLevelEnum.MEDIUM,
-                notes=None
+                notes=None,
             ),
-
             # Soil requirements
             soilRequirements=SoilRequirements(
                 phRequirements=PHRequirements(
                     minPH=legacy.optimalPHMin or 6.0,
                     maxPH=legacy.optimalPHMax or 7.0,
                     optimalPH=(
-                        (legacy.optimalPHMin or 6.0) +
-                        (legacy.optimalPHMax or 7.0)
-                    ) / 2
+                        (legacy.optimalPHMin or 6.0) + (legacy.optimalPHMax or 7.0)
+                    )
+                    / 2,
                 ),
                 soilTypes=[SoilTypeEnum.LOAMY],  # Default to loamy soil
                 nutrientsRecommendations=None,
                 ecRangeMs=None,
                 tdsRangePpm=None,
-                notes=None
+                notes=None,
             ),
-
             # Diseases and pests
             diseasesAndPests=[],  # Empty - needs manual population
-
             # Light requirements
             lightRequirements=LightRequirements(
                 lightType=LightTypeEnum.FULL_SUN,  # Default assumption
@@ -176,12 +174,10 @@ class PlantDataMigrationMapper:
                 intensityLux=None,
                 intensityPpfd=None,
                 photoperiodSensitive=False,
-                notes=None
+                notes=None,
             ),
-
             # Grading standards
             gradingStandards=[],  # Empty - needs manual population
-
             # Economics and labor
             economicsAndLabor=EconomicsAndLabor(
                 averageMarketValuePerKg=None,
@@ -190,33 +186,30 @@ class PlantDataMigrationMapper:
                 plantingHours=0.1,
                 maintenanceHours=0.3,
                 harvestingHours=0.1,
-                notes=None
+                notes=None,
             ),
-
             # Additional information
             additionalInfo=AdditionalInformation(
                 growthHabit=growth_habit,
                 spacing=SpacingRequirements(
                     betweenPlantsCm=50.0,  # Default spacing
                     betweenRowsCm=75.0,
-                    plantsPerSquareMeter=2.67
+                    plantsPerSquareMeter=2.67,
                 ),
                 supportRequirements=SupportTypeEnum.NONE,
                 companionPlants=None,
                 incompatiblePlants=None,
-                notes=legacy.notes
+                notes=legacy.notes,
             ),
-
             # Tags
             tags=legacy.tags,
-
             # Metadata
             dataVersion=legacy.dataVersion,
             createdBy=legacy.createdBy,
             createdByEmail=legacy.createdByEmail,
             createdAt=legacy.createdAt,
             updatedAt=legacy.updatedAt,
-            deletedAt=None
+            deletedAt=None,
         )
 
     @staticmethod
@@ -239,7 +232,11 @@ class PlantDataMigrationMapper:
         sunlight_hours_str = f"{int(enhanced.lightRequirements.minHoursDaily)}-{int(enhanced.lightRequirements.maxHoursDaily)}"
 
         # Get first farm type as plant type (simplified)
-        plant_type = enhanced.farmTypeCompatibility[0].value if enhanced.farmTypeCompatibility else "crop"
+        plant_type = (
+            enhanced.farmTypeCompatibility[0].value
+            if enhanced.farmTypeCompatibility
+            else "crop"
+        )
 
         return PlantData(
             plantDataId=enhanced.plantDataId,
@@ -261,11 +258,13 @@ class PlantDataMigrationMapper:
             createdBy=enhanced.createdBy,
             createdByEmail=enhanced.createdByEmail,
             createdAt=enhanced.createdAt,
-            updatedAt=enhanced.updatedAt
+            updatedAt=enhanced.updatedAt,
         )
 
     @staticmethod
-    def create_legacy_to_enhanced(legacy_create: PlantDataCreate) -> PlantDataEnhancedCreate:
+    def create_legacy_to_enhanced(
+        legacy_create: PlantDataCreate,
+    ) -> PlantDataEnhancedCreate:
         """
         Convert legacy PlantDataCreate to PlantDataEnhancedCreate.
 
@@ -298,7 +297,8 @@ class PlantDataMigrationMapper:
 
         return PlantDataEnhancedCreate(
             plantName=legacy_create.plantName,
-            scientificName=legacy_create.scientificName or f"{legacy_create.plantName} sp.",
+            scientificName=legacy_create.scientificName
+            or f"{legacy_create.plantName} sp.",
             farmTypeCompatibility=farm_types,
             growthCycle=GrowthCycleDuration(
                 germinationDays=max(int(legacy_create.growthCycleDays * 0.05), 3),
@@ -306,62 +306,62 @@ class PlantDataMigrationMapper:
                 floweringDays=int(legacy_create.growthCycleDays * 0.15),
                 fruitingDays=int(legacy_create.growthCycleDays * 0.30),
                 harvestDurationDays=int(legacy_create.growthCycleDays * 0.10),
-                totalCycleDays=legacy_create.growthCycleDays
+                totalCycleDays=legacy_create.growthCycleDays,
             ),
             yieldInfo=YieldInfo(
                 yieldPerPlant=legacy_create.expectedYieldPerPlant,
                 yieldUnit=legacy_create.yieldUnit,
-                expectedWastePercentage=10.0
+                expectedWastePercentage=10.0,
             ),
             environmentalRequirements=EnvironmentalRequirements(
                 temperature=TemperatureRange(
                     minCelsius=legacy_create.minTemperatureCelsius or 15.0,
                     maxCelsius=legacy_create.maxTemperatureCelsius or 30.0,
                     optimalCelsius=(
-                        (legacy_create.minTemperatureCelsius or 15.0) +
-                        (legacy_create.maxTemperatureCelsius or 30.0)
-                    ) / 2
+                        (legacy_create.minTemperatureCelsius or 15.0)
+                        + (legacy_create.maxTemperatureCelsius or 30.0)
+                    )
+                    / 2,
                 )
             ),
             wateringRequirements=WateringRequirements(
                 frequencyDays=legacy_create.wateringFrequencyDays or 3,
                 waterType=WaterTypeEnum.TAP,
-                droughtTolerance=ToleranceLevelEnum.MEDIUM
+                droughtTolerance=ToleranceLevelEnum.MEDIUM,
             ),
             soilRequirements=SoilRequirements(
                 phRequirements=PHRequirements(
                     minPH=legacy_create.optimalPHMin or 6.0,
                     maxPH=legacy_create.optimalPHMax or 7.0,
                     optimalPH=(
-                        (legacy_create.optimalPHMin or 6.0) +
-                        (legacy_create.optimalPHMax or 7.0)
-                    ) / 2
+                        (legacy_create.optimalPHMin or 6.0)
+                        + (legacy_create.optimalPHMax or 7.0)
+                    )
+                    / 2,
                 ),
-                soilTypes=[SoilTypeEnum.LOAMY]
+                soilTypes=[SoilTypeEnum.LOAMY],
             ),
             lightRequirements=LightRequirements(
                 lightType=LightTypeEnum.FULL_SUN,
                 minHoursDaily=min_hours,
                 maxHoursDaily=max_hours,
                 optimalHoursDaily=optimal_hours,
-                photoperiodSensitive=False
+                photoperiodSensitive=False,
             ),
             economicsAndLabor=EconomicsAndLabor(
                 currency="USD",
                 totalManHoursPerPlant=0.5,
                 plantingHours=0.1,
                 maintenanceHours=0.3,
-                harvestingHours=0.1
+                harvestingHours=0.1,
             ),
             additionalInfo=AdditionalInformation(
                 growthHabit=GrowthHabitEnum.BUSH,
                 spacing=SpacingRequirements(
-                    betweenPlantsCm=50.0,
-                    betweenRowsCm=75.0,
-                    plantsPerSquareMeter=2.67
+                    betweenPlantsCm=50.0, betweenRowsCm=75.0, plantsPerSquareMeter=2.67
                 ),
                 supportRequirements=SupportTypeEnum.NONE,
-                notes=legacy_create.notes
+                notes=legacy_create.notes,
             ),
-            tags=legacy_create.tags
+            tags=legacy_create.tags,
         )

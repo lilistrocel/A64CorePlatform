@@ -40,9 +40,7 @@ class VisaRepository:
 
         visa_dict = visa_data.model_dump()
         visa = Visa(
-            **visa_dict,
-            createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            **visa_dict, createdAt=datetime.utcnow(), updatedAt=datetime.utcnow()
         )
 
         visa_doc = visa.model_dump(by_alias=True)
@@ -51,9 +49,13 @@ class VisaRepository:
 
         # Convert dates to datetime for MongoDB
         if "issueDate" in visa_doc:
-            visa_doc["issueDate"] = datetime.combine(visa_doc["issueDate"], datetime.min.time())
+            visa_doc["issueDate"] = datetime.combine(
+                visa_doc["issueDate"], datetime.min.time()
+            )
         if "expiryDate" in visa_doc:
-            visa_doc["expiryDate"] = datetime.combine(visa_doc["expiryDate"], datetime.min.time())
+            visa_doc["expiryDate"] = datetime.combine(
+                visa_doc["expiryDate"], datetime.min.time()
+            )
 
         await collection.insert_one(visa_doc)
 
@@ -78,16 +80,15 @@ class VisaRepository:
             # Convert datetime back to date
             if "issueDate" in visa_doc and isinstance(visa_doc["issueDate"], datetime):
                 visa_doc["issueDate"] = visa_doc["issueDate"].date()
-            if "expiryDate" in visa_doc and isinstance(visa_doc["expiryDate"], datetime):
+            if "expiryDate" in visa_doc and isinstance(
+                visa_doc["expiryDate"], datetime
+            ):
                 visa_doc["expiryDate"] = visa_doc["expiryDate"].date()
             return Visa(**visa_doc)
         return None
 
     async def get_by_employee_id(
-        self,
-        employee_id: UUID,
-        skip: int = 0,
-        limit: int = 20
+        self, employee_id: UUID, skip: int = 0, limit: int = 20
     ) -> tuple[List[Visa], int]:
         """
         Get visas for a specific employee
@@ -115,17 +116,16 @@ class VisaRepository:
             # Convert datetime back to date
             if "issueDate" in visa_doc and isinstance(visa_doc["issueDate"], datetime):
                 visa_doc["issueDate"] = visa_doc["issueDate"].date()
-            if "expiryDate" in visa_doc and isinstance(visa_doc["expiryDate"], datetime):
+            if "expiryDate" in visa_doc and isinstance(
+                visa_doc["expiryDate"], datetime
+            ):
                 visa_doc["expiryDate"] = visa_doc["expiryDate"].date()
             visas.append(Visa(**visa_doc))
 
         return visas, total
 
     async def get_all(
-        self,
-        skip: int = 0,
-        limit: int = 20,
-        status: Optional[VisaStatus] = None
+        self, skip: int = 0, limit: int = 20, status: Optional[VisaStatus] = None
     ) -> tuple[List[Visa], int]:
         """
         Get all visas with pagination
@@ -156,7 +156,9 @@ class VisaRepository:
             # Convert datetime back to date
             if "issueDate" in visa_doc and isinstance(visa_doc["issueDate"], datetime):
                 visa_doc["issueDate"] = visa_doc["issueDate"].date()
-            if "expiryDate" in visa_doc and isinstance(visa_doc["expiryDate"], datetime):
+            if "expiryDate" in visa_doc and isinstance(
+                visa_doc["expiryDate"], datetime
+            ):
                 visa_doc["expiryDate"] = visa_doc["expiryDate"].date()
             visas.append(Visa(**visa_doc))
 
@@ -183,13 +185,16 @@ class VisaRepository:
 
         # Convert dates to datetime for MongoDB
         if "issueDate" in update_dict:
-            update_dict["issueDate"] = datetime.combine(update_dict["issueDate"], datetime.min.time())
+            update_dict["issueDate"] = datetime.combine(
+                update_dict["issueDate"], datetime.min.time()
+            )
         if "expiryDate" in update_dict:
-            update_dict["expiryDate"] = datetime.combine(update_dict["expiryDate"], datetime.min.time())
+            update_dict["expiryDate"] = datetime.combine(
+                update_dict["expiryDate"], datetime.min.time()
+            )
 
         result = await collection.update_one(
-            {"visaId": str(visa_id)},
-            {"$set": update_dict}
+            {"visaId": str(visa_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

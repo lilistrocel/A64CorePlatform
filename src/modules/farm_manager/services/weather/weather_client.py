@@ -43,7 +43,7 @@ class WeatherAPIClient:
         self,
         latitude: float,
         longitude: float,
-        units: str = "M"  # M=Metric, S=Scientific, I=Imperial
+        units: str = "M",  # M=Metric, S=Scientific, I=Imperial
     ) -> Dict[str, Any]:
         """
         Get current weather conditions
@@ -63,15 +63,12 @@ class WeatherAPIClient:
             "lon": longitude,
             "key": self.api_key,
             "units": units,
-            "include": "alerts"
+            "include": "alerts",
         }
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
-                response = await client.get(
-                    f"{self.base_url}/current",
-                    params=params
-                )
+                response = await client.get(f"{self.base_url}/current", params=params)
                 response.raise_for_status()
                 data = response.json()
 
@@ -79,7 +76,9 @@ class WeatherAPIClient:
                     raise WeatherAPIError("No weather data returned from API")
 
                 # Debug log to see what fields are returned
-                logger.info(f"Current Weather API response fields: {list(data['data'][0].keys())}")
+                logger.info(
+                    f"Current Weather API response fields: {list(data['data'][0].keys())}"
+                )
 
                 return data["data"][0]  # Return first result
 
@@ -87,17 +86,14 @@ class WeatherAPIClient:
                 logger.error(f"WeatherBit API HTTP error: {e.response.status_code}")
                 raise WeatherAPIError(
                     f"Weather API returned error: {e.response.status_code}",
-                    status_code=e.response.status_code
+                    status_code=e.response.status_code,
                 )
             except httpx.RequestError as e:
                 logger.error(f"WeatherBit API request error: {e}")
                 raise WeatherAPIError(f"Failed to connect to weather API: {str(e)}")
 
     async def get_agweather_forecast(
-        self,
-        latitude: float,
-        longitude: float,
-        units: str = "M"
+        self, latitude: float, longitude: float, units: str = "M"
     ) -> Dict[str, Any]:
         """
         Get agricultural weather forecast (8 days)
@@ -116,35 +112,38 @@ class WeatherAPIClient:
             "lat": latitude,
             "lon": longitude,
             "key": self.api_key,
-            "units": units
+            "units": units,
         }
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.get(
-                    f"{self.base_url}/forecast/agweather",
-                    params=params
+                    f"{self.base_url}/forecast/agweather", params=params
                 )
                 response.raise_for_status()
                 data = response.json()
 
                 # Debug log to see what fields are returned
                 if data.get("data") and len(data["data"]) > 0:
-                    logger.info(f"AgWeather API response fields: {list(data['data'][0].keys())}")
+                    logger.info(
+                        f"AgWeather API response fields: {list(data['data'][0].keys())}"
+                    )
 
                 return data
 
             except httpx.HTTPStatusError as e:
-                logger.error(f"WeatherBit AgWeather API HTTP error: {e.response.status_code}")
+                logger.error(
+                    f"WeatherBit AgWeather API HTTP error: {e.response.status_code}"
+                )
                 # AgWeather endpoint requires Business/Enterprise plan
                 if e.response.status_code == 403:
                     raise WeatherAPIError(
                         "AgWeather API requires Business or Enterprise plan",
-                        status_code=403
+                        status_code=403,
                     )
                 raise WeatherAPIError(
                     f"Weather API returned error: {e.response.status_code}",
-                    status_code=e.response.status_code
+                    status_code=e.response.status_code,
                 )
             except httpx.RequestError as e:
                 logger.error(f"WeatherBit API request error: {e}")
@@ -156,7 +155,7 @@ class WeatherAPIClient:
         longitude: float,
         start_date: datetime,
         end_date: datetime,
-        units: str = "M"
+        units: str = "M",
     ) -> Dict[str, Any]:
         """
         Get historical agricultural weather data
@@ -179,14 +178,13 @@ class WeatherAPIClient:
             "key": self.api_key,
             "units": units,
             "start_date": start_date.strftime("%Y-%m-%d"),
-            "end_date": end_date.strftime("%Y-%m-%d")
+            "end_date": end_date.strftime("%Y-%m-%d"),
         }
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.get(
-                    f"{self.base_url}/history/agweather",
-                    params=params
+                    f"{self.base_url}/history/agweather", params=params
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -194,26 +192,24 @@ class WeatherAPIClient:
                 return data
 
             except httpx.HTTPStatusError as e:
-                logger.error(f"WeatherBit History API HTTP error: {e.response.status_code}")
+                logger.error(
+                    f"WeatherBit History API HTTP error: {e.response.status_code}"
+                )
                 if e.response.status_code == 403:
                     raise WeatherAPIError(
                         "Historical AgWeather API requires Business or Enterprise plan",
-                        status_code=403
+                        status_code=403,
                     )
                 raise WeatherAPIError(
                     f"Weather API returned error: {e.response.status_code}",
-                    status_code=e.response.status_code
+                    status_code=e.response.status_code,
                 )
             except httpx.RequestError as e:
                 logger.error(f"WeatherBit API request error: {e}")
                 raise WeatherAPIError(f"Failed to connect to weather API: {str(e)}")
 
     async def get_weather_forecast(
-        self,
-        latitude: float,
-        longitude: float,
-        days: int = 7,
-        units: str = "M"
+        self, latitude: float, longitude: float, days: int = 7, units: str = "M"
     ) -> Dict[str, Any]:
         """
         Get standard weather forecast (fallback if agweather not available)
@@ -234,38 +230,39 @@ class WeatherAPIClient:
             "lon": longitude,
             "key": self.api_key,
             "units": units,
-            "days": min(days, 16)
+            "days": min(days, 16),
         }
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.get(
-                    f"{self.base_url}/forecast/daily",
-                    params=params
+                    f"{self.base_url}/forecast/daily", params=params
                 )
                 response.raise_for_status()
                 data = response.json()
 
                 # Debug log to see what fields are returned
                 if data.get("data") and len(data["data"]) > 0:
-                    logger.info(f"Standard Forecast API response fields: {list(data['data'][0].keys())}")
+                    logger.info(
+                        f"Standard Forecast API response fields: {list(data['data'][0].keys())}"
+                    )
 
                 return data
 
             except httpx.HTTPStatusError as e:
-                logger.error(f"WeatherBit Forecast API HTTP error: {e.response.status_code}")
+                logger.error(
+                    f"WeatherBit Forecast API HTTP error: {e.response.status_code}"
+                )
                 raise WeatherAPIError(
                     f"Weather API returned error: {e.response.status_code}",
-                    status_code=e.response.status_code
+                    status_code=e.response.status_code,
                 )
             except httpx.RequestError as e:
                 logger.error(f"WeatherBit API request error: {e}")
                 raise WeatherAPIError(f"Failed to connect to weather API: {str(e)}")
 
     async def get_air_quality(
-        self,
-        latitude: float,
-        longitude: float
+        self, latitude: float, longitude: float
     ) -> Dict[str, Any]:
         """
         Get current air quality data
@@ -279,17 +276,12 @@ class WeatherAPIClient:
         """
         self._check_enabled()
 
-        params = {
-            "lat": latitude,
-            "lon": longitude,
-            "key": self.api_key
-        }
+        params = {"lat": latitude, "lon": longitude, "key": self.api_key}
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.get(
-                    f"{self.base_url}/current/airquality",
-                    params=params
+                    f"{self.base_url}/current/airquality", params=params
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -298,20 +290,23 @@ class WeatherAPIClient:
                     raise WeatherAPIError("No air quality data returned from API")
 
                 # Debug log to see what fields are returned
-                logger.info(f"Air Quality API response fields: {list(data['data'][0].keys())}")
+                logger.info(
+                    f"Air Quality API response fields: {list(data['data'][0].keys())}"
+                )
 
                 return data["data"][0]  # Return first result
 
             except httpx.HTTPStatusError as e:
-                logger.error(f"WeatherBit Air Quality API HTTP error: {e.response.status_code}")
+                logger.error(
+                    f"WeatherBit Air Quality API HTTP error: {e.response.status_code}"
+                )
                 if e.response.status_code == 403:
                     raise WeatherAPIError(
-                        "Air Quality API requires a paid plan",
-                        status_code=403
+                        "Air Quality API requires a paid plan", status_code=403
                     )
                 raise WeatherAPIError(
                     f"Air Quality API returned error: {e.response.status_code}",
-                    status_code=e.response.status_code
+                    status_code=e.response.status_code,
                 )
             except httpx.RequestError as e:
                 logger.error(f"WeatherBit Air Quality API request error: {e}")

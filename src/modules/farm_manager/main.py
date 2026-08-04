@@ -34,7 +34,9 @@ async def lifespan(app: FastAPI):
     - Disconnect from MongoDB
     """
     # Startup
-    logger.info(f"[Farm Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Farm Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await farm_db.connect()
@@ -52,7 +54,9 @@ async def lifespan(app: FastAPI):
 
         # Start background refresh (every hour = 3600 seconds)
         await weather_cache.start_background_refresh(interval_seconds=3600)
-        logger.info("[Farm Module] Weather cache service initialized with hourly refresh")
+        logger.info(
+            "[Farm Module] Weather cache service initialized with hourly refresh"
+        )
     except Exception as e:
         logger.error(f"[Farm Module] Failed to initialize weather cache: {e}")
         # Don't raise - weather cache is not critical for startup
@@ -65,6 +69,7 @@ async def lifespan(app: FastAPI):
     # Stop weather cache background refresh
     try:
         from .services.weather.weather_cache_service import get_weather_cache_service
+
         weather_cache = get_weather_cache_service()
         await weather_cache.stop_background_refresh()
         logger.info("[Farm Module] Weather cache background refresh stopped")
@@ -83,7 +88,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
 )
 
 # CORS configuration
@@ -111,8 +116,12 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "Internal server error",
-            "detail": str(exc) if settings.MODULE_VERSION.startswith("0.") else "An error occurred"
-        }
+            "detail": (
+                str(exc)
+                if settings.MODULE_VERSION.startswith("0.")
+                else "An error occurred"
+            ),
+        },
     )
 
 
@@ -131,15 +140,12 @@ async def health_check():
         "status": "healthy" if db_healthy else "unhealthy",
         "module": settings.MODULE_NAME,
         "version": settings.MODULE_VERSION,
-        "database": "connected" if db_healthy else "disconnected"
+        "database": "connected" if db_healthy else "disconnected",
     }
 
 
 # Include API routes
-app.include_router(
-    api_router,
-    prefix=settings.API_PREFIX
-)
+app.include_router(api_router, prefix=settings.API_PREFIX)
 
 
 # Root endpoint
@@ -157,16 +163,11 @@ async def root():
         "description": "Farm Management Module - Comprehensive agricultural operations management",
         "docs": "/docs",
         "health": "/health",
-        "api": settings.API_PREFIX
+        "api": settings.API_PREFIX,
     }
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8001,
-        reload=True,
-        log_level="info"
-    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True, log_level="info")

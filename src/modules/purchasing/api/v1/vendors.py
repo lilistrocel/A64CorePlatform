@@ -20,7 +20,11 @@ from ...middleware.auth import (
 )
 from ...models.vendor import VendorCreate, VendorResponse, VendorUpdate
 from ...services.vendor_service import VendorService
-from src.modules.farm_manager.utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
+from src.modules.farm_manager.utils.responses import (
+    PaginatedResponse,
+    PaginationMeta,
+    SuccessResponse,
+)
 from src.modules.farm_manager.services.database import farm_db
 from src.core.finance.company_resolver import resolve_company_code
 
@@ -49,7 +53,9 @@ def _get_service() -> VendorService:
     description="Paginated vendor list; search by name/code. All authenticated users.",
 )
 async def list_vendors(
-    organization_id: Optional[str] = Query(None, description="Filter by organization ID"),
+    organization_id: Optional[str] = Query(
+        None, description="Filter by organization ID"
+    ),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=200),
     search: Optional[str] = Query(None, max_length=200),

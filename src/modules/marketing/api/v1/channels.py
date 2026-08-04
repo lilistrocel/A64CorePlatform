@@ -24,12 +24,12 @@ router = APIRouter()
     response_model=SuccessResponse[Channel],
     status_code=status.HTTP_201_CREATED,
     summary="Create a new marketing channel",
-    description="Create a new marketing channel. Requires marketing.create permission."
+    description="Create a new marketing channel. Requires marketing.create permission.",
 )
 async def create_channel(
     channel_data: ChannelCreate,
     current_user: CurrentUser = Depends(require_permission("marketing.create")),
-    service: ChannelService = Depends()
+    service: ChannelService = Depends(),
 ):
     """
     Create a new marketing channel
@@ -40,22 +40,16 @@ async def create_channel(
     - **costPerImpression**: Cost per impression/CPM (default: 0)
     - **isActive**: Whether channel is active (default: true)
     """
-    channel = await service.create_channel(
-        channel_data,
-        UUID(current_user.userId)
-    )
+    channel = await service.create_channel(channel_data, UUID(current_user.userId))
 
-    return SuccessResponse(
-        data=channel,
-        message="Channel created successfully"
-    )
+    return SuccessResponse(data=channel, message="Channel created successfully")
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[Channel],
     summary="Get all marketing channels",
-    description="Get all marketing channels with pagination and filters. Requires marketing.view permission."
+    description="Get all marketing channels with pagination and filters. Requires marketing.view permission.",
 )
 async def get_channels(
     page: int = Query(1, ge=1, description="Page number"),
@@ -63,7 +57,7 @@ async def get_channels(
     type: Optional[ChannelType] = Query(None, description="Filter by channel type"),
     isActive: Optional[bool] = Query(None, description="Filter by active status"),
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
-    service: ChannelService = Depends()
+    service: ChannelService = Depends(),
 ):
     """
     Get all marketing channels with pagination
@@ -80,11 +74,8 @@ async def get_channels(
     return PaginatedResponse(
         data=channels,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
@@ -92,12 +83,12 @@ async def get_channels(
     "/{channel_id}",
     response_model=SuccessResponse[Channel],
     summary="Get channel by ID",
-    description="Get a specific channel by ID. Requires marketing.view permission."
+    description="Get a specific channel by ID. Requires marketing.view permission.",
 )
 async def get_channel(
     channel_id: UUID,
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
-    service: ChannelService = Depends()
+    service: ChannelService = Depends(),
 ):
     """
     Get channel by ID
@@ -113,13 +104,13 @@ async def get_channel(
     "/{channel_id}",
     response_model=SuccessResponse[Channel],
     summary="Update channel",
-    description="Update a channel. Requires marketing.edit permission."
+    description="Update a channel. Requires marketing.edit permission.",
 )
 async def update_channel(
     channel_id: UUID,
     update_data: ChannelUpdate,
     current_user: CurrentUser = Depends(require_permission("marketing.edit")),
-    service: ChannelService = Depends()
+    service: ChannelService = Depends(),
 ):
     """
     Update a channel
@@ -127,27 +118,21 @@ async def update_channel(
     - **channel_id**: Channel UUID
     - All fields are optional (partial update)
     """
-    channel = await service.update_channel(
-        channel_id,
-        update_data
-    )
+    channel = await service.update_channel(channel_id, update_data)
 
-    return SuccessResponse(
-        data=channel,
-        message="Channel updated successfully"
-    )
+    return SuccessResponse(data=channel, message="Channel updated successfully")
 
 
 @router.delete(
     "/{channel_id}",
     response_model=SuccessResponse[dict],
     summary="Delete channel",
-    description="Delete a channel. Requires marketing.delete permission."
+    description="Delete a channel. Requires marketing.delete permission.",
 )
 async def delete_channel(
     channel_id: UUID,
     current_user: CurrentUser = Depends(require_permission("marketing.delete")),
-    service: ChannelService = Depends()
+    service: ChannelService = Depends(),
 ):
     """
     Delete a channel
@@ -156,7 +141,4 @@ async def delete_channel(
     """
     result = await service.delete_channel(channel_id)
 
-    return SuccessResponse(
-        data=result,
-        message="Channel deleted successfully"
-    )
+    return SuccessResponse(data=result, message="Channel deleted successfully")

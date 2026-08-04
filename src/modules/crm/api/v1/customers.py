@@ -9,7 +9,13 @@ from typing import Optional, List
 from uuid import UUID
 import logging
 
-from ...models.customer import Customer, CustomerCreate, CustomerUpdate, CustomerStatus, CustomerType
+from ...models.customer import (
+    Customer,
+    CustomerCreate,
+    CustomerUpdate,
+    CustomerStatus,
+    CustomerType,
+)
 from ...services.customer import CustomerService
 from ...middleware.auth import get_current_active_user, require_permission, CurrentUser
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
@@ -24,12 +30,12 @@ router = APIRouter()
     response_model=SuccessResponse[Customer],
     status_code=status.HTTP_201_CREATED,
     summary="Create a new customer",
-    description="Create a new customer. Requires crm.create permission."
+    description="Create a new customer. Requires crm.create permission.",
 )
 async def create_customer(
     customer_data: CustomerCreate,
     current_user: CurrentUser = Depends(require_permission("crm.create")),
-    service: CustomerService = Depends()
+    service: CustomerService = Depends(),
 ):
     """
     Create a new customer
@@ -44,31 +50,29 @@ async def create_customer(
     - **notes**: Additional notes (optional)
     - **tags**: Tags for categorization (optional)
     """
-    customer = await service.create_customer(
-        customer_data,
-        UUID(current_user.userId)
-    )
+    customer = await service.create_customer(customer_data, UUID(current_user.userId))
 
-    return SuccessResponse(
-        data=customer,
-        message="Customer created successfully"
-    )
+    return SuccessResponse(data=customer, message="Customer created successfully")
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[Customer],
     summary="Get all customers",
-    description="Get all customers with pagination and filters. Requires crm.view permission."
+    description="Get all customers with pagination and filters. Requires crm.view permission.",
 )
 async def get_customers(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    search: Optional[str] = Query(None, max_length=500, description="Search by name, email, or company"),
-    status: Optional[CustomerStatus] = Query(None, description="Filter by customer status"),
+    search: Optional[str] = Query(
+        None, max_length=500, description="Search by name, email, or company"
+    ),
+    status: Optional[CustomerStatus] = Query(
+        None, description="Filter by customer status"
+    ),
     type: Optional[CustomerType] = Query(None, description="Filter by customer type"),
     current_user: CurrentUser = Depends(require_permission("crm.view")),
-    service: CustomerService = Depends()
+    service: CustomerService = Depends(),
 ):
     """
     Get all customers with pagination
@@ -94,11 +98,8 @@ async def get_customers(
     return PaginatedResponse(
         data=customers,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
@@ -106,14 +107,14 @@ async def get_customers(
     "/search",
     response_model=PaginatedResponse[Customer],
     summary="Search customers",
-    description="Search customers by name, email, or company. Requires crm.view permission."
+    description="Search customers by name, email, or company. Requires crm.view permission.",
 )
 async def search_customers(
     q: str = Query(..., min_length=1, max_length=500, description="Search term"),
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: CurrentUser = Depends(require_permission("crm.view")),
-    service: CustomerService = Depends()
+    service: CustomerService = Depends(),
 ):
     """
     Search customers by name, email, or company
@@ -122,18 +123,13 @@ async def search_customers(
     - **page**: Page number (default: 1)
     - **perPage**: Items per page (default: 20, max: 100)
     """
-    customers, total, total_pages = await service.search_customers(
-        q, page, perPage
-    )
+    customers, total, total_pages = await service.search_customers(q, page, perPage)
 
     return PaginatedResponse(
         data=customers,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
@@ -141,12 +137,12 @@ async def search_customers(
     "/{customer_id}",
     response_model=SuccessResponse[Customer],
     summary="Get customer by ID",
-    description="Get a specific customer by ID. Requires crm.view permission."
+    description="Get a specific customer by ID. Requires crm.view permission.",
 )
 async def get_customer(
     customer_id: UUID,
     current_user: CurrentUser = Depends(require_permission("crm.view")),
-    service: CustomerService = Depends()
+    service: CustomerService = Depends(),
 ):
     """
     Get customer by ID
@@ -162,13 +158,13 @@ async def get_customer(
     "/{customer_id}",
     response_model=SuccessResponse[Customer],
     summary="Update customer",
-    description="Update a customer. Requires crm.edit permission."
+    description="Update a customer. Requires crm.edit permission.",
 )
 async def update_customer(
     customer_id: UUID,
     update_data: CustomerUpdate,
     current_user: CurrentUser = Depends(require_permission("crm.edit")),
-    service: CustomerService = Depends()
+    service: CustomerService = Depends(),
 ):
     """
     Update a customer
@@ -176,27 +172,21 @@ async def update_customer(
     - **customer_id**: Customer UUID
     - All fields are optional (partial update)
     """
-    customer = await service.update_customer(
-        customer_id,
-        update_data
-    )
+    customer = await service.update_customer(customer_id, update_data)
 
-    return SuccessResponse(
-        data=customer,
-        message="Customer updated successfully"
-    )
+    return SuccessResponse(data=customer, message="Customer updated successfully")
 
 
 @router.delete(
     "/{customer_id}",
     response_model=SuccessResponse[dict],
     summary="Delete customer",
-    description="Delete a customer. Requires crm.delete permission."
+    description="Delete a customer. Requires crm.delete permission.",
 )
 async def delete_customer(
     customer_id: UUID,
     current_user: CurrentUser = Depends(require_permission("crm.delete")),
-    service: CustomerService = Depends()
+    service: CustomerService = Depends(),
 ):
     """
     Delete a customer
@@ -205,7 +195,4 @@ async def delete_customer(
     """
     result = await service.delete_customer(customer_id)
 
-    return SuccessResponse(
-        data=result,
-        message="Customer deleted successfully"
-    )
+    return SuccessResponse(data=result, message="Customer deleted successfully")

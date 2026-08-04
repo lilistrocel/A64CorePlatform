@@ -211,7 +211,9 @@ async def _build_line_doc(
     }
 
 
-def _build_totals(lines: List[Dict[str, Any]], consumed_amount: Decimal = _ZERO) -> Dict[str, Any]:
+def _build_totals(
+    lines: List[Dict[str, Any]], consumed_amount: Decimal = _ZERO
+) -> Dict[str, Any]:
     """
     Aggregate totals from embedded DPI line documents.
 
@@ -232,7 +234,9 @@ def _build_totals(lines: List[Dict[str, Any]], consumed_amount: Decimal = _ZERO)
         "net": float(total_net.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)),
         "tax": float(total_tax.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)),
         "gross": float(total_gross),
-        "consumedAmount": float(consumed_amount.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)),
+        "consumedAmount": float(
+            consumed_amount.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+        ),
         "outstandingAmount": float(outstanding),
     }
 
@@ -279,7 +283,9 @@ def _raw_line_to_response(ln: Dict[str, Any]) -> APDownPaymentLine:
     )
 
 
-def _raw_totals_to_model(raw: Dict[str, Any], consumed_amount: Decimal = _ZERO) -> APDownPaymentTotals:
+def _raw_totals_to_model(
+    raw: Dict[str, Any], consumed_amount: Decimal = _ZERO
+) -> APDownPaymentTotals:
     """
     Convert raw MongoDB totals dict + consumedAmount to APDownPaymentTotals.
 
@@ -291,7 +297,9 @@ def _raw_totals_to_model(raw: Dict[str, Any], consumed_amount: Decimal = _ZERO) 
         APDownPaymentTotals with outstanding_amount computed.
     """
     gross = Decimal(str(raw.get("gross", 0)))
-    outstanding = max(gross - consumed_amount, _ZERO).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+    outstanding = max(gross - consumed_amount, _ZERO).quantize(
+        _TWOPLACES, rounding=ROUND_HALF_UP
+    )
     return APDownPaymentTotals(
         net=Decimal(str(raw.get("net", 0))),
         tax=Decimal(str(raw.get("tax", 0))),
@@ -381,7 +389,9 @@ async def _write_audit(
     )
 
 
-def _build_outbox_payload(dpi_raw: Dict[str, Any], *, event_type: str) -> Dict[str, Any]:
+def _build_outbox_payload(
+    dpi_raw: Dict[str, Any], *, event_type: str
+) -> Dict[str, Any]:
     """
     Build the ap_down_payment_posted outbox payload.
 
@@ -406,19 +416,21 @@ def _build_outbox_payload(dpi_raw: Dict[str, Any], *, event_type: str) -> Dict[s
 
     lines_payload = []
     for ln in sorted(dpi_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)):
-        lines_payload.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln.get("itemId"),
-            "itemCode": ln.get("itemCode", ""),
-            "quantity": str(ln.get("quantity", 0)),
-            "unitPrice": str(ln.get("unitPrice", 0)),
-            "lineNet": str(ln.get("lineNet", 0)),
-            "taxCode": ln.get("taxCode"),
-            "taxRate": str(ln.get("taxRate", 0)),
-            "lineTax": str(ln.get("lineTax", 0)),
-            "lineGross": str(ln.get("lineGross", 0)),
-            "costCenterId": ln.get("costCenterId"),
-        })
+        lines_payload.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln.get("itemId"),
+                "itemCode": ln.get("itemCode", ""),
+                "quantity": str(ln.get("quantity", 0)),
+                "unitPrice": str(ln.get("unitPrice", 0)),
+                "lineNet": str(ln.get("lineNet", 0)),
+                "taxCode": ln.get("taxCode"),
+                "taxRate": str(ln.get("taxRate", 0)),
+                "lineTax": str(ln.get("lineTax", 0)),
+                "lineGross": str(ln.get("lineGross", 0)),
+                "costCenterId": ln.get("costCenterId"),
+            }
+        )
 
     totals = dpi_raw.get("totals", {})
 
@@ -477,7 +489,9 @@ async def create_ap_down_payment(
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
         computed_lines.append(
-            await _build_line_doc(line, line_number=i, org_id=org_id, auth_token=auth_token)
+            await _build_line_doc(
+                line, line_number=i, org_id=org_id, auth_token=auth_token
+            )
         )
 
     totals = _build_totals(computed_lines, consumed_amount=_ZERO)
@@ -694,7 +708,9 @@ async def update_ap_down_payment(
         "docDate": payload.doc_date,
         "dueDate": payload.due_date,
         "currency": payload.currency,
-        "exchangeRate": float(payload.exchange_rate) if payload.exchange_rate is not None else None,
+        "exchangeRate": (
+            float(payload.exchange_rate) if payload.exchange_rate is not None else None
+        ),
         "paymentTermsId": payload.payment_terms_id,
         "journalMemo": payload.journal_memo,
         "notes": payload.notes,
@@ -723,7 +739,9 @@ async def update_ap_down_payment(
         detail={"updatedFields": list(updates.keys())},
     )
 
-    updated_raw = await db[_DPI_COL].find_one({"docId": doc_id, "organizationId": org_id})
+    updated_raw = await db[_DPI_COL].find_one(
+        {"docId": doc_id, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)
@@ -849,7 +867,9 @@ async def transition_status(
         emitted_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             emitted_event_id = await OutboxWriter.publish(
                 db=db,
@@ -935,7 +955,9 @@ async def transition_status(
         )
 
     # Reload and return the updated DPI.
-    updated_raw = await db[_DPI_COL].find_one({"docId": doc_id, "organizationId": org_id})
+    updated_raw = await db[_DPI_COL].find_one(
+        {"docId": doc_id, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)

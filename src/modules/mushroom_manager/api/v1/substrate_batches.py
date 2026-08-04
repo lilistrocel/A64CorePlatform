@@ -7,7 +7,11 @@ CRUD endpoints for substrate batches within a facility.
 import logging
 from fastapi import APIRouter, Depends, Query, status
 
-from ...models.substrate import SubstrateBatch, SubstrateBatchCreate, SubstrateBatchUpdate
+from ...models.substrate import (
+    SubstrateBatch,
+    SubstrateBatchCreate,
+    SubstrateBatchUpdate,
+)
 from ...services.substrate.substrate_service import SubstrateService
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 
@@ -25,6 +29,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # POST /facilities/{facility_id}/substrates
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/facilities/{facility_id}/substrates",
@@ -48,6 +53,7 @@ async def create_batch(
 # ---------------------------------------------------------------------------
 # GET /facilities/{facility_id}/substrates
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/facilities/{facility_id}/substrates",
@@ -87,6 +93,7 @@ async def list_batches(
 # GET /substrates/{batch_id}
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/substrates/{batch_id}",
     response_model=SuccessResponse[SubstrateBatch],
@@ -107,6 +114,7 @@ async def get_batch(
 # ---------------------------------------------------------------------------
 # PATCH /substrates/{batch_id}
 # ---------------------------------------------------------------------------
+
 
 @router.patch(
     "/substrates/{batch_id}",

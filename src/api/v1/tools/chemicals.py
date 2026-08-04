@@ -23,7 +23,9 @@ from src.modules.farm_manager.models.tools.fertilizer_chemical import (
     ChemicalCreate,
     ChemicalUpdate,
 )
-from src.modules.farm_manager.services.tools.chemicals_repository import ChemicalsRepository
+from src.modules.farm_manager.services.tools.chemicals_repository import (
+    ChemicalsRepository,
+)
 from src.modules.farm_manager.services.tools.chemicals_service import ChemicalsService
 from src.modules.farm_manager.utils.responses import SuccessResponse
 
@@ -55,7 +57,9 @@ async def list_chemicals(
     """
     org_id = _require_org(current_user)
     chemicals = await ChemicalsRepository.list_all(org_id, include_archived=archived)
-    return SuccessResponse(data=chemicals, message=f"{len(chemicals)} chemical(s) found")
+    return SuccessResponse(
+        data=chemicals, message=f"{len(chemicals)} chemical(s) found"
+    )
 
 
 @router.post(
@@ -227,6 +231,7 @@ async def discover_chemicals(
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _require_org(user: CurrentUser) -> UUID:
     """

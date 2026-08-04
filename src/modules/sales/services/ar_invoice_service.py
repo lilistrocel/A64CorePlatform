@@ -458,10 +458,9 @@ async def _build_line_doc(
     if _preloaded_finance_ext is not None:
         # Reason: caller already fetched finance ext (e.g. for isStock gating);
         # extract revenueAccountId directly to avoid a second HTTP round-trip.
-        rev_account = (
-            _preloaded_finance_ext.get("revenueAccountId")
-            or _preloaded_finance_ext.get("revenue_account_id")
-        )
+        rev_account = _preloaded_finance_ext.get(
+            "revenueAccountId"
+        ) or _preloaded_finance_ext.get("revenue_account_id")
         if not rev_account:
             raise ValueError(
                 f"Item '{item_id}' has a sale_item_finance_ext record but "
@@ -764,23 +763,27 @@ def _build_outbox_payload(
     raw_totals = invoice_raw.get("totals", {})
 
     lines_payload = []
-    for ln in sorted(invoice_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)):
+    for ln in sorted(
+        invoice_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)
+    ):
         base_ref = ln.get("baseDocRef") or {}
-        lines_payload.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln["itemId"],
-            "itemCode": ln.get("itemCode", ""),
-            "quantity": str(ln.get("quantity", 0)),
-            "unitPrice": str(ln.get("unitPrice", 0)),
-            "lineNet": str(ln.get("lineNet", 0)),
-            "taxCodeId": ln.get("taxCodeId"),
-            "taxPercent": str(ln.get("taxPercent", 0)),
-            "lineTax": str(ln.get("lineTax", 0)),
-            "lineGross": str(ln.get("lineGross", 0)),
-            "revenueAccountId": ln.get("revenueAccountId", ""),
-            "costCenterId": ln.get("costCenterId"),
-            "sourceDeliveryLineRef": base_ref if base_ref else None,
-        })
+        lines_payload.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln["itemId"],
+                "itemCode": ln.get("itemCode", ""),
+                "quantity": str(ln.get("quantity", 0)),
+                "unitPrice": str(ln.get("unitPrice", 0)),
+                "lineNet": str(ln.get("lineNet", 0)),
+                "taxCodeId": ln.get("taxCodeId"),
+                "taxPercent": str(ln.get("taxPercent", 0)),
+                "lineTax": str(ln.get("lineTax", 0)),
+                "lineGross": str(ln.get("lineGross", 0)),
+                "revenueAccountId": ln.get("revenueAccountId", ""),
+                "costCenterId": ln.get("costCenterId"),
+                "sourceDeliveryLineRef": base_ref if base_ref else None,
+            }
+        )
 
     base_ref = invoice_raw.get("baseDocRef") or {}
 
@@ -1110,11 +1113,21 @@ async def create_ar_invoice_from_delivery(
     # date_of_supply defaults to Delivery actual_delivery_date if not overridden.
     dn_delivery_date = dn_raw.get("actualDeliveryDate") or dn_raw.get("docDate")
     effective_date_of_supply: date = payload.date_of_supply or (
-        dn_delivery_date if isinstance(dn_delivery_date, (date, datetime)) else payload.doc_date
+        dn_delivery_date
+        if isinstance(dn_delivery_date, (date, datetime))
+        else payload.doc_date
     )
 
     tax_date = _compute_tax_date(
-        effective_date_of_supply if isinstance(effective_date_of_supply, date) else effective_date_of_supply.date() if hasattr(effective_date_of_supply, "date") else payload.doc_date,
+        (
+            effective_date_of_supply
+            if isinstance(effective_date_of_supply, date)
+            else (
+                effective_date_of_supply.date()
+                if hasattr(effective_date_of_supply, "date")
+                else payload.doc_date
+            )
+        ),
         payload.invoice_date,
     )
     terms_days = await _get_payment_terms_days(db, payload.payment_terms_id, org_id)
@@ -1374,7 +1387,9 @@ async def create_ar_invoice_from_delivery(
                 extra_detail={
                     "triggeredByAriDocEntry": doc_entry,
                     "triggeredByAriDocNumber": doc_number,
-                    "soLineDeltas": {k: float(v) for k, v in so_line_deltas_create.items()},
+                    "soLineDeltas": {
+                        k: float(v) for k, v in so_line_deltas_create.items()
+                    },
                 },
             )
 
@@ -1497,9 +1512,7 @@ async def create_ar_invoice_from_so(
             )
 
         # Fetch finance ext for isStock check + revenueAccountId pre-load.
-        ext = await _get_item_finance_ext(
-            so_line["itemId"], org_id, auth_token
-        )
+        ext = await _get_item_finance_ext(so_line["itemId"], org_id, auth_token)
 
         # Reason: stock lines must flow through a Delivery Note so that the
         # delivery_posted COGS JE fires before revenue is recognised.  Invoicing
@@ -1752,9 +1765,7 @@ async def get_ar_invoice(
     Returns:
         ARInvoiceResponse if found, None otherwise.
     """
-    raw = await db[_ARI_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARI_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
     raw.pop("_id", None)
@@ -1812,11 +1823,7 @@ async def list_ar_invoices(
     skip = (page - 1) * size
 
     cursor = (
-        db[_ARI_COL]
-        .find(query, projection)
-        .sort("docDate", -1)
-        .skip(skip)
-        .limit(size)
+        db[_ARI_COL].find(query, projection).sort("docDate", -1).skip(skip).limit(size)
     )
     raw_docs = await cursor.to_list(length=size)
 
@@ -1858,9 +1865,7 @@ async def update_ar_invoice(
     Raises:
         ValueError: If the invoice status is not DRAFT.
     """
-    raw = await db[_ARI_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARI_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -1881,8 +1886,14 @@ async def update_ar_invoice(
         # Reason: date fields are converted via _to_dt to datetime.datetime before
         # writing — PyMongo cannot encode bare datetime.date objects.
         "docDate": _to_dt(payload.doc_date) if payload.doc_date is not None else None,
-        "dateOfSupply": _to_dt(payload.date_of_supply) if payload.date_of_supply is not None else None,
-        "invoiceDate": _to_dt(payload.invoice_date) if payload.invoice_date is not None else None,
+        "dateOfSupply": (
+            _to_dt(payload.date_of_supply)
+            if payload.date_of_supply is not None
+            else None
+        ),
+        "invoiceDate": (
+            _to_dt(payload.invoice_date) if payload.invoice_date is not None else None
+        ),
         "paymentTermsId": payload.payment_terms_id,
         "currency": payload.currency,
         "exchangeRate": float(payload.exchange_rate) if payload.exchange_rate else None,
@@ -1938,7 +1949,9 @@ async def update_ar_invoice(
         # and from-SO invoices were validated at create time and must not be re-gated.
         # Discrimination: baseDocRef.docType distinguishes DN from SO.
         _update_base_ref = raw.get("baseDocRef") or {}
-        _update_base_doc_id = _update_base_ref.get("docId") or _update_base_ref.get("doc_id")
+        _update_base_doc_id = _update_base_ref.get("docId") or _update_base_ref.get(
+            "doc_id"
+        )
         _update_base_doc_type = (
             _update_base_ref.get("docType") or _update_base_ref.get("doc_type") or ""
         ).upper()
@@ -2014,7 +2027,9 @@ async def update_ar_invoice(
                 old_base = old_ln.get("baseDocRef") or {}
                 dn_lid = old_base.get("lineId") or old_base.get("line_id")
                 if dn_lid:
-                    old_qty = Decimal(str(old_ln.get("invoicedQty", old_ln.get("quantity", 0))))
+                    old_qty = Decimal(
+                        str(old_ln.get("invoicedQty", old_ln.get("quantity", 0)))
+                    )
                     old_totals[dn_lid] = old_totals.get(dn_lid, _ZERO) + old_qty
 
             # Build new-line totals: dn_line_id → sum of new qty.
@@ -2149,9 +2164,9 @@ async def update_ar_invoice(
             )
             if dn_for_so_map is not None:
                 dn_parent_ref = dn_for_so_map.get("baseDocRef") or {}
-                _so_doc_entry_from_dn_for_update = (
-                    dn_parent_ref.get("docId") or dn_parent_ref.get("doc_id")
-                )
+                _so_doc_entry_from_dn_for_update = dn_parent_ref.get(
+                    "docId"
+                ) or dn_parent_ref.get("doc_id")
                 if _so_doc_entry_from_dn_for_update and raw_deltas:
                     # Build dn_line_id → so_line_id map from the DN's embedded lines.
                     dn_line_to_so_line: Dict[str, str] = {}
@@ -2189,8 +2204,8 @@ async def update_ar_invoice(
                         for old_ln in raw.get("lines", []):
                             ari_lid = old_ln.get("lineId")
                             old_base_dn = old_ln.get("baseDocRef") or {}
-                            dn_lid_old = (
-                                old_base_dn.get("lineId") or old_base_dn.get("line_id")
+                            dn_lid_old = old_base_dn.get("lineId") or old_base_dn.get(
+                                "line_id"
                             )
                             if ari_lid and dn_lid_old:
                                 so_lid_mapped = dn_line_to_so_line.get(dn_lid_old)
@@ -2206,7 +2221,9 @@ async def update_ar_invoice(
                                     "lines.lineId": so_lid_old,
                                 },
                                 {
-                                    "$pull": {"lines.$.targetDocRefs": {"docId": doc_entry}},
+                                    "$pull": {
+                                        "lines.$.targetDocRefs": {"docId": doc_entry}
+                                    },
                                 },
                             )
 
@@ -2214,9 +2231,9 @@ async def update_ar_invoice(
                         new_doc_number_so_dn = raw.get("docNumber")
                         for new_ln in new_lines:
                             new_base_dn = new_ln.get("baseDocRef") or {}
-                            dn_lid_for_new = (
-                                new_base_dn.get("lineId") or new_base_dn.get("line_id")
-                            )
+                            dn_lid_for_new = new_base_dn.get(
+                                "lineId"
+                            ) or new_base_dn.get("line_id")
                             new_ari_line_id = new_ln.get("lineId")
                             if dn_lid_for_new and new_ari_line_id:
                                 so_lid_new = dn_line_to_so_line.get(dn_lid_for_new)
@@ -2255,7 +2272,9 @@ async def update_ar_invoice(
                 old_base = old_ln.get("baseDocRef") or {}
                 so_lid = old_base.get("lineId") or old_base.get("line_id")
                 if so_lid:
-                    old_qty = Decimal(str(old_ln.get("invoicedQty", old_ln.get("quantity", 0))))
+                    old_qty = Decimal(
+                        str(old_ln.get("invoicedQty", old_ln.get("quantity", 0)))
+                    )
                     old_so_totals[so_lid] = old_so_totals.get(so_lid, _ZERO) + old_qty
 
             # Build new SO-line totals: so_line_id → sum of new qty.
@@ -2447,7 +2466,9 @@ async def update_ar_invoice(
                 "triggeredByAriDocEntry": doc_entry,
                 "triggeredByAriDocNumber": raw.get("docNumber"),
                 "trigger": "invoice_edit",
-                "soLineDeltas": {k: float(v) for k, v in _so_line_deltas_from_dn.items()},
+                "soLineDeltas": {
+                    k: float(v) for k, v in _so_line_deltas_from_dn.items()
+                },
             },
         )
         await _auto_reopen_if_not_fully_invoiced(
@@ -2462,7 +2483,9 @@ async def update_ar_invoice(
                 "triggeredByAriDocEntry": doc_entry,
                 "triggeredByAriDocNumber": raw.get("docNumber"),
                 "trigger": "invoice_edit",
-                "soLineDeltas": {k: float(v) for k, v in _so_line_deltas_from_dn.items()},
+                "soLineDeltas": {
+                    k: float(v) for k, v in _so_line_deltas_from_dn.items()
+                },
             },
         )
 
@@ -2476,7 +2499,9 @@ async def update_ar_invoice(
             audit_detail["dnLineDeltas"] = _dn_line_deltas
     if _so_line_deltas_from_dn:
         # Reason: from-Delivery ARI update also touched SO lines; record separately.
-        audit_detail["soLineDeltas"] = {k: float(v) for k, v in _so_line_deltas_from_dn.items()}
+        audit_detail["soLineDeltas"] = {
+            k: float(v) for k, v in _so_line_deltas_from_dn.items()
+        }
 
     await _write_audit(
         db,
@@ -2521,9 +2546,7 @@ async def delete_ar_invoice(
     Raises:
         ValueError: If the invoice status is not DRAFT.
     """
-    raw = await db[_ARI_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARI_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return False
 
@@ -2543,8 +2566,12 @@ async def delete_ar_invoice(
     _delete_base_doc_type = (
         base_ref.get("docType") or base_ref.get("doc_type") or ""
     ).upper()
-    delivery_doc_entry = _delete_base_doc_id if _delete_base_doc_type == "DELIVERY" else None
-    so_doc_entry_for_delete = _delete_base_doc_id if _delete_base_doc_type == "SO" else None
+    delivery_doc_entry = (
+        _delete_base_doc_id if _delete_base_doc_type == "DELIVERY" else None
+    )
+    so_doc_entry_for_delete = (
+        _delete_base_doc_id if _delete_base_doc_type == "SO" else None
+    )
 
     _decremented_any_dn_line = False
     if delivery_doc_entry:
@@ -2553,7 +2580,9 @@ async def delete_ar_invoice(
             line_base_ref = ln.get("baseDocRef") or {}
             dn_line_id = line_base_ref.get("lineId") or line_base_ref.get("line_id")
             if dn_line_id:
-                release_qty = float(Decimal(str(ln.get("invoicedQty", ln.get("quantity", 0)))))
+                release_qty = float(
+                    Decimal(str(ln.get("invoicedQty", ln.get("quantity", 0))))
+                )
                 await db[_DN_COL].update_one(
                     {
                         "docEntry": delivery_doc_entry,
@@ -2591,7 +2620,8 @@ async def delete_ar_invoice(
         # T-201.7 fix: clean dangling targetDocRefs on the Delivery so the
         # Document Chain card does not surface a 404-dead link after delete.
         dn_line_ids_to_clean = [
-            (ln.get("baseDocRef") or {}).get("lineId") or (ln.get("baseDocRef") or {}).get("line_id")
+            (ln.get("baseDocRef") or {}).get("lineId")
+            or (ln.get("baseDocRef") or {}).get("line_id")
             for ln in raw.get("lines", [])
         ]
         await _pull_dangling_chain_refs(
@@ -2612,9 +2642,9 @@ async def delete_ar_invoice(
         )
         if dn_for_delete_so is not None:
             dn_del_base_ref = dn_for_delete_so.get("baseDocRef") or {}
-            so_doc_entry_from_dn_delete = (
-                dn_del_base_ref.get("docId") or dn_del_base_ref.get("doc_id")
-            )
+            so_doc_entry_from_dn_delete = dn_del_base_ref.get(
+                "docId"
+            ) or dn_del_base_ref.get("doc_id")
             if so_doc_entry_from_dn_delete:
                 # Build dn_line_id → so_line_id map from DN embedded lines.
                 dn_del_line_to_so: Dict[str, str] = {}
@@ -2653,7 +2683,10 @@ async def delete_ar_invoice(
                     )
 
                     so_reloaded_del = await db[_SO_COL].find_one(
-                        {"docEntry": so_doc_entry_from_dn_delete, "organizationId": org_id}
+                        {
+                            "docEntry": so_doc_entry_from_dn_delete,
+                            "organizationId": org_id,
+                        }
                     )
                     await _auto_reopen_if_not_fully_invoiced(
                         db,
@@ -2691,7 +2724,9 @@ async def delete_ar_invoice(
             line_base_ref = ln.get("baseDocRef") or {}
             so_line_id = line_base_ref.get("lineId") or line_base_ref.get("line_id")
             if so_line_id:
-                release_qty = float(Decimal(str(ln.get("invoicedQty", ln.get("quantity", 0)))))
+                release_qty = float(
+                    Decimal(str(ln.get("invoicedQty", ln.get("quantity", 0))))
+                )
                 await db[_SO_COL].update_one(
                     {
                         "docEntry": so_doc_entry_for_delete,
@@ -2747,9 +2782,7 @@ async def delete_ar_invoice(
         detail={"docNumber": raw.get("docNumber")},
     )
 
-    await db[_ARI_COL].delete_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    await db[_ARI_COL].delete_one({"docEntry": doc_entry, "organizationId": org_id})
     return True
 
 
@@ -2802,9 +2835,7 @@ async def transition_status(
     Raises:
         ValueError: If the transition is illegal or validation fails.
     """
-    raw = await db[_ARI_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_ARI_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -2815,8 +2846,7 @@ async def transition_status(
     # It is allowed as a super_admin override but not via the standard transition table.
     # Reason: cancelling a posted AR Invoice is exceptional; it must be explicit.
     is_open_to_cancelled = (
-        current_status == DocumentStatus.OPEN
-        and new_status == DocumentStatus.CANCELLED
+        current_status == DocumentStatus.OPEN and new_status == DocumentStatus.CANCELLED
     )
 
     if not is_open_to_cancelled:
@@ -2846,7 +2876,8 @@ async def transition_status(
                 ext_record = None
 
             if ext_record is None or not (
-                ext_record.get("revenueAccountId") or ext_record.get("revenue_account_id")
+                ext_record.get("revenueAccountId")
+                or ext_record.get("revenue_account_id")
             ):
                 raise ValueError(
                     f"Cannot post AR Invoice '{doc_entry}': item '{item_id}' no longer "
@@ -2902,7 +2933,9 @@ async def transition_status(
         emitted_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             emitted_event_id = await OutboxWriter.publish(
                 db=db,
@@ -2956,12 +2989,16 @@ async def transition_status(
         # Step 1: Emit sales_invoice_cancelled event.
         original_event_id = raw.get("outboxEventId")
         cancel_payload = _build_outbox_payload(
-            raw, event_type="sales_invoice_cancelled", original_event_id=original_event_id
+            raw,
+            event_type="sales_invoice_cancelled",
+            original_event_id=original_event_id,
         )
         cancelled_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             cancelled_event_id = await OutboxWriter.publish(
                 db=db,
@@ -3040,16 +3077,17 @@ async def transition_status(
             # Load the DN (already fetched as dn_reloaded_cancel if decremented,
             # else fetch now) to get the DN's parent SO and build the release deltas.
             dn_for_cancel_so = (
-                dn_reloaded_cancel if _cancel_decremented_any
+                dn_reloaded_cancel
+                if _cancel_decremented_any
                 else await db[_DN_COL].find_one(
                     {"docEntry": delivery_doc_entry, "organizationId": org_id}
                 )
             )
             if dn_for_cancel_so is not None:
                 dn_cancel_base = dn_for_cancel_so.get("baseDocRef") or {}
-                so_doc_entry_from_dn_cancel = (
-                    dn_cancel_base.get("docId") or dn_cancel_base.get("doc_id")
-                )
+                so_doc_entry_from_dn_cancel = dn_cancel_base.get(
+                    "docId"
+                ) or dn_cancel_base.get("doc_id")
                 if so_doc_entry_from_dn_cancel:
                     # Build dn_line_id → so_line_id map from DN embedded lines.
                     dn_cancel_line_to_so: Dict[str, str] = {}
@@ -3071,7 +3109,8 @@ async def transition_status(
                                     str(ln.get("invoicedQty", ln.get("quantity", 0)))
                                 )
                                 so_cancel_line_deltas[so_lid] = (
-                                    so_cancel_line_deltas.get(so_lid, _ZERO) - release_qty
+                                    so_cancel_line_deltas.get(so_lid, _ZERO)
+                                    - release_qty
                                 )
 
                     if so_cancel_line_deltas:
@@ -3088,7 +3127,10 @@ async def transition_status(
                         )
 
                         so_reloaded_cancel_so = await db[_SO_COL].find_one(
-                            {"docEntry": so_doc_entry_from_dn_cancel, "organizationId": org_id}
+                            {
+                                "docEntry": so_doc_entry_from_dn_cancel,
+                                "organizationId": org_id,
+                            }
                         )
                         await _auto_reopen_if_not_fully_invoiced(
                             db,
@@ -3166,7 +3208,9 @@ async def transition_status(
                 "from": current_status.value,
                 "to": new_status.value,
                 "reason": request_body.reason,
-                "cancelledOutboxEventId": str(cancelled_event_id) if cancelled_event_id else None,
+                "cancelledOutboxEventId": (
+                    str(cancelled_event_id) if cancelled_event_id else None
+                ),
                 "originalOutboxEventId": original_event_id,
             },
         )

@@ -10,7 +10,14 @@ from uuid import UUID, uuid4
 from datetime import datetime
 import logging
 
-from src.modules.logistics.models.vehicle import Vehicle, VehicleCreate, VehicleUpdate, VehicleStatus, VehicleType, VehicleOwnership
+from src.modules.logistics.models.vehicle import (
+    Vehicle,
+    VehicleCreate,
+    VehicleUpdate,
+    VehicleStatus,
+    VehicleType,
+    VehicleOwnership,
+)
 from src.modules.logistics.services.database import logistics_db
 
 logger = logging.getLogger(__name__)
@@ -66,13 +73,17 @@ class VehicleRepository:
         if normalized.get("capacity") is None:
             normalized["capacity"] = {
                 "weight": 1000.0,  # Default 1000 kg
-                "volume": 10.0,   # Default 10 m3
-                "unit": "kg/m3"
+                "volume": 10.0,  # Default 10 m3
+                "unit": "kg/m3",
             }
 
         # Map isActive to status
         if "status" not in normalized and "isActive" in normalized:
-            normalized["status"] = VehicleStatus.AVAILABLE.value if normalized.get("isActive") else VehicleStatus.RETIRED.value
+            normalized["status"] = (
+                VehicleStatus.AVAILABLE.value
+                if normalized.get("isActive")
+                else VehicleStatus.RETIRED.value
+            )
 
         # Provide default status if missing
         if "status" not in normalized:
@@ -104,11 +115,9 @@ class VehicleRepository:
         # Find the highest existing vehicle code number
         pipeline = [
             {"$match": {"vehicleCode": {"$regex": "^V\\d+"}}},
-            {"$project": {
-                "codeNum": {"$toInt": {"$substr": ["$vehicleCode", 1, -1]}}
-            }},
+            {"$project": {"codeNum": {"$toInt": {"$substr": ["$vehicleCode", 1, -1]}}}},
             {"$sort": {"codeNum": -1}},
-            {"$limit": 1}
+            {"$limit": 1},
         ]
         cursor = collection.aggregate(pipeline)
         max_existing = 0
@@ -124,7 +133,7 @@ class VehicleRepository:
             await db.counters.update_one(
                 {"_id": "vehicle_sequence"},
                 {"$set": {"value": max_existing}},
-                upsert=True
+                upsert=True,
             )
 
         # Now atomically increment
@@ -132,7 +141,7 @@ class VehicleRepository:
             {"_id": "vehicle_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
@@ -160,18 +169,24 @@ class VehicleRepository:
             vehicleCode=vehicle_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         vehicle_doc = vehicle.model_dump(by_alias=True)
-        vehicle_doc["vehicleId"] = str(vehicle_doc["vehicleId"])  # Convert UUID to string for MongoDB
+        vehicle_doc["vehicleId"] = str(
+            vehicle_doc["vehicleId"]
+        )  # Convert UUID to string for MongoDB
         vehicle_doc["createdBy"] = str(vehicle_doc["createdBy"])
 
         # Convert date to datetime for MongoDB
         if "purchaseDate" in vehicle_doc and vehicle_doc["purchaseDate"]:
-            vehicle_doc["purchaseDate"] = datetime.combine(vehicle_doc["purchaseDate"], datetime.min.time())
+            vehicle_doc["purchaseDate"] = datetime.combine(
+                vehicle_doc["purchaseDate"], datetime.min.time()
+            )
         if "maintenanceSchedule" in vehicle_doc and vehicle_doc["maintenanceSchedule"]:
-            vehicle_doc["maintenanceSchedule"] = datetime.combine(vehicle_doc["maintenanceSchedule"], datetime.min.time())
+            vehicle_doc["maintenanceSchedule"] = datetime.combine(
+                vehicle_doc["maintenanceSchedule"], datetime.min.time()
+            )
 
         await collection.insert_one(vehicle_doc)
 
@@ -196,10 +211,16 @@ class VehicleRepository:
             # Normalize legacy data
             vehicle_doc = self._normalize_legacy_vehicle(vehicle_doc)
             # Convert datetime back to date
-            if "purchaseDate" in vehicle_doc and isinstance(vehicle_doc["purchaseDate"], datetime):
+            if "purchaseDate" in vehicle_doc and isinstance(
+                vehicle_doc["purchaseDate"], datetime
+            ):
                 vehicle_doc["purchaseDate"] = vehicle_doc["purchaseDate"].date()
-            if "maintenanceSchedule" in vehicle_doc and isinstance(vehicle_doc["maintenanceSchedule"], datetime):
-                vehicle_doc["maintenanceSchedule"] = vehicle_doc["maintenanceSchedule"].date()
+            if "maintenanceSchedule" in vehicle_doc and isinstance(
+                vehicle_doc["maintenanceSchedule"], datetime
+            ):
+                vehicle_doc["maintenanceSchedule"] = vehicle_doc[
+                    "maintenanceSchedule"
+                ].date()
             return Vehicle(**vehicle_doc)
         return None
 
@@ -209,7 +230,7 @@ class VehicleRepository:
         limit: int = 20,
         status: Optional[VehicleStatus] = None,
         type: Optional[str] = None,
-        ownership: Optional[str] = None
+        ownership: Optional[str] = None,
     ) -> tuple[List[Vehicle], int]:
         """
         Get all vehicles with pagination and filters
@@ -236,20 +257,27 @@ class VehicleRepository:
             # Handle both new 'status' field and legacy 'isActive' field
             # Legacy mapping: isActive=true -> available; isActive=false -> retired
             if status == VehicleStatus.AVAILABLE:
-                and_conditions.append({
-                    "$or": [
-                        {"status": status.value},
-                        {"status": {"$exists": False}, "isActive": True},
-                        {"status": {"$exists": False}, "isActive": {"$exists": False}},  # Default to available if no status fields
-                    ]
-                })
+                and_conditions.append(
+                    {
+                        "$or": [
+                            {"status": status.value},
+                            {"status": {"$exists": False}, "isActive": True},
+                            {
+                                "status": {"$exists": False},
+                                "isActive": {"$exists": False},
+                            },  # Default to available if no status fields
+                        ]
+                    }
+                )
             elif status == VehicleStatus.RETIRED:
-                and_conditions.append({
-                    "$or": [
-                        {"status": status.value},
-                        {"status": {"$exists": False}, "isActive": False},
-                    ]
-                })
+                and_conditions.append(
+                    {
+                        "$or": [
+                            {"status": status.value},
+                            {"status": {"$exists": False}, "isActive": False},
+                        ]
+                    }
+                )
             else:
                 # For in_use and maintenance, only match new status field (not in legacy)
                 and_conditions.append({"status": status.value})
@@ -264,12 +292,14 @@ class VehicleRepository:
             }
             legacy_match = legacy_patterns.get(type)
             if legacy_match:
-                and_conditions.append({
-                    "$or": [
-                        {"type": type},
-                        {"vehicleType": legacy_match},
-                    ]
-                })
+                and_conditions.append(
+                    {
+                        "$or": [
+                            {"type": type},
+                            {"vehicleType": legacy_match},
+                        ]
+                    }
+                )
             else:
                 and_conditions.append({"type": type})
 
@@ -291,18 +321,22 @@ class VehicleRepository:
             # Normalize legacy data
             vehicle_doc = self._normalize_legacy_vehicle(vehicle_doc)
             # Convert datetime back to date
-            if "purchaseDate" in vehicle_doc and isinstance(vehicle_doc["purchaseDate"], datetime):
+            if "purchaseDate" in vehicle_doc and isinstance(
+                vehicle_doc["purchaseDate"], datetime
+            ):
                 vehicle_doc["purchaseDate"] = vehicle_doc["purchaseDate"].date()
-            if "maintenanceSchedule" in vehicle_doc and isinstance(vehicle_doc["maintenanceSchedule"], datetime):
-                vehicle_doc["maintenanceSchedule"] = vehicle_doc["maintenanceSchedule"].date()
+            if "maintenanceSchedule" in vehicle_doc and isinstance(
+                vehicle_doc["maintenanceSchedule"], datetime
+            ):
+                vehicle_doc["maintenanceSchedule"] = vehicle_doc[
+                    "maintenanceSchedule"
+                ].date()
             vehicles.append(Vehicle(**vehicle_doc))
 
         return vehicles, total
 
     async def get_available_vehicles(
-        self,
-        skip: int = 0,
-        limit: int = 20
+        self, skip: int = 0, limit: int = 20
     ) -> tuple[List[Vehicle], int]:
         """
         Get all available vehicles
@@ -316,7 +350,9 @@ class VehicleRepository:
         """
         return await self.get_all(skip, limit, status=VehicleStatus.AVAILABLE)
 
-    async def update(self, vehicle_id: UUID, update_data: VehicleUpdate) -> Optional[Vehicle]:
+    async def update(
+        self, vehicle_id: UUID, update_data: VehicleUpdate
+    ) -> Optional[Vehicle]:
         """
         Update a vehicle
 
@@ -337,13 +373,16 @@ class VehicleRepository:
 
         # Convert date to datetime for MongoDB
         if "purchaseDate" in update_dict and update_dict["purchaseDate"]:
-            update_dict["purchaseDate"] = datetime.combine(update_dict["purchaseDate"], datetime.min.time())
+            update_dict["purchaseDate"] = datetime.combine(
+                update_dict["purchaseDate"], datetime.min.time()
+            )
         if "maintenanceSchedule" in update_dict and update_dict["maintenanceSchedule"]:
-            update_dict["maintenanceSchedule"] = datetime.combine(update_dict["maintenanceSchedule"], datetime.min.time())
+            update_dict["maintenanceSchedule"] = datetime.combine(
+                update_dict["maintenanceSchedule"], datetime.min.time()
+            )
 
         result = await collection.update_one(
-            {"vehicleId": str(vehicle_id)},
-            {"$set": update_dict}
+            {"vehicleId": str(vehicle_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

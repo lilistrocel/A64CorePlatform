@@ -43,19 +43,29 @@ class FarmingYearService:
         """
         try:
             # Find existing configuration
-            config_doc = await self.collection.find_one({
-                "configType": self.CONFIG_TYPE
-            })
+            config_doc = await self.collection.find_one(
+                {"configType": self.CONFIG_TYPE}
+            )
 
             if config_doc:
                 # Convert MongoDB document to Pydantic model
                 return FarmingYearConfig(
-                    configId=UUID(config_doc["configId"]) if isinstance(config_doc.get("configId"), str) else config_doc.get("configId", uuid4()),
+                    configId=(
+                        UUID(config_doc["configId"])
+                        if isinstance(config_doc.get("configId"), str)
+                        else config_doc.get("configId", uuid4())
+                    ),
                     configType=config_doc.get("configType", self.CONFIG_TYPE),
-                    farmingYearStartMonth=config_doc.get("farmingYearStartMonth", DEFAULT_FARMING_YEAR_START_MONTH),
+                    farmingYearStartMonth=config_doc.get(
+                        "farmingYearStartMonth", DEFAULT_FARMING_YEAR_START_MONTH
+                    ),
                     updatedAt=config_doc.get("updatedAt", datetime.utcnow()),
-                    updatedBy=UUID(config_doc["updatedBy"]) if config_doc.get("updatedBy") else None,
-                    updatedByEmail=config_doc.get("updatedByEmail")
+                    updatedBy=(
+                        UUID(config_doc["updatedBy"])
+                        if config_doc.get("updatedBy")
+                        else None
+                    ),
+                    updatedByEmail=config_doc.get("updatedByEmail"),
                 )
 
             # No configuration exists - create default
@@ -69,7 +79,7 @@ class FarmingYearService:
                 configId=uuid4(),
                 configType=self.CONFIG_TYPE,
                 farmingYearStartMonth=DEFAULT_FARMING_YEAR_START_MONTH,
-                updatedAt=datetime.utcnow()
+                updatedAt=datetime.utcnow(),
             )
 
     async def _create_default_config(self) -> FarmingYearConfig:
@@ -78,18 +88,20 @@ class FarmingYearService:
             configId=uuid4(),
             configType=self.CONFIG_TYPE,
             farmingYearStartMonth=DEFAULT_FARMING_YEAR_START_MONTH,
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         try:
-            await self.collection.insert_one({
-                "configId": str(config.configId),
-                "configType": config.configType,
-                "farmingYearStartMonth": config.farmingYearStartMonth,
-                "updatedAt": config.updatedAt,
-                "updatedBy": None,
-                "updatedByEmail": None
-            })
+            await self.collection.insert_one(
+                {
+                    "configId": str(config.configId),
+                    "configType": config.configType,
+                    "farmingYearStartMonth": config.farmingYearStartMonth,
+                    "updatedAt": config.updatedAt,
+                    "updatedBy": None,
+                    "updatedByEmail": None,
+                }
+            )
             logger.info("Created default farming year configuration")
         except Exception as e:
             logger.error(f"Error creating default farming year config: {e}")
@@ -98,10 +110,7 @@ class FarmingYearService:
         return config
 
     async def update_farming_year_config(
-        self,
-        start_month: int,
-        user_id: UUID,
-        user_email: str
+        self, start_month: int, user_id: UUID, user_email: str
     ) -> FarmingYearConfig:
         """
         Update the farming year start month.
@@ -128,17 +137,19 @@ class FarmingYearService:
                         "farmingYearStartMonth": start_month,
                         "updatedAt": now,
                         "updatedBy": str(user_id),
-                        "updatedByEmail": user_email
+                        "updatedByEmail": user_email,
                     },
                     "$setOnInsert": {
                         "configId": str(uuid4()),
-                        "configType": self.CONFIG_TYPE
-                    }
+                        "configType": self.CONFIG_TYPE,
+                    },
                 },
-                upsert=True
+                upsert=True,
             )
 
-            logger.info(f"Updated farming year config to start month {start_month} by {user_email}")
+            logger.info(
+                f"Updated farming year config to start month {start_month} by {user_email}"
+            )
 
             # Return updated config
             return await self.get_farming_year_config()
@@ -148,9 +159,7 @@ class FarmingYearService:
             raise
 
     def get_farming_year_for_date(
-        self,
-        date: datetime,
-        start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
+        self, date: datetime, start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
     ) -> int:
         """
         Get the farming year for a given date.
@@ -182,14 +191,11 @@ class FarmingYearService:
         """
         config = await self.get_farming_year_config()
         return self.get_farming_year_for_date(
-            datetime.utcnow(),
-            config.farmingYearStartMonth
+            datetime.utcnow(), config.farmingYearStartMonth
         )
 
     def get_farming_year_date_range(
-        self,
-        farming_year: int,
-        start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
+        self, farming_year: int, start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
     ) -> Tuple[datetime, datetime]:
         """
         Get the date range for a farming year.
@@ -227,9 +233,7 @@ class FarmingYearService:
         return start_date, end_date
 
     def format_farming_year_display(
-        self,
-        farming_year: int,
-        start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
+        self, farming_year: int, start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
     ) -> str:
         """
         Format a farming year for display.
@@ -241,17 +245,19 @@ class FarmingYearService:
         Returns:
             Formatted string like "Aug 2025 - Jul 2026" or "Jan 2025 - Dec 2025"
         """
-        start_date, end_date = self.get_farming_year_date_range(farming_year, start_month)
+        start_date, end_date = self.get_farming_year_date_range(
+            farming_year, start_month
+        )
 
         start_month_name = MONTH_NAMES[start_date.month][:3]
         end_month_name = MONTH_NAMES[end_date.month][:3]
 
-        return f"{start_month_name} {start_date.year} - {end_month_name} {end_date.year}"
+        return (
+            f"{start_month_name} {start_date.year} - {end_month_name} {end_date.year}"
+        )
 
     async def get_farming_years_list(
-        self,
-        count: int = 5,
-        include_next: bool = True
+        self, count: int = 5, include_next: bool = True
     ) -> list[dict]:
         """
         Get a list of farming years for dropdown selection.
@@ -270,30 +276,42 @@ class FarmingYearService:
 
         # Include next year if requested
         if include_next:
-            years.append({
-                "year": current_year + 1,
-                "display": self.format_farming_year_display(current_year + 1, config.farmingYearStartMonth),
-                "isCurrent": False,
-                "isNext": True
-            })
+            years.append(
+                {
+                    "year": current_year + 1,
+                    "display": self.format_farming_year_display(
+                        current_year + 1, config.farmingYearStartMonth
+                    ),
+                    "isCurrent": False,
+                    "isNext": True,
+                }
+            )
 
         # Current year
-        years.append({
-            "year": current_year,
-            "display": self.format_farming_year_display(current_year, config.farmingYearStartMonth),
-            "isCurrent": True,
-            "isNext": False
-        })
+        years.append(
+            {
+                "year": current_year,
+                "display": self.format_farming_year_display(
+                    current_year, config.farmingYearStartMonth
+                ),
+                "isCurrent": True,
+                "isNext": False,
+            }
+        )
 
         # Past years
         for i in range(1, count):
             year = current_year - i
-            years.append({
-                "year": year,
-                "display": self.format_farming_year_display(year, config.farmingYearStartMonth),
-                "isCurrent": False,
-                "isNext": False
-            })
+            years.append(
+                {
+                    "year": year,
+                    "display": self.format_farming_year_display(
+                        year, config.farmingYearStartMonth
+                    ),
+                    "isCurrent": False,
+                    "isNext": False,
+                }
+            )
 
         return years
 
@@ -301,7 +319,7 @@ class FarmingYearService:
         self,
         date: datetime,
         farming_year: int,
-        start_month: int = DEFAULT_FARMING_YEAR_START_MONTH
+        start_month: int = DEFAULT_FARMING_YEAR_START_MONTH,
     ) -> bool:
         """
         Check if a date falls within a specific farming year.
@@ -314,7 +332,9 @@ class FarmingYearService:
         Returns:
             True if the date is within the farming year
         """
-        start_date, end_date = self.get_farming_year_date_range(farming_year, start_month)
+        start_date, end_date = self.get_farming_year_date_range(
+            farming_year, start_month
+        )
         return start_date <= date <= end_date
 
 

@@ -43,10 +43,10 @@ logger = logging.getLogger(__name__)
 
 # Supported unit-to-defaultUnit conversions (do NOT cross solid ↔ liquid)
 _UNIT_CONVERSIONS: Dict[str, Tuple[str, float]] = {
-    "g":  ("kg", 1 / 1000),
+    "g": ("kg", 1 / 1000),
     "kg": ("kg", 1.0),
-    "ml": ("L",  1 / 1000),
-    "L":  ("L",  1.0),
+    "ml": ("L", 1 / 1000),
+    "L": ("L", 1.0),
 }
 
 
@@ -95,7 +95,9 @@ async def calculate_for_crops(
 
         plant_name = plant.get("plantName", pid)
         growth_cycle = plant.get("growthCycle") or {}
-        cycle_days = growth_cycle.get("totalCycleDays") or plant.get("growthCycleDays") or 0
+        cycle_days = (
+            growth_cycle.get("totalCycleDays") or plant.get("growthCycleDays") or 0
+        )
 
         if not cycle_days:
             warnings.append(
@@ -107,13 +109,15 @@ async def calculate_for_crops(
         if not fertigation or not fertigation.get("cards"):
             warnings.append(f"No fertigation schedule defined for '{plant_name}'")
             # Still return the crop entry with empty ingredients
-            per_crop_raw.append({
-                "plantDataId": item.plantDataId,
-                "plantName": plant_name,
-                "points": item.points,
-                "cycleDays": cycle_days,
-                "ingredients_raw": {},  # name_lower → {name, unit, qty_per_point}
-            })
+            per_crop_raw.append(
+                {
+                    "plantDataId": item.plantDataId,
+                    "plantName": plant_name,
+                    "points": item.points,
+                    "cycleDays": cycle_days,
+                    "ingredients_raw": {},  # name_lower → {name, unit, qty_per_point}
+                }
+            )
             continue
 
         # Accumulate per-point quantities: name_lower → (display_name, unit, qty_per_point)
@@ -145,13 +149,15 @@ async def calculate_for_crops(
             if name_lower not in all_ingredient_names:
                 all_ingredient_names[name_lower] = (entry[0], entry[1])
 
-        per_crop_raw.append({
-            "plantDataId": item.plantDataId,
-            "plantName": plant_name,
-            "points": item.points,
-            "cycleDays": cycle_days,
-            "ingredients_raw": accum,  # name_lower → [display_name, unit, qty_per_point]
-        })
+        per_crop_raw.append(
+            {
+                "plantDataId": item.plantDataId,
+                "plantName": plant_name,
+                "points": item.points,
+                "cycleDays": cycle_days,
+                "ingredients_raw": accum,  # name_lower → [display_name, unit, qty_per_point]
+            }
+        )
 
     # ------------------------------------------------------------------
     # Phase 2: Archive-aware chemical resolution
@@ -166,7 +172,8 @@ async def calculate_for_crops(
     # Determine which ingredient names are truly unknown (not in either lookup)
     # Reason: only auto-discover genuinely new names; archived matches must NOT be re-created.
     truly_unknown = {
-        k for k in all_ingredient_names
+        k
+        for k in all_ingredient_names
         if k not in active_by_name and k not in archived_by_name
     }
 
@@ -175,7 +182,9 @@ async def calculate_for_crops(
         # Reason: trigger full discovery scan; it is archive-aware and will skip archived names
         newly_discovered = await ChemicalsService.discover_from_plant_library(
             organization_id=organization_id,
-            created_by=UUID("00000000-0000-0000-0000-000000000001"),  # system user sentinel
+            created_by=UUID(
+                "00000000-0000-0000-0000-000000000001"
+            ),  # system user sentinel
         )
         # Reload active lookup after discovery to include any freshly inserted chemicals
         active_by_name, archived_by_name = await ChemicalsService.build_chemical_lookup(
@@ -184,7 +193,12 @@ async def calculate_for_crops(
 
     # Alias conflict warnings for active chemicals
     for c in sorted(
-        [c for c in await ChemicalsRepository.list_all(organization_id, include_archived=False)],
+        [
+            c
+            for c in await ChemicalsRepository.list_all(
+                organization_id, include_archived=False
+            )
+        ],
         key=lambda x: str(x.chemicalId),
     ):
         for a in c.aliases:
@@ -217,7 +231,11 @@ async def calculate_for_crops(
         # Track which archived matches we've warned about in this crop to avoid duplicate warnings
         archived_warned: Set[str] = set()
 
-        for name_lower, (display_name, sched_unit, qty_per_point) in ingredients_raw.items():
+        for name_lower, (
+            display_name,
+            sched_unit,
+            qty_per_point,
+        ) in ingredients_raw.items():
             chemical = chemical_by_name.get(name_lower)
             total_qty_in_sched_unit = qty_per_point * points
 
@@ -227,7 +245,9 @@ async def calculate_for_crops(
                 if archived_match is not None:
                     # Reason: archived match — report qty but leave costs as None so the
                     # user knows the chemical exists but is archived.
-                    warn_key = f"{archived_match.canonical_name}|{crop_data['plantName']}"
+                    warn_key = (
+                        f"{archived_match.canonical_name}|{crop_data['plantName']}"
+                    )
                     if warn_key not in archived_warned:
                         warnings.append(
                             f"Ingredient '{display_name}' in '{crop_data['plantName']}' "
@@ -235,24 +255,28 @@ async def calculate_for_crops(
                             f"— restore the chemical or update the plant's fertigation schedule."
                         )
                         archived_warned.add(warn_key)
-                    ingredients.append(IngredientResult(
-                        chemicalId=None,
-                        name=display_name,
-                        qty=round(total_qty_in_sched_unit, 6),
-                        unit=sched_unit,
-                        unitPrice=None,
-                        totalCost=None,
-                    ))
+                    ingredients.append(
+                        IngredientResult(
+                            chemicalId=None,
+                            name=display_name,
+                            qty=round(total_qty_in_sched_unit, 6),
+                            unit=sched_unit,
+                            unitPrice=None,
+                            totalCost=None,
+                        )
+                    )
                 else:
                     # Truly unknown chemical — no match at all
-                    ingredients.append(IngredientResult(
-                        chemicalId=None,
-                        name=display_name,
-                        qty=round(total_qty_in_sched_unit, 6),
-                        unit=sched_unit,
-                        unitPrice=None,
-                        totalCost=None,
-                    ))
+                    ingredients.append(
+                        IngredientResult(
+                            chemicalId=None,
+                            name=display_name,
+                            qty=round(total_qty_in_sched_unit, 6),
+                            unit=sched_unit,
+                            unitPrice=None,
+                            totalCost=None,
+                        )
+                    )
                 continue
 
             # Convert to chemical.defaultUnit
@@ -265,14 +289,16 @@ async def calculate_for_crops(
                     f"but chemical '{chemical.name}' is priced in '{chemical.defaultUnit}' "
                     f"— quantities reported in schedule unit, cost not calculated"
                 )
-                ingredients.append(IngredientResult(
-                    chemicalId=chemical.chemicalId,
-                    name=display_name,
-                    qty=round(total_qty_in_sched_unit, 6),
-                    unit=sched_unit,
-                    unitPrice=None,
-                    totalCost=None,
-                ))
+                ingredients.append(
+                    IngredientResult(
+                        chemicalId=chemical.chemicalId,
+                        name=display_name,
+                        qty=round(total_qty_in_sched_unit, 6),
+                        unit=sched_unit,
+                        unitPrice=None,
+                        totalCost=None,
+                    )
+                )
                 continue
 
             chem_key = str(chemical.chemicalId)
@@ -291,23 +317,29 @@ async def calculate_for_crops(
         # Build ingredient results from aggregated chem_accum
         for chem_key, agg in chem_accum.items():
             chem = agg["chemical"]
-            name_str = " / ".join(dict.fromkeys(agg["names"]))  # deduplicate order-preserving
-            ingredients.append(IngredientResult(
-                chemicalId=chem.chemicalId,
-                name=name_str,
-                qty=round(agg["qty"], 6),
-                unit=agg["unit"],
-                unitPrice=None,   # filled in Phase 4
-                totalCost=None,   # filled in Phase 4
-            ))
+            name_str = " / ".join(
+                dict.fromkeys(agg["names"])
+            )  # deduplicate order-preserving
+            ingredients.append(
+                IngredientResult(
+                    chemicalId=chem.chemicalId,
+                    name=name_str,
+                    qty=round(agg["qty"], 6),
+                    unit=agg["unit"],
+                    unitPrice=None,  # filled in Phase 4
+                    totalCost=None,  # filled in Phase 4
+                )
+            )
 
-        per_crop_results.append(CropResult(
-            plantDataId=crop_data["plantDataId"],
-            plantName=crop_data["plantName"],
-            points=points,
-            cycleDays=crop_data["cycleDays"],
-            ingredients=ingredients,
-        ))
+        per_crop_results.append(
+            CropResult(
+                plantDataId=crop_data["plantDataId"],
+                plantName=crop_data["plantName"],
+                points=points,
+                cycleDays=crop_data["cycleDays"],
+                ingredients=ingredients,
+            )
+        )
 
     # ------------------------------------------------------------------
     # Phase 4: Resolve prices and compute costs
@@ -349,7 +381,9 @@ async def calculate_for_crops(
             crop_result.subtotalCost = None
             grand_total = None
         else:
-            crop_result.subtotalCost = round(subtotal, 4) if subtotal is not None else None
+            crop_result.subtotalCost = (
+                round(subtotal, 4) if subtotal is not None else None
+            )
             if grand_total is not None and crop_result.subtotalCost is not None:
                 grand_total += crop_result.subtotalCost
 
@@ -371,6 +405,7 @@ async def calculate_for_crops(
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _process_interval_rule(
     rule: dict,
@@ -418,7 +453,7 @@ def _process_interval_rule(
     if applications <= 0:
         return
 
-    for ing in (rule.get("ingredients") or []):
+    for ing in rule.get("ingredients") or []:
         _accumulate_ingredient(ing, applications, accum)
 
 
@@ -437,11 +472,11 @@ def _process_custom_rule(
         cycle_days: Full growth cycle in days.
         accum: Per-ingredient accumulator.
     """
-    for app in (rule.get("applications") or []):
+    for app in rule.get("applications") or []:
         app_day = app.get("day", 0) or 0
         if app_day > cycle_days:
             continue
-        for ing in (app.get("ingredients") or []):
+        for ing in app.get("ingredients") or []:
             _accumulate_ingredient(ing, 1, accum)
 
 

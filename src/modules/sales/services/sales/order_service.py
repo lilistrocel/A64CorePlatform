@@ -70,12 +70,15 @@ _RESERVED_STATUSES = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _now_iso() -> str:
     """Return current UTC time as ISO-8601 string."""
     return datetime.utcnow().isoformat()
 
 
-async def _lookup_source_row(db, inventory_source: str, inventory_id: str) -> Optional[dict]:
+async def _lookup_source_row(
+    db, inventory_source: str, inventory_id: str
+) -> Optional[dict]:
     """
     Fetch an inventory row from the correct collection.
 
@@ -94,9 +97,13 @@ async def _lookup_source_row(db, inventory_source: str, inventory_id: str) -> Op
     return None
 
 
-async def _update_source_row(db, inventory_source: str, inventory_id: str, update: dict) -> None:
+async def _update_source_row(
+    db, inventory_source: str, inventory_id: str, update: dict
+) -> None:
     """Apply a $set update to the correct inventory collection."""
-    collection = db.inventory_harvest if inventory_source == "harvest" else db.inventory_returned
+    collection = (
+        db.inventory_harvest if inventory_source == "harvest" else db.inventory_returned
+    )
     await collection.update_one({"inventoryId": inventory_id}, {"$set": update})
 
 
@@ -220,11 +227,16 @@ class OrderService:
                 new_reserved = old_reserved + alloc.quantity
 
                 try:
-                    await _update_source_row(db, source, inv_id, {
-                        "availableQuantity": new_available,
-                        "reservedQuantity": new_reserved,
-                        "updatedAt": _now_iso(),
-                    })
+                    await _update_source_row(
+                        db,
+                        source,
+                        inv_id,
+                        {
+                            "availableQuantity": new_available,
+                            "reservedQuantity": new_reserved,
+                            "updatedAt": _now_iso(),
+                        },
+                    )
                     await _write_movement(
                         db,
                         inventory_id=inv_id,
@@ -241,12 +253,22 @@ class OrderService:
                     processed.append((source, inv_id, alloc.quantity))
                     logger.info(
                         "Reserved %.2f from %s/%s for order %s",
-                        alloc.quantity, source, inv_id, order.orderId
+                        alloc.quantity,
+                        source,
+                        inv_id,
+                        order.orderId,
                     )
                 except Exception as exc:
-                    logger.error("Reservation mid-walk failure for %s/%s: %s", source, inv_id, exc)
+                    logger.error(
+                        "Reservation mid-walk failure for %s/%s: %s",
+                        source,
+                        inv_id,
+                        exc,
+                    )
                     # Best-effort rollback of successfully processed allocations
-                    await self._rollback_reservations(db, processed, str(order.orderId), performed_by)
+                    await self._rollback_reservations(
+                        db, processed, str(order.orderId), performed_by
+                    )
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail=(
@@ -278,11 +300,16 @@ class OrderService:
                     continue
                 old_available = row.get("availableQuantity", 0)
                 old_reserved = row.get("reservedQuantity", 0)
-                await _update_source_row(db, source, inv_id, {
-                    "availableQuantity": old_available + qty,
-                    "reservedQuantity": max(0, old_reserved - qty),
-                    "updatedAt": _now_iso(),
-                })
+                await _update_source_row(
+                    db,
+                    source,
+                    inv_id,
+                    {
+                        "availableQuantity": old_available + qty,
+                        "reservedQuantity": max(0, old_reserved - qty),
+                        "updatedAt": _now_iso(),
+                    },
+                )
                 await _write_movement(
                     db,
                     inventory_id=inv_id,
@@ -319,7 +346,12 @@ class OrderService:
                     source = alloc.inventorySource
                     row = await _lookup_source_row(db, source, inv_id)
                     if row is None:
-                        logger.warning("Release: row %s/%s not found for order %s", source, inv_id, order.orderId)
+                        logger.warning(
+                            "Release: row %s/%s not found for order %s",
+                            source,
+                            inv_id,
+                            order.orderId,
+                        )
                         continue
 
                     old_available = row.get("availableQuantity", 0)
@@ -327,11 +359,16 @@ class OrderService:
                     new_available = old_available + alloc.quantity
                     new_reserved = max(0, old_reserved - alloc.quantity)
 
-                    await _update_source_row(db, source, inv_id, {
-                        "availableQuantity": new_available,
-                        "reservedQuantity": new_reserved,
-                        "updatedAt": _now_iso(),
-                    })
+                    await _update_source_row(
+                        db,
+                        source,
+                        inv_id,
+                        {
+                            "availableQuantity": new_available,
+                            "reservedQuantity": new_reserved,
+                            "updatedAt": _now_iso(),
+                        },
+                    )
                     await _write_movement(
                         db,
                         inventory_id=inv_id,
@@ -345,7 +382,13 @@ class OrderService:
                         reason=f"Released reservation for cancelled order {order.orderCode}",
                         performed_by=performed_by,
                     )
-                    logger.info("Released %.2f from %s/%s for order %s", alloc.quantity, source, inv_id, order.orderId)
+                    logger.info(
+                        "Released %.2f from %s/%s for order %s",
+                        alloc.quantity,
+                        source,
+                        inv_id,
+                        order.orderId,
+                    )
             elif item.inventoryId:
                 # Legacy path — inventory_harvest only
                 inv_id = str(item.inventoryId)
@@ -358,11 +401,13 @@ class OrderService:
                 new_available = old_available + item.quantity
                 await db.inventory_harvest.update_one(
                     {"inventoryId": inv_id},
-                    {"$set": {
-                        "availableQuantity": new_available,
-                        "reservedQuantity": new_reserved,
-                        "updatedAt": _now_iso(),
-                    }},
+                    {
+                        "$set": {
+                            "availableQuantity": new_available,
+                            "reservedQuantity": new_reserved,
+                            "updatedAt": _now_iso(),
+                        }
+                    },
                 )
                 await _write_movement(
                     db,
@@ -401,7 +446,12 @@ class OrderService:
                     source = alloc.inventorySource
                     row = await _lookup_source_row(db, source, inv_id)
                     if row is None:
-                        logger.warning("Deduct: row %s/%s not found for order %s", source, inv_id, order.orderId)
+                        logger.warning(
+                            "Deduct: row %s/%s not found for order %s",
+                            source,
+                            inv_id,
+                            order.orderId,
+                        )
                         continue
 
                     current_qty = row.get("quantity", 0)
@@ -428,13 +478,20 @@ class OrderService:
 
                     new_qty = current_qty - alloc.quantity
                     new_reserved = current_reserved - alloc.quantity
-                    new_available = row.get("availableQuantity", 0)  # available unchanged — it was already reduced on reservation
+                    new_available = row.get(
+                        "availableQuantity", 0
+                    )  # available unchanged — it was already reduced on reservation
 
-                    await _update_source_row(db, source, inv_id, {
-                        "quantity": new_qty,
-                        "reservedQuantity": new_reserved,
-                        "updatedAt": _now_iso(),
-                    })
+                    await _update_source_row(
+                        db,
+                        source,
+                        inv_id,
+                        {
+                            "quantity": new_qty,
+                            "reservedQuantity": new_reserved,
+                            "updatedAt": _now_iso(),
+                        },
+                    )
                     await _write_movement(
                         db,
                         inventory_id=inv_id,
@@ -448,7 +505,13 @@ class OrderService:
                         reason=f"Shipped — order {order.orderCode}",
                         performed_by=performed_by,
                     )
-                    logger.info("Deducted %.2f from %s/%s for shipped order %s", alloc.quantity, source, inv_id, order.orderId)
+                    logger.info(
+                        "Deducted %.2f from %s/%s for shipped order %s",
+                        alloc.quantity,
+                        source,
+                        inv_id,
+                        order.orderId,
+                    )
             elif item.inventoryId:
                 # Legacy path — inventory_harvest only
                 inv_id = str(item.inventoryId)
@@ -461,11 +524,13 @@ class OrderService:
                 new_reserved = max(0, current_reserved - item.quantity)
                 await db.inventory_harvest.update_one(
                     {"inventoryId": inv_id},
-                    {"$set": {
-                        "quantity": new_qty,
-                        "reservedQuantity": new_reserved,
-                        "updatedAt": _now_iso(),
-                    }},
+                    {
+                        "$set": {
+                            "quantity": new_qty,
+                            "reservedQuantity": new_reserved,
+                            "updatedAt": _now_iso(),
+                        }
+                    },
                 )
                 await _write_movement(
                     db,
@@ -501,16 +566,20 @@ class OrderService:
             if not item.inventoryId:
                 continue
 
-            inventory_item = await db.inventory_harvest.find_one({"inventoryId": str(item.inventoryId)})
+            inventory_item = await db.inventory_harvest.find_one(
+                {"inventoryId": str(item.inventoryId)}
+            )
             if not inventory_item:
-                logger.warning(f"Inventory item {item.inventoryId} not found for order {order.orderId}")
+                logger.warning(
+                    f"Inventory item {item.inventoryId} not found for order {order.orderId}"
+                )
                 continue
 
             available = inventory_item.get("availableQuantity", 0)
             if item.quantity > available:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Insufficient inventory for {item.productName}. Available: {available}, Requested: {item.quantity}"
+                    detail=f"Insufficient inventory for {item.productName}. Available: {available}, Requested: {item.quantity}",
                 )
 
             current_reserved = inventory_item.get("reservedQuantity", 0)
@@ -519,11 +588,13 @@ class OrderService:
 
             await db.inventory_harvest.update_one(
                 {"inventoryId": str(item.inventoryId)},
-                {"$set": {
-                    "reservedQuantity": new_reserved,
-                    "availableQuantity": new_available,
-                    "updatedAt": _now_iso()
-                }}
+                {
+                    "$set": {
+                        "reservedQuantity": new_reserved,
+                        "availableQuantity": new_available,
+                        "updatedAt": _now_iso(),
+                    }
+                },
             )
 
             movement = InventoryMovement(
@@ -538,7 +609,7 @@ class OrderService:
                 reason=f"Reserved for order {order.orderCode}",
                 referenceId=str(order.orderId),
                 performedBy=order.createdBy,
-                performedAt=datetime.utcnow()
+                performedAt=datetime.utcnow(),
             )
             await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
 
@@ -553,7 +624,9 @@ class OrderService:
             if not item.inventoryId:
                 continue
 
-            inventory_item = await db.inventory_harvest.find_one({"inventoryId": str(item.inventoryId)})
+            inventory_item = await db.inventory_harvest.find_one(
+                {"inventoryId": str(item.inventoryId)}
+            )
             if not inventory_item:
                 continue
 
@@ -564,11 +637,13 @@ class OrderService:
 
             await db.inventory_harvest.update_one(
                 {"inventoryId": str(item.inventoryId)},
-                {"$set": {
-                    "reservedQuantity": new_reserved,
-                    "availableQuantity": new_available,
-                    "updatedAt": _now_iso()
-                }}
+                {
+                    "$set": {
+                        "reservedQuantity": new_reserved,
+                        "availableQuantity": new_available,
+                        "updatedAt": _now_iso(),
+                    }
+                },
             )
 
             movement = InventoryMovement(
@@ -583,7 +658,7 @@ class OrderService:
                 reason=f"Released reservation for cancelled order {order.orderCode}",
                 referenceId=str(order.orderId),
                 performedBy=order.createdBy,
-                performedAt=datetime.utcnow()
+                performedAt=datetime.utcnow(),
             )
             await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
 
@@ -598,7 +673,9 @@ class OrderService:
             if not item.inventoryId:
                 continue
 
-            inventory_item = await db.inventory_harvest.find_one({"inventoryId": str(item.inventoryId)})
+            inventory_item = await db.inventory_harvest.find_one(
+                {"inventoryId": str(item.inventoryId)}
+            )
             if not inventory_item:
                 continue
 
@@ -609,11 +686,13 @@ class OrderService:
 
             await db.inventory_harvest.update_one(
                 {"inventoryId": str(item.inventoryId)},
-                {"$set": {
-                    "quantity": new_quantity,
-                    "reservedQuantity": new_reserved,
-                    "updatedAt": _now_iso()
-                }}
+                {
+                    "$set": {
+                        "quantity": new_quantity,
+                        "reservedQuantity": new_reserved,
+                        "updatedAt": _now_iso(),
+                    }
+                },
             )
 
             movement = InventoryMovement(
@@ -628,7 +707,7 @@ class OrderService:
                 reason=f"Sold - Order {order.orderCode} delivered",
                 referenceId=str(order.orderId),
                 performedBy=order.createdBy,
-                performedAt=datetime.utcnow()
+                performedAt=datetime.utcnow(),
             )
             await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
 
@@ -656,7 +735,7 @@ class OrderService:
             if not customer_doc:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Customer {customer_id} not found in CRM system"
+                    detail=f"Customer {customer_id} not found in CRM system",
                 )
 
             return customer_doc
@@ -667,7 +746,7 @@ class OrderService:
             logger.error(f"Error validating customer: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to validate customer"
+                detail="Failed to validate customer",
             )
 
     # -----------------------------------------------------------------------
@@ -675,9 +754,7 @@ class OrderService:
     # -----------------------------------------------------------------------
 
     async def create_order(
-        self,
-        order_data: SalesOrderCreate,
-        created_by: UUID
+        self, order_data: SalesOrderCreate, created_by: UUID
     ) -> SalesOrder:
         """
         Create a new sales order.
@@ -702,13 +779,14 @@ class OrderService:
             if order_data.customerName != customer.get("name"):
                 logger.warning(
                     "Customer name mismatch: provided '%s' vs CRM '%s'",
-                    order_data.customerName, customer.get("name")
+                    order_data.customerName,
+                    customer.get("name"),
                 )
 
             if not order_data.items or len(order_data.items) == 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Order must contain at least one item"
+                    detail="Order must contain at least one item",
                 )
 
             # Validate totals
@@ -716,14 +794,16 @@ class OrderService:
             if abs(calculated_subtotal - order_data.subtotal) > 0.01:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Subtotal mismatch: calculated {calculated_subtotal}, provided {order_data.subtotal}"
+                    detail=f"Subtotal mismatch: calculated {calculated_subtotal}, provided {order_data.subtotal}",
                 )
 
-            calculated_total = order_data.subtotal + order_data.tax - order_data.discount
+            calculated_total = (
+                order_data.subtotal + order_data.tax - order_data.discount
+            )
             if abs(calculated_total - order_data.total) > 0.01:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Total mismatch: calculated {calculated_total}, provided {order_data.total}"
+                    detail=f"Total mismatch: calculated {calculated_total}, provided {order_data.total}",
                 )
 
             order = await self.repository.create(order_data, created_by)
@@ -748,7 +828,7 @@ class OrderService:
             logger.error(f"Error creating sales order: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create sales order"
+                detail="Failed to create sales order",
             )
 
     async def get_order(self, order_id: UUID) -> SalesOrder:
@@ -768,7 +848,7 @@ class OrderService:
         if not order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Sales order {order_id} not found"
+                detail=f"Sales order {order_id} not found",
             )
         return order
 
@@ -810,9 +890,7 @@ class OrderService:
         return orders, total, total_pages
 
     async def update_order(
-        self,
-        order_id: UUID,
-        update_data: SalesOrderUpdate
+        self, order_id: UUID, update_data: SalesOrderUpdate
     ) -> SalesOrder:
         """
         Update a sales order.
@@ -835,14 +913,14 @@ class OrderService:
         if update_data.items is not None and len(update_data.items) == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Order must contain at least one item"
+                detail="Order must contain at least one item",
             )
 
         updated_order = await self.repository.update(order_id, update_data)
         if not updated_order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Sales order {order_id} not found"
+                detail=f"Sales order {order_id} not found",
             )
 
         logger.info(f"Sales order updated: {order_id}")
@@ -878,15 +956,23 @@ class OrderService:
         order = await self.get_order(order_id)
         performed_by = str(updated_by) if updated_by else str(order.createdBy)
 
-        if new_status == SalesOrderStatus.CANCELLED and order.status in _RESERVED_STATUSES:
+        if (
+            new_status == SalesOrderStatus.CANCELLED
+            and order.status in _RESERVED_STATUSES
+        ):
             # Release reservations — prefer allocation-aware path
             if any(item.allocations for item in order.items):
                 await self._release_allocations(order, performed_by)
             else:
                 await self._release_inventory_reservation(order)
-            logger.info("Released inventory reservations for cancelled order %s", order_id)
+            logger.info(
+                "Released inventory reservations for cancelled order %s", order_id
+            )
 
-        if new_status == SalesOrderStatus.SHIPPED and order.status in _RESERVED_STATUSES:
+        if (
+            new_status == SalesOrderStatus.SHIPPED
+            and order.status in _RESERVED_STATUSES
+        ):
             # Deduct physical stock when goods leave the warehouse
             if any(item.allocations for item in order.items):
                 await self._deduct_allocations(order, performed_by)
@@ -908,7 +994,7 @@ class OrderService:
         if not updated_order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Sales order {order_id} not found"
+                detail=f"Sales order {order_id} not found",
             )
 
         logger.info("Sales order status updated: %s -> %s", order_id, new_status.value)
@@ -935,7 +1021,7 @@ class OrderService:
         if order.status != SalesOrderStatus.DRAFT:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Order cannot be confirmed. Current status: {order.status.value}"
+                detail=f"Order cannot be confirmed. Current status: {order.status.value}",
             )
 
         # Prefer allocation-aware reservation
@@ -944,7 +1030,9 @@ class OrderService:
         else:
             await self._reserve_inventory_for_order(order)
 
-        updated_order = await self.repository.update_status(order_id, SalesOrderStatus.CONFIRMED)
+        updated_order = await self.repository.update_status(
+            order_id, SalesOrderStatus.CONFIRMED
+        )
         logger.info("Order %s confirmed by user %s", order_id, confirmed_by)
         await self._invalidate_sales_dashboard_cache()
 
@@ -1003,11 +1091,13 @@ class OrderService:
                     state = "missing"
                 else:
                     # Check if this batch was already moved to waste by the expiry cron
-                    waste_doc = await db.inventory_waste.find_one({
-                        "sourceType": WasteSourceType.EXPIRED.value,
-                        "sourceInventoryId": inv_id,
-                        "quantity": {"$gt": 0},
-                    })
+                    waste_doc = await db.inventory_waste.find_one(
+                        {
+                            "sourceType": WasteSourceType.EXPIRED.value,
+                            "sourceInventoryId": inv_id,
+                            "quantity": {"$gt": 0},
+                        }
+                    )
                     if waste_doc is not None:
                         state = "expired"
                         expired_waste_id = waste_doc.get("wasteId")
@@ -1021,17 +1111,19 @@ class OrderService:
                     else:
                         state = "active"
 
-                allocation_previews.append(AllocationPreview(
-                    lineItemIndex=item_idx,
-                    inventorySource=source,
-                    inventoryId=alloc.inventoryId,
-                    farmName=alloc.farmName,
-                    plantName=item.productName,
-                    quantity=alloc.quantity,
-                    state=state,
-                    expiredWasteId=expired_waste_id,
-                    expiredOn=expired_on,
-                ))
+                allocation_previews.append(
+                    AllocationPreview(
+                        lineItemIndex=item_idx,
+                        inventorySource=source,
+                        inventoryId=alloc.inventoryId,
+                        farmName=alloc.farmName,
+                        plantName=item.productName,
+                        quantity=alloc.quantity,
+                        state=state,
+                        expiredWasteId=expired_waste_id,
+                        expiredOn=expired_on,
+                    )
+                )
 
         return DeletePreviewResponse(
             orderId=order.orderId,
@@ -1079,8 +1171,7 @@ class OrderService:
 
         # Build decision lookup: (lineItemIndex, str(inventoryId)) -> BatchDecision
         decision_map: dict[tuple[int, str], object] = {
-            (d.lineItemIndex, str(d.inventoryId)): d
-            for d in request.decisions
+            (d.lineItemIndex, str(d.inventoryId)): d for d in request.decisions
         }
 
         db = farm_db.get_database()
@@ -1107,11 +1198,13 @@ class OrderService:
                     action = "waste"
                 else:
                     # Check if expired
-                    waste_doc = await db.inventory_waste.find_one({
-                        "sourceType": WasteSourceType.EXPIRED.value,
-                        "sourceInventoryId": inv_id,
-                        "quantity": {"$gt": 0},
-                    })
+                    waste_doc = await db.inventory_waste.find_one(
+                        {
+                            "sourceType": WasteSourceType.EXPIRED.value,
+                            "sourceInventoryId": inv_id,
+                            "quantity": {"$gt": 0},
+                        }
+                    )
                     if waste_doc:
                         action = decision.action if decision else "waste"
                     else:
@@ -1125,11 +1218,16 @@ class OrderService:
                     old_reserved = row.get("reservedQuantity", 0)
                     new_available = old_available + alloc.quantity
                     new_reserved = max(0, old_reserved - alloc.quantity)
-                    await _update_source_row(db, source, inv_id, {
-                        "availableQuantity": new_available,
-                        "reservedQuantity": new_reserved,
-                        "updatedAt": now_iso,
-                    })
+                    await _update_source_row(
+                        db,
+                        source,
+                        inv_id,
+                        {
+                            "availableQuantity": new_available,
+                            "reservedQuantity": new_reserved,
+                            "updatedAt": now_iso,
+                        },
+                    )
                     await _write_movement(
                         db,
                         inventory_id=inv_id,
@@ -1163,21 +1261,25 @@ class OrderService:
                             ),
                         )
                     # Un-expire the waste record (zero it out and stamp revertedAt)
-                    waste_doc = await db.inventory_waste.find_one({
-                        "sourceType": WasteSourceType.EXPIRED.value,
-                        "sourceInventoryId": inv_id,
-                        "quantity": {"$gt": 0},
-                    })
+                    waste_doc = await db.inventory_waste.find_one(
+                        {
+                            "sourceType": WasteSourceType.EXPIRED.value,
+                            "sourceInventoryId": inv_id,
+                            "quantity": {"$gt": 0},
+                        }
+                    )
                     if waste_doc:
                         revived_qty = waste_doc.get("quantity", 0)
                         await db.inventory_waste.update_one(
                             {"wasteId": waste_doc["wasteId"]},
-                            {"$set": {
-                                "quantity": 0,
-                                "revertedAt": now_iso,
-                                "revertedBy": performed_by,
-                                "updatedAt": now_iso,
-                            }},
+                            {
+                                "$set": {
+                                    "quantity": 0,
+                                    "revertedAt": now_iso,
+                                    "revertedBy": performed_by,
+                                    "updatedAt": now_iso,
+                                }
+                            },
                         )
                         # Restore source row: bump quantity and update expiryDate
                         if row is not None:
@@ -1187,13 +1289,19 @@ class OrderService:
                             new_qty = old_qty + revived_qty
                             new_available = old_available + revived_qty
                             new_reserved = max(0, old_reserved - alloc.quantity)
-                            await _update_source_row(db, source, inv_id, {
-                                "quantity": new_qty,
-                                "availableQuantity": new_available + alloc.quantity,  # restore allocation too
-                                "reservedQuantity": new_reserved,
-                                "expiryDate": decision.expiryDate.isoformat(),
-                                "updatedAt": now_iso,
-                            })
+                            await _update_source_row(
+                                db,
+                                source,
+                                inv_id,
+                                {
+                                    "quantity": new_qty,
+                                    "availableQuantity": new_available
+                                    + alloc.quantity,  # restore allocation too
+                                    "reservedQuantity": new_reserved,
+                                    "expiryDate": decision.expiryDate.isoformat(),
+                                    "updatedAt": now_iso,
+                                },
+                            )
                             await _write_movement(
                                 db,
                                 inventory_id=inv_id,
@@ -1267,16 +1375,22 @@ class OrderService:
         collection = sales_db.get_collection("sales_orders")
         await collection.update_one(
             {"orderId": str(order_id)},
-            {"$set": {
-                "status": SalesOrderStatus.CANCELLED.value,
-                "deletedAt": now_iso,
-                "updatedAt": now_iso,
-            }},
+            {
+                "$set": {
+                    "status": SalesOrderStatus.CANCELLED.value,
+                    "deletedAt": now_iso,
+                    "updatedAt": now_iso,
+                }
+            },
         )
 
         logger.info(
             "Order %s soft-deleted by %s — restored=%.2f kg, revived=%s batches, wasted=%.2f kg",
-            order_id, deleted_by, restored_kg, len(revived_batches), wasted_kg
+            order_id,
+            deleted_by,
+            restored_kg,
+            len(revived_batches),
+            wasted_kg,
         )
         await self._invalidate_sales_dashboard_cache()
 
@@ -1310,7 +1424,7 @@ class OrderService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Sales order {order_id} not found"
+                detail=f"Sales order {order_id} not found",
             )
 
         logger.info(f"Sales order deleted: {order_id}")
@@ -1461,10 +1575,14 @@ class OrderService:
                     "plantName": order_item.productName,
                     "productType": HarvestProductType.FRESH.value,
                     "variety": None,
-                    "qualityGrade": (order_item.qualityGrade or QualityGrade.GRADE_A.value),
+                    "qualityGrade": (
+                        order_item.qualityGrade or QualityGrade.GRADE_A.value
+                    ),
                     "quantity": ret_item.quantity,
                     "unit": "kg",
-                    "harvestDate": harvest_date.isoformat() if harvest_date else now_iso,
+                    "harvestDate": (
+                        harvest_date.isoformat() if harvest_date else now_iso
+                    ),
                     "expiryDate": None,
                     "returnDate": now_iso,
                     "sourceOrderId": str(order_id),
@@ -1500,28 +1618,36 @@ class OrderService:
                     performed_by=performed_by,
                 )
                 added_to_returned += ret_item.quantity
-                items_returned_detail.append({
-                    "orderItemIndex": idx,
-                    "condition": "sellable",
-                    "quantity": ret_item.quantity,
-                    "inventoryReturnedId": inv_ret_id,
-                })
+                items_returned_detail.append(
+                    {
+                        "orderItemIndex": idx,
+                        "condition": "sellable",
+                        "quantity": ret_item.quantity,
+                        "inventoryReturnedId": inv_ret_id,
+                    }
+                )
 
                 # For return_orders UI
-                return_order_items.append({
-                    "orderItemId": str(uuid4()),
-                    "originalOrderItemProductId": str(order_item.productId),
-                    "productName": order_item.productName,
-                    "orderedQuantity": order_item.quantity,
-                    "returnedQuantity": ret_item.quantity,
-                    "originalGrade": order_item.qualityGrade or "grade_a",
-                    "newGrade": order_item.qualityGrade or "grade_a",
-                    "reason": "other",
-                    "condition": "resellable",
-                    "inventoryId": str(order_item.inventoryId) if order_item.inventoryId else None,
-                    "returnToInventory": True,
-                    "notes": ret_item.reason,
-                })
+                return_order_items.append(
+                    {
+                        "orderItemId": str(uuid4()),
+                        "originalOrderItemProductId": str(order_item.productId),
+                        "productName": order_item.productName,
+                        "orderedQuantity": order_item.quantity,
+                        "returnedQuantity": ret_item.quantity,
+                        "originalGrade": order_item.qualityGrade or "grade_a",
+                        "newGrade": order_item.qualityGrade or "grade_a",
+                        "reason": "other",
+                        "condition": "resellable",
+                        "inventoryId": (
+                            str(order_item.inventoryId)
+                            if order_item.inventoryId
+                            else None
+                        ),
+                        "returnToInventory": True,
+                        "notes": ret_item.reason,
+                    }
+                )
 
             elif ret_item.condition == "spoiled":
                 # Insert into inventory_waste (sourceType=RETURN)
@@ -1542,7 +1668,8 @@ class OrderService:
                     "originalGrade": order_item.qualityGrade or "grade_a",
                     "wasteReason": ret_item.reason or "Returned spoiled",
                     "wasteDate": now_iso,
-                    "disposalMethod": ret_item.disposalMethod or DisposalMethod.PENDING.value,
+                    "disposalMethod": ret_item.disposalMethod
+                    or DisposalMethod.PENDING.value,
                     "disposalDate": None,
                     "disposalNotes": None,
                     "estimatedValue": None,
@@ -1569,28 +1696,36 @@ class OrderService:
                     performed_by=performed_by,
                 )
                 added_to_waste += ret_item.quantity
-                items_returned_detail.append({
-                    "orderItemIndex": idx,
-                    "condition": "spoiled",
-                    "quantity": ret_item.quantity,
-                    "wasteId": waste_id,
-                })
+                items_returned_detail.append(
+                    {
+                        "orderItemIndex": idx,
+                        "condition": "spoiled",
+                        "quantity": ret_item.quantity,
+                        "wasteId": waste_id,
+                    }
+                )
 
                 # For return_orders UI
-                return_order_items.append({
-                    "orderItemId": str(uuid4()),
-                    "originalOrderItemProductId": str(order_item.productId),
-                    "productName": order_item.productName,
-                    "orderedQuantity": order_item.quantity,
-                    "returnedQuantity": ret_item.quantity,
-                    "originalGrade": order_item.qualityGrade or "grade_a",
-                    "newGrade": None,
-                    "reason": "quality_issue",
-                    "condition": "spoiled",
-                    "inventoryId": str(order_item.inventoryId) if order_item.inventoryId else None,
-                    "returnToInventory": False,
-                    "notes": ret_item.reason,
-                })
+                return_order_items.append(
+                    {
+                        "orderItemId": str(uuid4()),
+                        "originalOrderItemProductId": str(order_item.productId),
+                        "productName": order_item.productName,
+                        "orderedQuantity": order_item.quantity,
+                        "returnedQuantity": ret_item.quantity,
+                        "originalGrade": order_item.qualityGrade or "grade_a",
+                        "newGrade": None,
+                        "reason": "quality_issue",
+                        "condition": "spoiled",
+                        "inventoryId": (
+                            str(order_item.inventoryId)
+                            if order_item.inventoryId
+                            else None
+                        ),
+                        "returnToInventory": False,
+                        "notes": ret_item.reason,
+                    }
+                )
 
         # Insert full record into return_orders (for existing returns UI)
         total_returned_qty = added_to_returned + added_to_waste
@@ -1628,13 +1763,17 @@ class OrderService:
         collection = sales_db.get_collection("sales_orders")
         await collection.update_one(
             {"orderId": str(order_id)},
-            {"$push": {"returns": return_summary.model_dump(mode="json")},
-             "$set": {"updatedAt": now_iso}},
+            {
+                "$push": {"returns": return_summary.model_dump(mode="json")},
+                "$set": {"updatedAt": now_iso},
+            },
         )
 
         logger.info(
             "Report Return processed for order %s — %.2f kg sellable, %.2f kg waste",
-            order_id, added_to_returned, added_to_waste
+            order_id,
+            added_to_returned,
+            added_to_waste,
         )
         await self._invalidate_sales_dashboard_cache()
 
@@ -1680,8 +1819,12 @@ class OrderService:
 
             if cache.is_available:
                 await cache.delete_pattern("get_dashboard_stats:*", prefix="sales")
-                logger.info("[Cache] Invalidated sales dashboard caches after order mutation")
+                logger.info(
+                    "[Cache] Invalidated sales dashboard caches after order mutation"
+                )
 
         except Exception as e:
             # Reason: Never break the application due to cache errors
-            logger.warning(f"[Cache] Error invalidating sales dashboard caches: {str(e)}")
+            logger.warning(
+                f"[Cache] Error invalidating sales dashboard caches: {str(e)}"
+            )

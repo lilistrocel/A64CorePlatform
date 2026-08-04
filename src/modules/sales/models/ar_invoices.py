@@ -39,7 +39,6 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
-
 # Response models emit camelCase fields via the to_camel alias generator;
 # routes pair this with response_model_by_alias=True. populate_by_name=True
 # means consumers may still post snake_case input bodies.
@@ -51,7 +50,6 @@ _RESPONSE_CONFIG = ConfigDict(
 
 from src.core.documents.document_links import DocumentLinkRef, DocumentLineLinkMixin
 from src.core.documents.document_status import DocumentStatus
-
 
 # ---------------------------------------------------------------------------
 # Line schemas
@@ -88,12 +86,23 @@ class ARInvoiceLineCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     item_id: str = Field(..., alias="itemId", description="FK to items collection")
-    item_code: str = Field(..., alias="itemCode", max_length=50, description="Denormalised item code")
-    item_name: str = Field(..., alias="itemName", max_length=200, description="Denormalised item name")
+    item_code: str = Field(
+        ..., alias="itemCode", max_length=50, description="Denormalised item code"
+    )
+    item_name: str = Field(
+        ..., alias="itemName", max_length=200, description="Denormalised item name"
+    )
     description: Optional[str] = Field(None, max_length=500)
-    quantity: Decimal = Field(..., gt=Decimal("0"), description="Invoiced quantity; must be > 0")
+    quantity: Decimal = Field(
+        ..., gt=Decimal("0"), description="Invoiced quantity; must be > 0"
+    )
     uom: str = Field(..., max_length=20, description="Unit of measure")
-    unit_price: Decimal = Field(..., alias="unitPrice", ge=Decimal("0"), description="Unit selling price; must be >= 0")
+    unit_price: Decimal = Field(
+        ...,
+        alias="unitPrice",
+        ge=Decimal("0"),
+        description="Unit selling price; must be >= 0",
+    )
     discount_percent: Decimal = Field(
         Decimal("0"),
         alias="discountPercent",
@@ -101,11 +110,19 @@ class ARInvoiceLineCreate(BaseModel):
         le=Decimal("100"),
         description="Line discount 0–100",
     )
-    tax_code_id: Optional[str] = Field(None, alias="taxCodeId", description="FK to tax_codes; null = tax-exempt")
-    warehouse_id: Optional[str] = Field(None, alias="warehouseId", description="Warehouse for traceability")
-    cost_center_id: Optional[str] = Field(None, alias="costCenterId", description="Cost-centre for revenue allocation")
+    tax_code_id: Optional[str] = Field(
+        None, alias="taxCodeId", description="FK to tax_codes; null = tax-exempt"
+    )
+    warehouse_id: Optional[str] = Field(
+        None, alias="warehouseId", description="Warehouse for traceability"
+    )
+    cost_center_id: Optional[str] = Field(
+        None, alias="costCenterId", description="Cost-centre for revenue allocation"
+    )
     base_doc_ref: Optional[DocumentLinkRef] = Field(
-        None, alias="baseDocRef", description="Upstream Delivery line ref (null for direct invoice lines)"
+        None,
+        alias="baseDocRef",
+        description="Upstream Delivery line ref (null for direct invoice lines)",
     )
 
 
@@ -152,9 +169,13 @@ class ARInvoiceLineResponse(DocumentLineLinkMixin):
     uom: str
     unit_price: Decimal
     discount_percent: Decimal
-    line_net: Decimal = Field(..., description="quantity * unit_price * (1 - discount/100)")
+    line_net: Decimal = Field(
+        ..., description="quantity * unit_price * (1 - discount/100)"
+    )
     tax_code_id: Optional[str]
-    tax_percent: Decimal = Field(..., description="Snapshotted from tax code at create time")
+    tax_percent: Decimal = Field(
+        ..., description="Snapshotted from tax code at create time"
+    )
     line_tax: Decimal = Field(..., description="line_net * tax_percent / 100")
     line_gross: Decimal = Field(..., description="line_net + line_tax")
     revenue_account_id: str = Field(
@@ -165,7 +186,9 @@ class ARInvoiceLineResponse(DocumentLineLinkMixin):
     # Quantity tracking
     invoiced_qty: Decimal = Field(..., description="= quantity at create, immutable")
     credited_qty: Decimal = Field(Decimal("0"), description="Filled by Credit Note")
-    cancelled_qty: Decimal = Field(Decimal("0"), description="Set on line-level cancellation")
+    cancelled_qty: Decimal = Field(
+        Decimal("0"), description="Set on line-level cancellation"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -218,25 +241,55 @@ class ARInvoiceCreate(BaseModel):
     # Reason: organization_id is optional in the body — the authoritative value
     # comes from the query string.  Both snake_case and camelCase are accepted.
     organization_id: Optional[str] = Field(
-        None, alias="organizationId", description="Owning organisation UUID (also accepted from query param)"
+        None,
+        alias="organizationId",
+        description="Owning organisation UUID (also accepted from query param)",
     )
-    company_code: Optional[str] = Field(None, alias="companyCode", max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
-    customer_id: str = Field(..., alias="customerId", description="FK to customers collection")
-    customer_name: str = Field(..., alias="customerName", max_length=200, description="Denormalised customer name")
+    company_code: Optional[str] = Field(
+        None,
+        alias="companyCode",
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
+    customer_id: str = Field(
+        ..., alias="customerId", description="FK to customers collection"
+    )
+    customer_name: str = Field(
+        ...,
+        alias="customerName",
+        max_length=200,
+        description="Denormalised customer name",
+    )
     bp_ref_no: Optional[str] = Field(
-        None, alias="bpRefNo", max_length=100, description="Customer's own reference / PO number"
+        None,
+        alias="bpRefNo",
+        max_length=100,
+        description="Customer's own reference / PO number",
     )
     doc_date: date = Field(..., alias="docDate", description="Accounting posting date")
     date_of_supply: date = Field(
-        ..., alias="dateOfSupply", description="When goods/services were supplied (UAE VAT Art. 25)"
+        ...,
+        alias="dateOfSupply",
+        description="When goods/services were supplied (UAE VAT Art. 25)",
     )
     invoice_date: date = Field(
-        ..., alias="invoiceDate", description="Date printed on the invoice (usually = doc_date)"
+        ...,
+        alias="invoiceDate",
+        description="Date printed on the invoice (usually = doc_date)",
     )
-    payment_terms_id: Optional[str] = Field(None, alias="paymentTermsId", description="FK to payment_terms")
+    payment_terms_id: Optional[str] = Field(
+        None, alias="paymentTermsId", description="FK to payment_terms"
+    )
     currency: str = Field("AED", max_length=3, description="ISO 4217 currency code")
-    exchange_rate: Decimal = Field(Decimal("1.0"), alias="exchangeRate", gt=Decimal("0"), description="FX rate to base")
-    journal_memo: Optional[str] = Field(None, alias="journalMemo", max_length=500, description="GL journal memo")
+    exchange_rate: Decimal = Field(
+        Decimal("1.0"),
+        alias="exchangeRate",
+        gt=Decimal("0"),
+        description="FX rate to base",
+    )
+    journal_memo: Optional[str] = Field(
+        None, alias="journalMemo", max_length=500, description="GL journal memo"
+    )
     notes: Optional[str] = Field(None, max_length=2000, description="Free-text notes")
     lines: List[ARInvoiceLineCreate] = Field(
         ..., min_length=1, description="Invoice lines (at least one required)"
@@ -276,7 +329,9 @@ class ARInvoiceCreate(BaseModel):
 
 
 # Resolve the forward reference for ARInvoiceCreate validator
-from typing import Any  # noqa: E402 — placed after the class to avoid circular import noise
+from typing import (
+    Any,
+)  # noqa: E402 — placed after the class to avoid circular import noise
 
 
 class ARInvoiceFromDeliveryRequest(BaseModel):
@@ -308,10 +363,17 @@ class ARInvoiceFromDeliveryRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    company_code: Optional[str] = Field(None, alias="companyCode", max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        alias="companyCode",
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     bp_ref_no: Optional[str] = Field(None, alias="bpRefNo", max_length=100)
     doc_date: date = Field(..., alias="docDate", description="Accounting date")
-    invoice_date: date = Field(..., alias="invoiceDate", description="Date printed on the invoice")
+    invoice_date: date = Field(
+        ..., alias="invoiceDate", description="Date printed on the invoice"
+    )
     date_of_supply: Optional[date] = Field(
         None,
         alias="dateOfSupply",
@@ -319,11 +381,15 @@ class ARInvoiceFromDeliveryRequest(BaseModel):
     )
     payment_terms_id: Optional[str] = Field(None, alias="paymentTermsId")
     currency: str = Field("AED", max_length=3)
-    exchange_rate: Decimal = Field(Decimal("1.0"), alias="exchangeRate", gt=Decimal("0"))
+    exchange_rate: Decimal = Field(
+        Decimal("1.0"), alias="exchangeRate", gt=Decimal("0")
+    )
     journal_memo: Optional[str] = Field(None, alias="journalMemo", max_length=500)
     notes: Optional[str] = Field(None, max_length=2000)
     lines: List[ARInvoiceFromDeliveryLineRequest] = Field(
-        ..., min_length=1, description="Lines referencing Delivery lines (at least one required)"
+        ...,
+        min_length=1,
+        description="Lines referencing Delivery lines (at least one required)",
     )
 
 
@@ -345,9 +411,17 @@ class ARInvoiceFromDeliveryLineRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    delivery_line_id: str = Field(..., alias="deliveryLineId", description="lineId UUID of the source Delivery line")
-    quantity: Decimal = Field(..., gt=Decimal("0"), description="Qty to invoice; must be > 0")
-    unit_price: Decimal = Field(..., alias="unitPrice", ge=Decimal("0"), description="Selling price per unit")
+    delivery_line_id: str = Field(
+        ...,
+        alias="deliveryLineId",
+        description="lineId UUID of the source Delivery line",
+    )
+    quantity: Decimal = Field(
+        ..., gt=Decimal("0"), description="Qty to invoice; must be > 0"
+    )
+    unit_price: Decimal = Field(
+        ..., alias="unitPrice", ge=Decimal("0"), description="Selling price per unit"
+    )
     discount_percent: Decimal = Field(
         Decimal("0"), alias="discountPercent", ge=Decimal("0"), le=Decimal("100")
     )
@@ -389,7 +463,9 @@ class ARInvoiceFromSOLineRequest(BaseModel):
     so_line_id: str = Field(
         ..., alias="soLineId", description="lineId UUID of the source SO line"
     )
-    quantity: Decimal = Field(..., gt=Decimal("0"), description="Qty to invoice; must be > 0")
+    quantity: Decimal = Field(
+        ..., gt=Decimal("0"), description="Qty to invoice; must be > 0"
+    )
     unit_price: Decimal = Field(
         ..., alias="unitPrice", ge=Decimal("0"), description="Selling price per unit"
     )
@@ -465,7 +541,9 @@ class ARInvoiceFromSORequest(BaseModel):
     )
     payment_terms_id: Optional[str] = Field(None, alias="paymentTermsId")
     currency: str = Field("AED", max_length=3)
-    exchange_rate: Decimal = Field(Decimal("1.0"), alias="exchangeRate", gt=Decimal("0"))
+    exchange_rate: Decimal = Field(
+        Decimal("1.0"), alias="exchangeRate", gt=Decimal("0")
+    )
     journal_memo: Optional[str] = Field(None, alias="journalMemo", max_length=500)
     notes: Optional[str] = Field(None, max_length=2000)
     lines: List[ARInvoiceFromSOLineRequest] = Field(
@@ -535,7 +613,9 @@ class ARInvoiceUpdate(BaseModel):
     invoice_date: Optional[date] = Field(None, alias="invoiceDate")
     payment_terms_id: Optional[str] = Field(None, alias="paymentTermsId")
     currency: Optional[str] = Field(None, max_length=3)
-    exchange_rate: Optional[Decimal] = Field(None, alias="exchangeRate", gt=Decimal("0"))
+    exchange_rate: Optional[Decimal] = Field(
+        None, alias="exchangeRate", gt=Decimal("0")
+    )
     journal_memo: Optional[str] = Field(None, alias="journalMemo", max_length=500)
     notes: Optional[str] = Field(None, max_length=2000)
     lines: Optional[List[ARInvoiceLineCreate]] = Field(
@@ -566,7 +646,9 @@ class ARInvoiceResponse(BaseModel):
     doc_date: date
     date_of_supply: date
     invoice_date: date
-    tax_date: date = Field(..., description="min(date_of_supply, invoice_date) — UAE tax point")
+    tax_date: date = Field(
+        ..., description="min(date_of_supply, invoice_date) — UAE tax point"
+    )
     due_date: date
     # Money
     currency: str
@@ -584,7 +666,8 @@ class ARInvoiceResponse(BaseModel):
     )
     # Linking
     base_doc_ref: Optional[DocumentLinkRef] = Field(
-        None, description="Header-level reference to source Delivery (null for direct invoice)"
+        None,
+        description="Header-level reference to source Delivery (null for direct invoice)",
     )
     target_doc_refs: List[DocumentLinkRef] = Field(
         default_factory=list,
@@ -673,7 +756,9 @@ class ARInvoiceStatusTransitionRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    new_status: DocumentStatus = Field(..., alias="newStatus", description="Target status for the transition")
+    new_status: DocumentStatus = Field(
+        ..., alias="newStatus", description="Target status for the transition"
+    )
     reason: Optional[str] = Field(
         None,
         max_length=500,

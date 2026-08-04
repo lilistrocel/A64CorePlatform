@@ -110,9 +110,7 @@ async def get_modules_for_industry(
         )
 
     modules = _get_loaded_modules(industry_type)
-    logger.debug(
-        f"Returning {len(modules)} modules for industry '{industry_type}'"
-    )
+    logger.debug(f"Returning {len(modules)} modules for industry '{industry_type}'")
     return modules
 
 
@@ -139,15 +137,17 @@ def _get_loaded_modules(industry_type: IndustryType) -> List[Dict[str, Any]]:
         matching = pm.get_modules_for_industry(industry_type)
         result = []
         for name, manifest in matching.items():
-            result.append({
-                "module_name": manifest.module_name,
-                "display_name": manifest.display_name,
-                "version": manifest.version,
-                "description": manifest.description,
-                "route_prefix": manifest.route_prefix,
-                "industries": manifest.industries,
-                "industry_mode": manifest.industry_mode,
-            })
+            result.append(
+                {
+                    "module_name": manifest.module_name,
+                    "display_name": manifest.display_name,
+                    "version": manifest.version,
+                    "description": manifest.description,
+                    "route_prefix": manifest.route_prefix,
+                    "industries": manifest.industries,
+                    "industry_mode": manifest.industry_mode,
+                }
+            )
         return result
     except Exception as exc:
         # Reason: plugin manager may not be available in all environments (tests, etc.);

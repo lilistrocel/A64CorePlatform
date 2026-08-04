@@ -30,6 +30,7 @@ router = APIRouter(
 # List cameras (live MCP with cache fallback)
 # =============================================================================
 
+
 @router.get("/", summary="List cameras for a block")
 async def list_cameras(
     farm_id: UUID,
@@ -55,6 +56,7 @@ async def list_cameras(
 # =============================================================================
 # Trigger immediate capture
 # =============================================================================
+
 
 @router.post("/{camera_id}/capture", summary="Trigger immediate snapshot capture")
 async def capture_snapshot(
@@ -83,6 +85,7 @@ async def capture_snapshot(
 # List cached snapshots
 # =============================================================================
 
+
 @router.get("/{camera_id}/snapshots", summary="List cached snapshots for a camera")
 async def list_snapshots(
     farm_id: UUID,
@@ -108,6 +111,7 @@ async def list_snapshots(
 # Latest snapshot per camera
 # =============================================================================
 
+
 @router.get("/snapshots/latest", summary="Get most recent snapshot per camera")
 async def latest_snapshots(
     farm_id: UUID,
@@ -123,6 +127,7 @@ async def latest_snapshots(
 # Serve snapshot image
 # =============================================================================
 
+
 @router.get(
     "/snapshots/{snapshot_id}/image",
     summary="Serve a snapshot image file",
@@ -135,9 +140,7 @@ async def serve_snapshot_image(
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Serve a cached snapshot JPEG from local storage."""
-    doc = await SenseHubCacheQueryService.get_snapshot_by_id(
-        str(block_id), snapshot_id
-    )
+    doc = await SenseHubCacheQueryService.get_snapshot_by_id(str(block_id), snapshot_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Snapshot not found")
 

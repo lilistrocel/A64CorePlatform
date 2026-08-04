@@ -245,7 +245,9 @@ class LineService:
         update_fields["updatedAt"] = datetime.utcnow()
         await db[LINES].update_one({_ID_KEY: line_id}, {"$set": update_fields})
 
-        logger.info(f"[LineService] Updated line {line_id}: {list(update_fields.keys())}")
+        logger.info(
+            f"[LineService] Updated line {line_id}: {list(update_fields.keys())}"
+        )
         return await LineService.get_line(line_id)
 
     # -----------------------------------------------------------------------
@@ -565,7 +567,9 @@ class LineService:
 
         db = genetics_db.get_database()
         if preview["accessionIds"]:
-            await db[ACCESSIONS].delete_many({"accessionId": {"$in": preview["accessionIds"]}})
+            await db[ACCESSIONS].delete_many(
+                {"accessionId": {"$in": preview["accessionIds"]}}
+            )
         if preview["propagationEventIds"]:
             await db[PROPAGATIONS].delete_many(
                 {"eventId": {"$in": preview["propagationEventIds"]}}

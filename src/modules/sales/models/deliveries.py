@@ -34,7 +34,6 @@ from pydantic.alias_generators import to_camel
 from src.core.documents.document_links import DocumentLinkRef, DocumentLineLinkMixin
 from src.core.documents.document_status import DocumentStatus
 
-
 # Response models emit camelCase fields via the to_camel alias generator;
 # routes pair this with response_model_by_alias=True. populate_by_name=True
 # means consumers may still post snake_case input bodies.
@@ -76,10 +75,14 @@ class DeliveryLineCreate(BaseModel):
     item_code: str = Field(..., max_length=50, description="Denormalised item code")
     item_name: str = Field(..., max_length=200, description="Denormalised item name")
     description: Optional[str] = Field(None, max_length=500)
-    quantity: Decimal = Field(..., gt=Decimal("0"), description="Qty to deliver; must be > 0")
+    quantity: Decimal = Field(
+        ..., gt=Decimal("0"), description="Qty to deliver; must be > 0"
+    )
     uom: str = Field(..., max_length=20, description="Unit of measure")
     warehouse_id: str = Field(..., description="REQUIRED — warehouse goods leave from")
-    cost_center_id: Optional[str] = Field(None, description="Cost-centre for COGS allocation")
+    cost_center_id: Optional[str] = Field(
+        None, description="Cost-centre for COGS allocation"
+    )
 
 
 class DeliveryLineResponse(DocumentLineLinkMixin):
@@ -118,7 +121,8 @@ class DeliveryLineResponse(DocumentLineLinkMixin):
     uom: str
     warehouse_id: str
     unit_cost: Decimal = Field(
-        ..., description="Moving-avg cost snapshotted at OPEN-transition (tentative at DRAFT)"
+        ...,
+        description="Moving-avg cost snapshotted at OPEN-transition (tentative at DRAFT)",
     )
     line_cogs: Decimal = Field(..., description="quantity × unit_cost")
     cost_center_id: Optional[str]
@@ -126,7 +130,9 @@ class DeliveryLineResponse(DocumentLineLinkMixin):
     ordered_qty: Decimal = Field(..., description="= quantity at creation, immutable")
     invoiced_qty: Decimal = Field(Decimal("0"), description="Filled by AR Invoice")
     credited_qty: Decimal = Field(Decimal("0"), description="Filled by Credit Note")
-    cancelled_qty: Decimal = Field(Decimal("0"), description="Set on line-level cancellation")
+    cancelled_qty: Decimal = Field(
+        Decimal("0"), description="Set on line-level cancellation"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +164,11 @@ class DeliveryCreate(BaseModel):
     """
 
     organization_id: str = Field(..., description="Owning organisation UUID")
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     doc_date: date = Field(..., description="Accounting date for this document")
     actual_delivery_date: date = Field(
         ..., description="Physical shipment date (may differ from doc_date)"
@@ -228,7 +238,8 @@ class DeliveryResponse(BaseModel):
     )
     # Outbox event tracking (ops-side visibility)
     outbox_event_id: Optional[str] = Field(
-        None, description="event_id of the delivery_posted outbox event (set at OPEN-transition)"
+        None,
+        description="event_id of the delivery_posted outbox event (set at OPEN-transition)",
     )
     outbox_event_emitted_at: Optional[datetime] = Field(
         None, description="UTC timestamp when the outbox event was emitted"
@@ -310,7 +321,9 @@ class DeliveryStatusTransitionRequest(BaseModel):
         reason:     Optional free-text reason stored in the audit log.
     """
 
-    new_status: DocumentStatus = Field(..., description="Target status for the transition")
+    new_status: DocumentStatus = Field(
+        ..., description="Target status for the transition"
+    )
     reason: Optional[str] = Field(
         None,
         max_length=500,
@@ -342,7 +355,11 @@ class DeliveryFromSORequest(BaseModel):
         lines:                 Lines specifying which SO lines to deliver and qty.
     """
 
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     doc_date: date = Field(..., description="Accounting date")
     actual_delivery_date: date = Field(..., description="Physical shipment date")
     delivered_by_user_id: Optional[str] = Field(None)

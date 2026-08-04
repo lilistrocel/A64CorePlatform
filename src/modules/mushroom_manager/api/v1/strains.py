@@ -27,6 +27,7 @@ router = APIRouter()
 # POST /strains
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "",
     response_model=SuccessResponse[Strain],
@@ -48,6 +49,7 @@ async def create_strain(
 # ---------------------------------------------------------------------------
 # GET /strains
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "",
@@ -89,6 +91,7 @@ async def list_strains(
 # GET /strains/{strain_id}
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/{strain_id}",
     response_model=SuccessResponse[Strain],
@@ -109,6 +112,7 @@ async def get_strain(
 # ---------------------------------------------------------------------------
 # PATCH /strains/{strain_id}
 # ---------------------------------------------------------------------------
+
 
 @router.patch(
     "/{strain_id}",

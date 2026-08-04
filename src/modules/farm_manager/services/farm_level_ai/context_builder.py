@@ -60,9 +60,9 @@ async def build_farm_system_prompt(
     farm_area_unit = farm.get("areaUnit", "sqm")
 
     # Load all active blocks for this farm
-    cursor = db.blocks.find(
-        {"farmId": str(farm_id), "isActive": True}
-    ).sort("blockCode", 1)
+    cursor = db.blocks.find({"farmId": str(farm_id), "isActive": True}).sort(
+        "blockCode", 1
+    )
     blocks = await cursor.to_list(length=500)
 
     total_blocks = len(blocks)
@@ -93,11 +93,7 @@ async def build_farm_system_prompt(
         )
         block_table_sep = "  " + "-" * 110
         block_table = (
-            block_table_header
-            + "\n"
-            + block_table_sep
-            + "\n"
-            + "\n".join(block_rows)
+            block_table_header + "\n" + block_table_sep + "\n" + "\n".join(block_rows)
         )
     else:
         block_table = "  No active blocks found on this farm."

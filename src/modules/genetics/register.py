@@ -45,7 +45,9 @@ async def startup_hook() -> None:
 
     Connects to the database and creates module-specific MongoDB indexes.
     """
-    logger.info(f"[Genetics Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Genetics Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await genetics_db.connect()
@@ -92,7 +94,9 @@ def register(app: FastAPI, prefix: Optional[str] = None) -> None:
     # detail: it is the thing that makes "is this route public?" answerable
     # by "is it mounted under PUBLIC_API_PREFIX?" rather than by auditing
     # every route's dependency list.
-    logger.info(f"[Genetics Module] Registering PUBLIC routes with prefix: {PUBLIC_API_PREFIX}")
+    logger.info(
+        f"[Genetics Module] Registering PUBLIC routes with prefix: {PUBLIC_API_PREFIX}"
+    )
     app.include_router(
         public_router,
         prefix=PUBLIC_API_PREFIX,

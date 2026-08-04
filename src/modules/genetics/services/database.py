@@ -138,7 +138,9 @@ class GeneticsDatabaseManager:
             await db[OBSERVATIONS].create_index("lineId")
             await db[OBSERVATIONS].create_index("type")
             await db[OBSERVATIONS].create_index("isNovelTrait")
-            await db[OBSERVATIONS].create_index([("accessionId", 1), ("observedAt", -1)])
+            await db[OBSERVATIONS].create_index(
+                [("accessionId", 1), ("observedAt", -1)]
+            )
             await db[OBSERVATIONS].create_index([("observedAt", -1)])
 
             logger.info("[Genetics Module] MongoDB indexes created successfully")
@@ -154,7 +156,9 @@ class GeneticsDatabaseManager:
         Kept for parity with the module lifecycle pattern used by the other
         modules; actual disconnection happens in core services on shutdown.
         """
-        logger.info("[Genetics Module] Genetics module shutdown (database managed by core)")
+        logger.info(
+            "[Genetics Module] Genetics module shutdown (database managed by core)"
+        )
 
     @classmethod
     async def health_check(cls) -> bool:

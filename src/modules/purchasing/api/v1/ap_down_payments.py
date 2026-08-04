@@ -73,14 +73,16 @@ router = APIRouter(tags=["Purchasing — AP Down Payment Invoices"])
 # Role sets
 # ---------------------------------------------------------------------------
 
-_DPI_WRITE_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-    "accountant",
-    "finance_admin",
-})
+_DPI_WRITE_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+        "accountant",
+        "finance_admin",
+    }
+)
 
 _DPI_DELETE_ROLES = frozenset({"super_admin"})
 
@@ -147,7 +149,7 @@ def _extract_token(request: Request) -> Optional[str]:
     """Extract the raw Bearer token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 
@@ -328,7 +330,9 @@ async def create_dpi(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         )
 
-    return SuccessResponse(data=dpi, message="AP Down Payment Invoice created successfully")
+    return SuccessResponse(
+        data=dpi, message="AP Down Payment Invoice created successfully"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -23,9 +23,7 @@ class ChannelService:
         self.repository = ChannelRepository()
 
     async def create_channel(
-        self,
-        channel_data: ChannelCreate,
-        created_by: UUID
+        self, channel_data: ChannelCreate, created_by: UUID
     ) -> Channel:
         """
         Create a new channel
@@ -51,7 +49,7 @@ class ChannelService:
             logger.error(f"Error creating channel: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create channel"
+                detail="Failed to create channel",
             )
 
     async def get_channel(self, channel_id: UUID) -> Channel:
@@ -71,7 +69,7 @@ class ChannelService:
         if not channel:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Channel {channel_id} not found"
+                detail=f"Channel {channel_id} not found",
             )
         return channel
 
@@ -80,7 +78,7 @@ class ChannelService:
         page: int = 1,
         per_page: int = 20,
         channel_type: Optional[ChannelType] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> tuple[List[Channel], int, int]:
         """
         Get all channels with pagination
@@ -100,16 +98,16 @@ class ChannelService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        channels, total = await self.repository.get_all(skip, per_page, channel_type, is_active)
+        channels, total = await self.repository.get_all(
+            skip, per_page, channel_type, is_active
+        )
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 
         return channels, total, total_pages
 
     async def update_channel(
-        self,
-        channel_id: UUID,
-        update_data: ChannelUpdate
+        self, channel_id: UUID, update_data: ChannelUpdate
     ) -> Channel:
         """
         Update a channel
@@ -131,7 +129,7 @@ class ChannelService:
         if not updated_channel:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Channel {channel_id} not found"
+                detail=f"Channel {channel_id} not found",
             )
 
         logger.info(f"Channel updated: {channel_id}")
@@ -157,7 +155,7 @@ class ChannelService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Channel {channel_id} not found"
+                detail=f"Channel {channel_id} not found",
             )
 
         logger.info(f"Channel deleted: {channel_id}")

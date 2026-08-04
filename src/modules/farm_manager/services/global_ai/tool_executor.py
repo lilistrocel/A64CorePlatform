@@ -172,9 +172,7 @@ async def _collect_block_alerts(
         return enriched
 
     except Exception as e:
-        logger.debug(
-            f"Could not collect alerts from {farm_name}/{block_code}: {e}"
-        )
+        logger.debug(f"Could not collect alerts from {farm_name}/{block_code}: {e}")
         return []
 
 

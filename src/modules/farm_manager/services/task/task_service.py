@@ -10,9 +10,14 @@ from datetime import datetime
 import logging
 
 from ...models.farm_task import (
-    FarmTask, FarmTaskCreate, FarmTaskUpdate, FarmTaskWithDetails,
-    TaskType, TaskStatus, HarvestEntryCreate,
-    TaskCompletionData
+    FarmTask,
+    FarmTaskCreate,
+    FarmTaskUpdate,
+    FarmTaskWithDetails,
+    TaskType,
+    TaskStatus,
+    HarvestEntryCreate,
+    TaskCompletionData,
 )
 from ...models.block import BlockStatus, BlockStatusUpdate
 from ...utils.responses import PaginatedResponse, PaginationMeta
@@ -27,9 +32,7 @@ class TaskService:
 
     @staticmethod
     async def create_custom_task(
-        task_data: FarmTaskCreate,
-        created_by: UUID,
-        created_by_email: str
+        task_data: FarmTaskCreate, created_by: UUID, created_by_email: str
     ) -> FarmTask:
         """
         Create a custom task (assigned by manager)
@@ -56,26 +59,30 @@ class TaskService:
         if not block:
             raise ValueError(f"Block not found: {task_data.blockId}")
         if block["farmId"] != str(task_data.farmId):
-            raise ValueError(f"Block {task_data.blockId} does not belong to farm {task_data.farmId}")
+            raise ValueError(
+                f"Block {task_data.blockId} does not belong to farm {task_data.farmId}"
+            )
 
         # Validate assigned user if specified
         if task_data.assignedTo:
             # Check user has access to this farm (either via farmer_assignments or as farm manager)
-            assignment = await db.farmer_assignments.find_one({
-                "userId": str(task_data.assignedTo),
-                "farmId": str(task_data.farmId),
-                "isActive": True
-            })
+            assignment = await db.farmer_assignments.find_one(
+                {
+                    "userId": str(task_data.assignedTo),
+                    "farmId": str(task_data.farmId),
+                    "isActive": True,
+                }
+            )
             # Also allow if user is the farm manager
             is_manager = farm.get("managerId") == str(task_data.assignedTo)
             if not assignment and not is_manager:
-                raise ValueError(f"User {task_data.assignedTo} is not assigned to farm {task_data.farmId}")
+                raise ValueError(
+                    f"User {task_data.assignedTo} is not assigned to farm {task_data.farmId}"
+                )
 
         # Custom tasks are never auto-generated
         task = await TaskRepository.create(
-            task_data,
-            is_auto_generated=False,
-            generated_from_cycle_id=None
+            task_data, is_auto_generated=False, generated_from_cycle_id=None
         )
 
         logger.info(f"Created custom task {task.taskId} by {created_by_email}")
@@ -108,7 +115,7 @@ class TaskService:
         status: Optional[TaskStatus] = None,
         page: int = 1,
         per_page: int = 50,
-        farming_year: Optional[int] = None
+        farming_year: Optional[int] = None,
     ) -> PaginatedResponse[FarmTaskWithDetails]:
         """
         Get tasks for a farm, enriched with block/farm context for the
@@ -124,17 +131,16 @@ class TaskService:
         Returns:
             PaginatedResponse with paginated enriched tasks
         """
-        tasks, total = await TaskRepository.get_by_farm(farm_id, status, page, per_page, farming_year)
+        tasks, total = await TaskRepository.get_by_farm(
+            farm_id, status, page, per_page, farming_year
+        )
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
         return PaginatedResponse(
             data=await _enrich_tasks_with_block_farm(tasks),
             meta=PaginationMeta(
-                total=total,
-                page=page,
-                perPage=per_page,
-                totalPages=total_pages
-            )
+                total=total, page=page, perPage=per_page, totalPages=total_pages
+            ),
         )
 
     @staticmethod
@@ -143,7 +149,7 @@ class TaskService:
         status: Optional[TaskStatus] = None,
         page: int = 1,
         per_page: int = 50,
-        sort_by: str = "scheduledDate"
+        sort_by: str = "scheduledDate",
     ) -> PaginatedResponse[FarmTaskWithDetails]:
         """
         Get tasks for a block, enriched with block/farm context so the
@@ -160,24 +166,23 @@ class TaskService:
         Returns:
             PaginatedResponse with paginated enriched tasks
         """
-        tasks, total = await TaskRepository.get_by_block(block_id, status, page, per_page, sort_by)
+        tasks, total = await TaskRepository.get_by_block(
+            block_id, status, page, per_page, sort_by
+        )
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
         return PaginatedResponse(
             data=await _enrich_tasks_with_block_farm(tasks),
             meta=PaginationMeta(
-                total=total,
-                page=page,
-                perPage=per_page,
-                totalPages=total_pages
-            )
+                total=total, page=page, perPage=per_page, totalPages=total_pages
+            ),
         )
 
     @staticmethod
     async def get_my_tasks(
         user_id: UUID,
         farm_id: Optional[UUID] = None,
-        status: Optional[TaskStatus] = None
+        status: Optional[TaskStatus] = None,
     ) -> List[FarmTaskWithDetails]:
         """
         Get tasks visible to a user, enriched with block/farm context for
@@ -202,19 +207,17 @@ class TaskService:
             farm_ids = [farm_id]
         else:
             # Get all farms user is assigned to via farmer_assignments
-            cursor = db.farmer_assignments.find({
-                "userId": str(user_id),
-                "isActive": True
-            })
+            cursor = db.farmer_assignments.find(
+                {"userId": str(user_id), "isActive": True}
+            )
             farm_ids = []
             async for assignment in cursor:
                 farm_ids.append(UUID(assignment["farmId"]))
 
             # Also include farms where user is the manager
-            manager_cursor = db.farms.find({
-                "managerId": str(user_id),
-                "isActive": True
-            })
+            manager_cursor = db.farms.find(
+                {"managerId": str(user_id), "isActive": True}
+            )
             async for farm in manager_cursor:
                 farm_uuid = UUID(farm["farmId"])
                 if farm_uuid not in farm_ids:
@@ -247,10 +250,7 @@ class TaskService:
         db = farm_db.get_database()
 
         # Get user's assigned farms
-        cursor = db.farmer_assignments.find({
-            "userId": str(user_id),
-            "isActive": True
-        })
+        cursor = db.farmer_assignments.find({"userId": str(user_id), "isActive": True})
         farm_ids = []
         async for assignment in cursor:
             farm_ids.append(UUID(assignment["farmId"]))
@@ -265,7 +265,7 @@ class TaskService:
         task_id: UUID,
         update_data: FarmTaskUpdate,
         updated_by: UUID,
-        updated_by_email: str
+        updated_by_email: str,
     ) -> FarmTask:
         """
         Update a task
@@ -289,9 +289,15 @@ class TaskService:
 
         # Validate status transitions
         if update_data.status:
-            if task.status == TaskStatus.COMPLETED and update_data.status != TaskStatus.COMPLETED:
+            if (
+                task.status == TaskStatus.COMPLETED
+                and update_data.status != TaskStatus.COMPLETED
+            ):
                 raise ValueError("Cannot change status of completed task")
-            if task.status == TaskStatus.CANCELLED and update_data.status != TaskStatus.CANCELLED:
+            if (
+                task.status == TaskStatus.CANCELLED
+                and update_data.status != TaskStatus.CANCELLED
+            ):
                 raise ValueError("Cannot change status of cancelled task")
 
         # Update task
@@ -307,7 +313,7 @@ class TaskService:
         task_id: UUID,
         user_id: UUID,
         user_email: str,
-        completion_data: TaskCompletionData
+        completion_data: TaskCompletionData,
     ) -> FarmTask:
         """
         Complete a non-harvest task
@@ -355,27 +361,22 @@ class TaskService:
         # Verify user is assigned to the farm (if not assigned task)
         # Super admins bypass farm assignment checks
         if not task.assignedTo and user_role != "super_admin":
-            assignment = await db.farmer_assignments.find_one({
-                "userId": str(user_id),
-                "farmId": str(task.farmId),
-                "isActive": True
-            })
+            assignment = await db.farmer_assignments.find_one(
+                {"userId": str(user_id), "farmId": str(task.farmId), "isActive": True}
+            )
             if not assignment:
                 raise ValueError(f"User not assigned to farm {task.farmId}")
 
         # Create task data from completion data
         from ...models.farm_task import TaskData
+
         task_data = TaskData(
-            notes=completion_data.notes,
-            photoUrls=completion_data.photoUrls
+            notes=completion_data.notes, photoUrls=completion_data.photoUrls
         )
 
         # Complete task
         completed_task = await TaskRepository.complete_task(
-            task_id,
-            user_id,
-            user_email,
-            task_data
+            task_id, user_id, user_email, task_data
         )
 
         if not completed_task:
@@ -395,7 +396,7 @@ class TaskService:
                 # Create status update request
                 status_update = BlockStatusUpdate(
                     newStatus=new_status,
-                    notes=f"Automatic transition triggered by completing task: {task.title}"
+                    notes=f"Automatic transition triggered by completing task: {task.title}",
                 )
 
                 # Call block service to change status
@@ -403,12 +404,16 @@ class TaskService:
                     block_id=task.blockId,
                     status_update=status_update,
                     user_id=user_id,
-                    user_email=user_email
+                    user_email=user_email,
                 )
 
-                logger.info(f"Task {task_id} triggered block {task.blockId} transition to {new_status.value}")
+                logger.info(
+                    f"Task {task_id} triggered block {task.blockId} transition to {new_status.value}"
+                )
             except Exception as e:
-                logger.error(f"Failed to trigger state transition for block {task.blockId}: {e}")
+                logger.error(
+                    f"Failed to trigger state transition for block {task.blockId}: {e}"
+                )
                 # Don't raise error - task is already completed successfully
                 # State transition failure should not rollback task completion
 
@@ -416,10 +421,7 @@ class TaskService:
 
     @staticmethod
     async def add_harvest_entry(
-        task_id: UUID,
-        user_id: UUID,
-        user_email: str,
-        entry_data: HarvestEntryCreate
+        task_id: UUID, user_id: UUID, user_email: str, entry_data: HarvestEntryCreate
     ) -> FarmTask:
         """
         Add a harvest entry to a daily harvest task
@@ -462,33 +464,28 @@ class TaskService:
 
         # Super admins bypass farm assignment checks
         if user_role != "super_admin":
-            assignment = await db.farmer_assignments.find_one({
-                "userId": str(user_id),
-                "farmId": str(task.farmId),
-                "isActive": True
-            })
+            assignment = await db.farmer_assignments.find_one(
+                {"userId": str(user_id), "farmId": str(task.farmId), "isActive": True}
+            )
             if not assignment:
                 raise ValueError(f"User not assigned to farm {task.farmId}")
 
         # Add harvest entry
         updated_task = await TaskRepository.add_harvest_entry(
-            task_id,
-            user_id,
-            user_email,
-            entry_data
+            task_id, user_id, user_email, entry_data
         )
 
         if not updated_task:
             raise ValueError(f"Failed to add harvest entry to task: {task_id}")
 
-        logger.info(f"Harvest entry added to task {task_id}: {entry_data.quantity}kg grade {entry_data.grade} by {user_email}")
+        logger.info(
+            f"Harvest entry added to task {task_id}: {entry_data.quantity}kg grade {entry_data.grade} by {user_email}"
+        )
         return updated_task
 
     @staticmethod
     async def end_daily_harvest(
-        task_id: UUID,
-        user_id: UUID,
-        user_email: str
+        task_id: UUID, user_id: UUID, user_email: str
     ) -> FarmTask:
         """
         Manually end a daily harvest task early (aggregate and complete)
@@ -539,11 +536,7 @@ class TaskService:
         return completed_task
 
     @staticmethod
-    async def cancel_task(
-        task_id: UUID,
-        user_id: UUID,
-        user_email: str
-    ) -> FarmTask:
+    async def cancel_task(task_id: UUID, user_id: UUID, user_email: str) -> FarmTask:
         """
         Cancel a task
 
@@ -581,6 +574,7 @@ class TaskService:
 
         # Cancel task
         from ...models.farm_task import FarmTaskUpdate
+
         update_data = FarmTaskUpdate(status=TaskStatus.CANCELLED)
         cancelled_task = await TaskRepository.update(task_id, update_data)
 
@@ -591,11 +585,7 @@ class TaskService:
         return cancelled_task
 
     @staticmethod
-    async def delete_task(
-        task_id: UUID,
-        user_id: UUID,
-        user_email: str
-    ) -> bool:
+    async def delete_task(task_id: UUID, user_id: UUID, user_email: str) -> bool:
         """
         Delete a task (admin only)
 

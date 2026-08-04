@@ -83,7 +83,9 @@ async def _sensehub_update_growth_stage_task(
             )
             return
 
-        plant_data = await PlantDataEnhancedRepository.get_by_id(snapshot_block.targetCrop)
+        plant_data = await PlantDataEnhancedRepository.get_by_id(
+            snapshot_block.targetCrop
+        )
         if plant_data is None:
             logger.warning(
                 "[SenseHub] plant_data_enhanced not found for id=%s (block %s) — "

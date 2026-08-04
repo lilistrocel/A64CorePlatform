@@ -39,7 +39,9 @@ class PortManager:
         """
         self.db = db
         self.port_range = PortRange()  # Default: 9000-19999
-        logger.info(f"Port Manager initialized: Range {self.port_range.start_port}-{self.port_range.end_port}")
+        logger.info(
+            f"Port Manager initialized: Range {self.port_range.start_port}-{self.port_range.end_port}"
+        )
 
     async def _ensure_indexes(self):
         """Create database indexes for efficient port lookups"""
@@ -58,9 +60,7 @@ class PortManager:
         logger.info("Port registry indexes created")
 
     async def allocate_ports(
-        self,
-        module_name: str,
-        internal_ports: List[int]
+        self, module_name: str, internal_ports: List[int]
     ) -> Dict[str, int]:
         """
         Allocate external ports for a module's internal ports.
@@ -105,7 +105,7 @@ class PortManager:
                 module_name=module_name,
                 internal_port=internal_port,
                 allocated_at=datetime.utcnow(),
-                status="active"
+                status="active",
             )
 
             try:
@@ -113,7 +113,9 @@ class PortManager:
                 await self.db.port_registry.insert_one(allocation.dict())
                 # Use string key for internal port to match ModuleInDB schema
                 allocated_ports[str(internal_port)] = external_port
-                logger.info(f"Port {external_port} allocated to {module_name} (internal: {internal_port})")
+                logger.info(
+                    f"Port {external_port} allocated to {module_name} (internal: {internal_port})"
+                )
 
             except Exception as e:
                 # Rollback on error
@@ -121,7 +123,9 @@ class PortManager:
                 await self._rollback_allocations(module_name, allocated_ports)
                 raise RuntimeError(f"Port allocation failed: {str(e)}") from e
 
-        logger.info(f"Successfully allocated {len(allocated_ports)} port(s) for {module_name}: {allocated_ports}")
+        logger.info(
+            f"Successfully allocated {len(allocated_ports)} port(s) for {module_name}: {allocated_ports}"
+        )
         return allocated_ports
 
     async def _find_next_available_port(self) -> Optional[int]:
@@ -137,10 +141,13 @@ class PortManager:
             Next available port number or None if no ports available
         """
         # Get all active port allocations, sorted
-        allocations = await self.db.port_registry.find(
-            {"status": "active"},
-            {"port": 1, "_id": 0}
-        ).sort("port", 1).to_list(length=None)
+        allocations = (
+            await self.db.port_registry.find(
+                {"status": "active"}, {"port": 1, "_id": 0}
+            )
+            .sort("port", 1)
+            .to_list(length=None)
+        )
 
         allocated_port_set = {alloc["port"] for alloc in allocations}
 
@@ -159,9 +166,7 @@ class PortManager:
         return None
 
     async def _rollback_allocations(
-        self,
-        module_name: str,
-        allocated_ports: Dict[str, int]
+        self, module_name: str, allocated_ports: Dict[str, int]
     ):
         """
         Rollback port allocations in case of error.
@@ -173,14 +178,15 @@ class PortManager:
         if not allocated_ports:
             return
 
-        logger.warning(f"Rolling back {len(allocated_ports)} port allocation(s) for {module_name}")
+        logger.warning(
+            f"Rolling back {len(allocated_ports)} port allocation(s) for {module_name}"
+        )
 
         for internal_port, external_port in allocated_ports.items():
             try:
-                await self.db.port_registry.delete_one({
-                    "module_name": module_name,
-                    "port": external_port
-                })
+                await self.db.port_registry.delete_one(
+                    {"module_name": module_name, "port": external_port}
+                )
                 logger.info(f"Rolled back port {external_port} for {module_name}")
             except Exception as e:
                 logger.error(f"Failed to rollback port {external_port}: {e}")
@@ -208,7 +214,7 @@ class PortManager:
         # Mark ports as released
         result = await self.db.port_registry.update_many(
             {"module_name": module_name, "status": "active"},
-            {"$set": {"status": "released"}}
+            {"$set": {"status": "released"}},
         )
 
         logger.info(f"Released {result.modified_count} port(s) for {module_name}")
@@ -230,10 +236,7 @@ class PortManager:
             {"module_name": module_name, "status": "active"}
         ).to_list(length=None)
 
-        return {
-            str(alloc["internal_port"]): alloc["port"]
-            for alloc in allocations
-        }
+        return {str(alloc["internal_port"]): alloc["port"] for alloc in allocations}
 
     async def is_port_available(self, port: int) -> bool:
         """
@@ -245,10 +248,9 @@ class PortManager:
         Returns:
             True if available, False if allocated
         """
-        allocation = await self.db.port_registry.find_one({
-            "port": port,
-            "status": "active"
-        })
+        allocation = await self.db.port_registry.find_one(
+            {"port": port, "status": "active"}
+        )
 
         return allocation is None
 
@@ -265,10 +267,14 @@ class PortManager:
         active_count = await self.db.port_registry.count_documents({"status": "active"})
 
         # Count released allocations
-        released_count = await self.db.port_registry.count_documents({"status": "released"})
+        released_count = await self.db.port_registry.count_documents(
+            {"status": "released"}
+        )
 
         # Calculate available ports
-        available_count = total_range - active_count - len(self.port_range.reserved_ports)
+        available_count = (
+            total_range - active_count - len(self.port_range.reserved_ports)
+        )
 
         return {
             "total_ports_in_range": total_range,
@@ -278,9 +284,9 @@ class PortManager:
             "reserved_ports": len(self.port_range.reserved_ports),
             "port_range": {
                 "start": self.port_range.start_port,
-                "end": self.port_range.end_port
+                "end": self.port_range.end_port,
             },
-            "utilization_percent": round((active_count / total_range) * 100, 2)
+            "utilization_percent": round((active_count / total_range) * 100, 2),
         }
 
     async def generate_proxy_route(self, module_name: str) -> str:
@@ -331,7 +337,9 @@ port_manager: Optional[PortManager] = None
 def get_port_manager() -> PortManager:
     """Get Port Manager singleton instance"""
     if port_manager is None:
-        raise RuntimeError("Port Manager not initialized. Call init_port_manager() first.")
+        raise RuntimeError(
+            "Port Manager not initialized. Call init_port_manager() first."
+        )
     return port_manager
 
 

@@ -13,6 +13,7 @@ from enum import Enum
 
 class ChannelMetrics(BaseModel):
     """Channel performance metrics"""
+
     impressions: int = Field(0, ge=0, description="Total impressions")
     clicks: int = Field(0, ge=0, description="Total clicks")
     conversions: int = Field(0, ge=0, description="Total conversions")
@@ -25,6 +26,7 @@ class ChannelMetrics(BaseModel):
 
 class ChannelType(str, Enum):
     """Marketing channel type enumeration"""
+
     SOCIAL_MEDIA = "social_media"
     EMAIL = "email"
     PRINT = "print"
@@ -35,34 +37,48 @@ class ChannelType(str, Enum):
 
 class ChannelBase(BaseModel):
     """Base channel fields"""
+
     name: str = Field(..., min_length=1, max_length=200, description="Channel name")
     type: ChannelType = Field(..., description="Channel type")
-    platform: Optional[str] = Field(None, max_length=100, description="Platform name (e.g., facebook, instagram)")
-    description: Optional[str] = Field(None, max_length=1000, description="Channel description")
+    platform: Optional[str] = Field(
+        None, max_length=100, description="Platform name (e.g., facebook, instagram)"
+    )
+    description: Optional[str] = Field(
+        None, max_length=1000, description="Channel description"
+    )
     costPerImpression: float = Field(0, ge=0, description="Cost per impression (CPM)")
     isActive: bool = Field(True, description="Whether channel is active")
-    metrics: Optional[ChannelMetrics] = Field(default_factory=ChannelMetrics, description="Channel performance metrics")
+    metrics: Optional[ChannelMetrics] = Field(
+        default_factory=ChannelMetrics, description="Channel performance metrics"
+    )
 
 
 class ChannelCreate(ChannelBase):
     """Schema for creating a new channel"""
+
     pass
 
 
 class ChannelUpdate(BaseModel):
     """Schema for updating a channel"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     type: Optional[ChannelType] = None
     platform: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, max_length=1000)
     costPerImpression: Optional[float] = Field(None, ge=0)
     isActive: Optional[bool] = None
-    metrics: Optional[ChannelMetrics] = Field(None, description="Channel performance metrics")
+    metrics: Optional[ChannelMetrics] = Field(
+        None, description="Channel performance metrics"
+    )
 
 
 class Channel(ChannelBase):
     """Complete channel model with all fields"""
-    channelId: UUID = Field(default_factory=uuid4, description="Unique channel identifier")
+
+    channelId: UUID = Field(
+        default_factory=uuid4, description="Unique channel identifier"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
@@ -91,10 +107,10 @@ class Channel(ChannelBase):
                     "revenue": 11250.00,
                     "ctr": 3.0,
                     "conversionRate": 5.0,
-                    "roi": 400.0
+                    "roi": 400.0,
                 },
                 "createdBy": "d4e5f6a7-b8c9-0123-def1-234567890123",
                 "createdAt": "2025-01-20T10:00:00Z",
-                "updatedAt": "2025-01-20T10:00:00Z"
+                "updatedAt": "2025-01-20T10:00:00Z",
             }
         }

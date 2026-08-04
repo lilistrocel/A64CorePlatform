@@ -88,7 +88,8 @@ class WatchdogService:
 
         # Filter by severity threshold
         all_issues = [
-            i for i in all_issues
+            i
+            for i in all_issues
             if meets_threshold(i.severity, config.severityThreshold)
         ]
 
@@ -106,10 +107,12 @@ class WatchdogService:
 
         for issue in all_issues:
             key = issue.issue_key
-            existing = await col.find_one({
-                "issueKey": key,
-                "cooldownExpiresAt": {"$gt": now},
-            })
+            existing = await col.find_one(
+                {
+                    "issueKey": key,
+                    "cooldownExpiresAt": {"$gt": now},
+                }
+            )
             if existing:
                 result.skippedByCooldown += 1
             else:
@@ -187,8 +190,12 @@ class WatchdogService:
     async def get_history(self, limit: int = 50) -> List[dict]:
         """Get recent notification log entries."""
         col = self.db[NOTIFICATIONS_COLLECTION]
-        cursor = col.find(
-            {},
-            {"_id": 0},
-        ).sort("sentAt", -1).limit(limit)
+        cursor = (
+            col.find(
+                {},
+                {"_id": 0},
+            )
+            .sort("sentAt", -1)
+            .limit(limit)
+        )
         return await cursor.to_list(length=limit)

@@ -452,20 +452,22 @@ def _build_outbox_payload(
 
     lines_payload = []
     for ln in sorted(acn_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)):
-        lines_payload.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln["itemId"],
-            "itemCode": ln.get("itemCode", ""),
-            "quantity": str(ln.get("quantity", 0)),
-            "unitPrice": str(ln.get("unitPrice", 0)),
-            "lineNet": str(ln.get("lineNet", 0)),
-            "taxCode": ln.get("taxCode"),
-            "taxRate": str(ln.get("taxRate", 0)),
-            "lineTax": str(ln.get("lineTax", 0)),
-            "lineGross": str(ln.get("lineGross", 0)),
-            "costCenterId": ln.get("costCenterId"),
-            "grLineId": ln.get("grLineId"),
-        })
+        lines_payload.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln["itemId"],
+                "itemCode": ln.get("itemCode", ""),
+                "quantity": str(ln.get("quantity", 0)),
+                "unitPrice": str(ln.get("unitPrice", 0)),
+                "lineNet": str(ln.get("lineNet", 0)),
+                "taxCode": ln.get("taxCode"),
+                "taxRate": str(ln.get("taxRate", 0)),
+                "lineTax": str(ln.get("lineTax", 0)),
+                "lineGross": str(ln.get("lineGross", 0)),
+                "costCenterId": ln.get("costCenterId"),
+                "grLineId": ln.get("grLineId"),
+            }
+        )
 
     base_invoice_ref = acn_raw.get("baseInvoiceDocRef") or {}
     totals = acn_raw.get("totals", {})
@@ -540,7 +542,9 @@ async def create_ap_credit_note(
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
         computed_lines.append(
-            await _build_line_doc(line, line_number=i, org_id=org_id, auth_token=auth_token)
+            await _build_line_doc(
+                line, line_number=i, org_id=org_id, auth_token=auth_token
+            )
         )
 
     totals = _build_totals(computed_lines)
@@ -691,9 +695,7 @@ async def create_ap_credit_note_from_invoice(
 
     # Step 2: Per-line cap check against AP Invoice embedded lines.
     ap_lines: List[Dict[str, Any]] = ap_raw.get("lines", [])
-    ap_lines_map: Dict[str, Dict[str, Any]] = {
-        ln["lineId"]: ln for ln in ap_lines
-    }
+    ap_lines_map: Dict[str, Dict[str, Any]] = {ln["lineId"]: ln for ln in ap_lines}
 
     for line in payload.lines:
         base_ref = line.base_doc_ref
@@ -715,7 +717,9 @@ async def create_ap_credit_note_from_invoice(
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
         computed_lines.append(
-            await _build_line_doc(line, line_number=i, org_id=org_id, auth_token=auth_token)
+            await _build_line_doc(
+                line, line_number=i, org_id=org_id, auth_token=auth_token
+            )
         )
 
     totals = _build_totals(computed_lines)
@@ -725,9 +729,7 @@ async def create_ap_credit_note_from_invoice(
     # Reason: use the AP's companyCode for the doc-number counter scope if
     # the payload didn't explicitly provide one.
     effective_company_code = (
-        payload.company_code
-        or ap_raw.get("companyCode", "")
-        or org_id
+        payload.company_code or ap_raw.get("companyCode", "") or org_id
     )
 
     doc_number = await next_doc_number(
@@ -938,7 +940,9 @@ async def update_ap_credit_note(
         "creditDate": payload.credit_date,
         "dueDate": payload.due_date,
         "currency": payload.currency,
-        "exchangeRate": float(payload.exchange_rate) if payload.exchange_rate is not None else None,
+        "exchangeRate": (
+            float(payload.exchange_rate) if payload.exchange_rate is not None else None
+        ),
         "paymentTermsId": payload.payment_terms_id,
         "journalMemo": payload.journal_memo,
         "notes": payload.notes,
@@ -967,7 +971,9 @@ async def update_ap_credit_note(
         detail={"updatedFields": list(updates.keys())},
     )
 
-    updated_raw = await db[_ACN_COL].find_one({"docId": doc_id, "organizationId": org_id})
+    updated_raw = await db[_ACN_COL].find_one(
+        {"docId": doc_id, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)
@@ -1023,9 +1029,7 @@ async def delete_ap_credit_note(
     # Clean up dangling targetDocRefs on the source AP Invoice (if from-AP path).
     base_inv_ref = raw.get("baseInvoiceDocRef")
     if base_inv_ref:
-        ap_doc_id = (
-            base_inv_ref.get("docId") or base_inv_ref.get("doc_id")
-        )
+        ap_doc_id = base_inv_ref.get("docId") or base_inv_ref.get("doc_id")
         if ap_doc_id:
             await pull_dangling_ap_credit_refs(
                 db,
@@ -1131,7 +1135,9 @@ async def transition_status(
 
                 if ap_line_id:
                     line_qty = Decimal(str(acn_line.get("quantity", 0)))
-                    line_deltas[ap_line_id] = line_deltas.get(ap_line_id, _ZERO) + line_qty
+                    line_deltas[ap_line_id] = (
+                        line_deltas.get(ap_line_id, _ZERO) + line_qty
+                    )
 
                 # Accumulate gross regardless of line-level ref presence
                 # (for header-level creditedAmount).
@@ -1191,7 +1197,9 @@ async def transition_status(
         emitted_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             emitted_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1279,7 +1287,9 @@ async def transition_status(
         )
 
     # Reload and return the updated AP Credit Note.
-    updated_raw = await db[_ACN_COL].find_one({"docId": doc_id, "organizationId": org_id})
+    updated_raw = await db[_ACN_COL].find_one(
+        {"docId": doc_id, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)

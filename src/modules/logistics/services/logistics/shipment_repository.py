@@ -10,9 +10,17 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
-from src.modules.logistics.models.shipment import Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus
+from src.modules.logistics.models.shipment import (
+    Shipment,
+    ShipmentCreate,
+    ShipmentUpdate,
+    ShipmentStatus,
+)
 from src.modules.logistics.services.database import logistics_db
-from src.modules.farm_manager.models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+from src.modules.farm_manager.models.farming_year_config import (
+    get_farming_year,
+    DEFAULT_FARMING_YEAR_START_MONTH,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +51,7 @@ class ShipmentRepository:
             {"_id": "shipment_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
@@ -70,11 +78,13 @@ class ShipmentRepository:
         # Calculate farming year from actualDepartureDate, scheduledDate, or createdAt
         now = datetime.utcnow()
         date_for_farming_year = (
-            shipment_dict.get("actualDepartureDate") or
-            shipment_dict.get("scheduledDate") or
-            now
+            shipment_dict.get("actualDepartureDate")
+            or shipment_dict.get("scheduledDate")
+            or now
         )
-        farming_year = get_farming_year(date_for_farming_year, DEFAULT_FARMING_YEAR_START_MONTH)
+        farming_year = get_farming_year(
+            date_for_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+        )
         shipment_dict["farmingYear"] = farming_year
 
         shipment = Shipment(
@@ -82,11 +92,13 @@ class ShipmentRepository:
             shipmentCode=shipment_code,
             createdBy=created_by,
             createdAt=now,
-            updatedAt=now
+            updatedAt=now,
         )
 
         shipment_doc = shipment.model_dump(by_alias=True)
-        shipment_doc["shipmentId"] = str(shipment_doc["shipmentId"])  # Convert UUID to string for MongoDB
+        shipment_doc["shipmentId"] = str(
+            shipment_doc["shipmentId"]
+        )  # Convert UUID to string for MongoDB
         shipment_doc["routeId"] = str(shipment_doc["routeId"])
         shipment_doc["vehicleId"] = str(shipment_doc["vehicleId"])
         shipment_doc["driverId"] = str(shipment_doc["driverId"])
@@ -94,7 +106,9 @@ class ShipmentRepository:
 
         await collection.insert_one(shipment_doc)
 
-        logger.info(f"Created shipment: {shipment.shipmentId} with code {shipment_code}")
+        logger.info(
+            f"Created shipment: {shipment.shipmentId} with code {shipment_code}"
+        )
         return shipment
 
     async def get_by_id(self, shipment_id: UUID) -> Optional[Shipment]:
@@ -122,7 +136,7 @@ class ShipmentRepository:
         status: Optional[ShipmentStatus] = None,
         vehicle_id: Optional[UUID] = None,
         route_id: Optional[UUID] = None,
-        farming_year: Optional[int] = None
+        farming_year: Optional[int] = None,
     ) -> tuple[List[Shipment], int]:
         """
         Get all shipments with pagination and filters
@@ -163,7 +177,9 @@ class ShipmentRepository:
 
         return shipments, total
 
-    async def update(self, shipment_id: UUID, update_data: ShipmentUpdate) -> Optional[Shipment]:
+    async def update(
+        self, shipment_id: UUID, update_data: ShipmentUpdate
+    ) -> Optional[Shipment]:
         """
         Update a shipment
 
@@ -193,8 +209,7 @@ class ShipmentRepository:
             update_dict["orderIds"] = [str(oid) for oid in update_dict["orderIds"]]
 
         result = await collection.update_one(
-            {"shipmentId": str(shipment_id)},
-            {"$set": update_dict}
+            {"shipmentId": str(shipment_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:
@@ -203,7 +218,9 @@ class ShipmentRepository:
 
         return None
 
-    async def update_status(self, shipment_id: UUID, new_status: ShipmentStatus) -> Optional[Shipment]:
+    async def update_status(
+        self, shipment_id: UUID, new_status: ShipmentStatus
+    ) -> Optional[Shipment]:
         """
         Update shipment status
 
@@ -217,22 +234,20 @@ class ShipmentRepository:
         collection = self._get_collection()
 
         now = datetime.utcnow()
-        update_dict = {
-            "status": new_status.value,
-            "updatedAt": now
-        }
+        update_dict = {"status": new_status.value, "updatedAt": now}
 
         # Update departure/arrival dates based on status
         if new_status == ShipmentStatus.IN_TRANSIT:
             update_dict["actualDepartureDate"] = now
             # Recalculate farming year based on actual departure date
-            update_dict["farmingYear"] = get_farming_year(now, DEFAULT_FARMING_YEAR_START_MONTH)
+            update_dict["farmingYear"] = get_farming_year(
+                now, DEFAULT_FARMING_YEAR_START_MONTH
+            )
         elif new_status == ShipmentStatus.DELIVERED:
             update_dict["actualArrivalDate"] = now
 
         result = await collection.update_one(
-            {"shipmentId": str(shipment_id)},
-            {"$set": update_dict}
+            {"shipmentId": str(shipment_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

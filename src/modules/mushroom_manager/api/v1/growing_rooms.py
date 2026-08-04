@@ -8,7 +8,12 @@ Includes phase-transition endpoint for the 12-state lifecycle.
 import logging
 from fastapi import APIRouter, Depends, Query, status
 
-from ...models.growing_room import GrowingRoom, GrowingRoomCreate, GrowingRoomUpdate, PhaseTransitionRequest
+from ...models.growing_room import (
+    GrowingRoom,
+    GrowingRoomCreate,
+    GrowingRoomUpdate,
+    PhaseTransitionRequest,
+)
 from ...services.room.room_service import RoomService
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 
@@ -26,6 +31,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # POST /facilities/{facility_id}/rooms
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/facilities/{facility_id}/rooms",
@@ -51,6 +57,7 @@ async def create_room(
 # ---------------------------------------------------------------------------
 # GET /facilities/{facility_id}/rooms
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/facilities/{facility_id}/rooms",
@@ -92,6 +99,7 @@ async def list_rooms(
 # GET /facilities/{facility_id}/rooms/{room_id}
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/facilities/{facility_id}/rooms/{room_id}",
     response_model=SuccessResponse[GrowingRoom],
@@ -113,6 +121,7 @@ async def get_room(
 # ---------------------------------------------------------------------------
 # PATCH /facilities/{facility_id}/rooms/{room_id}
 # ---------------------------------------------------------------------------
+
 
 @router.patch(
     "/facilities/{facility_id}/rooms/{room_id}",
@@ -138,6 +147,7 @@ async def update_room(
 # ---------------------------------------------------------------------------
 # PATCH /facilities/{facility_id}/rooms/{room_id}/phase
 # ---------------------------------------------------------------------------
+
 
 @router.patch(
     "/facilities/{facility_id}/rooms/{room_id}/phase",
@@ -179,6 +189,7 @@ async def advance_phase(
 # DELETE /facilities/{facility_id}/rooms/{room_id}
 # ---------------------------------------------------------------------------
 
+
 @router.delete(
     "/facilities/{facility_id}/rooms/{room_id}",
     response_model=SuccessResponse[dict],
@@ -211,6 +222,4 @@ async def room_dependents(
     room_id: str,
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse[dict]:
-    return SuccessResponse(
-        data=await RoomService.room_dependents(facility_id, room_id)
-    )
+    return SuccessResponse(data=await RoomService.room_dependents(facility_id, room_id))

@@ -24,10 +24,7 @@ class FarmService:
         self.repository = FarmRepository()
 
     async def create_farm(
-        self,
-        farm_data: FarmCreate,
-        manager_id: UUID,
-        manager_email: str
+        self, farm_data: FarmCreate, manager_id: UUID, manager_email: str
     ) -> Farm:
         """
         Create a new farm
@@ -48,7 +45,7 @@ class FarmService:
             if farm_data.totalArea and farm_data.totalArea <= 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Total area must be greater than 0"
+                    detail="Total area must be greater than 0",
                 )
 
             farm = await self.repository.create(farm_data, manager_id, manager_email)
@@ -65,7 +62,7 @@ class FarmService:
             logger.error(f"Error creating farm: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create farm"
+                detail="Failed to create farm",
             )
 
     async def get_farm(self, farm_id: UUID) -> Farm:
@@ -85,14 +82,12 @@ class FarmService:
         if not farm:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Farm {farm_id} not found"
+                detail=f"Farm {farm_id} not found",
             )
         return farm
 
     async def get_user_farms(
-        self,
-        user_id: UUID,
-        is_active: Optional[bool] = None
+        self, user_id: UUID, is_active: Optional[bool] = None
     ) -> List[Farm]:
         """
         Get all farms for a user (manager)
@@ -108,10 +103,7 @@ class FarmService:
         return farms
 
     async def get_all_farms(
-        self,
-        page: int = 1,
-        per_page: int = 20,
-        is_active: Optional[bool] = None
+        self, page: int = 1, per_page: int = 20, is_active: Optional[bool] = None
     ) -> tuple[List[Farm], int, int]:
         """
         Get all farms with pagination
@@ -141,7 +133,7 @@ class FarmService:
         farm_id: UUID,
         update_data: FarmUpdate,
         user_id: UUID,
-        is_admin: bool = False
+        is_admin: bool = False,
     ) -> Farm:
         """
         Update a farm
@@ -165,28 +157,28 @@ class FarmService:
         if not is_admin and str(farm.managerId) != str(user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the farm manager can update this farm"
+                detail="Only the farm manager can update this farm",
             )
 
         # Only admins can change the manager
         if update_data.managerId is not None and not is_admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only admins can change the farm manager"
+                detail="Only admins can change the farm manager",
             )
 
         # Validate update data
         if update_data.totalArea is not None and update_data.totalArea <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Total area must be greater than 0"
+                detail="Total area must be greater than 0",
             )
 
         updated_farm = await self.repository.update(farm_id, update_data)
         if not updated_farm:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Farm {farm_id} not found"
+                detail=f"Farm {farm_id} not found",
             )
 
         logger.info(f"Farm updated: {farm_id} by user {user_id}")
@@ -217,7 +209,7 @@ class FarmService:
         if str(farm.managerId) != str(user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the farm manager can delete this farm"
+                detail="Only the farm manager can delete this farm",
             )
 
         # TODO: Check if farm has active blocks (implement after BlockRepository)
@@ -227,7 +219,7 @@ class FarmService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Farm {farm_id} not found"
+                detail=f"Farm {farm_id} not found",
             )
 
         logger.info(f"Farm deleted: {farm_id} by user {user_id}")
@@ -255,7 +247,9 @@ class FarmService:
                 # Invalidate dashboard summary caches
                 await cache.delete_pattern("get_dashboard_summary:*", prefix="farm")
 
-                logger.info("[Cache] Invalidated farm and dashboard caches after mutation")
+                logger.info(
+                    "[Cache] Invalidated farm and dashboard caches after mutation"
+                )
 
         except Exception as e:
             # CRITICAL: Never break the application due to cache errors

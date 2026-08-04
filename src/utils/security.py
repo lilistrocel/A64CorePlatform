@@ -33,7 +33,7 @@ def hash_password(password: str) -> str:
     """
     # Truncate password to 72 bytes for bcrypt compatibility
     # Reason: bcrypt has a 72-byte limit
-    if len(password.encode('utf-8')) > 72:
+    if len(password.encode("utf-8")) > 72:
         password = password[:72]
     return pwd_context.hash(password)
 
@@ -53,10 +53,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    user_id: str,
-    email: str,
-    role: UserRole,
-    expires_delta: Optional[timedelta] = None
+    user_id: str, email: str, role: UserRole, expires_delta: Optional[timedelta] = None
 ) -> str:
     """
     Create JWT access token
@@ -86,14 +83,10 @@ def create_access_token(
         "email": email,
         "role": role.value if isinstance(role, UserRole) else role,
         "exp": expire,
-        "type": "access"
+        "type": "access",
     }
 
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm="HS256"
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
 
     return encoded_jwt
 
@@ -101,7 +94,7 @@ def create_access_token(
 def create_refresh_token(
     user_id: str,
     token_id: Optional[str] = None,
-    expires_delta: Optional[timedelta] = None
+    expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, str]:
     """
     Create JWT refresh token
@@ -132,14 +125,10 @@ def create_refresh_token(
         "userId": user_id,
         "tokenId": token_id,
         "exp": expire,
-        "type": "refresh"
+        "type": "refresh",
     }
 
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm="HS256"
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
 
     return encoded_jwt, token_id
 
@@ -158,11 +147,7 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         JWTError: If token is invalid or expired
     """
     try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=["HS256"]
-        )
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         return payload
     except JWTError:
         return None
@@ -187,7 +172,7 @@ def verify_access_token(token: str) -> Optional[TokenPayload]:
         token_data = TokenPayload(
             userId=payload.get("userId"),
             email=payload.get("email"),
-            role=payload.get("role")
+            role=payload.get("role"),
         )
 
         return token_data
@@ -212,10 +197,7 @@ def verify_refresh_token(token: str) -> Optional[Dict[str, str]]:
         if not payload or payload.get("type") != "refresh":
             return None
 
-        return {
-            "userId": payload.get("userId"),
-            "tokenId": payload.get("tokenId")
-        }
+        return {"userId": payload.get("userId"), "tokenId": payload.get("tokenId")}
 
     except Exception:
         return None
@@ -232,10 +214,7 @@ def generate_token_id() -> str:
 
 
 def create_verification_token(
-    user_id: str,
-    email: str,
-    token_type: str,
-    expires_delta: Optional[timedelta] = None
+    user_id: str, email: str, token_type: str, expires_delta: Optional[timedelta] = None
 ) -> tuple[str, str]:
     """
     Create verification token (for email verification or password reset)
@@ -271,19 +250,17 @@ def create_verification_token(
         "email": email,
         "tokenId": token_id,
         "type": token_type,
-        "exp": expire
+        "exp": expire,
     }
 
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm="HS256"
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
 
     return encoded_jwt, token_id
 
 
-def verify_verification_token(token: str, expected_type: str) -> Optional[Dict[str, str]]:
+def verify_verification_token(
+    token: str, expected_type: str
+) -> Optional[Dict[str, str]]:
     """
     Verify and decode verification token
 
@@ -303,7 +280,7 @@ def verify_verification_token(token: str, expected_type: str) -> Optional[Dict[s
         return {
             "userId": payload.get("userId"),
             "email": payload.get("email"),
-            "tokenId": payload.get("tokenId")
+            "tokenId": payload.get("tokenId"),
         }
 
     except Exception:
@@ -312,10 +289,9 @@ def verify_verification_token(token: str, expected_type: str) -> Optional[Dict[s
 
 # ============= MFA Token Functions =============
 
+
 def create_mfa_token(
-    user_id: str,
-    email: str,
-    expires_delta: Optional[timedelta] = None
+    user_id: str, email: str, expires_delta: Optional[timedelta] = None
 ) -> tuple[str, str]:
     """
     Create a temporary MFA token for the second step of MFA login
@@ -346,14 +322,10 @@ def create_mfa_token(
         "email": email,
         "tokenId": token_id,
         "type": "mfa_pending",
-        "exp": expire
+        "exp": expire,
     }
 
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm="HS256"
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
 
     return encoded_jwt, token_id
 
@@ -377,7 +349,7 @@ def verify_mfa_token(token: str) -> Optional[Dict[str, str]]:
         return {
             "userId": payload.get("userId"),
             "email": payload.get("email"),
-            "tokenId": payload.get("tokenId")
+            "tokenId": payload.get("tokenId"),
         }
 
     except Exception:

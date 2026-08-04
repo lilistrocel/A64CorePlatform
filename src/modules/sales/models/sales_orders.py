@@ -166,7 +166,9 @@ class SalesOrderLineResponse(DocumentLineLinkMixin):
     open_qty = ordered_qty - delivered_qty - cancelled_qty (computed downstream).
     """
 
-    line_id: str = Field(..., description="UUID for this line (stable cross-service ref)")
+    line_id: str = Field(
+        ..., description="UUID for this line (stable cross-service ref)"
+    )
     line_number: int = Field(..., description="1-indexed position")
     item_id: str
     item_code: str
@@ -176,7 +178,9 @@ class SalesOrderLineResponse(DocumentLineLinkMixin):
     uom: str
     unit_price: Decimal
     discount_percent: Decimal
-    line_net: Decimal = Field(..., description="quantity × unit_price × (1 − discount/100)")
+    line_net: Decimal = Field(
+        ..., description="quantity × unit_price × (1 − discount/100)"
+    )
     tax_code_id: Optional[str]
     tax_percent: Decimal
     line_tax: Decimal = Field(..., description="line_net × tax_percent / 100")
@@ -326,7 +330,9 @@ class SalesOrderCreate(BPReferenceMixin, JournalMemoMixin):
     sales_employee_id: Optional[str] = Field(
         None, description="FK to ops users; the assigned sales rep"
     )
-    notes: Optional[str] = Field(None, max_length=2000, description="Free-text header notes")
+    notes: Optional[str] = Field(
+        None, max_length=2000, description="Free-text header notes"
+    )
     lines: List[SalesOrderLineCreate] = Field(
         ..., min_length=1, description="Sales Order lines (at least one required)"
     )
@@ -340,10 +346,7 @@ class SalesOrderCreate(BPReferenceMixin, JournalMemoMixin):
             ValueError: If delivery_date < doc_date.
             ValueError: If lines list is empty.
         """
-        if (
-            self.delivery_date is not None
-            and self.delivery_date < self.doc_date
-        ):
+        if self.delivery_date is not None and self.delivery_date < self.doc_date:
             raise ValueError(
                 f"delivery_date ({self.delivery_date}) must be >= "
                 f"doc_date ({self.doc_date})"
@@ -394,9 +397,7 @@ class SalesOrderUpdate(BaseModel):
             and self.delivery_date is not None
             and self.delivery_date < self.doc_date
         ):
-            raise ValueError(
-                "delivery_date must be >= doc_date when both are provided"
-            )
+            raise ValueError("delivery_date must be >= doc_date when both are provided")
         if self.lines is not None and len(self.lines) == 0:
             raise ValueError("Lines list cannot be empty when provided in an update.")
         return self
@@ -516,7 +517,9 @@ class SalesOrderStatusTransitionRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    new_status: DocumentStatus = Field(..., description="Target status for the transition")
+    new_status: DocumentStatus = Field(
+        ..., description="Target status for the transition"
+    )
     reason: Optional[str] = Field(
         None,
         max_length=500,

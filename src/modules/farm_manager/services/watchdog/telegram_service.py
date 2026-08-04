@@ -97,7 +97,9 @@ class TelegramService:
         if msg_id:
             return {
                 "success": True,
-                "botName": f"{bot_name} (@{bot_username})" if bot_username else bot_name,
+                "botName": (
+                    f"{bot_name} (@{bot_username})" if bot_username else bot_name
+                ),
                 "message": "Test message sent successfully",
                 "messageId": msg_id,
             }

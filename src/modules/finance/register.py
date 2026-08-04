@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 async def startup_hook() -> None:
     """Module startup hook — creates indexes and confirms DB access."""
-    logger.info(f"[Finance Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Finance Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
     try:
         await finance_db.connect()
         logger.info("[Finance Module] Database indexes initialized successfully")
@@ -45,11 +47,7 @@ def register(app: FastAPI, prefix: Optional[str] = None) -> None:
 
     logger.info(f"[Finance Module] Registering routes with prefix: {route_prefix}")
 
-    app.include_router(
-        api_router,
-        prefix=route_prefix,
-        tags=["finance"]
-    )
+    app.include_router(api_router, prefix=route_prefix, tags=["finance"])
 
     app.add_event_handler("startup", startup_hook)
     app.add_event_handler("shutdown", shutdown_hook)

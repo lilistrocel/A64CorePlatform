@@ -35,14 +35,14 @@ class PlantDataService:
         "expectedYieldPerPlant",
         "yieldUnit",
         "notes",
-        "tags"
+        "tags",
     ]
 
     @staticmethod
     async def create_plant_data(
         plant_data: PlantDataCreate,
         user_id: str,
-        user_email: str = "unknown@a64core.com"
+        user_email: str = "unknown@a64core.com",
     ) -> PlantData:
         """
         Create new plant data with validation
@@ -62,14 +62,14 @@ class PlantDataService:
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Plant data for '{plant_data.plantName}' already exists"
+                detail=f"Plant data for '{plant_data.plantName}' already exists",
             )
 
         # Validate growth cycle
         if plant_data.growthCycleDays <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="growthCycleDays must be greater than 0"
+                detail="growthCycleDays must be greater than 0",
             )
 
         # Validate temperature range
@@ -77,7 +77,7 @@ class PlantDataService:
             if plant_data.minTemperatureCelsius > plant_data.maxTemperatureCelsius:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="minTemperatureCelsius must be less than or equal to maxTemperatureCelsius"
+                    detail="minTemperatureCelsius must be less than or equal to maxTemperatureCelsius",
                 )
 
         # Validate pH range
@@ -85,13 +85,15 @@ class PlantDataService:
             if plant_data.optimalPHMin > plant_data.optimalPHMax:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="optimalPHMin must be less than or equal to optimalPHMax"
+                    detail="optimalPHMin must be less than or equal to optimalPHMax",
                 )
 
         # Create plant data
         plant = await PlantDataRepository.create(plant_data, user_id, user_email)
 
-        logger.info(f"[PlantData Service] User {user_id} created plant data: {plant.plantDataId}")
+        logger.info(
+            f"[PlantData Service] User {user_id} created plant data: {plant.plantDataId}"
+        )
         return plant
 
     @staticmethod
@@ -112,8 +114,7 @@ class PlantDataService:
 
         if not plant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plant data not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Plant data not found"
             )
 
         return plant
@@ -123,7 +124,7 @@ class PlantDataService:
         page: int = 1,
         per_page: int = 20,
         search: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> tuple[List[PlantData], int]:
         """
         Get all plant data with pagination and filters
@@ -142,19 +143,14 @@ class PlantDataService:
 
         # Get plant data
         plants, total = await PlantDataRepository.get_all(
-            skip=skip,
-            limit=per_page,
-            search=search,
-            is_active=is_active
+            skip=skip, limit=per_page, search=search, is_active=is_active
         )
 
         return plants, total
 
     @staticmethod
     async def update_plant_data(
-        plant_data_id: UUID,
-        update_data: PlantDataUpdate,
-        user_id: str
+        plant_data_id: UUID, update_data: PlantDataUpdate, user_id: str
     ) -> PlantData:
         """
         Update plant data
@@ -174,36 +170,56 @@ class PlantDataService:
         plant = await PlantDataRepository.get_by_id(plant_data_id)
         if not plant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plant data not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Plant data not found"
             )
 
         # Validate temperature range if updating
-        if update_data.minTemperatureCelsius is not None or update_data.maxTemperatureCelsius is not None:
-            temp_min = update_data.minTemperatureCelsius if update_data.minTemperatureCelsius is not None else plant.minTemperatureCelsius
-            temp_max = update_data.maxTemperatureCelsius if update_data.maxTemperatureCelsius is not None else plant.maxTemperatureCelsius
+        if (
+            update_data.minTemperatureCelsius is not None
+            or update_data.maxTemperatureCelsius is not None
+        ):
+            temp_min = (
+                update_data.minTemperatureCelsius
+                if update_data.minTemperatureCelsius is not None
+                else plant.minTemperatureCelsius
+            )
+            temp_max = (
+                update_data.maxTemperatureCelsius
+                if update_data.maxTemperatureCelsius is not None
+                else plant.maxTemperatureCelsius
+            )
 
             if temp_min and temp_max and temp_min > temp_max:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="minTemperatureCelsius must be less than or equal to maxTemperatureCelsius"
+                    detail="minTemperatureCelsius must be less than or equal to maxTemperatureCelsius",
                 )
 
         # Validate pH range if updating
         if update_data.optimalPHMin is not None or update_data.optimalPHMax is not None:
-            ph_min = update_data.optimalPHMin if update_data.optimalPHMin is not None else plant.optimalPHMin
-            ph_max = update_data.optimalPHMax if update_data.optimalPHMax is not None else plant.optimalPHMax
+            ph_min = (
+                update_data.optimalPHMin
+                if update_data.optimalPHMin is not None
+                else plant.optimalPHMin
+            )
+            ph_max = (
+                update_data.optimalPHMax
+                if update_data.optimalPHMax is not None
+                else plant.optimalPHMax
+            )
 
             if ph_min and ph_max and ph_min > ph_max:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="optimalPHMin must be less than or equal to optimalPHMax"
+                    detail="optimalPHMin must be less than or equal to optimalPHMax",
                 )
 
         # Update plant data
         updated_plant = await PlantDataRepository.update(plant_data_id, update_data)
 
-        logger.info(f"[PlantData Service] User {user_id} updated plant data: {plant_data_id}")
+        logger.info(
+            f"[PlantData Service] User {user_id} updated plant data: {plant_data_id}"
+        )
         return updated_plant
 
     @staticmethod
@@ -225,15 +241,16 @@ class PlantDataService:
         plant = await PlantDataRepository.get_by_id(plant_data_id)
         if not plant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plant data not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Plant data not found"
             )
 
         # Soft delete
         deleted = await PlantDataRepository.delete(plant_data_id)
 
         if deleted:
-            logger.info(f"[PlantData Service] User {user_id} deleted plant data: {plant_data_id}")
+            logger.info(
+                f"[PlantData Service] User {user_id} deleted plant data: {plant_data_id}"
+            )
 
         return deleted
 
@@ -242,7 +259,7 @@ class PlantDataService:
         file: UploadFile,
         user_id: str,
         user_email: str = "unknown@a64core.com",
-        update_existing: bool = False
+        update_existing: bool = False,
     ) -> dict:
         """
         Import plant data from CSV file
@@ -259,16 +276,16 @@ class PlantDataService:
             HTTPException: If CSV format is invalid
         """
         # Validate file type
-        if not file.filename.endswith('.csv'):
+        if not file.filename.endswith(".csv"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="File must be a CSV file"
+                detail="File must be a CSV file",
             )
 
         try:
             # Read file contents
             contents = await file.read()
-            csv_text = contents.decode('utf-8')
+            csv_text = contents.decode("utf-8")
             csv_file = io.StringIO(csv_text)
 
             # Parse CSV
@@ -278,16 +295,24 @@ class PlantDataService:
             if not reader.fieldnames:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="CSV file is empty or has no headers"
+                    detail="CSV file is empty or has no headers",
                 )
 
             # Check for required columns
-            required_columns = ["plantName", "growthCycleDays", "plantType", "expectedYieldPerPlant", "yieldUnit"]
-            missing_columns = [col for col in required_columns if col not in reader.fieldnames]
+            required_columns = [
+                "plantName",
+                "growthCycleDays",
+                "plantType",
+                "expectedYieldPerPlant",
+                "yieldUnit",
+            ]
+            missing_columns = [
+                col for col in required_columns if col not in reader.fieldnames
+            ]
             if missing_columns:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Missing required columns: {', '.join(missing_columns)}"
+                    detail=f"Missing required columns: {', '.join(missing_columns)}",
                 )
 
             # Parse rows
@@ -296,7 +321,9 @@ class PlantDataService:
             skipped = []
             errors = []
 
-            for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
+            for row_num, row in enumerate(
+                reader, start=2
+            ):  # Start at 2 (header is row 1)
                 try:
                     # Check if plant exists
                     existing = await PlantDataRepository.get_by_name(row["plantName"])
@@ -322,7 +349,9 @@ class PlantDataService:
 
             if new_plants:
                 try:
-                    created_plants = await PlantDataRepository.bulk_create(new_plants, user_id, user_email)
+                    created_plants = await PlantDataRepository.bulk_create(
+                        new_plants, user_id, user_email
+                    )
                     created_count = len(created_plants)
                 except Exception as e:
                     errors.append(f"Bulk create failed: {str(e)}")
@@ -338,7 +367,7 @@ class PlantDataService:
                 "updated": updated_count,
                 "skipped": len(skipped),
                 "errors": len(errors),
-                "errorDetails": errors[:10] if errors else []  # Limit error details
+                "errorDetails": errors[:10] if errors else [],  # Limit error details
             }
 
             logger.info(
@@ -352,13 +381,13 @@ class PlantDataService:
         except UnicodeDecodeError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid file encoding. Please use UTF-8 encoded CSV file"
+                detail="Invalid file encoding. Please use UTF-8 encoded CSV file",
             )
         except Exception as e:
             logger.error(f"[PlantData Service] CSV import error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to import CSV: {str(e)}"
+                detail=f"Failed to import CSV: {str(e)}",
             )
 
     @staticmethod
@@ -374,16 +403,32 @@ class PlantDataService:
             scientificName=row.get("scientificName") or None,
             plantType=row["plantType"],
             growthCycleDays=int(row["growthCycleDays"]),
-            minTemperatureCelsius=float(row["minTemperatureCelsius"]) if row.get("minTemperatureCelsius") else None,
-            maxTemperatureCelsius=float(row["maxTemperatureCelsius"]) if row.get("maxTemperatureCelsius") else None,
-            optimalPHMin=float(row["optimalPHMin"]) if row.get("optimalPHMin") else None,
-            optimalPHMax=float(row["optimalPHMax"]) if row.get("optimalPHMax") else None,
-            wateringFrequencyDays=int(row["wateringFrequencyDays"]) if row.get("wateringFrequencyDays") else None,
+            minTemperatureCelsius=(
+                float(row["minTemperatureCelsius"])
+                if row.get("minTemperatureCelsius")
+                else None
+            ),
+            maxTemperatureCelsius=(
+                float(row["maxTemperatureCelsius"])
+                if row.get("maxTemperatureCelsius")
+                else None
+            ),
+            optimalPHMin=(
+                float(row["optimalPHMin"]) if row.get("optimalPHMin") else None
+            ),
+            optimalPHMax=(
+                float(row["optimalPHMax"]) if row.get("optimalPHMax") else None
+            ),
+            wateringFrequencyDays=(
+                int(row["wateringFrequencyDays"])
+                if row.get("wateringFrequencyDays")
+                else None
+            ),
             sunlightHoursDaily=row.get("sunlightHoursDaily") or None,
             expectedYieldPerPlant=float(row["expectedYieldPerPlant"]),
             yieldUnit=row["yieldUnit"],
             notes=row.get("notes") or None,
-            tags=tags
+            tags=tags,
         )
 
     @staticmethod
@@ -397,17 +442,39 @@ class PlantDataService:
         return PlantDataUpdate(
             scientificName=row.get("scientificName") or None,
             plantType=row.get("plantType") or None,
-            growthCycleDays=int(row["growthCycleDays"]) if row.get("growthCycleDays") else None,
-            minTemperatureCelsius=float(row["minTemperatureCelsius"]) if row.get("minTemperatureCelsius") else None,
-            maxTemperatureCelsius=float(row["maxTemperatureCelsius"]) if row.get("maxTemperatureCelsius") else None,
-            optimalPHMin=float(row["optimalPHMin"]) if row.get("optimalPHMin") else None,
-            optimalPHMax=float(row["optimalPHMax"]) if row.get("optimalPHMax") else None,
-            wateringFrequencyDays=int(row["wateringFrequencyDays"]) if row.get("wateringFrequencyDays") else None,
+            growthCycleDays=(
+                int(row["growthCycleDays"]) if row.get("growthCycleDays") else None
+            ),
+            minTemperatureCelsius=(
+                float(row["minTemperatureCelsius"])
+                if row.get("minTemperatureCelsius")
+                else None
+            ),
+            maxTemperatureCelsius=(
+                float(row["maxTemperatureCelsius"])
+                if row.get("maxTemperatureCelsius")
+                else None
+            ),
+            optimalPHMin=(
+                float(row["optimalPHMin"]) if row.get("optimalPHMin") else None
+            ),
+            optimalPHMax=(
+                float(row["optimalPHMax"]) if row.get("optimalPHMax") else None
+            ),
+            wateringFrequencyDays=(
+                int(row["wateringFrequencyDays"])
+                if row.get("wateringFrequencyDays")
+                else None
+            ),
             sunlightHoursDaily=row.get("sunlightHoursDaily") or None,
-            expectedYieldPerPlant=float(row["expectedYieldPerPlant"]) if row.get("expectedYieldPerPlant") else None,
+            expectedYieldPerPlant=(
+                float(row["expectedYieldPerPlant"])
+                if row.get("expectedYieldPerPlant")
+                else None
+            ),
             yieldUnit=row.get("yieldUnit") or None,
             notes=row.get("notes") or None,
-            tags=tags
+            tags=tags,
         )
 
     @staticmethod
@@ -439,7 +506,7 @@ class PlantDataService:
             "expectedYieldPerPlant": "5.0",
             "yieldUnit": "kg",
             "notes": "Popular salad and cooking vegetable. Requires staking for support.",
-            "tags": "vegetable,salad,summer"
+            "tags": "vegetable,salad,summer",
         }
         writer.writerow(example)
 

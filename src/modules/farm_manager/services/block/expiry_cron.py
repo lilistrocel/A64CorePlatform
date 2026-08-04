@@ -42,10 +42,12 @@ async def process_expired_harvest_inventory(db) -> dict:
     # Match rows that have an expiryDate in the past AND still hold sellable stock.
     # expiryDate is stored as an ISO-8601 string ("YYYY-MM-DD" or full datetime).
     # Lexicographic comparison works correctly for ISO-8601 date strings.
-    cursor = db.inventory_harvest.find({
-        "expiryDate": {"$lte": now_iso, "$ne": None, "$exists": True},
-        "availableQuantity": {"$gt": 0},
-    })
+    cursor = db.inventory_harvest.find(
+        {
+            "expiryDate": {"$lte": now_iso, "$ne": None, "$exists": True},
+            "availableQuantity": {"$gt": 0},
+        }
+    )
 
     moved = 0
     skipped = 0

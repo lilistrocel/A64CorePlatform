@@ -67,7 +67,7 @@ class CRMDatabaseManager:
             # Text search index for name, email, company
             await db.customers.create_index(
                 [("name", "text"), ("email", "text"), ("company", "text")],
-                name="customer_search_text"
+                name="customer_search_text",
             )
 
             logger.info("[CRM Module] MongoDB indexes created successfully")

@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 # ContextVar holds the current division ID for the request scope
 _division_id_var: ContextVar[Optional[str]] = ContextVar("division_id", default=None)
-_organization_id_var: ContextVar[Optional[str]] = ContextVar("organization_id", default=None)
+_organization_id_var: ContextVar[Optional[str]] = ContextVar(
+    "organization_id", default=None
+)
 
 
 def get_current_division_id() -> Optional[str]:
@@ -31,7 +33,9 @@ def get_current_organization_id() -> Optional[str]:
     return _organization_id_var.get()
 
 
-def set_division_context(division_id: Optional[str], organization_id: Optional[str] = None) -> None:
+def set_division_context(
+    division_id: Optional[str], organization_id: Optional[str] = None
+) -> None:
     """Manually set division context (useful for background tasks)."""
     _division_id_var.set(division_id)
     if organization_id:
@@ -48,7 +52,9 @@ class DivisionContextMiddleware(BaseHTTPMiddleware):
     This ensures backward compatibility.
     """
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         # Read division ID from header
         division_id = request.headers.get("X-Division-Id")
         organization_id = request.headers.get("X-Organization-Id")

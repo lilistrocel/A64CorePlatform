@@ -25,14 +25,12 @@ class BlockService:
         BlockState.PLANNED: [BlockState.PLANTED, BlockState.EMPTY],
         BlockState.PLANTED: [BlockState.HARVESTING, BlockState.ALERT, BlockState.EMPTY],
         BlockState.HARVESTING: [BlockState.EMPTY, BlockState.ALERT],
-        BlockState.ALERT: [BlockState.EMPTY, BlockState.HARVESTING, BlockState.PLANTED]
+        BlockState.ALERT: [BlockState.EMPTY, BlockState.HARVESTING, BlockState.PLANTED],
     }
 
     @staticmethod
     async def create_block(
-        block_data: BlockCreate,
-        farm_id: UUID,
-        user_id: str
+        block_data: BlockCreate, farm_id: UUID, user_id: str
     ) -> Block:
         """
         Create a new block with validation
@@ -53,15 +51,14 @@ class BlockService:
         farm = await farm_repo.get_by_id(farm_id)
         if not farm:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Farm not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Farm not found"
             )
 
         # Verify farm is active
         if not farm.isActive:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot add blocks to inactive farm"
+                detail="Cannot add blocks to inactive farm",
             )
 
         # Check if block name is unique within farm
@@ -69,13 +66,15 @@ class BlockService:
         if any(b.name == block_data.name for b in existing_blocks):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Block with name '{block_data.name}' already exists in this farm"
+                detail=f"Block with name '{block_data.name}' already exists in this farm",
             )
 
         # Create block
         block = await BlockRepository.create(block_data, farm_id)
 
-        logger.info(f"[Block Service] User {user_id} created block {block.blockId} in farm {farm_id}")
+        logger.info(
+            f"[Block Service] User {user_id} created block {block.blockId} in farm {farm_id}"
+        )
         return block
 
     @staticmethod
@@ -96,8 +95,7 @@ class BlockService:
 
         if not block:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Block not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Block not found"
             )
 
         return block
@@ -107,7 +105,7 @@ class BlockService:
         farm_id: UUID,
         page: int = 1,
         per_page: int = 20,
-        state: Optional[BlockState] = None
+        state: Optional[BlockState] = None,
     ) -> tuple[List[Block], int]:
         """
         Get blocks for a farm with pagination
@@ -129,8 +127,7 @@ class BlockService:
         farm = await farm_repo.get_by_id(farm_id)
         if not farm:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Farm not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Farm not found"
             )
 
         # Calculate skip
@@ -138,19 +135,14 @@ class BlockService:
 
         # Get blocks
         blocks, total = await BlockRepository.get_by_farm(
-            farm_id,
-            skip=skip,
-            limit=per_page,
-            state=state
+            farm_id, skip=skip, limit=per_page, state=state
         )
 
         return blocks, total
 
     @staticmethod
     async def update_block(
-        block_id: UUID,
-        update_data: BlockUpdate,
-        user_id: str
+        block_id: UUID, update_data: BlockUpdate, user_id: str
     ) -> Block:
         """
         Update a block
@@ -170,17 +162,19 @@ class BlockService:
         block = await BlockRepository.get_by_id(block_id)
         if not block:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Block not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Block not found"
             )
 
         # Validate name uniqueness if changing name
         if update_data.name and update_data.name != block.name:
             existing_blocks, _ = await BlockRepository.get_by_farm(block.farmId)
-            if any(b.name == update_data.name and b.blockId != block_id for b in existing_blocks):
+            if any(
+                b.name == update_data.name and b.blockId != block_id
+                for b in existing_blocks
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Block with name '{update_data.name}' already exists in this farm"
+                    detail=f"Block with name '{update_data.name}' already exists in this farm",
                 )
 
         # Update block
@@ -208,15 +202,14 @@ class BlockService:
         block = await BlockRepository.get_by_id(block_id)
         if not block:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Block not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Block not found"
             )
 
         # Cannot delete block if it's not empty
         if block.state != BlockState.EMPTY:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete block in '{block.state.value}' state. Block must be empty."
+                detail=f"Cannot delete block in '{block.state.value}' state. Block must be empty.",
             )
 
         # Delete block
@@ -233,7 +226,7 @@ class BlockService:
         new_state: BlockState,
         user_id: str,
         planting_id: Optional[UUID] = None,
-        cycle_id: Optional[UUID] = None
+        cycle_id: Optional[UUID] = None,
     ) -> Block:
         """
         Transition block to a new state with validation
@@ -255,8 +248,7 @@ class BlockService:
         block = await BlockRepository.get_by_id(block_id)
         if not block:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Block not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Block not found"
             )
 
         # Check if transition is valid
@@ -267,22 +259,19 @@ class BlockService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid state transition from '{current_state.value}' to '{new_state.value}'. "
-                       f"Valid transitions: {[s.value for s in valid_transitions]}"
+                f"Valid transitions: {[s.value for s in valid_transitions]}",
             )
 
         # Additional validation for specific transitions
         if new_state == BlockState.PLANTED and not planting_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="planting_id is required when transitioning to 'planted' state"
+                detail="planting_id is required when transitioning to 'planted' state",
             )
 
         # Update state
         updated_block = await BlockRepository.update_state(
-            block_id,
-            new_state,
-            planting_id=planting_id,
-            cycle_id=cycle_id
+            block_id, new_state, planting_id=planting_id, cycle_id=cycle_id
         )
 
         logger.info(
@@ -309,8 +298,7 @@ class BlockService:
         block = await BlockRepository.get_by_id(block_id)
         if not block:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Block not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Block not found"
             )
 
         # Get farm details
@@ -334,7 +322,7 @@ class BlockService:
                 "totalCycles": 0,  # TODO: Get from block_cycles
                 "totalHarvests": 0,  # TODO: Get from harvests
                 "averageYield": 0.0,  # TODO: Calculate
-            }
+            },
         }
 
         return summary
@@ -367,9 +355,7 @@ class BlockService:
 
     @staticmethod
     async def update_block_state(
-        block_id: UUID,
-        new_state: BlockState,
-        additional_data: Optional[dict] = None
+        block_id: UUID, new_state: BlockState, additional_data: Optional[dict] = None
     ) -> Block:
         """
         Update block state with additional data (simplified version for internal use)
@@ -391,8 +377,7 @@ class BlockService:
         block = await BlockRepository.get_by_id(block_id)
         if not block:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Block not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Block not found"
             )
 
         # Prepare update data
@@ -403,9 +388,7 @@ class BlockService:
 
         # Update block
         updated_block = await BlockRepository.update_state(
-            block_id,
-            new_state,
-            additional_data=additional_data
+            block_id, new_state, additional_data=additional_data
         )
 
         logger.info(

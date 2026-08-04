@@ -55,11 +55,13 @@ logger = logging.getLogger(__name__)
 # Configuration
 # =============================================================================
 
+
 class ValidationMode(str, Enum):
     """License validation mode"""
-    FORMAT = "format"      # Format validation only (fast)
-    OFFLINE = "offline"    # Format + offline verification (no network)
-    ONLINE = "online"      # Format + offline + online verification (network required)
+
+    FORMAT = "format"  # Format validation only (fast)
+    OFFLINE = "offline"  # Format + offline verification (no network)
+    ONLINE = "online"  # Format + offline + online verification (network required)
 
 
 # Environment configuration
@@ -84,6 +86,7 @@ LICENSE_FORMATS = {
 # License Validator Class
 # =============================================================================
 
+
 class LicenseValidator:
     """
     License key validator with multiple validation strategies.
@@ -98,7 +101,7 @@ class LicenseValidator:
         self,
         validation_mode: str = LICENSE_VALIDATION_MODE,
         server_url: str = LICENSE_SERVER_URL,
-        api_key: str = LICENSE_SERVER_API_KEY
+        api_key: str = LICENSE_SERVER_API_KEY,
     ):
         """
         Initialize license validator.
@@ -211,7 +214,9 @@ class LicenseValidator:
     # Offline Validation
     # =========================================================================
 
-    def validate_offline(self, license_key: str, module_name: str = "") -> Dict[str, any]:
+    def validate_offline(
+        self, license_key: str, module_name: str = ""
+    ) -> Dict[str, any]:
         """
         Validate license key offline (no network calls).
 
@@ -238,9 +243,11 @@ class LicenseValidator:
         result = {
             "valid": False,
             "error": None,
-            "license_key": license_key[:10] + "..." if len(license_key) > 10 else license_key,
+            "license_key": (
+                license_key[:10] + "..." if len(license_key) > 10 else license_key
+            ),
             "module_name": module_name,
-            "validation_mode": "offline"
+            "validation_mode": "offline",
         }
 
         # Step 1: Format validation
@@ -277,10 +284,7 @@ class LicenseValidator:
     # =========================================================================
 
     async def validate_online(
-        self,
-        license_key: str,
-        module_name: str = "",
-        module_version: str = ""
+        self, license_key: str, module_name: str = "", module_version: str = ""
     ) -> Dict[str, any]:
         """
         Validate license key against external license server.
@@ -312,12 +316,14 @@ class LicenseValidator:
         result = {
             "valid": False,
             "error": None,
-            "license_key": license_key[:10] + "..." if len(license_key) > 10 else license_key,
+            "license_key": (
+                license_key[:10] + "..." if len(license_key) > 10 else license_key
+            ),
             "module_name": module_name,
             "module_version": module_version,
             "validation_mode": "online",
             "expires_at": None,
-            "features": []
+            "features": [],
         }
 
         # Step 1: Offline validation first
@@ -345,7 +351,7 @@ class LicenseValidator:
                 "module_name": module_name,
                 "module_version": module_version,
                 "platform": "a64core",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
             async with aiohttp.ClientSession() as session:
@@ -353,7 +359,7 @@ class LicenseValidator:
                     f"{self.server_url}/api/v1/licenses/validate",
                     json=payload,
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    timeout=aiohttp.ClientTimeout(total=10),
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
@@ -365,8 +371,12 @@ class LicenseValidator:
                             result["features"] = data.get("features", [])
                             logger.info(f"License validation successful (online)")
                         else:
-                            result["error"] = data.get("error", "License validation failed")
-                            logger.warning(f"License validation failed: {result['error']}")
+                            result["error"] = data.get(
+                                "error", "License validation failed"
+                            )
+                            logger.warning(
+                                f"License validation failed: {result['error']}"
+                            )
 
                     elif response.status == 404:
                         result["error"] = "License key not found"
@@ -377,7 +387,9 @@ class LicenseValidator:
                         logger.warning("License validation rate limited")
 
                     else:
-                        result["error"] = f"License server error (HTTP {response.status})"
+                        result["error"] = (
+                            f"License server error (HTTP {response.status})"
+                        )
                         logger.error(f"License server returned {response.status}")
 
         except aiohttp.ClientError as e:
@@ -395,10 +407,7 @@ class LicenseValidator:
     # =========================================================================
 
     async def validate_license(
-        self,
-        license_key: str,
-        module_name: str = "",
-        module_version: str = ""
+        self, license_key: str, module_name: str = "", module_version: str = ""
     ) -> Dict[str, any]:
         """
         Validate license key using configured validation mode.
@@ -432,7 +441,7 @@ class LicenseValidator:
             return {
                 "valid": is_valid,
                 "error": None if is_valid else "Invalid license key format",
-                "validation_mode": "format"
+                "validation_mode": "format",
             }
 
         elif mode == "offline":
@@ -498,7 +507,7 @@ class LicenseValidator:
     def generate_test_license(
         format_type: str = "segmented",
         module_name: str = "",
-        valid_checksum: bool = True
+        valid_checksum: bool = True,
     ) -> str:
         """
         Generate a test license key for development/testing.
@@ -528,7 +537,10 @@ class LicenseValidator:
             # Generate 4 segments
             segments = []
             for _ in range(4):
-                segment = ''.join(secrets.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") for _ in range(4))
+                segment = "".join(
+                    secrets.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+                    for _ in range(4)
+                )
                 segments.append(segment)
 
             license_key = "-".join(segments)
@@ -536,11 +548,15 @@ class LicenseValidator:
             # Add valid checksum if requested
             if valid_checksum:
                 # Calculate Luhn checksum for the numeric part
-                digits = ''.join(c for c in license_key if c.isdigit())
+                digits = "".join(c for c in license_key if c.isdigit())
                 if digits:
                     # Replace last digit with checksum
-                    checksum_digit = LicenseValidator._calculate_luhn_checksum(digits[:-1])
-                    license_key = license_key.replace(digits[-1], str(checksum_digit), 1)
+                    checksum_digit = LicenseValidator._calculate_luhn_checksum(
+                        digits[:-1]
+                    )
+                    license_key = license_key.replace(
+                        digits[-1], str(checksum_digit), 1
+                    )
 
             return license_key
 
@@ -550,7 +566,10 @@ class LicenseValidator:
 
         elif format_type == "alphanumeric":
             # Generate 32-character alphanumeric
-            return ''.join(secrets.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") for _ in range(32))
+            return "".join(
+                secrets.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+                for _ in range(32)
+            )
 
         else:
             raise ValueError(f"Unknown format type: {format_type}")
@@ -584,11 +603,12 @@ class LicenseValidator:
 # Convenience Functions
 # =============================================================================
 
+
 async def validate_license(
     license_key: str,
     module_name: str = "",
     module_version: str = "",
-    validation_mode: str = LICENSE_VALIDATION_MODE
+    validation_mode: str = LICENSE_VALIDATION_MODE,
 ) -> Dict[str, any]:
     """
     Convenience function for license validation.
@@ -659,21 +679,25 @@ if __name__ == "__main__":
         print("Usage:")
         print("  python -m src.utils.license_validator generate")
         print("  python -m src.utils.license_validator format <license_key>")
-        print("  python -m src.utils.license_validator offline <license_key> [module_name]")
-        print("  python -m src.utils.license_validator online <license_key> [module_name] [version]")
+        print(
+            "  python -m src.utils.license_validator offline <license_key> [module_name]"
+        )
+        print(
+            "  python -m src.utils.license_validator online <license_key> [module_name] [version]"
+        )
         sys.exit(1)
 
     command = sys.argv[1].lower()
 
     if command == "generate":
         # Generate test licenses
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("Test License Keys (FOR DEVELOPMENT ONLY)")
-        print("="*80)
+        print("=" * 80)
         print(f"Segmented:    {generate_test_license('segmented')}")
         print(f"UUID:         {generate_test_license('uuid')}")
         print(f"Alphanumeric: {generate_test_license('alphanumeric')}")
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
 
     elif command in ["format", "offline", "online"]:
         if len(sys.argv) < 3:
@@ -685,13 +709,15 @@ if __name__ == "__main__":
         module_version = sys.argv[4] if len(sys.argv) > 4 else ""
 
         async def run_validation():
-            result = await validate_license(license_key, module_name, module_version, command)
-            print("\n" + "="*80)
+            result = await validate_license(
+                license_key, module_name, module_version, command
+            )
+            print("\n" + "=" * 80)
             print("License Validation Result")
-            print("="*80)
+            print("=" * 80)
             for key, value in result.items():
                 print(f"{key:20s}: {value}")
-            print("="*80 + "\n")
+            print("=" * 80 + "\n")
 
         asyncio.run(run_validation())
 

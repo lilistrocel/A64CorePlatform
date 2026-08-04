@@ -34,15 +34,14 @@ router = APIRouter(prefix="/config")
 
 # ==================== Spacing Standards Endpoints ====================
 
+
 @router.get(
     "/spacing-standards",
     response_model=SpacingStandardsResponse,
     summary="Get spacing standards configuration",
-    description="Retrieve the current spacing standards configuration with plant densities per category."
+    description="Retrieve the current spacing standards configuration with plant densities per category.",
 )
-async def get_spacing_standards(
-    current_user: CurrentUser = Depends(get_current_user)
-):
+async def get_spacing_standards(current_user: CurrentUser = Depends(get_current_user)):
     """Get the current spacing standards configuration."""
     config_service = ConfigService()
     config = await config_service.get_spacing_standards()
@@ -53,11 +52,11 @@ async def get_spacing_standards(
     "/spacing-standards",
     response_model=SpacingStandardsResponse,
     summary="Update spacing standards configuration",
-    description="Update the spacing standards configuration. Requires admin privileges."
+    description="Update the spacing standards configuration. Requires admin privileges.",
 )
 async def update_spacing_standards(
     update_data: SpacingStandardsUpdate,
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Update spacing standards configuration.
@@ -68,7 +67,7 @@ async def update_spacing_standards(
     if current_user.role not in ("admin", "super_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can update spacing standards"
+            detail="Only administrators can update spacing standards",
         )
 
     # Validate all spacing categories are present
@@ -79,14 +78,14 @@ async def update_spacing_standards(
     if missing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Missing spacing categories: {', '.join(missing)}"
+            detail=f"Missing spacing categories: {', '.join(missing)}",
         )
 
     extra = provided_categories - valid_categories
     if extra:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid spacing categories: {', '.join(extra)}"
+            detail=f"Invalid spacing categories: {', '.join(extra)}",
         )
 
     # Validate all densities are positive integers
@@ -94,19 +93,18 @@ async def update_spacing_standards(
         if not isinstance(density, int) or density <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Density for '{category}' must be a positive integer"
+                detail=f"Density for '{category}' must be a positive integer",
             )
 
     config_service = ConfigService()
     config = await config_service.update_spacing_standards(
         densities=update_data.densities,
         user_id=UUID(current_user.userId),
-        user_email=current_user.email
+        user_email=current_user.email,
     )
 
     return SpacingStandardsResponse(
-        data=config,
-        message="Spacing standards updated successfully"
+        data=config, message="Spacing standards updated successfully"
     )
 
 
@@ -114,43 +112,42 @@ async def update_spacing_standards(
     "/spacing-standards/reset",
     response_model=SpacingStandardsResponse,
     summary="Reset spacing standards to defaults",
-    description="Reset spacing standards configuration to default values. Requires admin privileges."
+    description="Reset spacing standards configuration to default values. Requires admin privileges.",
 )
 async def reset_spacing_standards(
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Reset spacing standards to default values."""
     # Check for admin privileges
     if current_user.role not in ("admin", "super_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can reset spacing standards"
+            detail="Only administrators can reset spacing standards",
         )
 
     config_service = ConfigService()
     config = await config_service.reset_spacing_standards(
-        user_id=UUID(current_user.userId),
-        user_email=current_user.email
+        user_id=UUID(current_user.userId), user_email=current_user.email
     )
 
     return SpacingStandardsResponse(
-        data=config,
-        message="Spacing standards reset to defaults"
+        data=config, message="Spacing standards reset to defaults"
     )
 
 
 # ==================== Plant Count Calculator Endpoint ====================
 
+
 @router.get(
     "/calculate-plants",
     summary="Calculate plant count from area and spacing category",
-    description="Utility endpoint to calculate the number of plants based on area and spacing category."
+    description="Utility endpoint to calculate the number of plants based on area and spacing category.",
 )
 async def calculate_plants(
     area: float,
     area_unit: str = "sqm",
     spacing_category: SpacingCategory = SpacingCategory.M,
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Calculate the recommended number of plants for a given area.
@@ -174,7 +171,9 @@ async def calculate_plants(
     plant_count = calculate_plant_count(area_sqm, spacing_category, config.densities)
 
     # Get density for this category
-    density = config.densities.get(spacing_category.value, DEFAULT_SPACING_DENSITIES[spacing_category])
+    density = config.densities.get(
+        spacing_category.value, DEFAULT_SPACING_DENSITIES[spacing_category]
+    )
 
     return {
         "plantCount": plant_count,
@@ -183,20 +182,19 @@ async def calculate_plants(
         "areaSqm": area_sqm,
         "spacingCategory": spacing_category.value,
         "plantsPerHundredSqm": density,
-        "calculation": f"({area_sqm:.2f} / 100) × {density} = {plant_count}"
+        "calculation": f"({area_sqm:.2f} / 100) × {density} = {plant_count}",
     }
 
 
 # ==================== Spacing Categories Reference Endpoint ====================
 
+
 @router.get(
     "/spacing-categories",
     summary="Get all spacing categories with descriptions",
-    description="Get a list of all spacing categories with their default densities and descriptions."
+    description="Get a list of all spacing categories with their default densities and descriptions.",
 )
-async def get_spacing_categories(
-    current_user: CurrentUser = Depends(get_current_user)
-):
+async def get_spacing_categories(current_user: CurrentUser = Depends(get_current_user)):
     """Get all spacing categories with their default values and descriptions."""
     # Get current configuration
     config_service = ConfigService()
@@ -217,35 +215,40 @@ async def get_spacing_categories(
     }
 
     for cat in SpacingCategory:
-        current_density = config.densities.get(cat.value, DEFAULT_SPACING_DENSITIES[cat])
+        current_density = config.densities.get(
+            cat.value, DEFAULT_SPACING_DENSITIES[cat]
+        )
         default_density = DEFAULT_SPACING_DENSITIES[cat]
 
-        categories.append({
-            "value": cat.value,
-            "name": cat.name,
-            "description": descriptions.get(cat, ""),
-            "currentDensity": current_density,
-            "defaultDensity": default_density,
-            "isModified": current_density != default_density
-        })
+        categories.append(
+            {
+                "value": cat.value,
+                "name": cat.name,
+                "description": descriptions.get(cat, ""),
+                "currentDensity": current_density,
+                "defaultDensity": default_density,
+                "isModified": current_density != default_density,
+            }
+        )
 
     return {
         "categories": categories,
         "lastUpdated": config.updatedAt.isoformat() if config.updatedAt else None,
-        "updatedBy": config.updatedByEmail
+        "updatedBy": config.updatedByEmail,
     }
 
 
 # ==================== Farming Year Configuration Endpoints ====================
 
+
 @router.get(
     "/farming-year",
     response_model=FarmingYearConfigResponse,
     summary="Get farming year configuration",
-    description="Retrieve the current farming year configuration including start month."
+    description="Retrieve the current farming year configuration including start month.",
 )
 async def get_farming_year_config(
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Get the current farming year configuration.
@@ -259,8 +262,7 @@ async def get_farming_year_config(
     start_month_name = MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
 
     return FarmingYearConfigResponse(
-        data=config,
-        message=f"Farming year starts in {start_month_name}"
+        data=config, message=f"Farming year starts in {start_month_name}"
     )
 
 
@@ -268,11 +270,11 @@ async def get_farming_year_config(
     "/farming-year",
     response_model=FarmingYearConfigResponse,
     summary="Update farming year configuration",
-    description="Update the farming year start month. Requires admin privileges."
+    description="Update the farming year start month. Requires admin privileges.",
 )
 async def update_farming_year_config(
     update_data: FarmingYearConfigUpdate,
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Update the farming year start month.
@@ -284,7 +286,7 @@ async def update_farming_year_config(
     if current_user.role not in ("admin", "super_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can update farming year configuration"
+            detail="Only administrators can update farming year configuration",
         )
 
     service = get_farming_year_service()
@@ -293,29 +295,25 @@ async def update_farming_year_config(
         config = await service.update_farming_year_config(
             start_month=update_data.farmingYearStartMonth,
             user_id=UUID(current_user.userId),
-            user_email=current_user.email
+            user_email=current_user.email,
         )
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     start_month_name = MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
 
     return FarmingYearConfigResponse(
-        data=config,
-        message=f"Farming year start month updated to {start_month_name}"
+        data=config, message=f"Farming year start month updated to {start_month_name}"
     )
 
 
 @router.get(
     "/current-farming-year",
     summary="Get current farming year information",
-    description="Get detailed information about the current farming year based on configured start month."
+    description="Get detailed information about the current farming year based on configured start month.",
 )
 async def get_current_farming_year(
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Get the current farming year with formatted display string.
@@ -333,12 +331,10 @@ async def get_current_farming_year(
     current_year = await service.get_current_farming_year()
 
     start_date, end_date = service.get_farming_year_date_range(
-        current_year,
-        config.farmingYearStartMonth
+        current_year, config.farmingYearStartMonth
     )
     display_string = service.format_farming_year_display(
-        current_year,
-        config.farmingYearStartMonth
+        current_year, config.farmingYearStartMonth
     )
 
     start_month_name = MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
@@ -353,20 +349,20 @@ async def get_current_farming_year(
         "config": {
             "configId": str(config.configId),
             "updatedAt": config.updatedAt.isoformat() if config.updatedAt else None,
-            "updatedByEmail": config.updatedByEmail
-        }
+            "updatedByEmail": config.updatedByEmail,
+        },
     }
 
 
 @router.get(
     "/farming-years-list",
     summary="Get list of farming years for selection",
-    description="Get a list of farming years for dropdown/filter selection, including current and past years."
+    description="Get a list of farming years for dropdown/filter selection, including current and past years.",
 )
 async def get_farming_years_list(
     count: int = 5,
     include_next: bool = True,
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """
     Get a list of farming years for UI selection components.
@@ -384,7 +380,4 @@ async def get_farming_years_list(
     service = get_farming_year_service()
     years = await service.get_farming_years_list(count=count, include_next=include_next)
 
-    return {
-        "years": years,
-        "count": len(years)
-    }
+    return {"years": years, "count": len(years)}

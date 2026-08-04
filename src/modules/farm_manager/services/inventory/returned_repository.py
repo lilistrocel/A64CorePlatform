@@ -23,7 +23,10 @@ from ...models.inventory import (
     DisposalMethod,
     QualityGrade,
 )
-from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+from ...models.farming_year_config import (
+    get_farming_year,
+    DEFAULT_FARMING_YEAR_START_MONTH,
+)
 
 
 def _serialize(doc: Optional[dict]) -> Optional[dict]:
@@ -71,10 +74,12 @@ class ReturnedInventoryRepository:
         Returns:
             Serialised document dict, or None if not found.
         """
-        doc = await db.inventory_returned.find_one({
-            "inventoryId": str(inventory_id),
-            "organizationId": str(organization_id),
-        })
+        doc = await db.inventory_returned.find_one(
+            {
+                "inventoryId": str(inventory_id),
+                "organizationId": str(organization_id),
+            }
+        )
         return _serialize(doc)
 
     @staticmethod
@@ -123,7 +128,13 @@ class ReturnedInventoryRepository:
                 {"variety": {"$regex": search, "$options": "i"}},
             ]
 
-        valid_sort_fields = {"returnDate", "harvestDate", "plantName", "quantity", "createdAt"}
+        valid_sort_fields = {
+            "returnDate",
+            "harvestDate",
+            "plantName",
+            "quantity",
+            "createdAt",
+        }
         if sort_by not in valid_sort_fields:
             sort_by = "returnDate"
         direction = 1 if sort_order.lower() == "asc" else -1
@@ -180,7 +191,9 @@ class ReturnedInventoryRepository:
         harvest_date_dt = data.harvestDate
         if not isinstance(harvest_date_dt, datetime):
             harvest_date_dt = datetime.fromisoformat(str(harvest_date_dt))
-        farming_year = get_farming_year(harvest_date_dt, DEFAULT_FARMING_YEAR_START_MONTH)
+        farming_year = get_farming_year(
+            harvest_date_dt, DEFAULT_FARMING_YEAR_START_MONTH
+        )
 
         returned_item = ReturnedInventory(
             **inventory_data,
@@ -197,7 +210,11 @@ class ReturnedInventoryRepository:
         movement_doc = {
             "movementId": str(uuid4()),
             "inventoryId": str(returned_item.inventoryId),
-            "inventoryType": InventoryType.RETURN.value if hasattr(InventoryType, "RETURN") else "returned",
+            "inventoryType": (
+                InventoryType.RETURN.value
+                if hasattr(InventoryType, "RETURN")
+                else "returned"
+            ),
             "movementType": MovementType.RETURN.value,
             "quantityBefore": 0,
             "quantityChange": data.quantity,
@@ -243,14 +260,18 @@ class ReturnedInventoryRepository:
         Returns:
             Updated serialised document, or None if not found / not authorised.
         """
-        existing = await db.inventory_returned.find_one({
-            "inventoryId": str(inventory_id),
-            "organizationId": str(organization_id),
-        })
+        existing = await db.inventory_returned.find_one(
+            {
+                "inventoryId": str(inventory_id),
+                "organizationId": str(organization_id),
+            }
+        )
         if existing is None:
             return None
 
-        update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+        update_data = {
+            k: v for k, v in data.model_dump(mode="json").items() if v is not None
+        }
         update_data["updatedAt"] = datetime.utcnow().isoformat()
 
         if "quantity" in update_data:
@@ -281,7 +302,9 @@ class ReturnedInventoryRepository:
             {"$set": update_data},
         )
 
-        updated = await db.inventory_returned.find_one({"inventoryId": str(inventory_id)})
+        updated = await db.inventory_returned.find_one(
+            {"inventoryId": str(inventory_id)}
+        )
         return _serialize(updated)
 
     # ------------------------------------------------------------------
@@ -310,10 +333,12 @@ class ReturnedInventoryRepository:
         Returns:
             True if the row was found and soft-deleted, False otherwise.
         """
-        existing = await db.inventory_returned.find_one({
-            "inventoryId": str(inventory_id),
-            "organizationId": str(organization_id),
-        })
+        existing = await db.inventory_returned.find_one(
+            {
+                "inventoryId": str(inventory_id),
+                "organizationId": str(organization_id),
+            }
+        )
         if existing is None:
             return False
 
@@ -322,12 +347,14 @@ class ReturnedInventoryRepository:
 
         await db.inventory_returned.update_one(
             {"inventoryId": str(inventory_id)},
-            {"$set": {
-                "quantity": 0,
-                "availableQuantity": 0,
-                "deletedAt": now_iso,
-                "updatedAt": now_iso,
-            }},
+            {
+                "$set": {
+                    "quantity": 0,
+                    "availableQuantity": 0,
+                    "deletedAt": now_iso,
+                    "updatedAt": now_iso,
+                }
+            },
         )
 
         # Audit movement for the deletion
@@ -384,10 +411,12 @@ class ReturnedInventoryRepository:
         Raises:
             ValueError: If the row is already depleted (quantity == 0).
         """
-        existing = await db.inventory_returned.find_one({
-            "inventoryId": str(inventory_id),
-            "organizationId": str(organization_id),
-        })
+        existing = await db.inventory_returned.find_one(
+            {
+                "inventoryId": str(inventory_id),
+                "organizationId": str(organization_id),
+            }
+        )
         if existing is None:
             return None
 
@@ -422,7 +451,8 @@ class ReturnedInventoryRepository:
             "quantity": qty,
             "unit": existing.get("unit", "kg"),
             "originalGrade": existing.get("qualityGrade"),
-            "wasteReason": waste_reason or f"Returned batch {inventory_id} moved to waste",
+            "wasteReason": waste_reason
+            or f"Returned batch {inventory_id} moved to waste",
             "wasteDate": now_iso,
             "disposalMethod": disposal_method,
             "disposalDate": None,
@@ -440,13 +470,15 @@ class ReturnedInventoryRepository:
         # Zero out the source row
         await db.inventory_returned.update_one(
             {"inventoryId": str(inventory_id)},
-            {"$set": {
-                "quantity": 0,
-                "availableQuantity": 0,
-                "movedToWasteAt": now_iso,
-                "movedToWasteId": waste_id,
-                "updatedAt": now_iso,
-            }},
+            {
+                "$set": {
+                    "quantity": 0,
+                    "availableQuantity": 0,
+                    "movedToWasteAt": now_iso,
+                    "movedToWasteId": waste_id,
+                    "updatedAt": now_iso,
+                }
+            },
         )
 
         # Audit movement

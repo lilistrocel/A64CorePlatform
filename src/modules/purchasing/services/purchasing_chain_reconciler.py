@@ -214,7 +214,12 @@ async def load_po_with_lines(
         Dict with header fields + synthetic ``lines`` array, or None if not found.
     """
     header = await db[_HEADERS_COL].find_one(
-        {"docId": po_doc_id, "organizationId": org_id, "docType": "PO", "deletedAt": None}
+        {
+            "docId": po_doc_id,
+            "organizationId": org_id,
+            "docType": "PO",
+            "deletedAt": None,
+        }
     )
     if not header:
         return None
@@ -264,7 +269,12 @@ async def load_gr_with_lines(
         Dict with header fields + synthetic ``lines`` array, or None if not found.
     """
     header = await db[_HEADERS_COL].find_one(
-        {"docId": gr_doc_id, "organizationId": org_id, "docType": "GR", "deletedAt": None}
+        {
+            "docId": gr_doc_id,
+            "organizationId": org_id,
+            "docType": "GR",
+            "deletedAt": None,
+        }
     )
     if not header:
         return None
@@ -541,9 +551,7 @@ async def reconcile_po_line_receipt_counters(
         ValueError: If ``cap_check=True`` and a delta exceeds line's openQuantity.
     """
     significant = {
-        lid: delta
-        for lid, delta in line_deltas.items()
-        if abs(delta) > TOLERANCE
+        lid: delta for lid, delta in line_deltas.items() if abs(delta) > TOLERANCE
     }
     if not significant:
         return
@@ -555,9 +563,7 @@ async def reconcile_po_line_receipt_counters(
         # partial-batch inconsistency.
         po_lines_cursor = db[_LINES_COL].find({"docId": po_doc_id})
         po_lines = await po_lines_cursor.to_list(length=None)
-        po_lines_map: Dict[str, Dict[str, Any]] = {
-            ln["lineId"]: ln for ln in po_lines
-        }
+        po_lines_map: Dict[str, Dict[str, Any]] = {ln["lineId"]: ln for ln in po_lines}
 
         for line_id, delta in significant.items():
             if delta > _ZERO:
@@ -627,9 +633,7 @@ async def reconcile_gr_line_invoice_counters(
         ValueError: If ``cap_check=True`` and a delta exceeds available qty.
     """
     significant = {
-        lid: delta
-        for lid, delta in line_deltas.items()
-        if abs(delta) > TOLERANCE
+        lid: delta for lid, delta in line_deltas.items() if abs(delta) > TOLERANCE
     }
     if not significant:
         return
@@ -639,9 +643,7 @@ async def reconcile_gr_line_invoice_counters(
     if cap_check:
         gr_lines_cursor = db[_LINES_COL].find({"docId": gr_doc_id})
         gr_lines = await gr_lines_cursor.to_list(length=None)
-        gr_lines_map: Dict[str, Dict[str, Any]] = {
-            ln["lineId"]: ln for ln in gr_lines
-        }
+        gr_lines_map: Dict[str, Dict[str, Any]] = {ln["lineId"]: ln for ln in gr_lines}
 
         for line_id, delta in significant.items():
             if delta > _ZERO:
@@ -853,9 +855,7 @@ async def reconcile_ap_line_credit_counters(
         ValueError: If ``cap_check=True`` and a delta exceeds line's creditable qty.
     """
     significant = {
-        lid: delta
-        for lid, delta in line_deltas.items()
-        if abs(delta) > TOLERANCE
+        lid: delta for lid, delta in line_deltas.items() if abs(delta) > TOLERANCE
     }
     if not significant and abs(gross_delta) <= TOLERANCE:
         return
@@ -874,9 +874,7 @@ async def reconcile_ap_line_credit_counters(
         return
 
     ap_lines: List[Dict[str, Any]] = ap_header.get("lines", [])
-    ap_lines_map: Dict[str, Dict[str, Any]] = {
-        ln["lineId"]: ln for ln in ap_lines
-    }
+    ap_lines_map: Dict[str, Dict[str, Any]] = {ln["lineId"]: ln for ln in ap_lines}
 
     if cap_check:
         # Reason: validate ALL positive deltas before any update to prevent
@@ -1203,7 +1201,9 @@ async def reconcile_dpi_consumption(
     if abs(allocated_amount) <= _DPI_TOLERANCE:
         return
 
-    dpi_raw = await db[_DPI_COL].find_one({"docId": dpi_doc_id, "organizationId": org_id})
+    dpi_raw = await db[_DPI_COL].find_one(
+        {"docId": dpi_doc_id, "organizationId": org_id}
+    )
     if dpi_raw is None:
         raise ValueError(
             f"AP Down Payment Invoice '{dpi_doc_id}' not found in organisation '{org_id}'."
@@ -1251,7 +1251,9 @@ async def reconcile_dpi_consumption(
         db,
         audit_collection=_DPI_AUDIT_COL,
         doc_id=dpi_doc_id,
-        action="dpi_allocated" if allocated_amount > _ZERO else "dpi_allocation_released",
+        action=(
+            "dpi_allocated" if allocated_amount > _ZERO else "dpi_allocation_released"
+        ),
         user_id=user_id,
         detail={
             "allocatedAmount": float(allocated_amount),
@@ -1319,7 +1321,9 @@ async def auto_close_dpi_if_fully_consumed(
         return False
 
     # Re-read for the post-increment consumedAmount.
-    refreshed = await db[_DPI_COL].find_one({"docId": dpi_doc_id, "organizationId": org_id})
+    refreshed = await db[_DPI_COL].find_one(
+        {"docId": dpi_doc_id, "organizationId": org_id}
+    )
     if refreshed is None:
         return False
 
@@ -1334,7 +1338,13 @@ async def auto_close_dpi_if_fully_consumed(
             return False  # already closed
         await db[_DPI_COL].update_one(
             {"docId": dpi_doc_id, "organizationId": org_id},
-            {"$set": {"status": DocumentStatus.CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+            {
+                "$set": {
+                    "status": DocumentStatus.CLOSED.value,
+                    "updatedAt": now,
+                    "updatedBy": user_id,
+                }
+            },
         )
         logger.info(
             "[PurchasingChainReconciler] DPI '%s' auto-closed on full consumption by user '%s'",
@@ -1352,10 +1362,19 @@ async def auto_close_dpi_if_fully_consumed(
         return True
 
     # Partially consumed + currently OPEN -> PARTLY_CLOSED.
-    if consumed > _DPI_TOLERANCE and refreshed.get("status") == DocumentStatus.OPEN.value:
+    if (
+        consumed > _DPI_TOLERANCE
+        and refreshed.get("status") == DocumentStatus.OPEN.value
+    ):
         await db[_DPI_COL].update_one(
             {"docId": dpi_doc_id, "organizationId": org_id},
-            {"$set": {"status": DocumentStatus.PARTLY_CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+            {
+                "$set": {
+                    "status": DocumentStatus.PARTLY_CLOSED.value,
+                    "updatedAt": now,
+                    "updatedBy": user_id,
+                }
+            },
         )
         logger.info(
             "[PurchasingChainReconciler] DPI '%s' transitioned to PARTLY_CLOSED by user '%s'",
@@ -1406,7 +1425,9 @@ async def auto_reopen_dpi_if_not_fully_consumed(
     Returns:
         True if a status transition was written, False otherwise.
     """
-    refreshed = await db[_DPI_COL].find_one({"docId": dpi_doc_id, "organizationId": org_id})
+    refreshed = await db[_DPI_COL].find_one(
+        {"docId": dpi_doc_id, "organizationId": org_id}
+    )
     if refreshed is None:
         return False
 
@@ -1596,7 +1617,9 @@ async def reconcile_bla_consumption(
     if abs(gross_delta) <= _BLA_TOLERANCE and not line_deltas:
         return
 
-    bla_raw = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
+    bla_raw = await db[_BLA_COL].find_one(
+        {"docId": bla_doc_id, "organizationId": org_id}
+    )
     if bla_raw is None:
         raise ValueError(
             f"Blanket Agreement '{bla_doc_id}' not found in organisation '{org_id}'."
@@ -1643,9 +1666,7 @@ async def reconcile_bla_consumption(
 
     # Apply per-line consumedQty increments for line_based BLAs.
     significant_lines = {
-        lid: delta
-        for lid, delta in line_deltas.items()
-        if abs(delta) > _BLA_TOLERANCE
+        lid: delta for lid, delta in line_deltas.items() if abs(delta) > _BLA_TOLERANCE
     }
     for line_id, delta in significant_lines.items():
         await db[_BLA_COL].update_one(
@@ -1729,7 +1750,9 @@ async def auto_close_bla_if_fully_consumed(
         return False
 
     # Re-read for the post-increment consumedAmount.
-    refreshed = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
+    refreshed = await db[_BLA_COL].find_one(
+        {"docId": bla_doc_id, "organizationId": org_id}
+    )
     if refreshed is None:
         return False
 
@@ -1744,7 +1767,13 @@ async def auto_close_bla_if_fully_consumed(
             return False  # already closed
         await db[_BLA_COL].update_one(
             {"docId": bla_doc_id, "organizationId": org_id},
-            {"$set": {"status": DocumentStatus.CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+            {
+                "$set": {
+                    "status": DocumentStatus.CLOSED.value,
+                    "updatedAt": now,
+                    "updatedBy": user_id,
+                }
+            },
         )
         logger.info(
             "[PurchasingChainReconciler] BLA '%s' auto-closed on full consumption by user '%s'",
@@ -1762,10 +1791,19 @@ async def auto_close_bla_if_fully_consumed(
         return True
 
     # Partially consumed + currently OPEN -> PARTLY_CLOSED.
-    if consumed > _BLA_TOLERANCE and refreshed.get("status") == DocumentStatus.OPEN.value:
+    if (
+        consumed > _BLA_TOLERANCE
+        and refreshed.get("status") == DocumentStatus.OPEN.value
+    ):
         await db[_BLA_COL].update_one(
             {"docId": bla_doc_id, "organizationId": org_id},
-            {"$set": {"status": DocumentStatus.PARTLY_CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+            {
+                "$set": {
+                    "status": DocumentStatus.PARTLY_CLOSED.value,
+                    "updatedAt": now,
+                    "updatedBy": user_id,
+                }
+            },
         )
         logger.info(
             "[PurchasingChainReconciler] BLA '%s' transitioned to PARTLY_CLOSED by user '%s'",
@@ -1818,7 +1856,9 @@ async def auto_reopen_bla_if_not_fully_consumed(
     Returns:
         True if a status transition was written, False otherwise.
     """
-    refreshed = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
+    refreshed = await db[_BLA_COL].find_one(
+        {"docId": bla_doc_id, "organizationId": org_id}
+    )
     if refreshed is None:
         return False
 

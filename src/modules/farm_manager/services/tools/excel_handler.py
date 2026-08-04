@@ -43,10 +43,10 @@ from ...models.tools.calculator_request import (
 # ---------------------------------------------------------------------------
 # Colour constants
 # ---------------------------------------------------------------------------
-_HEADER_BG = "1F6AA5"   # dark blue
-_CROP_BG = "BDD7EE"     # light blue
-_TOTAL_BG = "FFF2CC"    # light yellow
-_GRAND_BG = "FCE4D6"    # light orange
+_HEADER_BG = "1F6AA5"  # dark blue
+_CROP_BG = "BDD7EE"  # light blue
+_TOTAL_BG = "FFF2CC"  # light yellow
+_GRAND_BG = "FCE4D6"  # light orange
 _NOTE_FONT_COLOR = "888888"  # light grey
 
 # ---------------------------------------------------------------------------
@@ -166,8 +166,15 @@ def export_calculation(
     if include_yield:
         col_widths = [30, 8, 12, 16, 30, 12, 8, 18, 18]
         headers = [
-            "Crop Name", "Points", "Cycle Days", "Est. Yield (kg)",
-            "Chemical", "Qty", "Unit", "Unit Price (AED)", "Total Cost (AED)",
+            "Crop Name",
+            "Points",
+            "Cycle Days",
+            "Est. Yield (kg)",
+            "Chemical",
+            "Qty",
+            "Unit",
+            "Unit Price (AED)",
+            "Total Cost (AED)",
         ]
         # Column indices (1-based)
         col_chem = 5
@@ -179,8 +186,14 @@ def export_calculation(
     else:
         col_widths = [30, 8, 12, 30, 12, 8, 18, 18]
         headers = [
-            "Crop Name", "Points", "Cycle Days",
-            "Chemical", "Qty", "Unit", "Unit Price (AED)", "Total Cost (AED)",
+            "Crop Name",
+            "Points",
+            "Cycle Days",
+            "Chemical",
+            "Qty",
+            "Unit",
+            "Unit Price (AED)",
+            "Total Cost (AED)",
         ]
         col_chem = 4
         col_qty = 5
@@ -221,7 +234,9 @@ def export_calculation(
                 if per_dripper > 0:
                     est_yield = round(crop.points * per_dripper, 4)
                     yield_unit = yi.get("yieldUnit", "kg")
-                    total_yield_by_unit[yield_unit] = total_yield_by_unit.get(yield_unit, 0) + est_yield
+                    total_yield_by_unit[yield_unit] = (
+                        total_yield_by_unit.get(yield_unit, 0) + est_yield
+                    )
 
         # -- Crop header row --
         crop_fill = PatternFill("solid", fgColor=_CROP_BG)
@@ -235,7 +250,11 @@ def export_calculation(
             if c_idx in (2, 3) and isinstance(val, (int, float)):
                 cell.number_format = _FMT_INT
         if include_yield:
-            yield_cell = ws.cell(row=current_row, column=4, value=est_yield if est_yield is not None else "—")
+            yield_cell = ws.cell(
+                row=current_row,
+                column=4,
+                value=est_yield if est_yield is not None else "—",
+            )
             yield_cell.fill = crop_fill
             yield_cell.font = crop_font
             if isinstance(est_yield, (int, float)):
@@ -251,10 +270,14 @@ def export_calculation(
             qty_cell = ws.cell(row=current_row, column=col_qty, value=round(ing.qty, 4))
             qty_cell.number_format = _FMT_DECIMAL
             ws.cell(row=current_row, column=col_unit, value=ing.unit)
-            up_cell = ws.cell(row=current_row, column=col_unit_price, value=ing.unitPrice)
+            up_cell = ws.cell(
+                row=current_row, column=col_unit_price, value=ing.unitPrice
+            )
             if isinstance(ing.unitPrice, (int, float)):
                 up_cell.number_format = _FMT_DECIMAL
-            tc_cell = ws.cell(row=current_row, column=col_total_cost, value=ing.totalCost)
+            tc_cell = ws.cell(
+                row=current_row, column=col_total_cost, value=ing.totalCost
+            )
             if isinstance(ing.totalCost, (int, float)):
                 tc_cell.number_format = _FMT_DECIMAL
             current_row += 1
@@ -266,11 +289,17 @@ def export_calculation(
             ws.cell(row=current_row, column=c_idx).fill = total_fill
         ws.cell(row=current_row, column=col_chem, value="Subtotal").font = total_font
         if crop.subtotalCost is not None:
-            sub_cell = ws.cell(row=current_row, column=col_total_cost, value=round(crop.subtotalCost, 4))
+            sub_cell = ws.cell(
+                row=current_row,
+                column=col_total_cost,
+                value=round(crop.subtotalCost, 4),
+            )
             sub_cell.font = total_font
             sub_cell.number_format = _FMT_DECIMAL
         else:
-            ws.cell(row=current_row, column=col_total_cost, value="N/A (missing prices)").font = total_font
+            ws.cell(
+                row=current_row, column=col_total_cost, value="N/A (missing prices)"
+            ).font = total_font
             grand_total_known = False
         current_row += 1
 
@@ -294,7 +323,9 @@ def export_calculation(
             # Add unit suffix beside it in next col if available
             ws.cell(row=current_row, column=5, value=unit).font = yield_total_font
         else:
-            label = " + ".join(f"{round(v, 4)} {u}" for u, v in total_yield_by_unit.items())
+            label = " + ".join(
+                f"{round(v, 4)} {u}" for u, v in total_yield_by_unit.items()
+            )
             cell = ws.cell(row=current_row, column=4, value=label)
             cell.font = yield_total_font
         current_row += 1
@@ -306,11 +337,15 @@ def export_calculation(
         ws.cell(row=current_row, column=c_idx).fill = gt_fill
     ws.cell(row=current_row, column=1, value="GRAND TOTAL").font = gt_font
     if grand_total_known:
-        gt_cell = ws.cell(row=current_row, column=col_total_cost, value=round(grand_total, 4))
+        gt_cell = ws.cell(
+            row=current_row, column=col_total_cost, value=round(grand_total, 4)
+        )
         gt_cell.font = gt_font
         gt_cell.number_format = _FMT_DECIMAL
     else:
-        ws.cell(row=current_row, column=col_total_cost, value="N/A (missing prices)").font = gt_font
+        ws.cell(
+            row=current_row, column=col_total_cost, value="N/A (missing prices)"
+        ).font = gt_font
 
     # -- Per Input sheet --
     _write_per_input_sheet(wb, response)
@@ -356,7 +391,11 @@ def _write_per_input_sheet(wb: Workbook, response: CalculateResponse) -> None:
     aggregated: dict = {}
     for crop in response.perCrop:
         for ing in crop.ingredients:
-            key = str(ing.chemicalId) if ing.chemicalId else f"unmatched::{ing.name}::{ing.unit}"
+            key = (
+                str(ing.chemicalId)
+                if ing.chemicalId
+                else f"unmatched::{ing.name}::{ing.unit}"
+            )
             entry = aggregated.setdefault(
                 key,
                 {
@@ -390,7 +429,9 @@ def _write_per_input_sheet(wb: Workbook, response: CalculateResponse) -> None:
         if isinstance(entry["unitPrice"], (int, float)):
             up_cell.number_format = _FMT_DECIMAL
         if entry["costKnown"] and entry["unitPrice"] is not None:
-            tc_cell = ws.cell(row=current_row, column=5, value=round(entry["totalCost"], 4))
+            tc_cell = ws.cell(
+                row=current_row, column=5, value=round(entry["totalCost"], 4)
+            )
             tc_cell.number_format = _FMT_DECIMAL
             grand_total += entry["totalCost"]
         else:
@@ -506,8 +547,7 @@ async def import_crops(file_bytes: bytes) -> ParsedImport:
     # -- Find and parse header row --
     header_row = rows[0]
     header_lower = [
-        str(cell).strip().lower() if cell is not None else ""
-        for cell in header_row
+        str(cell).strip().lower() if cell is not None else "" for cell in header_row
     ]
 
     if "crop name" not in header_lower or "points" not in header_lower:
@@ -548,7 +588,9 @@ async def import_crops(file_bytes: bytes) -> ParsedImport:
 
         name_str = str(raw_name).strip() if raw_name is not None else ""
         if not name_str:
-            skipped.append(SkippedRow(rowIndex=row_idx, name="", reason="Empty crop name"))
+            skipped.append(
+                SkippedRow(rowIndex=row_idx, name="", reason="Empty crop name")
+            )
             continue
 
         # -- Resolve plant --
@@ -604,16 +646,16 @@ async def import_crops(file_bytes: bytes) -> ParsedImport:
                     # Positive Net Yield value — convert to points via yieldInfo
                     yield_info = plant_doc.get("yieldInfo") or {}
                     yield_per_plant = float(yield_info.get("yieldPerPlant", 0) or 0)
-                    seeds_per_point = int(yield_info.get("seedsPerPlantingPoint", 1) or 1)
+                    seeds_per_point = int(
+                        yield_info.get("seedsPerPlantingPoint", 1) or 1
+                    )
                     waste_pct = float(yield_info.get("expectedWastePercentage", 0) or 0)
                     yield_unit = str(yield_info.get("yieldUnit", "kg") or "kg")
 
                     # Reason: yieldPerDripper is the net harvestable yield per
                     # planting point after accounting for waste.
                     yield_per_dripper = (
-                        yield_per_plant
-                        * seeds_per_point
-                        * (1.0 - waste_pct / 100.0)
+                        yield_per_plant * seeds_per_point * (1.0 - waste_pct / 100.0)
                     )
 
                     if yield_per_dripper <= 0:

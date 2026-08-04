@@ -24,12 +24,12 @@ router = APIRouter()
     response_model=SuccessResponse[Event],
     status_code=status.HTTP_201_CREATED,
     summary="Create a new marketing event",
-    description="Create a new marketing event. Requires marketing.create permission."
+    description="Create a new marketing event. Requires marketing.create permission.",
 )
 async def create_event(
     event_data: EventCreate,
     current_user: CurrentUser = Depends(require_permission("marketing.create")),
-    service: EventService = Depends()
+    service: EventService = Depends(),
 ):
     """
     Create a new marketing event
@@ -47,22 +47,16 @@ async def create_event(
     - **status**: Event status (default: planned)
     - **notes**: Additional notes (optional)
     """
-    event = await service.create_event(
-        event_data,
-        UUID(current_user.userId)
-    )
+    event = await service.create_event(event_data, UUID(current_user.userId))
 
-    return SuccessResponse(
-        data=event,
-        message="Event created successfully"
-    )
+    return SuccessResponse(data=event, message="Event created successfully")
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[Event],
     summary="Get all marketing events",
-    description="Get all marketing events with pagination and filters. Requires marketing.view permission."
+    description="Get all marketing events with pagination and filters. Requires marketing.view permission.",
 )
 async def get_events(
     page: int = Query(1, ge=1, description="Page number"),
@@ -71,7 +65,7 @@ async def get_events(
     type: Optional[EventType] = Query(None, description="Filter by event type"),
     campaignId: Optional[UUID] = Query(None, description="Filter by campaign ID"),
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
-    service: EventService = Depends()
+    service: EventService = Depends(),
 ):
     """
     Get all marketing events with pagination
@@ -89,11 +83,8 @@ async def get_events(
     return PaginatedResponse(
         data=events,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
@@ -101,12 +92,12 @@ async def get_events(
     "/{event_id}",
     response_model=SuccessResponse[Event],
     summary="Get event by ID",
-    description="Get a specific event by ID. Requires marketing.view permission."
+    description="Get a specific event by ID. Requires marketing.view permission.",
 )
 async def get_event(
     event_id: UUID,
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
-    service: EventService = Depends()
+    service: EventService = Depends(),
 ):
     """
     Get event by ID
@@ -122,13 +113,13 @@ async def get_event(
     "/{event_id}",
     response_model=SuccessResponse[Event],
     summary="Update event",
-    description="Update an event. Requires marketing.edit permission."
+    description="Update an event. Requires marketing.edit permission.",
 )
 async def update_event(
     event_id: UUID,
     update_data: EventUpdate,
     current_user: CurrentUser = Depends(require_permission("marketing.edit")),
-    service: EventService = Depends()
+    service: EventService = Depends(),
 ):
     """
     Update an event
@@ -136,27 +127,21 @@ async def update_event(
     - **event_id**: Event UUID
     - All fields are optional (partial update)
     """
-    event = await service.update_event(
-        event_id,
-        update_data
-    )
+    event = await service.update_event(event_id, update_data)
 
-    return SuccessResponse(
-        data=event,
-        message="Event updated successfully"
-    )
+    return SuccessResponse(data=event, message="Event updated successfully")
 
 
 @router.delete(
     "/{event_id}",
     response_model=SuccessResponse[dict],
     summary="Delete event",
-    description="Delete an event. Requires marketing.delete permission."
+    description="Delete an event. Requires marketing.delete permission.",
 )
 async def delete_event(
     event_id: UUID,
     current_user: CurrentUser = Depends(require_permission("marketing.delete")),
-    service: EventService = Depends()
+    service: EventService = Depends(),
 ):
     """
     Delete an event
@@ -165,7 +150,4 @@ async def delete_event(
     """
     result = await service.delete_event(event_id)
 
-    return SuccessResponse(
-        data=result,
-        message="Event deleted successfully"
-    )
+    return SuccessResponse(data=result, message="Event deleted successfully")

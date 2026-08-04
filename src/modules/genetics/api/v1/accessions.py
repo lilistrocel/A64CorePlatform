@@ -41,12 +41,14 @@ router = APIRouter()
 
 class SplitResult(BaseModel):
     """Both sides of a batch split."""
+
     source: Accession
     split: Accession
 
 
 class RoomOccupancy(BaseModel):
     """Live material held in one room."""
+
     vessels: int = Field(0, description="Total vessels/head across all records")
     records: int = Field(0, description="Number of accession records")
     byForm: Dict[str, int] = Field(
@@ -87,9 +89,15 @@ async def list_accessions(
     status_: Optional[str] = Query(None, alias="status"),
     form: Optional[str] = Query(None),
     mediumBatchId: Optional[str] = Query(None),
-    roomId: Optional[str] = Query(None, description="Material currently held in this room"),
-    facilityId: Optional[str] = Query(None, description="Material currently held in this facility"),
-    generation: Optional[int] = Query(None, ge=0, description="Filter by clone generation (G)"),
+    roomId: Optional[str] = Query(
+        None, description="Material currently held in this room"
+    ),
+    facilityId: Optional[str] = Query(
+        None, description="Material currently held in this facility"
+    ),
+    generation: Optional[int] = Query(
+        None, ge=0, description="Filter by clone generation (G)"
+    ),
     search: Optional[str] = Query(None, description="Match accession code or label"),
     activeOnly: bool = Query(False),
     current_user: CurrentUser = Depends(require_view),

@@ -64,18 +64,18 @@ class RoomService:
 
     @staticmethod
     async def create_room(
-        facility_id: str,
-        data: GrowingRoomCreate,
-        current_user
+        facility_id: str, data: GrowingRoomCreate, current_user
     ) -> GrowingRoom:
         db = mushroom_db.get_database()
 
         # Validate parent facility exists
-        facility_doc = await db.mushroom_facilities.find_one({"facilityId": facility_id})
+        facility_doc = await db.mushroom_facilities.find_one(
+            {"facilityId": facility_id}
+        )
         if not facility_doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Facility '{facility_id}' not found"
+                detail=f"Facility '{facility_id}' not found",
             )
 
         # Enforce unique roomCode per facility
@@ -85,7 +85,7 @@ class RoomService:
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Room code '{data.roomCode}' already exists in facility '{facility_id}'"
+                detail=f"Room code '{data.roomCode}' already exists in facility '{facility_id}'",
             )
 
         room = GrowingRoom(
@@ -107,7 +107,7 @@ class RoomService:
             logger.error(f"[RoomService] insert_one failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create growing room"
+                detail="Failed to create growing room",
             )
 
         logger.info(
@@ -129,7 +129,7 @@ class RoomService:
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Room '{room_id}' not found in facility '{facility_id}'"
+                detail=f"Room '{room_id}' not found in facility '{facility_id}'",
             )
         return _doc_to_model(doc)
 
@@ -139,20 +139,14 @@ class RoomService:
 
     @staticmethod
     async def list_rooms(
-        facility_id: str,
-        skip: int = 0,
-        limit: int = 20
+        facility_id: str, skip: int = 0, limit: int = 20
     ) -> Tuple[List[GrowingRoom], int]:
         db = mushroom_db.get_database()
         query = {"facilityId": facility_id}
 
         total = await db.growing_rooms.count_documents(query)
         cursor = (
-            db.growing_rooms
-            .find(query)
-            .sort("roomCode", 1)
-            .skip(skip)
-            .limit(limit)
+            db.growing_rooms.find(query).sort("roomCode", 1).skip(skip).limit(limit)
         )
 
         rooms: List[GrowingRoom] = []
@@ -167,9 +161,7 @@ class RoomService:
 
     @staticmethod
     async def update_room(
-        facility_id: str,
-        room_id: str,
-        data: GrowingRoomUpdate
+        facility_id: str, room_id: str, data: GrowingRoomUpdate
     ) -> GrowingRoom:
         await RoomService.get_room(facility_id, room_id)
 
@@ -177,18 +169,19 @@ class RoomService:
         if not update_fields:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No fields provided for update"
+                detail="No fields provided for update",
             )
 
         update_fields["updatedAt"] = datetime.utcnow()
 
         db = mushroom_db.get_database()
         await db.growing_rooms.update_one(
-            {_MONGO_ID_KEY: room_id, "facilityId": facility_id},
-            {"$set": update_fields}
+            {_MONGO_ID_KEY: room_id, "facilityId": facility_id}, {"$set": update_fields}
         )
 
-        logger.info(f"[RoomService] Updated room {room_id}: {list(update_fields.keys())}")
+        logger.info(
+            f"[RoomService] Updated room {room_id}: {list(update_fields.keys())}"
+        )
         return await RoomService.get_room(facility_id, room_id)
 
     # ---------------------------------------------------------------------------
@@ -201,7 +194,7 @@ class RoomService:
         room_id: str,
         target_phase: RoomPhase,
         notes: str | None,
-        current_user
+        current_user,
     ) -> GrowingRoom:
         room = await RoomService.get_room(facility_id, room_id)
         current_phase = room.currentPhase
@@ -226,8 +219,13 @@ class RoomService:
             # cleaning to maintenance in any order. Permission to hold the
             # phase (checked above) is the only constraint.
             return await RoomService._commit_phase(
-                facility_id, room_id, room, current_phase, target_phase,
-                notes, current_user,
+                facility_id,
+                room_id,
+                room,
+                current_phase,
+                target_phase,
+                notes,
+                current_user,
             )
 
         # Validate the transition
@@ -238,12 +236,17 @@ class RoomService:
                 detail=(
                     f"Invalid phase transition: '{current_phase}' → '{target_phase}'. "
                     f"Allowed next phases: {[p.value for p in allowed]}"
-                )
+                ),
             )
 
         return await RoomService._commit_phase(
-            facility_id, room_id, room, current_phase, target_phase,
-            notes, current_user,
+            facility_id,
+            room_id,
+            room,
+            current_phase,
+            target_phase,
+            notes,
+            current_user,
         )
 
     @staticmethod

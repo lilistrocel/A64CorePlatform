@@ -57,16 +57,13 @@ PERMISSION_ROLES: Dict[str, FrozenSet[str]] = {
     # Read. Everyone who does the work needs to read the procedure — that is
     # the entire point of writing it down.
     "protocols.view": _BENCH,
-
     # Authoring. Writing and editing procedures is a curation act: an SOP is a
     # statement about how the lab operates, not a record of one shift's work.
     "protocols.author": _CURATION,
-
     # Approval is deliberately the narrowest permission. Signing off a
     # procedure is what makes it usable at the bench, so it sits with admins
     # rather than with whoever happened to draft it.
     "protocols.approve": _ADMIN,
-
     "protocols.retire": _CURATION,
 }
 
@@ -119,7 +116,7 @@ def require_permission(permission: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission denied: {permission} requires one of "
-                       f"{sorted(allowed)}",
+                f"{sorted(allowed)}",
             )
         return current_user
 

@@ -96,6 +96,7 @@ class PriceBook:
 # Private helpers
 # ---------------------------------------------------------------------------
 
+
 async def _resolve_from_inventory(
     chemicals: List[FertilizerChemical],
     org_str: str,

@@ -30,7 +30,11 @@ from ...models.document import (
     RejectBody,
 )
 from ...services.document_service import DocumentService
-from src.modules.farm_manager.utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
+from src.modules.farm_manager.utils.responses import (
+    PaginatedResponse,
+    PaginationMeta,
+    SuccessResponse,
+)
 from src.modules.farm_manager.services.database import farm_db
 from src.core.finance.company_resolver import resolve_company_code
 
@@ -38,11 +42,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Purchasing — Purchase Orders"])
 
-_APPROVER_ROLES = frozenset({
-    "procurement_manager",
-    "admin",
-    "super_admin",
-})
+_APPROVER_ROLES = frozenset(
+    {
+        "procurement_manager",
+        "admin",
+        "super_admin",
+    }
+)
 
 
 def _get_service() -> DocumentService:
@@ -68,7 +74,7 @@ def _extract_token(request: Request) -> Optional[str]:
     """Extract the raw Bearer token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 
@@ -176,7 +182,9 @@ async def create_po(
             company_code=company_code,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
 
     return SuccessResponse(data=po, message="Purchase Order created successfully")
 
@@ -232,9 +240,13 @@ async def create_po_from_pr(
             company_code=company_code,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
 
-    return SuccessResponse(data=po, message="Purchase Order created from PR successfully")
+    return SuccessResponse(
+        data=po, message="Purchase Order created from PR successfully"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +283,9 @@ async def get_po(
     org_id = _get_org_id(organization_id, current_user)
     po = await service.get_po(org_id, doc_id)
     if not po:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PO '{doc_id}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"PO '{doc_id}' not found"
+        )
     return SuccessResponse(data=po)
 
 
@@ -312,7 +326,9 @@ async def update_po(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
     if not po:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PO '{doc_id}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"PO '{doc_id}' not found"
+        )
     return SuccessResponse(data=po, message="Purchase Order updated")
 
 
@@ -348,7 +364,9 @@ async def delete_po(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PO '{doc_id}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"PO '{doc_id}' not found"
+        )
 
 
 # ---------------------------------------------------------------------------

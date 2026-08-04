@@ -33,10 +33,16 @@ class WatchdogConfigService:
                 checkIntervalMinutes=doc.get("checkIntervalMinutes", 15),
                 notificationCooldownMinutes=doc.get("notificationCooldownMinutes", 60),
                 severityThreshold=doc.get("severityThreshold", "high_plus"),
-                enabledChecks=doc.get("enabledChecks", [
-                    "mcp_reachability", "late_items", "active_alerts",
-                    "block_health", "system_health"
-                ]),
+                enabledChecks=doc.get(
+                    "enabledChecks",
+                    [
+                        "mcp_reachability",
+                        "late_items",
+                        "active_alerts",
+                        "block_health",
+                        "system_health",
+                    ],
+                ),
                 updatedAt=doc.get("updatedAt"),
                 updatedBy=doc.get("updatedBy"),
                 updatedByEmail=doc.get("updatedByEmail"),
@@ -45,17 +51,19 @@ class WatchdogConfigService:
         # Create default config
         logger.info("No watchdog config found, creating defaults")
         default = WatchdogConfig()
-        await self.collection.insert_one({
-            "configType": CONFIG_TYPE,
-            "botToken": "",
-            "chatId": "",
-            "enabled": False,
-            "checkIntervalMinutes": 15,
-            "notificationCooldownMinutes": 60,
-            "severityThreshold": "high_plus",
-            "enabledChecks": default.enabledChecks,
-            "updatedAt": datetime.utcnow(),
-        })
+        await self.collection.insert_one(
+            {
+                "configType": CONFIG_TYPE,
+                "botToken": "",
+                "chatId": "",
+                "enabled": False,
+                "checkIntervalMinutes": 15,
+                "notificationCooldownMinutes": 60,
+                "severityThreshold": "high_plus",
+                "enabledChecks": default.enabledChecks,
+                "updatedAt": datetime.utcnow(),
+            }
+        )
         return default
 
     async def update_config(
@@ -74,6 +82,7 @@ class WatchdogConfigService:
         if update.botToken is not None:
             # Encrypt the token before storing
             from src.utils.encryption import encrypt_telegram_token
+
             set_fields["botToken"] = encrypt_telegram_token(update.botToken)
 
         if update.chatId is not None:
@@ -83,7 +92,9 @@ class WatchdogConfigService:
         if update.checkIntervalMinutes is not None:
             set_fields["checkIntervalMinutes"] = update.checkIntervalMinutes
         if update.notificationCooldownMinutes is not None:
-            set_fields["notificationCooldownMinutes"] = update.notificationCooldownMinutes
+            set_fields["notificationCooldownMinutes"] = (
+                update.notificationCooldownMinutes
+            )
         if update.severityThreshold is not None:
             set_fields["severityThreshold"] = update.severityThreshold.value
         if update.enabledChecks is not None:
@@ -109,6 +120,7 @@ class WatchdogConfigService:
 
         try:
             from src.utils.encryption import decrypt_telegram_token
+
             return decrypt_telegram_token(doc["botToken"])
         except Exception as e:
             logger.error(f"Failed to decrypt Telegram token: {e}")

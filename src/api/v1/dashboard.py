@@ -29,13 +29,17 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 class ModuleSummary(BaseModel):
     """Summary stats for a single module."""
+
     total: int = Field(..., description="Total count")
     active: Optional[int] = Field(None, description="Active count (if applicable)")
-    details: Optional[Dict[str, Any]] = Field(None, description="Additional module-specific details")
+    details: Optional[Dict[str, Any]] = Field(
+        None, description="Additional module-specific details"
+    )
 
 
 class DashboardSummaryResponse(BaseModel):
     """Aggregated dashboard summary response."""
+
     farms: ModuleSummary = Field(..., description="Farm statistics")
     blocks: ModuleSummary = Field(..., description="Block statistics")
     employees: ModuleSummary = Field(..., description="Employee statistics")
@@ -45,7 +49,9 @@ class DashboardSummaryResponse(BaseModel):
     shipments: ModuleSummary = Field(..., description="Shipment statistics")
     campaigns: ModuleSummary = Field(..., description="Marketing campaign statistics")
     users: ModuleSummary = Field(..., description="System user statistics")
-    lastUpdated: datetime = Field(default_factory=datetime.utcnow, description="Timestamp of summary generation")
+    lastUpdated: datetime = Field(
+        default_factory=datetime.utcnow, description="Timestamp of summary generation"
+    )
 
 
 # ============================================================================
@@ -113,14 +119,16 @@ async def get_dashboard_summary(
         total = await db.blocks.count_documents({})
         active = await db.blocks.count_documents({"isActive": True})
         # Get state breakdown (blocks use 'state' field, not 'status')
-        pipeline = [
-            {"$group": {"_id": "$state", "count": {"$sum": 1}}}
-        ]
+        pipeline = [{"$group": {"_id": "$state", "count": {"$sum": 1}}}]
         state_breakdown = {}
         async for doc in db.blocks.aggregate(pipeline):
             if doc["_id"]:
                 state_breakdown[doc["_id"]] = doc["count"]
-        return ModuleSummary(total=total, active=active, details=state_breakdown if state_breakdown else None)
+        return ModuleSummary(
+            total=total,
+            active=active,
+            details=state_breakdown if state_breakdown else None,
+        )
 
     # Employee counts
     async def get_employee_stats():
@@ -138,41 +146,43 @@ async def get_dashboard_summary(
     async def get_order_stats():
         total = await db.sales_orders.count_documents({})
         # Get status breakdown
-        pipeline = [
-            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
-        ]
+        pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
         status_breakdown = {}
         async for doc in db.sales_orders.aggregate(pipeline):
             if doc["_id"]:
                 status_breakdown[doc["_id"]] = doc["count"]
-        return ModuleSummary(total=total, details=status_breakdown if status_breakdown else None)
+        return ModuleSummary(
+            total=total, details=status_breakdown if status_breakdown else None
+        )
 
     # Vehicle counts with status breakdown
     async def get_vehicle_stats():
         total = await db.vehicles.count_documents({})
         # Get status breakdown
-        pipeline = [
-            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
-        ]
+        pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
         status_breakdown = {}
         async for doc in db.vehicles.aggregate(pipeline):
             if doc["_id"]:
                 status_breakdown[doc["_id"]] = doc["count"]
         available = status_breakdown.get("available", 0)
-        return ModuleSummary(total=total, active=available, details=status_breakdown if status_breakdown else None)
+        return ModuleSummary(
+            total=total,
+            active=available,
+            details=status_breakdown if status_breakdown else None,
+        )
 
     # Shipment counts with status breakdown
     async def get_shipment_stats():
         total = await db.shipments.count_documents({})
         # Get status breakdown
-        pipeline = [
-            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
-        ]
+        pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
         status_breakdown = {}
         async for doc in db.shipments.aggregate(pipeline):
             if doc["_id"]:
                 status_breakdown[doc["_id"]] = doc["count"]
-        return ModuleSummary(total=total, details=status_breakdown if status_breakdown else None)
+        return ModuleSummary(
+            total=total, details=status_breakdown if status_breakdown else None
+        )
 
     # Campaign counts
     async def get_campaign_stats():

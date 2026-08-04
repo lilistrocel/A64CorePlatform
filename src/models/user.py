@@ -17,6 +17,7 @@ class UserRole(str, Enum):
     User role enumeration
     Follows role hierarchy defined in User-Structure.md
     """
+
     SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     MODERATOR = "moderator"
@@ -33,6 +34,7 @@ class UserRole(str, Enum):
 
 class UserBase(BaseModel):
     """Base user model with common fields"""
+
     email: EmailStr
     firstName: str = Field(..., min_length=1, max_length=100)
     lastName: str = Field(..., min_length=1, max_length=100)
@@ -53,28 +55,32 @@ class UserCreate(UserBase):
     - At least one number
     - At least one special character
     """
+
     password: str = Field(..., min_length=8, max_length=128)
 
-    @validator('password')
+    @validator("password")
     def validate_password(cls, v: str) -> str:
         """
         Validate password strength
 
         Reason: Security requirement from User-Structure.md
         """
-        if not re.search(r'[A-Z]', v):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[a-z]', v):
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not re.search(r'\d', v):
-            raise ValueError('Password must contain at least one number')
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
-            raise ValueError('Password must contain at least one special character (!@#$%^&*)')
+            raise ValueError(
+                "Password must contain at least one special character (!@#$%^&*)"
+            )
         return v
 
 
 class UserUpdate(BaseModel):
     """User update model - all fields optional"""
+
     firstName: Optional[str] = Field(None, min_length=1, max_length=100)
     lastName: Optional[str] = Field(None, min_length=1, max_length=100)
     phone: Optional[str] = Field(None, max_length=20)
@@ -91,7 +97,10 @@ class UserOrganizationAssignment(BaseModel):
     is required; division fields are optional so a fresh-deployment super
     admin can self-assign before any divisions exist.
     """
-    organizationId: str = Field(..., min_length=1, description="Target organization UUID")
+
+    organizationId: str = Field(
+        ..., min_length=1, description="Target organization UUID"
+    )
     divisionAccess: Optional[List[str]] = Field(
         None, description="Division IDs the user can access (optional)"
     )
@@ -106,6 +115,7 @@ class UserResponse(UserBase):
 
     NEVER includes passwordHash or other sensitive data
     """
+
     userId: str
     role: UserRole
     isActive: bool
@@ -117,15 +127,20 @@ class UserResponse(UserBase):
     updatedAt: datetime
 
     # Multi-industry fields (optional for backward compatibility)
-    organizationId: Optional[str] = Field(None, description="Organization this user belongs to")
-    divisionAccess: Optional[List[str]] = Field(None, description="Division IDs the user can access")
+    organizationId: Optional[str] = Field(
+        None, description="Organization this user belongs to"
+    )
+    divisionAccess: Optional[List[str]] = Field(
+        None, description="Division IDs the user can access"
+    )
     defaultDivisionId: Optional[str] = Field(None, description="Last-used division ID")
 
     # Cloudflare Access (dual-mode SSO) — lets the admin UI badge
     # Access-provisioned accounts. Defaults to "password" for every account
     # created before this field existed.
     authProvider: Optional[str] = Field(
-        "password", description="How this account authenticates: 'password' or 'cloudflare_access'"
+        "password",
+        description="How this account authenticates: 'password' or 'cloudflare_access'",
     )
 
     # JIT-provisioned via Cloudflare Access: the IdP's JWT only reliably
@@ -135,11 +150,13 @@ class UserResponse(UserBase):
     # via PATCH /api/v1/auth/me (see UserService.update_user), which is the
     # signal the frontend should use to stop prompting for a real name.
     nameAutoDerived: bool = Field(
-        False, description="True if firstName/lastName were auto-derived (e.g. from email) rather than chosen by the user"
+        False,
+        description="True if firstName/lastName were auto-derived (e.g. from email) rather than chosen by the user",
     )
 
     class Config:
         """Pydantic config"""
+
         from_attributes = True
 
 
@@ -149,32 +166,43 @@ class UserInDB(UserResponse):
 
     Includes passwordHash for internal use only
     """
+
     passwordHash: str
 
 
 class UserLogin(BaseModel):
     """User login credentials"""
+
     email: EmailStr
     password: str = Field(..., min_length=1)
 
 
 class TokenResponse(BaseModel):
     """JWT token response"""
+
     accessToken: str = Field(..., alias="access_token")
     refreshToken: str = Field(..., alias="refresh_token")
     tokenType: str = Field(default="bearer", alias="token_type")
     expiresIn: int = Field(..., alias="expires_in")
     user: UserResponse
-    warning: Optional[str] = Field(None, description="Security warning message (e.g., low backup codes)")
-    backupCodesRemaining: Optional[int] = Field(None, alias="backup_codes_remaining", description="Remaining MFA backup codes (only when backup code used)")
+    warning: Optional[str] = Field(
+        None, description="Security warning message (e.g., low backup codes)"
+    )
+    backupCodesRemaining: Optional[int] = Field(
+        None,
+        alias="backup_codes_remaining",
+        description="Remaining MFA backup codes (only when backup code used)",
+    )
 
     class Config:
         """Pydantic config"""
+
         populate_by_name = True
 
 
 class TokenPayload(BaseModel):
     """JWT token payload"""
+
     userId: str
     email: str
     role: UserRole
@@ -183,6 +211,7 @@ class TokenPayload(BaseModel):
 
 class RefreshTokenCreate(BaseModel):
     """Refresh token creation model"""
+
     tokenId: str
     userId: str
     token: str
@@ -191,6 +220,7 @@ class RefreshTokenCreate(BaseModel):
 
 class RefreshTokenInDB(RefreshTokenCreate):
     """Refresh token as stored in database"""
+
     isRevoked: bool = False
     createdAt: datetime
     lastUsedAt: Optional[datetime] = None
@@ -198,44 +228,51 @@ class RefreshTokenInDB(RefreshTokenCreate):
 
 class EmailVerificationRequest(BaseModel):
     """Request model for email verification"""
+
     email: EmailStr
 
 
 class VerifyEmailRequest(BaseModel):
     """Request model for verifying email with token"""
+
     token: str
 
 
 class PasswordResetRequest(BaseModel):
     """Request model for password reset"""
+
     email: EmailStr
 
 
 class PasswordResetConfirm(BaseModel):
     """Request model for confirming password reset"""
+
     token: str
     newPassword: str = Field(..., min_length=8, max_length=128)
 
-    @validator('newPassword')
+    @validator("newPassword")
     def validate_password(cls, v: str) -> str:
         """
         Validate password strength
 
         Reason: Security requirement from User-Structure.md
         """
-        if not re.search(r'[A-Z]', v):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[a-z]', v):
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not re.search(r'\d', v):
-            raise ValueError('Password must contain at least one number')
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
-            raise ValueError('Password must contain at least one special character (!@#$%^&*)')
+            raise ValueError(
+                "Password must contain at least one special character (!@#$%^&*)"
+            )
         return v
 
 
 class VerificationTokenInDB(BaseModel):
     """Verification token as stored in database"""
+
     tokenId: str
     userId: str
     email: str
@@ -249,16 +286,19 @@ class VerificationTokenInDB(BaseModel):
 
 class UserRoleUpdate(BaseModel):
     """Request model for updating user role (admin/super_admin only)"""
+
     role: UserRole = Field(..., description="New role for the user")
 
 
 class UserStatusUpdate(BaseModel):
     """Request model for updating user status (admin/super_admin only)"""
+
     isActive: bool = Field(..., description="User active status")
 
 
 class UserListResponse(BaseModel):
     """Response model for paginated user list"""
+
     data: list[UserResponse]
     total: int
     page: int
@@ -268,55 +308,95 @@ class UserListResponse(BaseModel):
 
 class UserListFilters(BaseModel):
     """Query parameters for filtering user list"""
+
     role: Optional[UserRole] = None
     isActive: Optional[bool] = None
     isEmailVerified: Optional[bool] = None
-    search: Optional[str] = Field(None, max_length=200, description="Search in email, firstName, lastName")
+    search: Optional[str] = Field(
+        None, max_length=200, description="Search in email, firstName, lastName"
+    )
 
 
 # MFA Models
 
+
 class MFASetupResponse(BaseModel):
     """Response when initiating MFA setup"""
+
     secret: str = Field(..., description="Base32-encoded TOTP secret for manual entry")
     qrCodeUri: str = Field(..., description="otpauth:// URI for QR code generation")
-    qrCodeDataUrl: Optional[str] = Field(None, description="Base64-encoded QR code image (data:image/png;base64,...)")
+    qrCodeDataUrl: Optional[str] = Field(
+        None, description="Base64-encoded QR code image (data:image/png;base64,...)"
+    )
     message: str = Field(default="Scan the QR code with your authenticator app")
 
 
 class MFAEnableRequest(BaseModel):
     """Request to enable MFA by verifying TOTP code"""
-    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code from authenticator app")
+
+    totpCode: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        description="6-digit TOTP code from authenticator app",
+    )
 
 
 class MFAEnableResponse(BaseModel):
     """Response after successfully enabling MFA"""
+
     enabled: bool = True
-    backupCodes: list[str] = Field(..., description="One-time backup codes for account recovery")
+    backupCodes: list[str] = Field(
+        ..., description="One-time backup codes for account recovery"
+    )
     message: str = Field(default="MFA has been enabled successfully")
 
 
 class MFADisableRequest(BaseModel):
     """Request to disable MFA"""
-    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code to verify identity")
-    password: str = Field(..., min_length=1, description="Current password for additional verification")
+
+    totpCode: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        description="6-digit TOTP code to verify identity",
+    )
+    password: str = Field(
+        ..., min_length=1, description="Current password for additional verification"
+    )
 
 
 class MFAVerifyRequest(BaseModel):
     """Request to verify MFA during login"""
-    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code or backup code")
+
+    totpCode: str = Field(
+        ..., min_length=6, max_length=6, description="6-digit TOTP code or backup code"
+    )
 
 
 class MFAStatusResponse(BaseModel):
     """Response for MFA status check - GET /api/v1/auth/mfa/status"""
+
     isEnabled: bool = Field(..., description="Whether MFA is currently enabled")
-    setupRequired: bool = Field(default=False, description="Whether MFA setup is required or pending")
-    backupCodesRemaining: int = Field(default=0, description="Number of unused backup codes remaining")
-    lastUsed: Optional[datetime] = Field(default=None, description="Last time MFA was used for authentication")
+    setupRequired: bool = Field(
+        default=False, description="Whether MFA setup is required or pending"
+    )
+    backupCodesRemaining: int = Field(
+        default=0, description="Number of unused backup codes remaining"
+    )
+    lastUsed: Optional[datetime] = Field(
+        default=None, description="Last time MFA was used for authentication"
+    )
     # Legacy fields for backward compatibility
-    mfaEnabled: bool = Field(default=False, description="Alias for isEnabled (deprecated)")
-    mfaSetupPending: bool = Field(default=False, description="Alias for setupRequired (deprecated)")
-    hasBackupCodes: bool = Field(default=False, description="Whether any backup codes exist (deprecated)")
+    mfaEnabled: bool = Field(
+        default=False, description="Alias for isEnabled (deprecated)"
+    )
+    mfaSetupPending: bool = Field(
+        default=False, description="Alias for setupRequired (deprecated)"
+    )
+    hasBackupCodes: bool = Field(
+        default=False, description="Whether any backup codes exist (deprecated)"
+    )
 
 
 class MFALoginResponse(BaseModel):
@@ -326,19 +406,38 @@ class MFALoginResponse(BaseModel):
     Returned instead of TokenResponse when user has MFA enabled.
     Client must then call /api/v1/auth/mfa/verify with the mfaToken and TOTP code.
     """
+
     mfaRequired: bool = True
-    mfaToken: str = Field(..., description="Temporary token for MFA verification (5 min expiry)")
+    mfaToken: str = Field(
+        ..., description="Temporary token for MFA verification (5 min expiry)"
+    )
     userId: str = Field(..., description="User ID (masked for security)")
     message: str = Field(default="MFA verification required")
 
 
 class MFAVerifyLoginRequest(BaseModel):
     """Request to complete login with MFA verification"""
+
     mfaToken: str = Field(..., description="Temporary MFA token from login response")
-    code: str = Field(..., min_length=6, max_length=9, description="6-digit TOTP code or backup code (XXXX-XXXX format)")
+    code: str = Field(
+        ...,
+        min_length=6,
+        max_length=9,
+        description="6-digit TOTP code or backup code (XXXX-XXXX format)",
+    )
 
 
 class MFARegenerateBackupCodesRequest(BaseModel):
     """Request to regenerate MFA backup codes (requires full authentication)"""
-    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code to verify MFA ownership")
-    password: str = Field(..., min_length=1, description="Current password for additional security verification")
+
+    totpCode: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        description="6-digit TOTP code to verify MFA ownership",
+    )
+    password: str = Field(
+        ...,
+        min_length=1,
+        description="Current password for additional security verification",
+    )

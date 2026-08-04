@@ -423,7 +423,10 @@ async def create_return_request(
         payload.base_doc_ref
         and (
             getattr(payload.base_doc_ref, "doc_id", None)
-            or (isinstance(payload.base_doc_ref, dict) and payload.base_doc_ref.get("doc_id"))
+            or (
+                isinstance(payload.base_doc_ref, dict)
+                and payload.base_doc_ref.get("doc_id")
+            )
         )
     )
     if _rr_is_direct:
@@ -521,9 +524,7 @@ async def get_return_request(
     Returns:
         ReturnRequestResponse if found, None otherwise.
     """
-    raw = await db[_RR_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RR_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
     raw.pop("_id", None)
@@ -627,9 +628,7 @@ async def update_return_request(
         ValueError: If the RR status is not DRAFT, or if any new line is a
                     stock item on a direct (no Delivery) Return Request.
     """
-    raw = await db[_RR_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RR_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -643,7 +642,11 @@ async def update_return_request(
 
     field_map = {
         "docDate": _to_dt(payload.doc_date) if payload.doc_date is not None else None,
-        "validUntilDate": _to_dt(payload.valid_until_date) if payload.valid_until_date is not None else None,
+        "validUntilDate": (
+            _to_dt(payload.valid_until_date)
+            if payload.valid_until_date is not None
+            else None
+        ),
         "reason": payload.reason,
         "reasonText": payload.reason_text,
         "notes": payload.notes,
@@ -720,9 +723,7 @@ async def delete_return_request(
     Raises:
         ValueError: If the RR status is not DRAFT.
     """
-    raw = await db[_RR_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RR_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return False
 
@@ -741,9 +742,7 @@ async def delete_return_request(
         detail={"docNumber": raw.get("docNumber")},
     )
 
-    await db[_RR_COL].delete_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    await db[_RR_COL].delete_one({"docEntry": doc_entry, "organizationId": org_id})
     return True
 
 
@@ -780,9 +779,7 @@ async def transition_status(
         ValueError: If the transition is illegal, or if a direct RR has a stock
                     item when transitioning DRAFT → OPEN.
     """
-    raw = await db[_RR_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RR_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -795,10 +792,7 @@ async def transition_status(
     # DRAFT → OPEN: re-validate isStock for direct (no Delivery) RRs.
     # Reason: catches edge case where an admin reclassified an item to stock
     # after the RR was created as a DRAFT.
-    if (
-        current_status == DocumentStatus.DRAFT
-        and new_status == DocumentStatus.OPEN
-    ):
+    if current_status == DocumentStatus.DRAFT and new_status == DocumentStatus.OPEN:
         _trans_base_ref = raw.get("baseDocRef") or {}
         _trans_is_direct = not bool(
             _trans_base_ref.get("docId") or _trans_base_ref.get("doc_id")

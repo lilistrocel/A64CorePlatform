@@ -10,10 +10,14 @@ from datetime import datetime
 import logging
 
 from ...models.block_archive import (
-    BlockArchive, BlockArchiveAnalytics,
-    CropPerformanceComparison
+    BlockArchive,
+    BlockArchiveAnalytics,
+    CropPerformanceComparison,
 )
-from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+from ...models.farming_year_config import (
+    get_farming_year,
+    DEFAULT_FARMING_YEAR_START_MONTH,
+)
 from ..database import farm_db
 
 logger = logging.getLogger(__name__)
@@ -48,8 +52,9 @@ class ArchiveRepository:
                 "changedAt": change["changedAt"],
                 "changedBy": str(change["changedBy"]),
                 "changedByEmail": change["changedByEmail"],
-                "notes": change.get("notes")
-            } for change in archive_dict["statusChanges"]
+                "notes": change.get("notes"),
+            }
+            for change in archive_dict["statusChanges"]
         ]
 
         result = await db.block_archives.insert_one(archive_dict)
@@ -57,7 +62,9 @@ class ArchiveRepository:
         if not result.inserted_id:
             raise Exception("Failed to create archive")
 
-        logger.info(f"[Archive Repository] Created archive: {archive.archiveId} for block {archive.blockId}")
+        logger.info(
+            f"[Archive Repository] Created archive: {archive.archiveId} for block {archive.blockId}"
+        )
         return archive
 
     @staticmethod
@@ -78,7 +85,7 @@ class ArchiveRepository:
         skip: int = 0,
         limit: int = 100,
         farming_year: Optional[int] = None,
-        farming_year_filter: str = "planted"
+        farming_year_filter: str = "planted",
     ) -> Tuple[List[BlockArchive], int]:
         """
         Get all archived cycles for a block
@@ -107,22 +114,27 @@ class ArchiveRepository:
                 # Match if either field equals the farming year
                 query["$or"] = [
                     {"farmingYearPlanted": farming_year},
-                    {"farmingYearHarvested": farming_year}
+                    {"farmingYearHarvested": farming_year},
                 ]
                 # Need to restructure query for $or
                 query = {
                     "blockId": str(block_id),
                     "$or": [
                         {"farmingYearPlanted": farming_year},
-                        {"farmingYearHarvested": farming_year}
-                    ]
+                        {"farmingYearHarvested": farming_year},
+                    ],
                 }
 
         # Get total count
         total = await db.block_archives.count_documents(query)
 
         # Get paginated results (most recent first)
-        cursor = db.block_archives.find(query).sort("plantedDate", -1).skip(skip).limit(limit)
+        cursor = (
+            db.block_archives.find(query)
+            .sort("plantedDate", -1)
+            .skip(skip)
+            .limit(limit)
+        )
         archive_docs = await cursor.to_list(length=limit)
 
         archives = [BlockArchive(**doc) for doc in archive_docs]
@@ -138,7 +150,7 @@ class ArchiveRepository:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         farming_year: Optional[int] = None,
-        farming_year_filter: str = "planted"
+        farming_year_filter: str = "planted",
     ) -> Tuple[List[BlockArchive], int]:
         """
         Get all archives for a farm with filters
@@ -184,9 +196,9 @@ class ArchiveRepository:
                         {
                             "$or": [
                                 {"farmingYearPlanted": farming_year},
-                                {"farmingYearHarvested": farming_year}
+                                {"farmingYearHarvested": farming_year},
                             ]
-                        }
+                        },
                     ]
                 }
 
@@ -194,7 +206,12 @@ class ArchiveRepository:
         total = await db.block_archives.count_documents(query)
 
         # Get paginated results
-        cursor = db.block_archives.find(query).sort("plantedDate", -1).skip(skip).limit(limit)
+        cursor = (
+            db.block_archives.find(query)
+            .sort("plantedDate", -1)
+            .skip(skip)
+            .limit(limit)
+        )
         archive_docs = await cursor.to_list(length=limit)
 
         archives = [BlockArchive(**doc) for doc in archive_docs]
@@ -203,9 +220,7 @@ class ArchiveRepository:
 
     @staticmethod
     async def get_by_crop(
-        crop_id: UUID,
-        skip: int = 0,
-        limit: int = 100
+        crop_id: UUID, skip: int = 0, limit: int = 100
     ) -> Tuple[List[BlockArchive], int]:
         """Get all archives for a specific crop"""
         db = farm_db.get_database()
@@ -216,7 +231,12 @@ class ArchiveRepository:
         total = await db.block_archives.count_documents(query)
 
         # Get paginated results
-        cursor = db.block_archives.find(query).sort("yieldEfficiencyPercent", -1).skip(skip).limit(limit)
+        cursor = (
+            db.block_archives.find(query)
+            .sort("yieldEfficiencyPercent", -1)
+            .skip(skip)
+            .limit(limit)
+        )
         archive_docs = await cursor.to_list(length=limit)
 
         archives = [BlockArchive(**doc) for doc in archive_docs]
@@ -240,7 +260,7 @@ class ArchiveRepository:
     async def get_performance_analytics(
         farm_id: Optional[UUID] = None,
         block_id: Optional[UUID] = None,
-        crop_id: Optional[UUID] = None
+        crop_id: Optional[UUID] = None,
     ) -> BlockArchiveAnalytics:
         """Get performance analytics for archived cycles"""
         db = farm_db.get_database()
@@ -264,9 +284,9 @@ class ArchiveRepository:
                     "avgCycleDuration": {"$avg": "$cycleDurationDays"},
                     "totalYieldKg": {"$sum": "$actualYieldKg"},
                     "bestEfficiency": {"$max": "$yieldEfficiencyPercent"},
-                    "worstEfficiency": {"$min": "$yieldEfficiencyPercent"}
+                    "worstEfficiency": {"$min": "$yieldEfficiencyPercent"},
                 }
-            }
+            },
         ]
 
         result = await db.block_archives.aggregate(pipeline).to_list(length=1)
@@ -278,7 +298,7 @@ class ArchiveRepository:
                 bestPerformingCycle=None,
                 worstPerformingCycle=None,
                 averageCycleDuration=0.0,
-                totalYieldKg=0.0
+                totalYieldKg=0.0,
             )
 
         data = result[0]
@@ -291,7 +311,7 @@ class ArchiveRepository:
             # Find best performing cycle
             best_doc = await db.block_archives.find_one(
                 {**match_criteria, "yieldEfficiencyPercent": data["bestEfficiency"]},
-                sort=[("yieldEfficiencyPercent", -1)]
+                sort=[("yieldEfficiencyPercent", -1)],
             )
             if best_doc:
                 best_cycle = BlockArchive(**best_doc)
@@ -299,7 +319,7 @@ class ArchiveRepository:
             # Find worst performing cycle
             worst_doc = await db.block_archives.find_one(
                 {**match_criteria, "yieldEfficiencyPercent": data["worstEfficiency"]},
-                sort=[("yieldEfficiencyPercent", 1)]
+                sort=[("yieldEfficiencyPercent", 1)],
             )
             if worst_doc:
                 worst_cycle = BlockArchive(**worst_doc)
@@ -310,12 +330,12 @@ class ArchiveRepository:
             bestPerformingCycle=best_cycle,
             worstPerformingCycle=worst_cycle,
             averageCycleDuration=round(data.get("avgCycleDuration", 0.0), 1),
-            totalYieldKg=round(data.get("totalYieldKg", 0.0), 2)
+            totalYieldKg=round(data.get("totalYieldKg", 0.0), 2),
         )
 
     @staticmethod
     async def get_crop_performance_comparison(
-        farm_id: Optional[UUID] = None
+        farm_id: Optional[UUID] = None,
     ) -> List[CropPerformanceComparison]:
         """Compare performance across different crops"""
         db = farm_db.get_database()
@@ -329,41 +349,37 @@ class ArchiveRepository:
             {"$match": match_criteria} if match_criteria else {"$match": {}},
             {
                 "$group": {
-                    "_id": {
-                        "cropId": "$targetCrop",
-                        "cropName": "$targetCropName"
-                    },
+                    "_id": {"cropId": "$targetCrop", "cropName": "$targetCropName"},
                     "totalCycles": {"$sum": 1},
                     "avgYieldEfficiency": {"$avg": "$yieldEfficiencyPercent"},
                     "avgYieldKg": {"$avg": "$actualYieldKg"},
                     "avgCycleDuration": {"$avg": "$cycleDurationDays"},
-                    "totalYieldKg": {"$sum": "$actualYieldKg"}
+                    "totalYieldKg": {"$sum": "$actualYieldKg"},
                 }
             },
-            {"$sort": {"avgYieldEfficiency": -1}}
+            {"$sort": {"avgYieldEfficiency": -1}},
         ]
 
         results = await db.block_archives.aggregate(pipeline).to_list(length=100)
 
         comparisons = []
         for data in results:
-            comparisons.append(CropPerformanceComparison(
-                cropName=data["_id"]["cropName"],
-                cropId=UUID(data["_id"]["cropId"]),
-                totalCycles=data["totalCycles"],
-                averageYieldEfficiency=round(data["avgYieldEfficiency"], 2),
-                averageYieldKg=round(data["avgYieldKg"], 2),
-                averageCycleDuration=round(data["avgCycleDuration"], 1),
-                totalYieldKg=round(data["totalYieldKg"], 2)
-            ))
+            comparisons.append(
+                CropPerformanceComparison(
+                    cropName=data["_id"]["cropName"],
+                    cropId=UUID(data["_id"]["cropId"]),
+                    totalCycles=data["totalCycles"],
+                    averageYieldEfficiency=round(data["avgYieldEfficiency"], 2),
+                    averageYieldKg=round(data["avgYieldKg"], 2),
+                    averageCycleDuration=round(data["avgCycleDuration"], 1),
+                    totalYieldKg=round(data["totalYieldKg"], 2),
+                )
+            )
 
         return comparisons
 
     @staticmethod
-    async def get_top_performing_blocks(
-        farm_id: UUID,
-        limit: int = 10
-    ) -> List[dict]:
+    async def get_top_performing_blocks(farm_id: UUID, limit: int = 10) -> List[dict]:
         """Get top performing blocks by average yield efficiency"""
         db = farm_db.get_database()
 
@@ -371,17 +387,14 @@ class ArchiveRepository:
             {"$match": {"farmId": str(farm_id)}},
             {
                 "$group": {
-                    "_id": {
-                        "blockId": "$blockId",
-                        "blockCode": "$blockCode"
-                    },
+                    "_id": {"blockId": "$blockId", "blockCode": "$blockCode"},
                     "cycleCount": {"$sum": 1},
                     "avgEfficiency": {"$avg": "$yieldEfficiencyPercent"},
-                    "totalYield": {"$sum": "$actualYieldKg"}
+                    "totalYield": {"$sum": "$actualYieldKg"},
                 }
             },
             {"$sort": {"avgEfficiency": -1}},
-            {"$limit": limit}
+            {"$limit": limit},
         ]
 
         results = await db.block_archives.aggregate(pipeline).to_list(length=limit)
@@ -392,7 +405,7 @@ class ArchiveRepository:
                 "blockCode": data["_id"]["blockCode"],
                 "cycleCount": data["cycleCount"],
                 "avgEfficiency": round(data["avgEfficiency"], 2),
-                "totalYield": round(data["totalYield"], 2)
+                "totalYield": round(data["totalYield"], 2),
             }
             for data in results
         ]
@@ -408,7 +421,7 @@ class ArchiveRepository:
         block_id: UUID,
         user_id: UUID,
         user_email: str,
-        archive_reason: str = "Cycle completed"
+        archive_reason: str = "Cycle completed",
     ) -> BlockArchive:
         """
         Archive the current cycle of a block.
@@ -451,12 +464,20 @@ class ArchiveRepository:
         # Calculate yield efficiency
         yield_efficiency = 0.0
         if block.kpi and block.kpi.predictedYieldKg and block.kpi.predictedYieldKg > 0:
-            yield_efficiency = (block.kpi.actualYieldKg / block.kpi.predictedYieldKg) * 100
+            yield_efficiency = (
+                block.kpi.actualYieldKg / block.kpi.predictedYieldKg
+            ) * 100
 
         # Calculate farming years (Feature #378)
         # Get farming year start month from config
-        config_doc = await db.system_config.find_one({"configType": "farming_year_config"})
-        start_month = config_doc.get("farmingYearStartMonth", DEFAULT_FARMING_YEAR_START_MONTH) if config_doc else DEFAULT_FARMING_YEAR_START_MONTH
+        config_doc = await db.system_config.find_one(
+            {"configType": "farming_year_config"}
+        )
+        start_month = (
+            config_doc.get("farmingYearStartMonth", DEFAULT_FARMING_YEAR_START_MONTH)
+            if config_doc
+            else DEFAULT_FARMING_YEAR_START_MONTH
+        )
 
         planted_date = block.plantedDate or datetime.utcnow()
         harvest_completed_date = datetime.utcnow()
@@ -488,7 +509,7 @@ class ArchiveRepository:
             totalHarvests=block.kpi.totalHarvests if block.kpi else 0,
             statusChanges=block.statusChanges or [],
             archivedBy=user_id,
-            archivedByEmail=user_email
+            archivedByEmail=user_email,
         )
 
         # Save to database

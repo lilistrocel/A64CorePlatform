@@ -46,7 +46,9 @@ class MarketingDatabaseManager:
             logger.info("[Marketing Module] Marketing indexes initialized")
 
         except Exception as e:
-            logger.error(f"[Marketing Module] Error initializing Marketing indexes: {e}")
+            logger.error(
+                f"[Marketing Module] Error initializing Marketing indexes: {e}"
+            )
             raise
 
     @classmethod
@@ -66,8 +68,7 @@ class MarketingDatabaseManager:
             await db.marketing_budgets.create_index([("createdAt", -1)])
             # Text search index for budget name
             await db.marketing_budgets.create_index(
-                [("name", "text")],
-                name="budget_search_text"
+                [("name", "text")], name="budget_search_text"
             )
 
             # Marketing Campaigns collection
@@ -83,7 +84,7 @@ class MarketingDatabaseManager:
             # Text search index for campaign name and description
             await db.marketing_campaigns.create_index(
                 [("name", "text"), ("description", "text"), ("campaignCode", "text")],
-                name="campaign_search_text"
+                name="campaign_search_text",
             )
 
             # Marketing Channels collection
@@ -96,8 +97,7 @@ class MarketingDatabaseManager:
             await db.marketing_channels.create_index([("createdAt", -1)])
             # Text search index for channel name and platform
             await db.marketing_channels.create_index(
-                [("name", "text"), ("platform", "text")],
-                name="channel_search_text"
+                [("name", "text"), ("platform", "text")], name="channel_search_text"
             )
 
             # Marketing Events collection
@@ -113,7 +113,7 @@ class MarketingDatabaseManager:
             # Text search index for event name and location
             await db.marketing_events.create_index(
                 [("name", "text"), ("location", "text"), ("eventCode", "text")],
-                name="event_search_text"
+                name="event_search_text",
             )
 
             logger.info("[Marketing Module] MongoDB indexes created successfully")
@@ -130,7 +130,9 @@ class MarketingDatabaseManager:
         to the shared MongoDB connection from src.services.database.
         The actual disconnection is handled by core services during shutdown.
         """
-        logger.info("[Marketing Module] Marketing module shutdown (database managed by core)")
+        logger.info(
+            "[Marketing Module] Marketing module shutdown (database managed by core)"
+        )
         # No action needed - core services handle disconnection
 
     @classmethod

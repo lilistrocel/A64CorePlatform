@@ -49,8 +49,10 @@ class BlockHistoryRepository:
         if not result.inserted_id:
             raise Exception("Failed to create block history")
 
-        logger.info(f"Archived block cycle: {history.blockCode} - {history.targetCropName} "
-                   f"({history.cycleDurationDays} days, {history.kpi.yieldEfficiencyPercent:.1f}% efficiency)")
+        logger.info(
+            f"Archived block cycle: {history.blockCode} - {history.targetCropName} "
+            f"({history.cycleDurationDays} days, {history.kpi.yieldEfficiencyPercent:.1f}% efficiency)"
+        )
 
         return history
 
@@ -70,9 +72,7 @@ class BlockHistoryRepository:
 
     @staticmethod
     async def get_by_block_id(
-        block_id: UUID,
-        page: int = 1,
-        per_page: int = 50
+        block_id: UUID, page: int = 1, per_page: int = 50
     ) -> Tuple[List[BlockHistoryArchive], int]:
         """
         Get all historical cycles for a specific block
@@ -95,7 +95,12 @@ class BlockHistoryRepository:
 
         # Get paginated results
         skip = (page - 1) * per_page
-        cursor = db.block_history.find(query).sort("archivedAt", -1).skip(skip).limit(per_page)
+        cursor = (
+            db.block_history.find(query)
+            .sort("archivedAt", -1)
+            .skip(skip)
+            .limit(per_page)
+        )
 
         history_docs = await cursor.to_list(length=per_page)
 
@@ -109,9 +114,7 @@ class BlockHistoryRepository:
 
     @staticmethod
     async def get_by_farm_id(
-        farm_id: UUID,
-        page: int = 1,
-        per_page: int = 50
+        farm_id: UUID, page: int = 1, per_page: int = 50
     ) -> Tuple[List[BlockHistoryArchive], int]:
         """
         Get all block history for a farm
@@ -134,7 +137,12 @@ class BlockHistoryRepository:
 
         # Get paginated results
         skip = (page - 1) * per_page
-        cursor = db.block_history.find(query).sort("archivedAt", -1).skip(skip).limit(per_page)
+        cursor = (
+            db.block_history.find(query)
+            .sort("archivedAt", -1)
+            .skip(skip)
+            .limit(per_page)
+        )
 
         history_docs = await cursor.to_list(length=per_page)
 
@@ -148,9 +156,7 @@ class BlockHistoryRepository:
 
     @staticmethod
     async def get_by_crop(
-        target_crop: UUID,
-        page: int = 1,
-        per_page: int = 50
+        target_crop: UUID, page: int = 1, per_page: int = 50
     ) -> Tuple[List[BlockHistoryArchive], int]:
         """
         Get all block history for a specific crop
@@ -173,7 +179,12 @@ class BlockHistoryRepository:
 
         # Get paginated results
         skip = (page - 1) * per_page
-        cursor = db.block_history.find(query).sort("archivedAt", -1).skip(skip).limit(per_page)
+        cursor = (
+            db.block_history.find(query)
+            .sort("archivedAt", -1)
+            .skip(skip)
+            .limit(per_page)
+        )
 
         history_docs = await cursor.to_list(length=per_page)
 
@@ -200,17 +211,17 @@ class BlockHistoryRepository:
 
         pipeline = [
             {"$match": {"farmId": str(farm_id)}},
-            {"$group": {
-                "_id": None,
-                "totalCycles": {"$sum": 1},
-                "avgYieldEfficiency": {"$avg": "$kpi.yieldEfficiencyPercent"},
-                "avgCycleDuration": {"$avg": "$cycleDurationDays"},
-                "totalYieldKg": {"$sum": "$kpi.actualYieldKg"},
-                "avgOverallOffset": {"$avg": "$overallOffsetDays"},
-                "performanceCategories": {
-                    "$push": "$performanceCategory"
+            {
+                "$group": {
+                    "_id": None,
+                    "totalCycles": {"$sum": 1},
+                    "avgYieldEfficiency": {"$avg": "$kpi.yieldEfficiencyPercent"},
+                    "avgCycleDuration": {"$avg": "$cycleDurationDays"},
+                    "totalYieldKg": {"$sum": "$kpi.actualYieldKg"},
+                    "avgOverallOffset": {"$avg": "$overallOffsetDays"},
+                    "performanceCategories": {"$push": "$performanceCategory"},
                 }
-            }}
+            },
         ]
 
         result = await db.block_history.aggregate(pipeline).to_list(length=1)
@@ -222,7 +233,7 @@ class BlockHistoryRepository:
                 "avgCycleDuration": 0.0,
                 "totalYieldKg": 0.0,
                 "avgOverallOffset": 0.0,
-                "performanceCategoryBreakdown": {}
+                "performanceCategoryBreakdown": {},
             }
 
         stats = result[0]
@@ -238,5 +249,5 @@ class BlockHistoryRepository:
             "avgCycleDuration": round(stats.get("avgCycleDuration", 0.0), 1),
             "totalYieldKg": round(stats.get("totalYieldKg", 0.0), 2),
             "avgOverallOffset": round(stats.get("avgOverallOffset", 0.0), 1),
-            "performanceCategoryBreakdown": category_counts
+            "performanceCategoryBreakdown": category_counts,
         }

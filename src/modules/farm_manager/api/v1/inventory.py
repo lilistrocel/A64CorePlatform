@@ -18,7 +18,10 @@ from io import StringIO
 
 from ...services.database import farm_db
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
-from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+from ...models.farming_year_config import (
+    get_farming_year,
+    DEFAULT_FARMING_YEAR_START_MONTH,
+)
 from ...services.inventory.returned_repository import ReturnedInventoryRepository
 
 from src.modules.farm_manager.models.inventory import (
@@ -88,6 +91,7 @@ router = APIRouter(prefix="/inventory", tags=["Inventory"])
 # HELPER FUNCTIONS
 # ============================================================================
 
+
 def get_database():
     """Get database instance from farm module"""
     return farm_db.get_database()
@@ -115,9 +119,7 @@ def compute_inventory_scope(farm_id: Optional[UUID]) -> InventoryScope:
 
 
 def validate_scope_rules(
-    farm_id: Optional[UUID],
-    block_id: Optional[UUID],
-    inventory_scope: InventoryScope
+    farm_id: Optional[UUID], block_id: Optional[UUID], inventory_scope: InventoryScope
 ) -> None:
     """
     Validate inventory scope rules.
@@ -139,21 +141,20 @@ def validate_scope_rules(
     if farm_id is None and inventory_scope != InventoryScope.ORGANIZATION:
         raise HTTPException(
             status_code=400,
-            detail="Default inventory (farmId=null) must have inventoryScope='organization'"
+            detail="Default inventory (farmId=null) must have inventoryScope='organization'",
         )
 
     # Rule 2: farmId present => FARM scope
     if farm_id is not None and inventory_scope != InventoryScope.FARM:
         raise HTTPException(
-            status_code=400,
-            detail="Farm inventory must have inventoryScope='farm'"
+            status_code=400, detail="Farm inventory must have inventoryScope='farm'"
         )
 
     # Rule 3: blockId only valid for farm inventory
     if block_id is not None and farm_id is None:
         raise HTTPException(
             status_code=400,
-            detail="blockId can only be set for farm-scoped inventory (farmId must be present)"
+            detail="blockId can only be set for farm-scoped inventory (farmId must be present)",
         )
 
 
@@ -170,11 +171,10 @@ async def get_organization_id(current_user: CurrentUser) -> UUID:
     Raises:
         HTTPException: If user has no organization
     """
-    org_id = getattr(current_user, 'organizationId', None)
+    org_id = getattr(current_user, "organizationId", None)
     if not org_id:
         raise HTTPException(
-            status_code=400,
-            detail="User must belong to an organization"
+            status_code=400, detail="User must belong to an organization"
         )
     return UUID(org_id) if isinstance(org_id, str) else org_id
 
@@ -193,7 +193,7 @@ async def record_movement(
     from_scope: Optional[InventoryScope] = None,
     to_scope: Optional[InventoryScope] = None,
     from_farm_id: Optional[UUID] = None,
-    to_farm_id: Optional[UUID] = None
+    to_farm_id: Optional[UUID] = None,
 ):
     """
     Record an inventory movement.
@@ -229,7 +229,7 @@ async def record_movement(
         reason=reason,
         referenceId=reference_id,
         performedBy=user_id,
-        performedAt=datetime.utcnow()
+        performedAt=datetime.utcnow(),
     )
     await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
 
@@ -238,11 +238,12 @@ async def record_movement(
 # INVENTORY SUMMARY & DASHBOARD
 # ============================================================================
 
+
 @router.get("/summary", response_model=InventorySummary)
 async def get_inventory_summary(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm"),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Get inventory summary for dashboard"""
     farm_filter = {"farmId": str(farm_id)} if farm_id else {}
@@ -251,87 +252,132 @@ async def get_inventory_summary(
     # This collection contains aggregated harvest data grouped by farm + crop + grade + productType
     harvest_pipeline = [
         {"$match": farm_filter},
-        {"$group": {
-            "_id": None,
-            "totalItems": {"$sum": 1},
-            "totalQuantity": {"$sum": "$quantity"},
-            "totalValue": {"$sum": {"$multiply": ["$quantity", {"$ifNull": ["$unitPrice", 0]}]}},
-            "byGrade": {"$push": "$qualityGrade"}
-        }}
+        {
+            "$group": {
+                "_id": None,
+                "totalItems": {"$sum": 1},
+                "totalQuantity": {"$sum": "$quantity"},
+                "totalValue": {
+                    "$sum": {"$multiply": ["$quantity", {"$ifNull": ["$unitPrice", 0]}]}
+                },
+                "byGrade": {"$push": "$qualityGrade"},
+            }
+        },
     ]
     harvest_result = await db.inventory_harvest.aggregate(harvest_pipeline).to_list(1)
-    harvest_stats = harvest_result[0] if harvest_result else {"totalItems": 0, "totalQuantity": 0, "totalValue": 0}
+    harvest_stats = (
+        harvest_result[0]
+        if harvest_result
+        else {"totalItems": 0, "totalQuantity": 0, "totalValue": 0}
+    )
 
     # Input inventory stats
     input_pipeline = [
         {"$match": farm_filter},
-        {"$group": {
-            "_id": None,
-            "totalItems": {"$sum": 1},
-            "totalValue": {"$sum": {"$multiply": ["$quantity", {"$ifNull": ["$unitCost", 0]}]}},
-            "lowStockCount": {"$sum": {"$cond": ["$isLowStock", 1, 0]}}
-        }}
+        {
+            "$group": {
+                "_id": None,
+                "totalItems": {"$sum": 1},
+                "totalValue": {
+                    "$sum": {"$multiply": ["$quantity", {"$ifNull": ["$unitCost", 0]}]}
+                },
+                "lowStockCount": {"$sum": {"$cond": ["$isLowStock", 1, 0]}},
+            }
+        },
     ]
     input_result = await db.inventory_input.aggregate(input_pipeline).to_list(1)
-    input_stats = input_result[0] if input_result else {"totalItems": 0, "totalValue": 0, "lowStockCount": 0}
+    input_stats = (
+        input_result[0]
+        if input_result
+        else {"totalItems": 0, "totalValue": 0, "lowStockCount": 0}
+    )
 
     # Asset inventory stats
     asset_pipeline = [
         {"$match": farm_filter},
-        {"$group": {
-            "_id": None,
-            "totalItems": {"$sum": 1},
-            "totalValue": {"$sum": {"$ifNull": ["$currentValue", 0]}},
-            "maintenanceOverdueCount": {"$sum": {"$cond": ["$maintenanceOverdue", 1, 0]}},
-            "byStatus": {"$push": "$status"}
-        }}
+        {
+            "$group": {
+                "_id": None,
+                "totalItems": {"$sum": 1},
+                "totalValue": {"$sum": {"$ifNull": ["$currentValue", 0]}},
+                "maintenanceOverdueCount": {
+                    "$sum": {"$cond": ["$maintenanceOverdue", 1, 0]}
+                },
+                "byStatus": {"$push": "$status"},
+            }
+        },
     ]
     asset_result = await db.inventory_asset.aggregate(asset_pipeline).to_list(1)
-    asset_stats = asset_result[0] if asset_result else {"totalItems": 0, "totalValue": 0, "maintenanceOverdueCount": 0}
+    asset_stats = (
+        asset_result[0]
+        if asset_result
+        else {"totalItems": 0, "totalValue": 0, "maintenanceOverdueCount": 0}
+    )
 
     # Waste inventory stats
     waste_pipeline = [
         {"$match": farm_filter},
-        {"$group": {
-            "_id": None,
-            "totalItems": {"$sum": 1},
-            "totalValue": {"$sum": {"$ifNull": ["$estimatedValue", 0]}},
-            "pendingDisposal": {"$sum": {"$cond": [{"$eq": ["$disposalMethod", "pending"]}, 1, 0]}}
-        }}
+        {
+            "$group": {
+                "_id": None,
+                "totalItems": {"$sum": 1},
+                "totalValue": {"$sum": {"$ifNull": ["$estimatedValue", 0]}},
+                "pendingDisposal": {
+                    "$sum": {"$cond": [{"$eq": ["$disposalMethod", "pending"]}, 1, 0]}
+                },
+            }
+        },
     ]
     waste_result = await db.inventory_waste.aggregate(waste_pipeline).to_list(1)
-    waste_stats = waste_result[0] if waste_result else {"totalItems": 0, "totalValue": 0, "pendingDisposal": 0}
+    waste_stats = (
+        waste_result[0]
+        if waste_result
+        else {"totalItems": 0, "totalValue": 0, "pendingDisposal": 0}
+    )
 
     # Count expiring items (within 7 days)
     seven_days = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     from datetime import timedelta
+
     seven_days_later = seven_days + timedelta(days=7)
 
-    expiring_harvest = await db.inventory_harvest.count_documents({
-        **farm_filter,
-        "expiryDate": {"$lte": seven_days_later.isoformat(), "$gte": datetime.utcnow().isoformat()}
-    })
-    expiring_input = await db.inventory_input.count_documents({
-        **farm_filter,
-        "expiryDate": {"$lte": seven_days_later.isoformat(), "$gte": datetime.utcnow().isoformat()}
-    })
+    expiring_harvest = await db.inventory_harvest.count_documents(
+        {
+            **farm_filter,
+            "expiryDate": {
+                "$lte": seven_days_later.isoformat(),
+                "$gte": datetime.utcnow().isoformat(),
+            },
+        }
+    )
+    expiring_input = await db.inventory_input.count_documents(
+        {
+            **farm_filter,
+            "expiryDate": {
+                "$lte": seven_days_later.isoformat(),
+                "$gte": datetime.utcnow().isoformat(),
+            },
+        }
+    )
 
     return InventorySummary(
         harvestInventory={
             "totalItems": harvest_stats.get("totalItems", 0),
-            "totalQuantity": harvest_stats.get("totalQuantity", 0)
+            "totalQuantity": harvest_stats.get("totalQuantity", 0),
         },
         inputInventory={
             "totalItems": input_stats.get("totalItems", 0),
-            "lowStockItems": input_stats.get("lowStockCount", 0)
+            "lowStockItems": input_stats.get("lowStockCount", 0),
         },
         assetInventory={
             "totalItems": asset_stats.get("totalItems", 0),
-            "operationalCount": sum(1 for s in asset_stats.get("byStatus", []) if s == "operational")
+            "operationalCount": sum(
+                1 for s in asset_stats.get("byStatus", []) if s == "operational"
+            ),
         },
         wasteInventory={
             "totalItems": waste_stats.get("totalItems", 0),
-            "pendingDisposal": waste_stats.get("pendingDisposal", 0)
+            "pendingDisposal": waste_stats.get("pendingDisposal", 0),
         },
         totalHarvestValue=harvest_stats.get("totalValue", 0),
         totalInputValue=input_stats.get("totalValue", 0),
@@ -339,7 +385,7 @@ async def get_inventory_summary(
         totalWasteValue=waste_stats.get("totalValue", 0),
         lowStockAlerts=input_stats.get("lowStockCount", 0),
         expiringItems=expiring_harvest + expiring_input,
-        maintenanceOverdue=asset_stats.get("maintenanceOverdueCount", 0)
+        maintenanceOverdue=asset_stats.get("maintenanceOverdueCount", 0),
     )
 
 
@@ -347,19 +393,27 @@ async def get_inventory_summary(
 # HARVEST INVENTORY ENDPOINTS
 # ============================================================================
 
+
 @router.get("/harvest", response_model=dict)
 async def list_harvest_inventory(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    scope: Optional[InventoryScope] = Query(
+        None, description="Filter by scope (organization or farm)"
+    ),
     quality_grade: Optional[QualityGrade] = Query(None),
-    farming_year: Optional[int] = Query(None, alias="farmingYear", description="Filter by farming year (e.g., 2025)"),
+    farming_year: Optional[int] = Query(
+        None, alias="farmingYear", description="Filter by farming year (e.g., 2025)"
+    ),
     search: Optional[str] = Query(None, max_length=100),
-    sort_by: str = Query("harvestDate", description="Field to sort by (harvestDate, createdAt, plantName, quantity)"),
+    sort_by: str = Query(
+        "harvestDate",
+        description="Field to sort by (harvestDate, createdAt, plantName, quantity)",
+    ),
     sort_order: str = Query("desc", description="Sort order (asc or desc)"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     List harvest inventory items with pagination.
@@ -396,26 +450,38 @@ async def list_harvest_inventory(
         query["$or"] = [
             {"plantName": {"$regex": search, "$options": "i"}},
             {"variety": {"$regex": search, "$options": "i"}},
-            {"storageLocation": {"$regex": search, "$options": "i"}}
+            {"storageLocation": {"$regex": search, "$options": "i"}},
         ]
 
     skip = (page - 1) * per_page
     total = await db.inventory_harvest.count_documents(query)
 
     # Validate and apply sorting
-    valid_sort_fields = ["harvestDate", "createdAt", "plantName", "quantity", "qualityGrade"]
+    valid_sort_fields = [
+        "harvestDate",
+        "createdAt",
+        "plantName",
+        "quantity",
+        "qualityGrade",
+    ]
     if sort_by not in valid_sort_fields:
         sort_by = "harvestDate"
     sort_direction = 1 if sort_order.lower() == "asc" else -1
 
-    items = await db.inventory_harvest.find(query).sort(sort_by, sort_direction).skip(skip).limit(per_page).to_list(per_page)
+    items = (
+        await db.inventory_harvest.find(query)
+        .sort(sort_by, sort_direction)
+        .skip(skip)
+        .limit(per_page)
+        .to_list(per_page)
+    )
 
     return {
         "items": [serialize_doc(item) for item in items],
         "total": total,
         "page": page,
         "perPage": per_page,
-        "totalPages": (total + per_page - 1) // per_page
+        "totalPages": (total + per_page - 1) // per_page,
     }
 
 
@@ -425,17 +491,19 @@ async def list_harvest_inventory(
     responses={
         200: {
             "content": {"text/csv": {}},
-            "description": "CSV file with filtered harvest inventory"
+            "description": "CSV file with filtered harvest inventory",
         }
-    }
+    },
 )
 async def export_harvest_inventory_csv(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    scope: Optional[InventoryScope] = Query(
+        None, description="Filter by scope (organization or farm)"
+    ),
     quality_grade: Optional[QualityGrade] = Query(None),
     search: Optional[str] = Query(None, max_length=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Export harvest inventory to CSV format.
@@ -468,42 +536,59 @@ async def export_harvest_inventory_csv(
         query["$or"] = [
             {"plantName": {"$regex": search, "$options": "i"}},
             {"variety": {"$regex": search, "$options": "i"}},
-            {"storageLocation": {"$regex": search, "$options": "i"}}
+            {"storageLocation": {"$regex": search, "$options": "i"}},
         ]
 
-    items = await db.inventory_harvest.find(query).sort("harvestDate", -1).to_list(10000)
+    items = (
+        await db.inventory_harvest.find(query).sort("harvestDate", -1).to_list(10000)
+    )
 
     # Generate CSV
     output = StringIO()
     writer = csv.writer(output)
 
     # Header row
-    writer.writerow([
-        "Plant Name", "Variety", "Quality Grade", "Product Type",
-        "Quantity", "Unit", "Available Quantity",
-        "Harvest Date", "Expiry Date", "Farm ID", "Block ID",
-        "Unit Price", "Currency", "Storage Location", "Notes"
-    ])
+    writer.writerow(
+        [
+            "Plant Name",
+            "Variety",
+            "Quality Grade",
+            "Product Type",
+            "Quantity",
+            "Unit",
+            "Available Quantity",
+            "Harvest Date",
+            "Expiry Date",
+            "Farm ID",
+            "Block ID",
+            "Unit Price",
+            "Currency",
+            "Storage Location",
+            "Notes",
+        ]
+    )
 
     # Data rows
     for item in items:
-        writer.writerow([
-            item.get("plantName", ""),
-            item.get("variety", ""),
-            item.get("qualityGrade", ""),
-            item.get("productType", ""),
-            item.get("quantity", ""),
-            item.get("unit", ""),
-            item.get("availableQuantity", ""),
-            item.get("harvestDate", ""),
-            item.get("expiryDate", ""),
-            item.get("farmId", ""),
-            item.get("blockId", ""),
-            item.get("unitPrice", ""),
-            item.get("currency", ""),
-            item.get("storageLocation", ""),
-            item.get("notes", "")
-        ])
+        writer.writerow(
+            [
+                item.get("plantName", ""),
+                item.get("variety", ""),
+                item.get("qualityGrade", ""),
+                item.get("productType", ""),
+                item.get("quantity", ""),
+                item.get("unit", ""),
+                item.get("availableQuantity", ""),
+                item.get("harvestDate", ""),
+                item.get("expiryDate", ""),
+                item.get("farmId", ""),
+                item.get("blockId", ""),
+                item.get("unitPrice", ""),
+                item.get("currency", ""),
+                item.get("storageLocation", ""),
+                item.get("notes", ""),
+            ]
+        )
 
     csv_content = output.getvalue()
 
@@ -512,7 +597,7 @@ async def export_harvest_inventory_csv(
         media_type="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=harvest_inventory_export.csv"
-        }
+        },
     )
 
 
@@ -520,7 +605,7 @@ async def export_harvest_inventory_csv(
 async def create_harvest_inventory(
     data: HarvestInventoryCreate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Create a new harvest inventory item.
@@ -551,7 +636,7 @@ async def create_harvest_inventory(
         availableQuantity=data.quantity,
         originalQuantity=data.quantity,  # Immutable batch size set on creation
         farmingYear=farming_year,
-        createdBy=UUID(current_user.userId)
+        createdBy=UUID(current_user.userId),
     )
 
     doc = inventory.model_dump(mode="json")
@@ -567,7 +652,7 @@ async def create_harvest_inventory(
         quantity_change=data.quantity,
         user_id=UUID(current_user.userId),
         organization_id=org_id,
-        reason="Initial inventory creation"
+        reason="Initial inventory creation",
     )
 
     return serialize_doc(doc)
@@ -577,7 +662,7 @@ async def create_harvest_inventory(
 async def get_harvest_inventory(
     inventory_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Get a specific harvest inventory item"""
     item = await db.inventory_harvest.find_one({"inventoryId": str(inventory_id)})
@@ -591,7 +676,7 @@ async def update_harvest_inventory(
     inventory_id: UUID,
     data: HarvestInventoryUpdate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Update a harvest inventory item"""
     org_id = await get_organization_id(current_user)
@@ -602,9 +687,14 @@ async def update_harvest_inventory(
 
     # Verify organization
     if item.get("organizationId") != str(org_id):
-        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organization",
+        )
 
-    update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+    update_data = {
+        k: v for k, v in data.model_dump(mode="json").items() if v is not None
+    }
     update_data["updatedAt"] = datetime.utcnow().isoformat()
 
     # If quantity changed, update available quantity and record movement
@@ -624,12 +714,11 @@ async def update_harvest_inventory(
                 quantity_change=new_quantity - old_quantity,
                 user_id=UUID(current_user.userId),
                 organization_id=org_id,
-                reason="Manual quantity adjustment"
+                reason="Manual quantity adjustment",
             )
 
     await db.inventory_harvest.update_one(
-        {"inventoryId": str(inventory_id)},
-        {"$set": update_data}
+        {"inventoryId": str(inventory_id)}, {"$set": update_data}
     )
 
     updated = await db.inventory_harvest.find_one({"inventoryId": str(inventory_id)})
@@ -640,7 +729,7 @@ async def update_harvest_inventory(
 async def delete_harvest_inventory(
     inventory_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Delete a harvest inventory item"""
     result = await db.inventory_harvest.delete_one({"inventoryId": str(inventory_id)})
@@ -652,17 +741,20 @@ async def delete_harvest_inventory(
 # INPUT INVENTORY ENDPOINTS
 # ============================================================================
 
+
 @router.get("/input", response_model=dict)
 async def list_input_inventory(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    scope: Optional[InventoryScope] = Query(
+        None, description="Filter by scope (organization or farm)"
+    ),
     category: Optional[InputCategory] = Query(None),
     low_stock_only: bool = Query(False),
     search: Optional[str] = Query(None, max_length=100),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     List input inventory items with pagination.
@@ -698,19 +790,25 @@ async def list_input_inventory(
         query["$or"] = [
             {"itemName": {"$regex": search, "$options": "i"}},
             {"brand": {"$regex": search, "$options": "i"}},
-            {"sku": {"$regex": search, "$options": "i"}}
+            {"sku": {"$regex": search, "$options": "i"}},
         ]
 
     skip = (page - 1) * per_page
     total = await db.inventory_input.count_documents(query)
-    items = await db.inventory_input.find(query).sort("createdAt", -1).skip(skip).limit(per_page).to_list(per_page)
+    items = (
+        await db.inventory_input.find(query)
+        .sort("createdAt", -1)
+        .skip(skip)
+        .limit(per_page)
+        .to_list(per_page)
+    )
 
     return {
         "items": [serialize_doc(item) for item in items],
         "total": total,
         "page": page,
         "perPage": per_page,
-        "totalPages": (total + per_page - 1) // per_page
+        "totalPages": (total + per_page - 1) // per_page,
     }
 
 
@@ -720,18 +818,20 @@ async def list_input_inventory(
     responses={
         200: {
             "content": {"text/csv": {}},
-            "description": "CSV file with filtered input inventory"
+            "description": "CSV file with filtered input inventory",
         }
-    }
+    },
 )
 async def export_input_inventory_csv(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    scope: Optional[InventoryScope] = Query(
+        None, description="Filter by scope (organization or farm)"
+    ),
     category: Optional[InputCategory] = Query(None),
     low_stock_only: bool = Query(False),
     search: Optional[str] = Query(None, max_length=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Export input inventory to CSV format.
@@ -767,7 +867,7 @@ async def export_input_inventory_csv(
         query["$or"] = [
             {"itemName": {"$regex": search, "$options": "i"}},
             {"brand": {"$regex": search, "$options": "i"}},
-            {"sku": {"$regex": search, "$options": "i"}}
+            {"sku": {"$regex": search, "$options": "i"}},
         ]
 
     items = await db.inventory_input.find(query).sort("createdAt", -1).to_list(10000)
@@ -777,30 +877,43 @@ async def export_input_inventory_csv(
     writer = csv.writer(output)
 
     # Header row
-    writer.writerow([
-        "Item Name", "Category", "Brand", "SKU",
-        "Quantity", "Unit", "Minimum Stock", "Low Stock",
-        "Unit Cost", "Expiry Date", "Farm ID",
-        "Supplier", "Notes"
-    ])
+    writer.writerow(
+        [
+            "Item Name",
+            "Category",
+            "Brand",
+            "SKU",
+            "Quantity",
+            "Unit",
+            "Minimum Stock",
+            "Low Stock",
+            "Unit Cost",
+            "Expiry Date",
+            "Farm ID",
+            "Supplier",
+            "Notes",
+        ]
+    )
 
     # Data rows
     for item in items:
-        writer.writerow([
-            item.get("itemName", ""),
-            item.get("category", ""),
-            item.get("brand", ""),
-            item.get("sku", ""),
-            item.get("quantity", ""),
-            item.get("unit", ""),
-            item.get("minimumStock", ""),
-            item.get("isLowStock", ""),
-            item.get("unitCost", ""),
-            item.get("expiryDate", ""),
-            item.get("farmId", ""),
-            item.get("supplier", ""),
-            item.get("notes", "")
-        ])
+        writer.writerow(
+            [
+                item.get("itemName", ""),
+                item.get("category", ""),
+                item.get("brand", ""),
+                item.get("sku", ""),
+                item.get("quantity", ""),
+                item.get("unit", ""),
+                item.get("minimumStock", ""),
+                item.get("isLowStock", ""),
+                item.get("unitCost", ""),
+                item.get("expiryDate", ""),
+                item.get("farmId", ""),
+                item.get("supplier", ""),
+                item.get("notes", ""),
+            ]
+        )
 
     csv_content = output.getvalue()
 
@@ -809,7 +922,7 @@ async def export_input_inventory_csv(
         media_type="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=input_inventory_export.csv"
-        }
+        },
     )
 
 
@@ -817,7 +930,7 @@ async def export_input_inventory_csv(
 async def create_input_inventory(
     data: InputInventoryCreate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Create a new input inventory item.
@@ -835,12 +948,16 @@ async def create_input_inventory(
     # Validate scope rules (blockId not applicable for input inventory)
     validate_scope_rules(data.farmId, None, inventory_scope)
 
-    is_low_stock = data.quantity <= data.minimumStock if data.minimumStock > 0 else False
+    is_low_stock = (
+        data.quantity <= data.minimumStock if data.minimumStock > 0 else False
+    )
 
     # Calculate base unit and quantities for automated calculations
     base_unit = get_base_unit_for_category(data.category)
     base_quantity = convert_to_base_unit(data.quantity, data.unit, data.category)
-    base_minimum_stock = convert_to_base_unit(data.minimumStock, data.unit, data.category)
+    base_minimum_stock = convert_to_base_unit(
+        data.minimumStock, data.unit, data.category
+    )
 
     inventory = InputInventory(
         **data.model_dump(exclude={"organizationId"}),
@@ -850,7 +967,7 @@ async def create_input_inventory(
         baseQuantity=base_quantity,
         baseMinimumStock=base_minimum_stock,
         isLowStock=is_low_stock,
-        createdBy=UUID(current_user.userId)
+        createdBy=UUID(current_user.userId),
     )
 
     doc = inventory.model_dump(mode="json")
@@ -866,7 +983,7 @@ async def create_input_inventory(
         quantity_change=data.quantity,
         user_id=UUID(current_user.userId),
         organization_id=org_id,
-        reason="Initial inventory creation"
+        reason="Initial inventory creation",
     )
 
     return serialize_doc(doc)
@@ -876,7 +993,7 @@ async def create_input_inventory(
 async def get_input_inventory(
     inventory_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Get a specific input inventory item"""
     item = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
@@ -890,7 +1007,7 @@ async def update_input_inventory(
     inventory_id: UUID,
     data: InputInventoryUpdate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Update an input inventory item"""
     org_id = await get_organization_id(current_user)
@@ -901,9 +1018,14 @@ async def update_input_inventory(
 
     # Verify organization
     if item.get("organizationId") != str(org_id):
-        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organization",
+        )
 
-    update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+    update_data = {
+        k: v for k, v in data.model_dump(mode="json").items() if v is not None
+    }
     update_data["updatedAt"] = datetime.utcnow().isoformat()
 
     # Check low stock status
@@ -919,7 +1041,9 @@ async def update_input_inventory(
         update_data["baseQuantity"] = convert_to_base_unit(new_quantity, unit, category)
 
     if "minimumStock" in update_data:
-        update_data["baseMinimumStock"] = convert_to_base_unit(min_stock, unit, category)
+        update_data["baseMinimumStock"] = convert_to_base_unit(
+            min_stock, unit, category
+        )
 
     # Record quantity change
     if "quantity" in update_data:
@@ -934,12 +1058,11 @@ async def update_input_inventory(
                 quantity_change=new_quantity - old_quantity,
                 user_id=UUID(current_user.userId),
                 organization_id=org_id,
-                reason="Manual quantity adjustment"
+                reason="Manual quantity adjustment",
             )
 
     await db.inventory_input.update_one(
-        {"inventoryId": str(inventory_id)},
-        {"$set": update_data}
+        {"inventoryId": str(inventory_id)}, {"$set": update_data}
     )
 
     updated = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
@@ -950,7 +1073,7 @@ async def update_input_inventory(
 async def delete_input_inventory(
     inventory_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Delete an input inventory item"""
     result = await db.inventory_input.delete_one({"inventoryId": str(inventory_id)})
@@ -963,11 +1086,15 @@ async def delete_input_inventory(
 async def use_input_inventory(
     inventory_id: UUID,
     quantity: float = Query(..., gt=0, description="Quantity to use in display units"),
-    farm_id: Optional[UUID] = Query(None, description="Farm requesting inventory (for pool fallback)"),
-    allow_pool_deduction: bool = Query(True, description="Allow automatic fallback to default inventory"),
+    farm_id: Optional[UUID] = Query(
+        None, description="Farm requesting inventory (for pool fallback)"
+    ),
+    allow_pool_deduction: bool = Query(
+        True, description="Allow automatic fallback to default inventory"
+    ),
     reason: Optional[str] = Query(None, max_length=500),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Record usage of an input inventory item with automatic pool fallback.
@@ -987,7 +1114,10 @@ async def use_input_inventory(
 
     # Verify organization
     if item.get("organizationId") != str(org_id):
-        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organization",
+        )
 
     current_quantity = item.get("quantity", 0)
     category = InputCategory(item.get("category"))
@@ -1002,13 +1132,15 @@ async def use_input_inventory(
 
         await db.inventory_input.update_one(
             {"inventoryId": str(inventory_id)},
-            {"$set": {
-                "quantity": new_quantity,
-                "baseQuantity": new_base_quantity,
-                "isLowStock": new_quantity <= min_stock if min_stock > 0 else False,
-                "lastUsedAt": datetime.utcnow().isoformat(),
-                "updatedAt": datetime.utcnow().isoformat()
-            }}
+            {
+                "$set": {
+                    "quantity": new_quantity,
+                    "baseQuantity": new_base_quantity,
+                    "isLowStock": new_quantity <= min_stock if min_stock > 0 else False,
+                    "lastUsedAt": datetime.utcnow().isoformat(),
+                    "updatedAt": datetime.utcnow().isoformat(),
+                }
+            },
         )
 
         await record_movement(
@@ -1020,7 +1152,7 @@ async def use_input_inventory(
             quantity_change=-quantity,
             user_id=UUID(current_user.userId),
             organization_id=org_id,
-            reason=reason or "Input material usage"
+            reason=reason or "Input material usage",
         )
 
         updated = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
@@ -1030,7 +1162,7 @@ async def use_input_inventory(
     if not allow_pool_deduction:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient quantity. Available: {current_quantity} {unit}, Requested: {quantity} {unit}"
+            detail=f"Insufficient quantity. Available: {current_quantity} {unit}, Requested: {quantity} {unit}",
         )
 
     # Check if this is farm inventory
@@ -1039,21 +1171,23 @@ async def use_input_inventory(
         # Already default inventory - no fallback possible
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient quantity in default inventory. Available: {current_quantity} {unit}, Requested: {quantity} {unit}"
+            detail=f"Insufficient quantity in default inventory. Available: {current_quantity} {unit}, Requested: {quantity} {unit}",
         )
 
     # Find default inventory with same item
-    default_item = await db.inventory_input.find_one({
-        "organizationId": str(org_id),
-        "farmId": None,
-        "itemName": item.get("itemName"),
-        "category": item.get("category")
-    })
+    default_item = await db.inventory_input.find_one(
+        {
+            "organizationId": str(org_id),
+            "farmId": None,
+            "itemName": item.get("itemName"),
+            "category": item.get("category"),
+        }
+    )
 
     if not default_item:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient quantity in farm inventory and no default inventory found. Available: {current_quantity} {unit}, Requested: {quantity} {unit}"
+            detail=f"Insufficient quantity in farm inventory and no default inventory found. Available: {current_quantity} {unit}, Requested: {quantity} {unit}",
         )
 
     remaining_quantity = quantity - current_quantity
@@ -1062,20 +1196,22 @@ async def use_input_inventory(
     if remaining_quantity > default_quantity:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient total quantity. Farm: {current_quantity} {unit}, Default: {default_quantity} {unit}, Requested: {quantity} {unit}"
+            detail=f"Insufficient total quantity. Farm: {current_quantity} {unit}, Default: {default_quantity} {unit}, Requested: {quantity} {unit}",
         )
 
     # Deduct all from farm inventory (use everything available)
     if current_quantity > 0:
         await db.inventory_input.update_one(
             {"inventoryId": str(inventory_id)},
-            {"$set": {
-                "quantity": 0,
-                "baseQuantity": 0,
-                "isLowStock": True,
-                "lastUsedAt": datetime.utcnow().isoformat(),
-                "updatedAt": datetime.utcnow().isoformat()
-            }}
+            {
+                "$set": {
+                    "quantity": 0,
+                    "baseQuantity": 0,
+                    "isLowStock": True,
+                    "lastUsedAt": datetime.utcnow().isoformat(),
+                    "updatedAt": datetime.utcnow().isoformat(),
+                }
+            },
         )
 
         await record_movement(
@@ -1087,23 +1223,31 @@ async def use_input_inventory(
             quantity_change=-current_quantity,
             user_id=UUID(current_user.userId),
             organization_id=org_id,
-            reason=f"Partial usage (farm inventory): {reason or 'Input material usage'}"
+            reason=f"Partial usage (farm inventory): {reason or 'Input material usage'}",
         )
 
     # Deduct remaining from default inventory
     new_default_quantity = default_quantity - remaining_quantity
     min_stock_default = default_item.get("minimumStock", 0)
-    new_base_quantity_default = convert_to_base_unit(new_default_quantity, unit, category)
+    new_base_quantity_default = convert_to_base_unit(
+        new_default_quantity, unit, category
+    )
 
     await db.inventory_input.update_one(
         {"inventoryId": str(default_item["inventoryId"])},
-        {"$set": {
-            "quantity": new_default_quantity,
-            "baseQuantity": new_base_quantity_default,
-            "isLowStock": new_default_quantity <= min_stock_default if min_stock_default > 0 else False,
-            "lastUsedAt": datetime.utcnow().isoformat(),
-            "updatedAt": datetime.utcnow().isoformat()
-        }}
+        {
+            "$set": {
+                "quantity": new_default_quantity,
+                "baseQuantity": new_base_quantity_default,
+                "isLowStock": (
+                    new_default_quantity <= min_stock_default
+                    if min_stock_default > 0
+                    else False
+                ),
+                "lastUsedAt": datetime.utcnow().isoformat(),
+                "updatedAt": datetime.utcnow().isoformat(),
+            }
+        },
     )
 
     await record_movement(
@@ -1115,18 +1259,20 @@ async def use_input_inventory(
         quantity_change=-remaining_quantity,
         user_id=UUID(current_user.userId),
         organization_id=org_id,
-        reason=f"Pool fallback usage (from default inventory): {reason or 'Input material usage'}"
+        reason=f"Pool fallback usage (from default inventory): {reason or 'Input material usage'}",
     )
 
     # Return both updated items
     updated_farm = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
-    updated_default = await db.inventory_input.find_one({"inventoryId": str(default_item["inventoryId"])})
+    updated_default = await db.inventory_input.find_one(
+        {"inventoryId": str(default_item["inventoryId"])}
+    )
 
     return {
         "message": f"Successfully used {quantity} {unit} ({current_quantity} from farm, {remaining_quantity} from default inventory)",
         "farmInventory": serialize_doc(updated_farm),
         "defaultInventory": serialize_doc(updated_default),
-        "poolFallbackUsed": True
+        "poolFallbackUsed": True,
     }
 
 
@@ -1134,11 +1280,15 @@ async def use_input_inventory(
 @router.post("/input/{inventory_id}/deduct-base", response_model=dict)
 async def deduct_input_base_units(
     inventory_id: UUID,
-    base_quantity: float = Query(..., gt=0, description="Quantity to deduct in base units (mg or ml)"),
+    base_quantity: float = Query(
+        ..., gt=0, description="Quantity to deduct in base units (mg or ml)"
+    ),
     reason: Optional[str] = Query(None, max_length=500),
-    reference_id: Optional[str] = Query(None, max_length=100, description="Reference to task/block/plant"),
+    reference_id: Optional[str] = Query(
+        None, max_length=100, description="Reference to task/block/plant"
+    ),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Deduct inventory using base units (mg/ml).
@@ -1161,13 +1311,16 @@ async def deduct_input_base_units(
 
     # Verify organization
     if item.get("organizationId") != str(org_id):
-        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organization",
+        )
 
     current_base_quantity = item.get("baseQuantity", 0)
     if base_quantity > current_base_quantity:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient quantity. Available: {current_base_quantity} {item.get('baseUnit', 'units')}"
+            detail=f"Insufficient quantity. Available: {current_base_quantity} {item.get('baseUnit', 'units')}",
         )
 
     # Calculate new quantities
@@ -1184,13 +1337,17 @@ async def deduct_input_base_units(
 
     await db.inventory_input.update_one(
         {"inventoryId": str(inventory_id)},
-        {"$set": {
-            "quantity": new_display_quantity,
-            "baseQuantity": new_base_quantity,
-            "isLowStock": new_display_quantity <= min_stock if min_stock > 0 else False,
-            "lastUsedAt": datetime.utcnow().isoformat(),
-            "updatedAt": datetime.utcnow().isoformat()
-        }}
+        {
+            "$set": {
+                "quantity": new_display_quantity,
+                "baseQuantity": new_base_quantity,
+                "isLowStock": (
+                    new_display_quantity <= min_stock if min_stock > 0 else False
+                ),
+                "lastUsedAt": datetime.utcnow().isoformat(),
+                "updatedAt": datetime.utcnow().isoformat(),
+            }
+        },
     )
 
     await record_movement(
@@ -1202,8 +1359,9 @@ async def deduct_input_base_units(
         quantity_change=-display_quantity_change,
         user_id=UUID(current_user.userId),
         organization_id=org_id,
-        reason=reason or f"Automated deduction ({base_quantity} {item.get('baseUnit', 'units')})",
-        reference_id=reference_id
+        reason=reason
+        or f"Automated deduction ({base_quantity} {item.get('baseUnit', 'units')})",
+        reference_id=reference_id,
     )
 
     updated = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
@@ -1212,9 +1370,7 @@ async def deduct_input_base_units(
 
 # Get available units for a category
 @router.get("/units/{category}", response_model=dict)
-async def get_units_for_category(
-    category: InputCategory
-):
+async def get_units_for_category(category: InputCategory):
     """
     Get available display units and base unit for a category.
     Useful for frontend dropdowns.
@@ -1223,17 +1379,45 @@ async def get_units_for_category(
 
     if base_unit == BaseUnit.MILLIGRAM:
         display_units = [
-            {"value": "kg", "label": "Kilograms (kg)", "conversionFactor": MASS_TO_MG["kg"]},
+            {
+                "value": "kg",
+                "label": "Kilograms (kg)",
+                "conversionFactor": MASS_TO_MG["kg"],
+            },
             {"value": "g", "label": "Grams (g)", "conversionFactor": MASS_TO_MG["g"]},
-            {"value": "mg", "label": "Milligrams (mg)", "conversionFactor": MASS_TO_MG["mg"]},
-            {"value": "lb", "label": "Pounds (lb)", "conversionFactor": MASS_TO_MG["lb"]},
-            {"value": "oz", "label": "Ounces (oz)", "conversionFactor": MASS_TO_MG["oz"]},
+            {
+                "value": "mg",
+                "label": "Milligrams (mg)",
+                "conversionFactor": MASS_TO_MG["mg"],
+            },
+            {
+                "value": "lb",
+                "label": "Pounds (lb)",
+                "conversionFactor": MASS_TO_MG["lb"],
+            },
+            {
+                "value": "oz",
+                "label": "Ounces (oz)",
+                "conversionFactor": MASS_TO_MG["oz"],
+            },
         ]
     elif base_unit == BaseUnit.MILLILITER:
         display_units = [
-            {"value": "L", "label": "Liters (L)", "conversionFactor": VOLUME_TO_ML["L"]},
-            {"value": "ml", "label": "Milliliters (ml)", "conversionFactor": VOLUME_TO_ML["ml"]},
-            {"value": "gal", "label": "Gallons (gal)", "conversionFactor": VOLUME_TO_ML["gal"]},
+            {
+                "value": "L",
+                "label": "Liters (L)",
+                "conversionFactor": VOLUME_TO_ML["L"],
+            },
+            {
+                "value": "ml",
+                "label": "Milliliters (ml)",
+                "conversionFactor": VOLUME_TO_ML["ml"],
+            },
+            {
+                "value": "gal",
+                "label": "Gallons (gal)",
+                "conversionFactor": VOLUME_TO_ML["gal"],
+            },
         ]
     else:  # BaseUnit.UNIT
         display_units = [
@@ -1247,7 +1431,7 @@ async def get_units_for_category(
     return {
         "category": category.value,
         "baseUnit": base_unit.value,
-        "displayUnits": display_units
+        "displayUnits": display_units,
     }
 
 
@@ -1255,19 +1439,24 @@ async def get_units_for_category(
 # ASSET INVENTORY ENDPOINTS
 # ============================================================================
 
+
 @router.get("/asset", response_model=dict)
 async def list_asset_inventory(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    scope: Optional[InventoryScope] = Query(
+        None, description="Filter by scope (organization or farm)"
+    ),
     category: Optional[AssetCategory] = Query(None),
     status_filter: Optional[AssetStatus] = Query(None, alias="status"),
     maintenance_overdue: bool = Query(False),
-    allocated_to_farm: Optional[UUID] = Query(None, description="Filter by currently allocated farm"),
+    allocated_to_farm: Optional[UUID] = Query(
+        None, description="Filter by currently allocated farm"
+    ),
     search: Optional[str] = Query(None, max_length=100),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     List asset inventory items with pagination.
@@ -1310,19 +1499,25 @@ async def list_asset_inventory(
             {"assetName": {"$regex": search, "$options": "i"}},
             {"brand": {"$regex": search, "$options": "i"}},
             {"model": {"$regex": search, "$options": "i"}},
-            {"assetTag": {"$regex": search, "$options": "i"}}
+            {"assetTag": {"$regex": search, "$options": "i"}},
         ]
 
     skip = (page - 1) * per_page
     total = await db.inventory_asset.count_documents(query)
-    items = await db.inventory_asset.find(query).sort("createdAt", -1).skip(skip).limit(per_page).to_list(per_page)
+    items = (
+        await db.inventory_asset.find(query)
+        .sort("createdAt", -1)
+        .skip(skip)
+        .limit(per_page)
+        .to_list(per_page)
+    )
 
     return {
         "items": [serialize_doc(item) for item in items],
         "total": total,
         "page": page,
         "perPage": per_page,
-        "totalPages": (total + per_page - 1) // per_page
+        "totalPages": (total + per_page - 1) // per_page,
     }
 
 
@@ -1332,19 +1527,21 @@ async def list_asset_inventory(
     responses={
         200: {
             "content": {"text/csv": {}},
-            "description": "CSV file with filtered asset inventory"
+            "description": "CSV file with filtered asset inventory",
         }
-    }
+    },
 )
 async def export_asset_inventory_csv(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    scope: Optional[InventoryScope] = Query(
+        None, description="Filter by scope (organization or farm)"
+    ),
     category: Optional[AssetCategory] = Query(None),
     status_filter: Optional[AssetStatus] = Query(None, alias="status"),
     maintenance_overdue: bool = Query(False),
     search: Optional[str] = Query(None, max_length=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Export asset inventory to CSV format.
@@ -1384,7 +1581,7 @@ async def export_asset_inventory_csv(
             {"assetName": {"$regex": search, "$options": "i"}},
             {"brand": {"$regex": search, "$options": "i"}},
             {"model": {"$regex": search, "$options": "i"}},
-            {"assetTag": {"$regex": search, "$options": "i"}}
+            {"assetTag": {"$regex": search, "$options": "i"}},
         ]
 
     items = await db.inventory_asset.find(query).sort("createdAt", -1).to_list(10000)
@@ -1394,32 +1591,47 @@ async def export_asset_inventory_csv(
     writer = csv.writer(output)
 
     # Header row
-    writer.writerow([
-        "Asset Name", "Category", "Status", "Brand", "Model",
-        "Asset Tag", "Serial Number", "Purchase Date", "Purchase Cost",
-        "Current Value", "Next Maintenance Date", "Maintenance Overdue",
-        "Farm ID", "Location", "Notes"
-    ])
+    writer.writerow(
+        [
+            "Asset Name",
+            "Category",
+            "Status",
+            "Brand",
+            "Model",
+            "Asset Tag",
+            "Serial Number",
+            "Purchase Date",
+            "Purchase Cost",
+            "Current Value",
+            "Next Maintenance Date",
+            "Maintenance Overdue",
+            "Farm ID",
+            "Location",
+            "Notes",
+        ]
+    )
 
     # Data rows
     for item in items:
-        writer.writerow([
-            item.get("assetName", ""),
-            item.get("category", ""),
-            item.get("status", ""),
-            item.get("brand", ""),
-            item.get("model", ""),
-            item.get("assetTag", ""),
-            item.get("serialNumber", ""),
-            item.get("purchaseDate", ""),
-            item.get("purchaseCost", ""),
-            item.get("currentValue", ""),
-            item.get("nextMaintenanceDate", ""),
-            item.get("maintenanceOverdue", ""),
-            item.get("farmId", ""),
-            item.get("location", ""),
-            item.get("notes", "")
-        ])
+        writer.writerow(
+            [
+                item.get("assetName", ""),
+                item.get("category", ""),
+                item.get("status", ""),
+                item.get("brand", ""),
+                item.get("model", ""),
+                item.get("assetTag", ""),
+                item.get("serialNumber", ""),
+                item.get("purchaseDate", ""),
+                item.get("purchaseCost", ""),
+                item.get("currentValue", ""),
+                item.get("nextMaintenanceDate", ""),
+                item.get("maintenanceOverdue", ""),
+                item.get("farmId", ""),
+                item.get("location", ""),
+                item.get("notes", ""),
+            ]
+        )
 
     csv_content = output.getvalue()
 
@@ -1428,7 +1640,7 @@ async def export_asset_inventory_csv(
         media_type="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=asset_inventory_export.csv"
-        }
+        },
     )
 
 
@@ -1436,7 +1648,7 @@ async def export_asset_inventory_csv(
 async def create_asset_inventory(
     data: AssetInventoryCreate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Create a new asset inventory item.
@@ -1467,7 +1679,7 @@ async def create_asset_inventory(
         **inventory_data,
         inventoryScope=inventory_scope,
         maintenanceOverdue=maintenance_overdue,
-        createdBy=UUID(current_user.userId)
+        createdBy=UUID(current_user.userId),
     )
 
     doc = inventory.model_dump(mode="json")
@@ -1480,7 +1692,7 @@ async def create_asset_inventory(
 async def get_asset_inventory(
     inventory_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Get a specific asset inventory item"""
     item = await db.inventory_asset.find_one({"inventoryId": str(inventory_id)})
@@ -1494,26 +1706,31 @@ async def update_asset_inventory(
     inventory_id: UUID,
     data: AssetInventoryUpdate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Update an asset inventory item"""
     item = await db.inventory_asset.find_one({"inventoryId": str(inventory_id)})
     if not item:
         raise HTTPException(status_code=404, detail="Asset inventory item not found")
 
-    update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+    update_data = {
+        k: v for k, v in data.model_dump(mode="json").items() if v is not None
+    }
     update_data["updatedAt"] = datetime.utcnow().isoformat()
 
     # Check maintenance overdue status
-    next_maintenance = update_data.get("nextMaintenanceDate", item.get("nextMaintenanceDate"))
+    next_maintenance = update_data.get(
+        "nextMaintenanceDate", item.get("nextMaintenanceDate")
+    )
     if next_maintenance:
         if isinstance(next_maintenance, str):
-            next_maintenance = datetime.fromisoformat(next_maintenance.replace("Z", "+00:00"))
+            next_maintenance = datetime.fromisoformat(
+                next_maintenance.replace("Z", "+00:00")
+            )
         update_data["maintenanceOverdue"] = next_maintenance < datetime.utcnow()
 
     await db.inventory_asset.update_one(
-        {"inventoryId": str(inventory_id)},
-        {"$set": update_data}
+        {"inventoryId": str(inventory_id)}, {"$set": update_data}
     )
 
     updated = await db.inventory_asset.find_one({"inventoryId": str(inventory_id)})
@@ -1524,7 +1741,7 @@ async def update_asset_inventory(
 async def delete_asset_inventory(
     inventory_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Delete an asset inventory item"""
     result = await db.inventory_asset.delete_one({"inventoryId": str(inventory_id)})
@@ -1536,11 +1753,12 @@ async def delete_asset_inventory(
 # TRANSFER OPERATIONS
 # ============================================================================
 
+
 @router.post("/transfer", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def transfer_inventory(
     transfer: TransferRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Transfer inventory between scopes.
@@ -1564,32 +1782,26 @@ async def transfer_inventory(
     if transfer.fromScope == transfer.toScope == InventoryScope.ORGANIZATION:
         raise HTTPException(
             status_code=400,
-            detail="Cannot transfer within organization scope (use adjustment instead)"
+            detail="Cannot transfer within organization scope (use adjustment instead)",
         )
 
     if transfer.fromScope == InventoryScope.ORGANIZATION and transfer.fromFarmId:
         raise HTTPException(
             status_code=400,
-            detail="Organization inventory has no farmId (fromFarmId must be null)"
+            detail="Organization inventory has no farmId (fromFarmId must be null)",
         )
 
     if transfer.toScope == InventoryScope.ORGANIZATION and transfer.toFarmId:
         raise HTTPException(
             status_code=400,
-            detail="Organization inventory has no farmId (toFarmId must be null)"
+            detail="Organization inventory has no farmId (toFarmId must be null)",
         )
 
     if transfer.fromScope == InventoryScope.FARM and not transfer.fromFarmId:
-        raise HTTPException(
-            status_code=400,
-            detail="Farm transfer requires fromFarmId"
-        )
+        raise HTTPException(status_code=400, detail="Farm transfer requires fromFarmId")
 
     if transfer.toScope == InventoryScope.FARM and not transfer.toFarmId:
-        raise HTTPException(
-            status_code=400,
-            detail="Farm transfer requires toFarmId"
-        )
+        raise HTTPException(status_code=400, detail="Farm transfer requires toFarmId")
 
     # Get collection based on inventory type
     if transfer.inventoryType == InventoryType.HARVEST:
@@ -1608,15 +1820,20 @@ async def transfer_inventory(
 
     # Verify source item belongs to organization
     if source_item.get("organizationId") != str(org_id):
-        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organization",
+        )
 
     # Verify source scope matches
     source_farm_id = source_item.get("farmId")
-    actual_from_scope = InventoryScope.ORGANIZATION if source_farm_id is None else InventoryScope.FARM
+    actual_from_scope = (
+        InventoryScope.ORGANIZATION if source_farm_id is None else InventoryScope.FARM
+    )
     if actual_from_scope != transfer.fromScope:
         raise HTTPException(
             status_code=400,
-            detail=f"Source item is {actual_from_scope} scope, but transfer specifies {transfer.fromScope}"
+            detail=f"Source item is {actual_from_scope} scope, but transfer specifies {transfer.fromScope}",
         )
 
     # Check sufficient quantity
@@ -1624,13 +1841,15 @@ async def transfer_inventory(
     if transfer.quantity > current_quantity:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient quantity. Available: {current_quantity} {transfer.unit}, Requested: {transfer.quantity} {transfer.unit}"
+            detail=f"Insufficient quantity. Available: {current_quantity} {transfer.unit}, Requested: {transfer.quantity} {transfer.unit}",
         )
 
     # Calculate base quantity for input inventory
     if transfer.inventoryType == InventoryType.INPUT:
         category = InputCategory(source_item.get("category"))
-        base_quantity_transferred = convert_to_base_unit(transfer.quantity, transfer.unit, category)
+        base_quantity_transferred = convert_to_base_unit(
+            transfer.quantity, transfer.unit, category
+        )
     else:
         base_quantity_transferred = transfer.quantity
 
@@ -1641,7 +1860,7 @@ async def transfer_inventory(
     new_source_quantity = current_quantity - transfer.quantity
     update_data = {
         "quantity": new_source_quantity,
-        "updatedAt": datetime.utcnow().isoformat()
+        "updatedAt": datetime.utcnow().isoformat(),
     }
 
     if transfer.inventoryType == InventoryType.HARVEST:
@@ -1654,7 +1873,9 @@ async def transfer_inventory(
         new_base_quantity = convert_to_base_unit(new_source_quantity, unit, category)
         update_data["baseQuantity"] = new_base_quantity
         min_stock = source_item.get("minimumStock", 0)
-        update_data["isLowStock"] = new_source_quantity <= min_stock if min_stock > 0 else False
+        update_data["isLowStock"] = (
+            new_source_quantity <= min_stock if min_stock > 0 else False
+        )
 
     # Add to transfer history
     transfer_record = TransferRecord(
@@ -1663,19 +1884,24 @@ async def transfer_inventory(
         toScope=transfer.toScope,
         fromFarmId=transfer.fromFarmId,
         toFarmId=transfer.toFarmId,
-        quantityTransferred=base_quantity_transferred if transfer.inventoryType == InventoryType.INPUT else transfer.quantity,
+        quantityTransferred=(
+            base_quantity_transferred
+            if transfer.inventoryType == InventoryType.INPUT
+            else transfer.quantity
+        ),
         transferredBy=user_id,
-        reason=transfer.reason
+        reason=transfer.reason,
     )
 
     if "transferHistory" in source_item:
-        update_data["transferHistory"] = source_item["transferHistory"] + [transfer_record.model_dump(mode="json")]
+        update_data["transferHistory"] = source_item["transferHistory"] + [
+            transfer_record.model_dump(mode="json")
+        ]
     else:
         update_data["transferHistory"] = [transfer_record.model_dump(mode="json")]
 
     await collection.update_one(
-        {"inventoryId": str(transfer.inventoryId)},
-        {"$set": update_data}
+        {"inventoryId": str(transfer.inventoryId)}, {"$set": update_data}
     )
 
     # Record movement for source
@@ -1693,23 +1919,38 @@ async def transfer_inventory(
         from_farm_id=transfer.fromFarmId,
         to_farm_id=transfer.toFarmId,
         reason=f"Transfer to {transfer.toScope}: {transfer.reason}",
-        reference_id=str(transfer_id)
+        reference_id=str(transfer_id),
     )
 
     # Create or update destination inventory
     # For simplicity, create a new inventory item at destination
     # (Alternative: Find existing item and increase quantity)
-    dest_inventory_data = {k: v for k, v in source_item.items() if k not in ["_id", "inventoryId", "farmId", "inventoryScope", "createdAt", "updatedAt", "createdBy"]}
-    dest_inventory_data.update({
-        "inventoryId": str(uuid4()),
-        "organizationId": str(org_id),
-        "farmId": str(transfer.toFarmId) if transfer.toFarmId else None,
-        "inventoryScope": transfer.toScope.value,
-        "quantity": transfer.quantity,
-        "createdBy": str(user_id),
-        "createdAt": datetime.utcnow().isoformat(),
-        "updatedAt": datetime.utcnow().isoformat()
-    })
+    dest_inventory_data = {
+        k: v
+        for k, v in source_item.items()
+        if k
+        not in [
+            "_id",
+            "inventoryId",
+            "farmId",
+            "inventoryScope",
+            "createdAt",
+            "updatedAt",
+            "createdBy",
+        ]
+    }
+    dest_inventory_data.update(
+        {
+            "inventoryId": str(uuid4()),
+            "organizationId": str(org_id),
+            "farmId": str(transfer.toFarmId) if transfer.toFarmId else None,
+            "inventoryScope": transfer.toScope.value,
+            "quantity": transfer.quantity,
+            "createdBy": str(user_id),
+            "createdAt": datetime.utcnow().isoformat(),
+            "updatedAt": datetime.utcnow().isoformat(),
+        }
+    )
 
     if transfer.inventoryType == InventoryType.HARVEST:
         dest_inventory_data["availableQuantity"] = transfer.quantity
@@ -1718,7 +1959,9 @@ async def transfer_inventory(
     if transfer.inventoryType == InventoryType.INPUT:
         dest_inventory_data["baseQuantity"] = base_quantity_transferred
         min_stock = dest_inventory_data.get("minimumStock", 0)
-        dest_inventory_data["isLowStock"] = transfer.quantity <= min_stock if min_stock > 0 else False
+        dest_inventory_data["isLowStock"] = (
+            transfer.quantity <= min_stock if min_stock > 0 else False
+        )
 
     # Insert destination inventory
     await collection.insert_one(dest_inventory_data)
@@ -1739,24 +1982,29 @@ async def transfer_inventory(
         from_farm_id=transfer.fromFarmId,
         to_farm_id=transfer.toFarmId,
         reason=f"Transfer from {transfer.fromScope}: {transfer.reason}",
-        reference_id=str(transfer_id)
+        reference_id=str(transfer_id),
     )
 
     # Get updated source and destination
-    updated_source = await collection.find_one({"inventoryId": str(transfer.inventoryId)})
-    updated_destination = await collection.find_one({"inventoryId": str(dest_inventory_id)})
+    updated_source = await collection.find_one(
+        {"inventoryId": str(transfer.inventoryId)}
+    )
+    updated_destination = await collection.find_one(
+        {"inventoryId": str(dest_inventory_id)}
+    )
 
     return {
         "transferId": str(transfer_id),
         "sourceInventory": serialize_doc(updated_source),
         "destinationInventory": serialize_doc(updated_destination),
-        "message": f"Successfully transferred {transfer.quantity} {transfer.unit} from {transfer.fromScope} to {transfer.toScope}"
+        "message": f"Successfully transferred {transfer.quantity} {transfer.unit} from {transfer.fromScope} to {transfer.toScope}",
     }
 
 
 # ============================================================================
 # PRODUCT CATALOG ENDPOINTS
 # ============================================================================
+
 
 @router.get("/products", response_model=dict)
 async def list_products(
@@ -1765,7 +2013,7 @@ async def list_products(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """List products in the master catalog"""
     org_id = await get_organization_id(current_user)
@@ -1777,19 +2025,25 @@ async def list_products(
         query["$or"] = [
             {"name": {"$regex": search, "$options": "i"}},
             {"brand": {"$regex": search, "$options": "i"}},
-            {"sku": {"$regex": search, "$options": "i"}}
+            {"sku": {"$regex": search, "$options": "i"}},
         ]
 
     skip = (page - 1) * per_page
     total = await db.products.count_documents(query)
-    items = await db.products.find(query).sort("name", 1).skip(skip).limit(per_page).to_list(per_page)
+    items = (
+        await db.products.find(query)
+        .sort("name", 1)
+        .skip(skip)
+        .limit(per_page)
+        .to_list(per_page)
+    )
 
     return {
         "items": [serialize_doc(item) for item in items],
         "total": total,
         "page": page,
         "perPage": per_page,
-        "totalPages": (total + per_page - 1) // per_page
+        "totalPages": (total + per_page - 1) // per_page,
     }
 
 
@@ -1797,7 +2051,7 @@ async def list_products(
 async def create_product(
     data: ProductCreate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Create a new product in the master catalog"""
     org_id = await get_organization_id(current_user)
@@ -1816,7 +2070,7 @@ async def create_product(
         conversionFactor=conversion_factor,
         brand=data.brand,
         sku=data.sku,
-        createdBy=UUID(current_user.userId)
+        createdBy=UUID(current_user.userId),
     )
 
     doc = product.model_dump(mode="json")
@@ -1829,15 +2083,14 @@ async def create_product(
 async def get_product(
     product_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Get a specific product"""
     org_id = await get_organization_id(current_user)
 
-    product = await db.products.find_one({
-        "productId": str(product_id),
-        "organizationId": str(org_id)
-    })
+    product = await db.products.find_one(
+        {"productId": str(product_id), "organizationId": str(org_id)}
+    )
 
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -1850,26 +2103,24 @@ async def update_product(
     product_id: UUID,
     data: ProductUpdate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Update a product"""
     org_id = await get_organization_id(current_user)
 
-    product = await db.products.find_one({
-        "productId": str(product_id),
-        "organizationId": str(org_id)
-    })
+    product = await db.products.find_one(
+        {"productId": str(product_id), "organizationId": str(org_id)}
+    )
 
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+    update_data = {
+        k: v for k, v in data.model_dump(mode="json").items() if v is not None
+    }
     update_data["updatedAt"] = datetime.utcnow().isoformat()
 
-    await db.products.update_one(
-        {"productId": str(product_id)},
-        {"$set": update_data}
-    )
+    await db.products.update_one({"productId": str(product_id)}, {"$set": update_data})
 
     updated = await db.products.find_one({"productId": str(product_id)})
     return serialize_doc(updated)
@@ -1879,15 +2130,14 @@ async def update_product(
 async def delete_product(
     product_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Delete a product"""
     org_id = await get_organization_id(current_user)
 
-    result = await db.products.delete_one({
-        "productId": str(product_id),
-        "organizationId": str(org_id)
-    })
+    result = await db.products.delete_one(
+        {"productId": str(product_id), "organizationId": str(org_id)}
+    )
 
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -1897,6 +2147,7 @@ async def delete_product(
 # INVENTORY MOVEMENTS HISTORY
 # ============================================================================
 
+
 @router.get("/movements", response_model=dict)
 async def list_inventory_movements(
     inventory_id: Optional[UUID] = Query(None),
@@ -1905,7 +2156,7 @@ async def list_inventory_movements(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """List inventory movements/transactions"""
     query = {}
@@ -1918,14 +2169,20 @@ async def list_inventory_movements(
 
     skip = (page - 1) * per_page
     total = await db.inventory_movements.count_documents(query)
-    items = await db.inventory_movements.find(query).sort("performedAt", -1).skip(skip).limit(per_page).to_list(per_page)
+    items = (
+        await db.inventory_movements.find(query)
+        .sort("performedAt", -1)
+        .skip(skip)
+        .limit(per_page)
+        .to_list(per_page)
+    )
 
     return {
         "items": [serialize_doc(item) for item in items],
         "total": total,
         "page": page,
         "perPage": per_page,
-        "totalPages": (total + per_page - 1) // per_page
+        "totalPages": (total + per_page - 1) // per_page,
     }
 
 
@@ -1933,45 +2190,63 @@ async def list_inventory_movements(
 # CATEGORY LOOKUPS
 # ============================================================================
 
+
 @router.get("/categories/input", response_model=List[dict])
 async def get_input_categories():
     """Get list of input inventory categories"""
-    return [{"value": cat.value, "label": cat.value.replace("_", " ").title()} for cat in InputCategory]
+    return [
+        {"value": cat.value, "label": cat.value.replace("_", " ").title()}
+        for cat in InputCategory
+    ]
 
 
 @router.get("/categories/asset", response_model=List[dict])
 async def get_asset_categories():
     """Get list of asset inventory categories"""
-    return [{"value": cat.value, "label": cat.value.replace("_", " ").title()} for cat in AssetCategory]
+    return [
+        {"value": cat.value, "label": cat.value.replace("_", " ").title()}
+        for cat in AssetCategory
+    ]
 
 
 @router.get("/statuses/asset", response_model=List[dict])
 async def get_asset_statuses():
     """Get list of asset statuses"""
-    return [{"value": s.value, "label": s.value.replace("_", " ").title()} for s in AssetStatus]
+    return [
+        {"value": s.value, "label": s.value.replace("_", " ").title()}
+        for s in AssetStatus
+    ]
 
 
 @router.get("/grades/quality", response_model=List[dict])
 async def get_quality_grades():
     """Get list of quality grades"""
-    return [{"value": g.value, "label": g.value.replace("_", " ").title()} for g in QualityGrade]
+    return [
+        {"value": g.value, "label": g.value.replace("_", " ").title()}
+        for g in QualityGrade
+    ]
 
 
 # ============================================================================
 # WASTE INVENTORY ENDPOINTS
 # ============================================================================
 
+
 @router.get("/waste", response_model=dict)
 async def list_waste_inventory(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    source_type: Optional[WasteSourceType] = Query(None, description="Filter by source type"),
-    disposal_method: Optional[DisposalMethod] = Query(None, description="Filter by disposal method"),
+    source_type: Optional[WasteSourceType] = Query(
+        None, description="Filter by source type"
+    ),
+    disposal_method: Optional[DisposalMethod] = Query(
+        None, description="Filter by disposal method"
+    ),
     pending_only: bool = Query(False, description="Show only pending disposal"),
     search: Optional[str] = Query(None, max_length=100),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """List waste inventory items with pagination"""
     org_id = await get_organization_id(current_user)
@@ -1990,19 +2265,25 @@ async def list_waste_inventory(
         query["$or"] = [
             {"plantName": {"$regex": search, "$options": "i"}},
             {"variety": {"$regex": search, "$options": "i"}},
-            {"wasteReason": {"$regex": search, "$options": "i"}}
+            {"wasteReason": {"$regex": search, "$options": "i"}},
         ]
 
     skip = (page - 1) * per_page
     total = await db.inventory_waste.count_documents(query)
-    items = await db.inventory_waste.find(query).sort("wasteDate", -1).skip(skip).limit(per_page).to_list(per_page)
+    items = (
+        await db.inventory_waste.find(query)
+        .sort("wasteDate", -1)
+        .skip(skip)
+        .limit(per_page)
+        .to_list(per_page)
+    )
 
     return {
         "items": [serialize_doc(item) for item in items],
         "total": total,
         "page": page,
         "perPage": per_page,
-        "totalPages": (total + per_page - 1) // per_page
+        "totalPages": (total + per_page - 1) // per_page,
     }
 
 
@@ -2012,18 +2293,22 @@ async def list_waste_inventory(
     responses={
         200: {
             "content": {"text/csv": {}},
-            "description": "CSV file with filtered waste inventory"
+            "description": "CSV file with filtered waste inventory",
         }
-    }
+    },
 )
 async def export_waste_inventory_csv(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
-    source_type: Optional[WasteSourceType] = Query(None, description="Filter by source type"),
-    disposal_method: Optional[DisposalMethod] = Query(None, description="Filter by disposal method"),
+    source_type: Optional[WasteSourceType] = Query(
+        None, description="Filter by source type"
+    ),
+    disposal_method: Optional[DisposalMethod] = Query(
+        None, description="Filter by disposal method"
+    ),
     pending_only: bool = Query(False, description="Show only pending disposal"),
     search: Optional[str] = Query(None, max_length=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Export waste inventory to CSV format.
@@ -2053,7 +2338,7 @@ async def export_waste_inventory_csv(
         query["$or"] = [
             {"plantName": {"$regex": search, "$options": "i"}},
             {"variety": {"$regex": search, "$options": "i"}},
-            {"wasteReason": {"$regex": search, "$options": "i"}}
+            {"wasteReason": {"$regex": search, "$options": "i"}},
         ]
 
     items = await db.inventory_waste.find(query).sort("wasteDate", -1).to_list(10000)
@@ -2063,31 +2348,45 @@ async def export_waste_inventory_csv(
     writer = csv.writer(output)
 
     # Header row
-    writer.writerow([
-        "Plant Name", "Variety", "Source Type", "Waste Reason",
-        "Quantity", "Unit", "Waste Date", "Disposal Method",
-        "Disposal Date", "Original Grade", "Estimated Value",
-        "Currency", "Farm ID", "Notes"
-    ])
+    writer.writerow(
+        [
+            "Plant Name",
+            "Variety",
+            "Source Type",
+            "Waste Reason",
+            "Quantity",
+            "Unit",
+            "Waste Date",
+            "Disposal Method",
+            "Disposal Date",
+            "Original Grade",
+            "Estimated Value",
+            "Currency",
+            "Farm ID",
+            "Notes",
+        ]
+    )
 
     # Data rows
     for item in items:
-        writer.writerow([
-            item.get("plantName", ""),
-            item.get("variety", ""),
-            item.get("sourceType", ""),
-            item.get("wasteReason", ""),
-            item.get("quantity", ""),
-            item.get("unit", ""),
-            item.get("wasteDate", ""),
-            item.get("disposalMethod", ""),
-            item.get("disposalDate", ""),
-            item.get("originalGrade", ""),
-            item.get("estimatedValue", ""),
-            item.get("currency", ""),
-            item.get("farmId", ""),
-            item.get("notes", "")
-        ])
+        writer.writerow(
+            [
+                item.get("plantName", ""),
+                item.get("variety", ""),
+                item.get("sourceType", ""),
+                item.get("wasteReason", ""),
+                item.get("quantity", ""),
+                item.get("unit", ""),
+                item.get("wasteDate", ""),
+                item.get("disposalMethod", ""),
+                item.get("disposalDate", ""),
+                item.get("originalGrade", ""),
+                item.get("estimatedValue", ""),
+                item.get("currency", ""),
+                item.get("farmId", ""),
+                item.get("notes", ""),
+            ]
+        )
 
     csv_content = output.getvalue()
 
@@ -2096,7 +2395,7 @@ async def export_waste_inventory_csv(
         media_type="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=waste_inventory_export.csv"
-        }
+        },
     )
 
 
@@ -2104,7 +2403,7 @@ async def export_waste_inventory_csv(
 async def create_waste_inventory(
     data: WasteInventoryCreate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Create a new waste inventory record"""
     org_id = await get_organization_id(current_user)
@@ -2112,10 +2411,7 @@ async def create_waste_inventory(
     waste_data = data.model_dump()
     waste_data["organizationId"] = org_id  # Set from auth context
 
-    waste = WasteInventory(
-        **waste_data,
-        recordedBy=UUID(current_user.userId)
-    )
+    waste = WasteInventory(**waste_data, recordedBy=UUID(current_user.userId))
 
     doc = waste.model_dump(mode="json")
     await db.inventory_waste.insert_one(doc)
@@ -2130,7 +2426,7 @@ async def get_waste_summary(
     start_date: Optional[datetime] = Query(None, description="Start date for summary"),
     end_date: Optional[datetime] = Query(None, description="End date for summary"),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Get waste inventory summary statistics"""
     org_id = await get_organization_id(current_user)
@@ -2148,35 +2444,64 @@ async def get_waste_summary(
     # Aggregation pipeline
     pipeline = [
         {"$match": match_query},
-        {"$group": {
-            "_id": None,
-            "totalRecords": {"$sum": 1},
-            "totalQuantity": {"$sum": "$quantity"},
-            "totalValue": {"$sum": {"$ifNull": ["$estimatedValue", 0]}},
-            "pendingDisposal": {
-                "$sum": {"$cond": [{"$eq": ["$disposalMethod", "pending"]}, 1, 0]}
+        {
+            "$group": {
+                "_id": None,
+                "totalRecords": {"$sum": 1},
+                "totalQuantity": {"$sum": "$quantity"},
+                "totalValue": {"$sum": {"$ifNull": ["$estimatedValue", 0]}},
+                "pendingDisposal": {
+                    "$sum": {"$cond": [{"$eq": ["$disposalMethod", "pending"]}, 1, 0]}
+                },
             }
-        }}
+        },
     ]
 
     result = await db.inventory_waste.aggregate(pipeline).to_list(1)
-    stats = result[0] if result else {"totalRecords": 0, "totalQuantity": 0, "totalValue": 0, "pendingDisposal": 0}
+    stats = (
+        result[0]
+        if result
+        else {
+            "totalRecords": 0,
+            "totalQuantity": 0,
+            "totalValue": 0,
+            "pendingDisposal": 0,
+        }
+    )
 
     # Get breakdown by source type
     source_pipeline = [
         {"$match": match_query},
-        {"$group": {"_id": "$sourceType", "count": {"$sum": 1}, "quantity": {"$sum": "$quantity"}}}
+        {
+            "$group": {
+                "_id": "$sourceType",
+                "count": {"$sum": 1},
+                "quantity": {"$sum": "$quantity"},
+            }
+        },
     ]
     source_result = await db.inventory_waste.aggregate(source_pipeline).to_list(100)
-    by_source = {r["_id"]: {"count": r["count"], "quantity": r["quantity"]} for r in source_result}
+    by_source = {
+        r["_id"]: {"count": r["count"], "quantity": r["quantity"]}
+        for r in source_result
+    }
 
     # Get breakdown by disposal method
     disposal_pipeline = [
         {"$match": match_query},
-        {"$group": {"_id": "$disposalMethod", "count": {"$sum": 1}, "quantity": {"$sum": "$quantity"}}}
+        {
+            "$group": {
+                "_id": "$disposalMethod",
+                "count": {"$sum": 1},
+                "quantity": {"$sum": "$quantity"},
+            }
+        },
     ]
     disposal_result = await db.inventory_waste.aggregate(disposal_pipeline).to_list(100)
-    by_disposal = {r["_id"]: {"count": r["count"], "quantity": r["quantity"]} for r in disposal_result}
+    by_disposal = {
+        r["_id"]: {"count": r["count"], "quantity": r["quantity"]}
+        for r in disposal_result
+    }
 
     return WasteSummary(
         totalWasteRecords=stats.get("totalRecords", 0),
@@ -2184,7 +2509,7 @@ async def get_waste_summary(
         totalEstimatedValue=stats.get("totalValue", 0),
         bySourceType=by_source,
         byDisposalMethod=by_disposal,
-        pendingDisposal=stats.get("pendingDisposal", 0)
+        pendingDisposal=stats.get("pendingDisposal", 0),
     )
 
 
@@ -2192,7 +2517,7 @@ async def get_waste_summary(
 async def move_harvest_to_waste(
     request: MoveToWasteRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Move inventory from harvest to waste.
@@ -2203,20 +2528,25 @@ async def move_harvest_to_waste(
     user_id = UUID(current_user.userId)
 
     # Get harvest inventory item
-    harvest_item = await db.inventory_harvest.find_one({"inventoryId": str(request.inventoryId)})
+    harvest_item = await db.inventory_harvest.find_one(
+        {"inventoryId": str(request.inventoryId)}
+    )
     if not harvest_item:
         raise HTTPException(status_code=404, detail="Harvest inventory item not found")
 
     # Verify organization
     if harvest_item.get("organizationId") != str(org_id):
-        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organization",
+        )
 
     # Check available quantity
     available = harvest_item.get("availableQuantity", harvest_item.get("quantity", 0))
     if request.quantity > available:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient quantity. Available: {available}, Requested: {request.quantity}"
+            detail=f"Insufficient quantity. Available: {available}, Requested: {request.quantity}",
         )
 
     # Deduct from harvest inventory
@@ -2227,11 +2557,13 @@ async def move_harvest_to_waste(
 
     await db.inventory_harvest.update_one(
         {"inventoryId": str(request.inventoryId)},
-        {"$set": {
-            "quantity": new_qty,
-            "availableQuantity": new_available,
-            "updatedAt": datetime.utcnow().isoformat()
-        }}
+        {
+            "$set": {
+                "quantity": new_qty,
+                "availableQuantity": new_available,
+                "updatedAt": datetime.utcnow().isoformat(),
+            }
+        },
     )
 
     # Record movement
@@ -2244,7 +2576,7 @@ async def move_harvest_to_waste(
         quantity_change=-request.quantity,
         user_id=user_id,
         organization_id=org_id,
-        reason=f"Moved to waste: {request.wasteReason}"
+        reason=f"Moved to waste: {request.wasteReason}",
     )
 
     # Create waste record
@@ -2253,7 +2585,9 @@ async def move_harvest_to_waste(
         farmId=UUID(harvest_item["farmId"]) if harvest_item.get("farmId") else None,
         sourceType=request.sourceType,
         sourceInventoryId=request.inventoryId,
-        sourceBlockId=UUID(harvest_item["blockId"]) if harvest_item.get("blockId") else None,
+        sourceBlockId=(
+            UUID(harvest_item["blockId"]) if harvest_item.get("blockId") else None
+        ),
         plantName=harvest_item.get("plantName", "Unknown"),
         variety=harvest_item.get("variety"),
         quantity=request.quantity,
@@ -2263,7 +2597,7 @@ async def move_harvest_to_waste(
         wasteDate=datetime.utcnow(),
         estimatedValue=request.quantity * (harvest_item.get("unitPrice", 0) or 0),
         currency=harvest_item.get("currency", "AED"),
-        recordedBy=user_id
+        recordedBy=user_id,
     )
 
     waste_doc = waste.model_dump(mode="json")
@@ -2272,7 +2606,11 @@ async def move_harvest_to_waste(
     return {
         "message": f"Moved {request.quantity} {harvest_item.get('unit', 'units')} to waste",
         "wasteRecord": serialize_doc(waste_doc),
-        "updatedInventory": serialize_doc(await db.inventory_harvest.find_one({"inventoryId": str(request.inventoryId)}))
+        "updatedInventory": serialize_doc(
+            await db.inventory_harvest.find_one(
+                {"inventoryId": str(request.inventoryId)}
+            )
+        ),
     }
 
 
@@ -2281,7 +2619,7 @@ async def move_harvest_to_waste(
 async def get_waste_inventory(
     waste_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Get a specific waste inventory item"""
     item = await db.inventory_waste.find_one({"wasteId": str(waste_id)})
@@ -2295,7 +2633,7 @@ async def update_waste_inventory(
     waste_id: UUID,
     data: WasteInventoryUpdate,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Update a waste inventory item (usually for disposal tracking)"""
     org_id = await get_organization_id(current_user)
@@ -2305,14 +2643,17 @@ async def update_waste_inventory(
         raise HTTPException(status_code=404, detail="Waste inventory item not found")
 
     if item.get("organizationId") != str(org_id):
-        raise HTTPException(status_code=403, detail="Waste item does not belong to your organization")
+        raise HTTPException(
+            status_code=403, detail="Waste item does not belong to your organization"
+        )
 
-    update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+    update_data = {
+        k: v for k, v in data.model_dump(mode="json").items() if v is not None
+    }
     update_data["updatedAt"] = datetime.utcnow().isoformat()
 
     await db.inventory_waste.update_one(
-        {"wasteId": str(waste_id)},
-        {"$set": update_data}
+        {"wasteId": str(waste_id)}, {"$set": update_data}
     )
 
     updated = await db.inventory_waste.find_one({"wasteId": str(waste_id)})
@@ -2323,7 +2664,7 @@ async def update_waste_inventory(
 async def delete_waste_inventory(
     waste_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """Delete a waste inventory item"""
     result = await db.inventory_waste.delete_one({"wasteId": str(waste_id)})
@@ -2334,6 +2675,7 @@ async def delete_waste_inventory(
 # ============================================================================
 # ADMIN — EXPIRY CRON ENDPOINT
 # ============================================================================
+
 
 @router.post(
     "/admin/process-expired",
@@ -2377,6 +2719,7 @@ async def admin_process_expired_inventory(
 # HARVEST EXPIRE / REVIVE (Deliverables 2 & 3)
 # ============================================================================
 
+
 @router.post(
     "/harvest/{inventory_id}/expire",
     response_model=dict,
@@ -2418,7 +2761,7 @@ async def expire_harvest_inventory(
     if row.get("organizationId") != str(org_id):
         raise HTTPException(
             status_code=403,
-            detail="Inventory item does not belong to your organisation"
+            detail="Inventory item does not belong to your organisation",
         )
 
     qty = row.get("quantity", 0)
@@ -2478,11 +2821,13 @@ async def expire_harvest_inventory(
     # 2. Zero out the harvest row
     await db.inventory_harvest.update_one(
         {"inventoryId": str(inventory_id)},
-        {"$set": {
-            "quantity": 0,
-            "availableQuantity": 0,
-            "updatedAt": now_iso,
-        }},
+        {
+            "$set": {
+                "quantity": 0,
+                "availableQuantity": 0,
+                "updatedAt": now_iso,
+            }
+        },
     )
 
     # 3. Audit movement
@@ -2552,7 +2897,7 @@ async def revive_harvest_inventory(
     if row.get("organizationId") != str(org_id):
         raise HTTPException(
             status_code=403,
-            detail="Inventory item does not belong to your organisation"
+            detail="Inventory item does not belong to your organisation",
         )
 
     # Find the matching expired waste row — most recent one for this batch
@@ -2578,10 +2923,7 @@ async def revive_harvest_inventory(
         # Strip timezone for naive datetime comparison
         expiry_dt = expiry_dt.replace(tzinfo=None)
     if expiry_dt <= now:
-        raise HTTPException(
-            status_code=422,
-            detail="expiryDate must be in the future"
-        )
+        raise HTTPException(status_code=422, detail="expiryDate must be in the future")
 
     qty_to_restore = waste_row.get("quantity", 0)
     waste_id = str(waste_row.get("wasteId", ""))
@@ -2593,23 +2935,27 @@ async def revive_harvest_inventory(
 
     await db.inventory_harvest.update_one(
         {"inventoryId": str(inventory_id)},
-        {"$set": {
-            "quantity": current_qty + qty_to_restore,
-            "availableQuantity": current_available + qty_to_restore,
-            "expiryDate": expiry_dt.isoformat(),
-            "updatedAt": now_iso,
-        }},
+        {
+            "$set": {
+                "quantity": current_qty + qty_to_restore,
+                "availableQuantity": current_available + qty_to_restore,
+                "expiryDate": expiry_dt.isoformat(),
+                "updatedAt": now_iso,
+            }
+        },
     )
 
     # 2. Soft-delete the waste row (preserve audit — set qty = 0)
     await db.inventory_waste.update_one(
         {"wasteId": waste_id},
-        {"$set": {
-            "quantity": 0,
-            "revertedAt": now_iso,
-            "revertedBy": str(user_id),
-            "updatedAt": now_iso,
-        }},
+        {
+            "$set": {
+                "quantity": 0,
+                "revertedAt": now_iso,
+                "revertedBy": str(user_id),
+                "updatedAt": now_iso,
+            }
+        },
     )
 
     # 3. Audit movement (RESTORATION)
@@ -2640,6 +2986,7 @@ async def revive_harvest_inventory(
 # RETURNED INVENTORY ENDPOINTS (Deliverable 4)
 # ============================================================================
 
+
 @router.get(
     "/returned",
     response_model=dict,
@@ -2651,7 +2998,10 @@ async def list_returned_inventory(
     quality_grade: Optional[QualityGrade] = Query(None, alias="qualityGrade"),
     farming_year: Optional[int] = Query(None, alias="farmingYear"),
     search: Optional[str] = Query(None, max_length=100),
-    sort_by: str = Query("returnDate", description="Sort field: returnDate, harvestDate, plantName, quantity, createdAt"),
+    sort_by: str = Query(
+        "returnDate",
+        description="Sort field: returnDate, harvestDate, plantName, quantity, createdAt",
+    ),
     sort_order: str = Query("desc", description="Sort order: asc or desc"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -2768,7 +3118,7 @@ async def update_returned_inventory(
     if updated is None:
         raise HTTPException(
             status_code=404,
-            detail="Returned inventory item not found or does not belong to your organisation"
+            detail="Returned inventory item not found or does not belong to your organisation",
         )
 
     return updated
@@ -2840,7 +3190,7 @@ async def mark_returned_as_waste(
     if row.get("organizationId") != str(org_id):
         raise HTTPException(
             status_code=403,
-            detail="Returned inventory item does not belong to your organisation"
+            detail="Returned inventory item does not belong to your organisation",
         )
 
     try:

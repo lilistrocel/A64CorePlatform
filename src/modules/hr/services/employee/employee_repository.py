@@ -12,7 +12,12 @@ import logging
 
 from pydantic import ValidationError
 
-from src.modules.hr.models.employee import Employee, EmployeeCreate, EmployeeUpdate, EmployeeStatus
+from src.modules.hr.models.employee import (
+    Employee,
+    EmployeeCreate,
+    EmployeeUpdate,
+    EmployeeStatus,
+)
 from src.modules.hr.services.database import hr_db
 
 logger = logging.getLogger(__name__)
@@ -63,7 +68,7 @@ class EmployeeRepository:
             {"_id": "employee_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
@@ -91,20 +96,26 @@ class EmployeeRepository:
             employeeCode=employee_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         employee_doc = employee.model_dump(by_alias=True)
-        employee_doc["employeeId"] = str(employee_doc["employeeId"])  # Convert UUID to string for MongoDB
+        employee_doc["employeeId"] = str(
+            employee_doc["employeeId"]
+        )  # Convert UUID to string for MongoDB
         employee_doc["createdBy"] = str(employee_doc["createdBy"])
 
         # Convert date to datetime for MongoDB
         if "hireDate" in employee_doc:
-            employee_doc["hireDate"] = datetime.combine(employee_doc["hireDate"], datetime.min.time())
+            employee_doc["hireDate"] = datetime.combine(
+                employee_doc["hireDate"], datetime.min.time()
+            )
 
         await collection.insert_one(employee_doc)
 
-        logger.info(f"Created employee: {employee.employeeId} with code {employee_code}")
+        logger.info(
+            f"Created employee: {employee.employeeId} with code {employee_code}"
+        )
         return employee
 
     async def get_by_id(self, employee_id: UUID) -> Optional[Employee]:
@@ -123,7 +134,9 @@ class EmployeeRepository:
         if employee_doc:
             employee_doc.pop("_id", None)  # Remove MongoDB _id
             # Convert datetime back to date
-            if "hireDate" in employee_doc and isinstance(employee_doc["hireDate"], datetime):
+            if "hireDate" in employee_doc and isinstance(
+                employee_doc["hireDate"], datetime
+            ):
                 employee_doc["hireDate"] = employee_doc["hireDate"].date()
             return Employee(**employee_doc)
         return None
@@ -133,7 +146,7 @@ class EmployeeRepository:
         skip: int = 0,
         limit: int = 20,
         status: Optional[EmployeeStatus] = None,
-        department: Optional[str] = None
+        department: Optional[str] = None,
     ) -> tuple[List[Employee], int]:
         """
         Get all employees with pagination and filters
@@ -165,7 +178,9 @@ class EmployeeRepository:
         async for employee_doc in cursor:
             employee_doc.pop("_id", None)
             # Convert datetime back to date
-            if "hireDate" in employee_doc and isinstance(employee_doc["hireDate"], datetime):
+            if "hireDate" in employee_doc and isinstance(
+                employee_doc["hireDate"], datetime
+            ):
                 employee_doc["hireDate"] = employee_doc["hireDate"].date()
             employee = _build_employee_safe(employee_doc)
             if employee is not None:
@@ -174,10 +189,7 @@ class EmployeeRepository:
         return employees, total
 
     async def search(
-        self,
-        search_term: str,
-        skip: int = 0,
-        limit: int = 20
+        self, search_term: str, skip: int = 0, limit: int = 20
     ) -> tuple[List[Employee], int]:
         """
         Search employees by name, email, or department using text search
@@ -199,17 +211,21 @@ class EmployeeRepository:
         total = await collection.count_documents(query)
 
         # Get employees with text score sorting
-        cursor = collection.find(
-            query,
-            {"score": {"$meta": "textScore"}}
-        ).sort([("score", {"$meta": "textScore"})]).skip(skip).limit(limit)
+        cursor = (
+            collection.find(query, {"score": {"$meta": "textScore"}})
+            .sort([("score", {"$meta": "textScore"})])
+            .skip(skip)
+            .limit(limit)
+        )
 
         employees = []
         async for employee_doc in cursor:
             employee_doc.pop("_id", None)
             employee_doc.pop("score", None)  # Remove score field
             # Convert datetime back to date
-            if "hireDate" in employee_doc and isinstance(employee_doc["hireDate"], datetime):
+            if "hireDate" in employee_doc and isinstance(
+                employee_doc["hireDate"], datetime
+            ):
                 employee_doc["hireDate"] = employee_doc["hireDate"].date()
             employee = _build_employee_safe(employee_doc)
             if employee is not None:
@@ -217,7 +233,9 @@ class EmployeeRepository:
 
         return employees, total
 
-    async def update(self, employee_id: UUID, update_data: EmployeeUpdate) -> Optional[Employee]:
+    async def update(
+        self, employee_id: UUID, update_data: EmployeeUpdate
+    ) -> Optional[Employee]:
         """
         Update an employee
 
@@ -238,11 +256,12 @@ class EmployeeRepository:
 
         # Convert date to datetime for MongoDB
         if "hireDate" in update_dict:
-            update_dict["hireDate"] = datetime.combine(update_dict["hireDate"], datetime.min.time())
+            update_dict["hireDate"] = datetime.combine(
+                update_dict["hireDate"], datetime.min.time()
+            )
 
         result = await collection.update_one(
-            {"employeeId": str(employee_id)},
-            {"$set": update_dict}
+            {"employeeId": str(employee_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

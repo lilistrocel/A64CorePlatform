@@ -39,7 +39,10 @@ from src.modules.farm_manager.middleware.auth import (
     require_permission,
 )
 from src.modules.farm_manager.models.tools.fertilizer_chemical import FertilizerChemical
-from src.modules.farm_manager.models.tools.fertilizer_price import PriceOverride, ResolvedPrice
+from src.modules.farm_manager.models.tools.fertilizer_price import (
+    PriceOverride,
+    ResolvedPrice,
+)
 from src.modules.farm_manager.models.tools.calculation_list import (
     CalculationList,
     CalculationListCreate,
@@ -50,8 +53,12 @@ from src.modules.farm_manager.models.tools.calculator_request import (
     CalculateResponse,
     ParsedImport,
 )
-from src.modules.farm_manager.services.tools.chemicals_repository import ChemicalsRepository
-from src.modules.farm_manager.services.tools.fertilizer_calculator import calculate_for_crops
+from src.modules.farm_manager.services.tools.chemicals_repository import (
+    ChemicalsRepository,
+)
+from src.modules.farm_manager.services.tools.fertilizer_calculator import (
+    calculate_for_crops,
+)
 from src.modules.farm_manager.services.tools.excel_handler import (
     build_import_template,
     export_calculation,
@@ -72,6 +79,7 @@ OVERRIDES_COLLECTION = "fertilizer_price_overrides"
 # ---------------------------------------------------------------------------
 # Request / response helpers
 # ---------------------------------------------------------------------------
+
 
 class PriceUpsertBody(BaseModel):
     """Request body for PATCH /prices/{chemicalId}."""
@@ -100,6 +108,7 @@ class PaginatedSavedLists(BaseModel):
 # Price Book endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/prices",
     response_model=SuccessResponse[List[ChemicalWithPrice]],
@@ -127,13 +136,17 @@ async def get_prices(
     result = []
     for chemical in chemicals:
         resolved = prices.get(str(chemical.chemicalId))
-        result.append(ChemicalWithPrice(
-            chemical=chemical,
-            price=resolved.price if resolved else None,
-            source=resolved.source if resolved else "none",
-        ))
+        result.append(
+            ChemicalWithPrice(
+                chemical=chemical,
+                price=resolved.price if resolved else None,
+                source=resolved.source if resolved else "none",
+            )
+        )
 
-    return SuccessResponse(data=result, message=f"{len(result)} chemical(s) in price book")
+    return SuccessResponse(
+        data=result, message=f"{len(result)} chemical(s) in price book"
+    )
 
 
 @router.patch(
@@ -225,10 +238,12 @@ async def delete_price(
     """
     org_id = _require_org(current_user)
     db = farm_db.get_database()
-    result = await db[OVERRIDES_COLLECTION].delete_one({
-        "chemicalId": str(chemical_id),
-        "organizationId": str(org_id),
-    })
+    result = await db[OVERRIDES_COLLECTION].delete_one(
+        {
+            "chemicalId": str(chemical_id),
+            "organizationId": str(org_id),
+        }
+    )
     if result.deleted_count == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -240,6 +255,7 @@ async def delete_price(
 # ---------------------------------------------------------------------------
 # Calculation endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/calculate",
@@ -368,7 +384,9 @@ async def download_import_template(
     summary="Import crops from Excel",
 )
 async def import_from_excel(
-    file: UploadFile = File(..., description=".xlsx file with 'Crop Name' and 'Points' columns"),
+    file: UploadFile = File(
+        ..., description=".xlsx file with 'Crop Name' and 'Points' columns"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse:
     """
@@ -400,9 +418,8 @@ async def import_from_excel(
             detail=str(exc),
         )
 
-    msg = (
-        f"Parsed {len(result.items)} crop(s)"
-        + (f", skipped {len(result.skipped)}" if result.skipped else "")
+    msg = f"Parsed {len(result.items)} crop(s)" + (
+        f", skipped {len(result.skipped)}" if result.skipped else ""
     )
     return SuccessResponse(data=result, message=msg)
 
@@ -410,6 +427,7 @@ async def import_from_excel(
 # ---------------------------------------------------------------------------
 # Saved Lists endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/lists",
@@ -419,7 +437,9 @@ async def import_from_excel(
 async def list_saved_lists(
     page: int = Query(1, ge=1, description="1-indexed page number"),
     size: int = Query(20, ge=1, le=200, description="Page size (max 200)"),
-    search: Optional[str] = Query(None, description="Case-insensitive name substring filter"),
+    search: Optional[str] = Query(
+        None, description="Case-insensitive name substring filter"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse:
     """
@@ -542,6 +562,7 @@ async def delete_saved_list(
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _require_org(user: CurrentUser) -> UUID:
     """

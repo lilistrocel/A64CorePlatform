@@ -31,7 +31,9 @@ async def startup_hook() -> None:
 
     Connects to the database and creates module-specific MongoDB indexes.
     """
-    logger.info(f"[Protocols Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Protocols Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await protocols_db.connect()
@@ -74,7 +76,9 @@ def register(app: FastAPI, prefix: Optional[str] = None) -> None:
     app.add_event_handler("startup", startup_hook)
     app.add_event_handler("shutdown", shutdown_hook)
 
-    logger.info(f"[Protocols Module] Successfully registered v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Protocols Module] Successfully registered v{settings.MODULE_VERSION}"
+    )
 
 
 # Module metadata (used by the plugin system for discovery)

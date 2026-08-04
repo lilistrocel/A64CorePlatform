@@ -9,14 +9,14 @@ from .sales_order import (
     SalesOrderStatus,
     PaymentStatus,
     OrderItem,
-    ShippingAddress
+    ShippingAddress,
 )
 from .purchase_order import (
     PurchaseOrder,
     PurchaseOrderCreate,
     PurchaseOrderUpdate,
     PurchaseOrderStatus,
-    PurchaseOrderItem
+    PurchaseOrderItem,
 )
 
 __all__ = [
@@ -31,5 +31,5 @@ __all__ = [
     "PurchaseOrderCreate",
     "PurchaseOrderUpdate",
     "PurchaseOrderStatus",
-    "PurchaseOrderItem"
+    "PurchaseOrderItem",
 ]

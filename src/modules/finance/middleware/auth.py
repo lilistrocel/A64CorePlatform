@@ -23,6 +23,7 @@ security = HTTPBearer()
 
 class CurrentUser:
     """Current authenticated user"""
+
     def __init__(
         self,
         userId: str,
@@ -31,7 +32,7 @@ class CurrentUser:
         lastName: str,
         role: str,
         isActive: bool,
-        isEmailVerified: bool
+        isEmailVerified: bool,
     ):
         self.userId = userId
         self.email = email
@@ -43,7 +44,7 @@ class CurrentUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> CurrentUser:
     """
     Get current authenticated user from JWT token.
@@ -59,9 +60,7 @@ async def get_current_user(
     try:
         token = credentials.credentials
         payload = jwt.decode(
-            token,
-            core_settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            token, core_settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
 
         user_id: str = payload.get("userId")
@@ -86,8 +85,7 @@ async def get_current_user(
 
     if not user_doc.get("isActive", False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
 
     return CurrentUser(
@@ -97,18 +95,17 @@ async def get_current_user(
         lastName=user_doc["lastName"],
         role=user_doc["role"],
         isActive=user_doc["isActive"],
-        isEmailVerified=user_doc.get("isEmailVerified", False)
+        isEmailVerified=user_doc.get("isEmailVerified", False),
     )
 
 
 async def get_current_active_user(
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> CurrentUser:
     """Get current active user."""
     if not current_user.isActive:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
     return current_user
 
@@ -120,21 +117,28 @@ def require_permission(permission: str):
     finance.view is granted to all authenticated roles.
     finance.manage is restricted to admin/super_admin.
     """
+
     async def permission_checker(
-        current_user: CurrentUser = Depends(get_current_active_user)
+        current_user: CurrentUser = Depends(get_current_active_user),
     ) -> CurrentUser:
         if permission == "finance.view":
             # All authenticated roles can view finance data
-            if current_user.role not in ["admin", "super_admin", "moderator", "user", "guest"]:
+            if current_user.role not in [
+                "admin",
+                "super_admin",
+                "moderator",
+                "user",
+                "guest",
+            ]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}"
+                    detail=f"Permission denied: Missing {permission}",
                 )
         elif permission == "finance.manage":
             if current_user.role not in ["admin", "super_admin"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}"
+                    detail=f"Permission denied: Missing {permission}",
                 )
 
         return current_user

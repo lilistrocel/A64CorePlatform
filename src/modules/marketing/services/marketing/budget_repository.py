@@ -44,7 +44,7 @@ class BudgetRepository:
             **budget_dict,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         budget_doc = budget.model_dump(by_alias=True)
@@ -79,7 +79,7 @@ class BudgetRepository:
         skip: int = 0,
         limit: int = 20,
         status: Optional[BudgetStatus] = None,
-        year: Optional[int] = None
+        year: Optional[int] = None,
     ) -> tuple[List[Budget], int]:
         """
         Get all budgets with pagination and filters
@@ -114,7 +114,9 @@ class BudgetRepository:
 
         return budgets, total
 
-    async def update(self, budget_id: UUID, update_data: BudgetUpdate) -> Optional[Budget]:
+    async def update(
+        self, budget_id: UUID, update_data: BudgetUpdate
+    ) -> Optional[Budget]:
         """
         Update a budget
 
@@ -134,8 +136,7 @@ class BudgetRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"budgetId": str(budget_id)},
-            {"$set": update_dict}
+            {"budgetId": str(budget_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

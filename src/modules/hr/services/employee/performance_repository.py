@@ -10,7 +10,11 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
-from src.modules.hr.models.performance import PerformanceReview, PerformanceReviewCreate, PerformanceReviewUpdate
+from src.modules.hr.models.performance import (
+    PerformanceReview,
+    PerformanceReviewCreate,
+    PerformanceReviewUpdate,
+)
 from src.modules.hr.services.database import hr_db
 
 logger = logging.getLogger(__name__)
@@ -40,9 +44,7 @@ class PerformanceRepository:
 
         review_dict = review_data.model_dump()
         review = PerformanceReview(
-            **review_dict,
-            createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            **review_dict, createdAt=datetime.utcnow(), updatedAt=datetime.utcnow()
         )
 
         review_doc = review.model_dump(by_alias=True)
@@ -52,11 +54,15 @@ class PerformanceRepository:
 
         # Convert date to datetime for MongoDB
         if "reviewDate" in review_doc:
-            review_doc["reviewDate"] = datetime.combine(review_doc["reviewDate"], datetime.min.time())
+            review_doc["reviewDate"] = datetime.combine(
+                review_doc["reviewDate"], datetime.min.time()
+            )
 
         await collection.insert_one(review_doc)
 
-        logger.info(f"Created performance review: {review.reviewId} for employee {review.employeeId}")
+        logger.info(
+            f"Created performance review: {review.reviewId} for employee {review.employeeId}"
+        )
         return review
 
     async def get_by_id(self, review_id: UUID) -> Optional[PerformanceReview]:
@@ -75,16 +81,15 @@ class PerformanceRepository:
         if review_doc:
             review_doc.pop("_id", None)
             # Convert datetime back to date
-            if "reviewDate" in review_doc and isinstance(review_doc["reviewDate"], datetime):
+            if "reviewDate" in review_doc and isinstance(
+                review_doc["reviewDate"], datetime
+            ):
                 review_doc["reviewDate"] = review_doc["reviewDate"].date()
             return PerformanceReview(**review_doc)
         return None
 
     async def get_by_employee_id(
-        self,
-        employee_id: UUID,
-        skip: int = 0,
-        limit: int = 20
+        self, employee_id: UUID, skip: int = 0, limit: int = 20
     ) -> tuple[List[PerformanceReview], int]:
         """
         Get performance reviews for a specific employee
@@ -110,16 +115,16 @@ class PerformanceRepository:
         async for review_doc in cursor:
             review_doc.pop("_id", None)
             # Convert datetime back to date
-            if "reviewDate" in review_doc and isinstance(review_doc["reviewDate"], datetime):
+            if "reviewDate" in review_doc and isinstance(
+                review_doc["reviewDate"], datetime
+            ):
                 review_doc["reviewDate"] = review_doc["reviewDate"].date()
             reviews.append(PerformanceReview(**review_doc))
 
         return reviews, total
 
     async def get_all(
-        self,
-        skip: int = 0,
-        limit: int = 20
+        self, skip: int = 0, limit: int = 20
     ) -> tuple[List[PerformanceReview], int]:
         """
         Get all performance reviews with pagination
@@ -144,7 +149,9 @@ class PerformanceRepository:
         async for review_doc in cursor:
             review_doc.pop("_id", None)
             # Convert datetime back to date
-            if "reviewDate" in review_doc and isinstance(review_doc["reviewDate"], datetime):
+            if "reviewDate" in review_doc and isinstance(
+                review_doc["reviewDate"], datetime
+            ):
                 review_doc["reviewDate"] = review_doc["reviewDate"].date()
             reviews.append(PerformanceReview(**review_doc))
 
@@ -166,7 +173,7 @@ class PerformanceRepository:
                     "_id": None,
                     "avgRating": {"$avg": "$rating"},
                     "avgHappinessScore": {"$avg": "$happinessScore"},
-                    "totalReviews": {"$sum": 1}
+                    "totalReviews": {"$sum": 1},
                 }
             }
         ]
@@ -177,16 +184,14 @@ class PerformanceRepository:
             return {
                 "avgRating": round(result[0].get("avgRating", 0), 2),
                 "avgHappinessScore": round(result[0].get("avgHappinessScore", 0), 2),
-                "totalReviews": result[0].get("totalReviews", 0)
+                "totalReviews": result[0].get("totalReviews", 0),
             }
 
-        return {
-            "avgRating": 0,
-            "avgHappinessScore": 0,
-            "totalReviews": 0
-        }
+        return {"avgRating": 0, "avgHappinessScore": 0, "totalReviews": 0}
 
-    async def update(self, review_id: UUID, update_data: PerformanceReviewUpdate) -> Optional[PerformanceReview]:
+    async def update(
+        self, review_id: UUID, update_data: PerformanceReviewUpdate
+    ) -> Optional[PerformanceReview]:
         """
         Update a performance review
 
@@ -207,15 +212,16 @@ class PerformanceRepository:
 
         # Convert date to datetime for MongoDB
         if "reviewDate" in update_dict:
-            update_dict["reviewDate"] = datetime.combine(update_dict["reviewDate"], datetime.min.time())
+            update_dict["reviewDate"] = datetime.combine(
+                update_dict["reviewDate"], datetime.min.time()
+            )
 
         # Convert reviewerId to string if present
         if "reviewerId" in update_dict:
             update_dict["reviewerId"] = str(update_dict["reviewerId"])
 
         result = await collection.update_one(
-            {"reviewId": str(review_id)},
-            {"$set": update_dict}
+            {"reviewId": str(review_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

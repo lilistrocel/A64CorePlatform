@@ -11,9 +11,7 @@ from datetime import datetime
 from fastapi import HTTPException
 import logging
 
-from ...models.block import (
-    Block, BlockStatus, AddVirtualCropRequest, PlantDataSnapshot
-)
+from ...models.block import Block, BlockStatus, AddVirtualCropRequest, PlantDataSnapshot
 from .block_repository_new import BlockRepository
 from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
 from .block_service_new import BlockService
@@ -82,10 +80,10 @@ class VirtualBlockService:
             raise HTTPException(404, f"Parent block not found: {parent_block_id}")
 
         # Validate parent is physical
-        if parent_block.blockCategory != 'physical':
+        if parent_block.blockCategory != "physical":
             raise HTTPException(
                 409,
-                "Only physical blocks can have virtual children. Virtual blocks cannot have children."
+                "Only physical blocks can have virtual children. Virtual blocks cannot have children.",
             )
 
         # Validate parent is active
@@ -114,12 +112,14 @@ class VirtualBlockService:
             )
         elif allocated_area is None:
             raise HTTPException(
-                400,
-                "Either allocatedArea or plantsPer100m2 must be provided."
+                400, "Either allocatedArea or plantsPer100m2 must be provided."
             )
 
         # SOFT budget check: 409 when over budget and caller has not approved
-        if parent_block.availableArea is not None and allocated_area > parent_block.availableArea:
+        if (
+            parent_block.availableArea is not None
+            and allocated_area > parent_block.availableArea
+        ):
             if not allow_over_area:
                 over_by = allocated_area - parent_block.availableArea
                 raise HTTPException(
@@ -167,7 +167,7 @@ class VirtualBlockService:
             parent_id=parent_block_id,
             child_id=str(virtual_block.blockId),
             allocated_area=allocated_area,
-            new_counter=new_counter
+            new_counter=new_counter,
         )
 
         # Initiate planting on virtual block
@@ -176,30 +176,36 @@ class VirtualBlockService:
         actual_planting_date = planting_date if planting_date else datetime.utcnow()
 
         # Calculate expected dates
-        expected_harvest_date, expected_status_changes = await BlockService.calculate_expected_dates(
-            crop_id,
-            actual_planting_date
+        expected_harvest_date, expected_status_changes = (
+            await BlockService.calculate_expected_dates(crop_id, actual_planting_date)
         )
 
         # Calculate predicted yield
-        predicted_yield = await BlockService.calculate_predicted_yield(crop_id, plant_count)
+        predicted_yield = await BlockService.calculate_predicted_yield(
+            crop_id, plant_count
+        )
 
         # Update KPI with predicted yield
         await BlockRepository.update_kpi(
-            virtual_block.blockId,
-            predicted_yield_kg=predicted_yield
+            virtual_block.blockId, predicted_yield_kg=predicted_yield
         )
 
         # Build plant-data snapshot so staleness can be detected later
         snapshot = PlantDataSnapshot(
             plantName=plant_data.plantName,
-            yieldPerPlant=plant_data.yieldInfo.yieldPerPlant if plant_data.yieldInfo else None,
+            yieldPerPlant=(
+                plant_data.yieldInfo.yieldPerPlant if plant_data.yieldInfo else None
+            ),
             yieldUnit=plant_data.yieldInfo.yieldUnit if plant_data.yieldInfo else None,
             expectedWastePercentage=(
-                plant_data.yieldInfo.expectedWastePercentage if plant_data.yieldInfo else None
+                plant_data.yieldInfo.expectedWastePercentage
+                if plant_data.yieldInfo
+                else None
             ),
             totalCycleDays=(
-                plant_data.growthCycle.totalCycleDays if plant_data.growthCycle else None
+                plant_data.growthCycle.totalCycleDays
+                if plant_data.growthCycle
+                else None
             ),
         )
         await BlockRepository.set_plant_data_version(
@@ -219,7 +225,7 @@ class VirtualBlockService:
             target_crop_name=plant_data.plantName,
             actual_plant_count=plant_count,
             expected_harvest_date=expected_harvest_date,
-            expected_status_changes=expected_status_changes
+            expected_status_changes=expected_status_changes,
         )
 
         logger.info(
@@ -231,10 +237,7 @@ class VirtualBlockService:
 
     @staticmethod
     async def add_crop_to_physical_block(
-        block_id: UUID,
-        request: AddVirtualCropRequest,
-        user_id: UUID,
-        user_email: str
+        block_id: UUID, request: AddVirtualCropRequest, user_id: UUID, user_email: str
     ) -> Block:
         """
         Add an additional crop to an existing physical block by creating a virtual child.
@@ -284,7 +287,7 @@ class VirtualBlockService:
         if not parent_block:
             raise HTTPException(404, f"Parent block not found: {parent_block_id}")
 
-        if parent_block.blockCategory != 'physical':
+        if parent_block.blockCategory != "physical":
             # Virtual blocks cannot have children
             return []
 
@@ -320,10 +323,9 @@ class VirtualBlockService:
             raise HTTPException(404, f"Block not found: {block_id}")
 
         # Validate block is physical
-        if block.blockCategory != 'physical':
+        if block.blockCategory != "physical":
             raise HTTPException(
-                400,
-                "Only physical blocks can have area budgets initialized"
+                400, "Only physical blocks can have area budgets initialized"
             )
 
         # Check if already initialized
@@ -337,7 +339,7 @@ class VirtualBlockService:
         if not block.area or block.area <= 0:
             raise HTTPException(
                 400,
-                f"Block must have a valid area before initializing budget (current area: {block.area})"
+                f"Block must have a valid area before initializing budget (current area: {block.area})",
             )
 
         # Initialize availableArea to total area
@@ -353,9 +355,7 @@ class VirtualBlockService:
 
     @staticmethod
     async def empty_virtual_block(
-        virtual_block_id: UUID,
-        user_id: UUID,
-        user_email: str
+        virtual_block_id: UUID, user_id: UUID, user_email: str
     ) -> dict:
         """
         Empty a virtual block, transfer history to parent, and delete it.
@@ -398,32 +398,33 @@ class VirtualBlockService:
             raise HTTPException(404, f"Block not found: {virtual_block_id}")
 
         # Validate it's a virtual block
-        if virtual_block.blockCategory != 'virtual':
+        if virtual_block.blockCategory != "virtual":
             raise HTTPException(
                 400,
-                f"Block {virtual_block.blockCode} is not a virtual block (category: {virtual_block.blockCategory})"
+                f"Block {virtual_block.blockCode} is not a virtual block (category: {virtual_block.blockCategory})",
             )
 
         # Validate it's active
         if not virtual_block.isActive:
             raise HTTPException(
-                400,
-                f"Cannot empty deleted block {virtual_block.blockCode}"
+                400, f"Cannot empty deleted block {virtual_block.blockCode}"
             )
 
         # Get parent block
         if not virtual_block.parentBlockId:
             raise HTTPException(
-                500,
-                f"Virtual block {virtual_block.blockCode} has no parent block ID"
+                500, f"Virtual block {virtual_block.blockCode} has no parent block ID"
             )
 
-        parent_block_id = virtual_block.parentBlockId if isinstance(virtual_block.parentBlockId, UUID) else UUID(str(virtual_block.parentBlockId))
+        parent_block_id = (
+            virtual_block.parentBlockId
+            if isinstance(virtual_block.parentBlockId, UUID)
+            else UUID(str(virtual_block.parentBlockId))
+        )
         parent_block = await BlockRepository.get_by_id(parent_block_id)
         if not parent_block:
             raise HTTPException(
-                404,
-                f"Parent block not found: {virtual_block.parentBlockId}"
+                404, f"Parent block not found: {virtual_block.parentBlockId}"
             )
 
         logger.info(
@@ -433,46 +434,47 @@ class VirtualBlockService:
 
         # Archive the virtual block's current cycle
         from .archive_repository import ArchiveRepository
+
         try:
             await ArchiveRepository.archive_block_cycle(
                 virtual_block_id,
                 user_id,
                 user_email,
-                archive_reason="Virtual block emptied - history transferred to parent"
+                archive_reason="Virtual block emptied - history transferred to parent",
             )
-            logger.info(f"[Virtual Block Service] Archived cycle for {virtual_block.blockCode}")
+            logger.info(
+                f"[Virtual Block Service] Archived cycle for {virtual_block.blockCode}"
+            )
         except Exception as e:
             logger.error(f"[Virtual Block Service] Failed to archive cycle: {e}")
             # Continue with cleanup even if archival fails
 
         # Transfer tasks to parent
-        tasks_transferred, tasks_deleted = await VirtualBlockService.transfer_tasks_to_parent(
-            virtual_block_id,
-            parent_block_id,
-            virtual_block.blockCode,
-            user_id,
-            user_email
+        tasks_transferred, tasks_deleted = (
+            await VirtualBlockService.transfer_tasks_to_parent(
+                virtual_block_id,
+                parent_block_id,
+                virtual_block.blockCode,
+                user_id,
+                user_email,
+            )
         )
 
         # Transfer harvests to parent
         harvests_transferred = await VirtualBlockService.transfer_harvests_to_parent(
-            virtual_block_id,
-            parent_block_id,
-            virtual_block.blockCode
+            virtual_block_id, parent_block_id, virtual_block.blockCode
         )
 
         # Return area to parent's budget
         await VirtualBlockService.return_area_to_parent(
-            parent_block_id,
-            virtual_block.area,
-            str(virtual_block_id)
+            parent_block_id, virtual_block.area, str(virtual_block_id)
         )
 
         # Update parent status after child removal
-        updated_parent = await VirtualBlockService.update_parent_status_after_child_removal(
-            parent_block_id,
-            user_id,
-            user_email
+        updated_parent = (
+            await VirtualBlockService.update_parent_status_after_child_removal(
+                parent_block_id, user_id, user_email
+            )
         )
 
         # Delete the virtual block (hard delete)
@@ -487,7 +489,7 @@ class VirtualBlockService:
             "tasksDeleted": tasks_deleted,
             "harvestsTransferred": harvests_transferred,
             "areaReturned": virtual_block.area,
-            "deleted": deleted
+            "deleted": deleted,
         }
 
         logger.info(
@@ -504,7 +506,7 @@ class VirtualBlockService:
         parent_block_id: UUID,
         virtual_block_code: str,
         user_id: UUID,
-        user_email: str
+        user_email: str,
     ) -> tuple[int, int]:
         """
         Transfer tasks from virtual block to parent.
@@ -530,10 +532,7 @@ class VirtualBlockService:
 
         # First, auto-complete any in-progress tasks
         in_progress_result = await db.farm_tasks.update_many(
-            {
-                "blockId": str(virtual_block_id),
-                "status": "in_progress"
-            },
+            {"blockId": str(virtual_block_id), "status": "in_progress"},
             {
                 "$set": {
                     "status": "completed",
@@ -541,9 +540,9 @@ class VirtualBlockService:
                     "completedBy": str(user_id),
                     "completedByEmail": user_email,
                     "notes": "Auto-completed during virtual block cleanup",
-                    "updatedAt": datetime.utcnow()
+                    "updatedAt": datetime.utcnow(),
                 }
-            }
+            },
         )
 
         logger.info(
@@ -553,26 +552,22 @@ class VirtualBlockService:
 
         # Transfer completed tasks (including the ones we just completed)
         transfer_result = await db.farm_tasks.update_many(
-            {
-                "blockId": str(virtual_block_id),
-                "status": "completed"
-            },
+            {"blockId": str(virtual_block_id), "status": "completed"},
             {
                 "$set": {
                     "blockId": str(parent_block_id),
                     "sourceBlockCode": virtual_block_code,
-                    "updatedAt": datetime.utcnow()
+                    "updatedAt": datetime.utcnow(),
                 }
-            }
+            },
         )
 
         tasks_transferred = transfer_result.modified_count
 
         # Delete pending tasks
-        delete_result = await db.farm_tasks.delete_many({
-            "blockId": str(virtual_block_id),
-            "status": "pending"
-        })
+        delete_result = await db.farm_tasks.delete_many(
+            {"blockId": str(virtual_block_id), "status": "pending"}
+        )
 
         tasks_deleted = delete_result.deleted_count
 
@@ -585,9 +580,7 @@ class VirtualBlockService:
 
     @staticmethod
     async def transfer_harvests_to_parent(
-        virtual_block_id: UUID,
-        parent_block_id: UUID,
-        virtual_block_code: str
+        virtual_block_id: UUID, parent_block_id: UUID, virtual_block_code: str
     ) -> int:
         """
         Transfer all harvest records from virtual block to parent.
@@ -613,9 +606,9 @@ class VirtualBlockService:
             {
                 "$set": {
                     "blockId": str(parent_block_id),
-                    "sourceBlockCode": virtual_block_code
+                    "sourceBlockCode": virtual_block_code,
                 }
-            }
+            },
         )
 
         harvests_transferred = result.modified_count
@@ -630,10 +623,7 @@ class VirtualBlockService:
             # Recalculate parent's actual yield from all harvests
             pipeline = [
                 {"$match": {"blockId": str(parent_block_id)}},
-                {"$group": {
-                    "_id": None,
-                    "totalYield": {"$sum": "$totalWeightKg"}
-                }}
+                {"$group": {"_id": None, "totalYield": {"$sum": "$totalWeightKg"}}},
             ]
 
             result = await db.block_harvests.aggregate(pipeline).to_list(1)
@@ -641,8 +631,7 @@ class VirtualBlockService:
             if result:
                 total_yield = result[0]["totalYield"]
                 await BlockRepository.update_kpi(
-                    parent_block_id,
-                    actual_yield_kg=total_yield
+                    parent_block_id, actual_yield_kg=total_yield
                 )
                 logger.info(
                     f"[Virtual Block Service] Updated parent block KPI: "
@@ -653,9 +642,7 @@ class VirtualBlockService:
 
     @staticmethod
     async def return_area_to_parent(
-        parent_block_id: UUID,
-        allocated_area: float,
-        child_block_id: str
+        parent_block_id: UUID, allocated_area: float, child_block_id: str
     ) -> None:
         """
         Return allocated area to parent's budget and remove child from childBlockIds.
@@ -671,9 +658,7 @@ class VirtualBlockService:
             Exception: If database operation fails
         """
         await BlockRepository.return_area_to_parent(
-            parent_block_id,
-            allocated_area,
-            child_block_id
+            parent_block_id, allocated_area, child_block_id
         )
 
         logger.info(
@@ -683,9 +668,7 @@ class VirtualBlockService:
 
     @staticmethod
     async def update_parent_status_after_child_removal(
-        parent_block_id: UUID,
-        user_id: UUID,
-        user_email: str
+        parent_block_id: UUID, user_id: UUID, user_email: str
     ) -> Block:
         """
         Update parent block status after virtual child is removed.
@@ -727,7 +710,7 @@ class VirtualBlockService:
                 BlockStatus.EMPTY,
                 user_id,
                 user_email,
-                notes="Last virtual child removed, no direct crop"
+                notes="Last virtual child removed, no direct crop",
             )
         else:
             logger.info(
@@ -759,8 +742,12 @@ class VirtualBlockService:
         deleted = await BlockRepository.hard_delete(virtual_block_id)
 
         if deleted:
-            logger.info(f"[Virtual Block Service] Hard deleted virtual block {virtual_block_id}")
+            logger.info(
+                f"[Virtual Block Service] Hard deleted virtual block {virtual_block_id}"
+            )
         else:
-            logger.warning(f"[Virtual Block Service] Virtual block {virtual_block_id} not found for deletion")
+            logger.warning(
+                f"[Virtual Block Service] Virtual block {virtual_block_id} not found for deletion"
+            )
 
         return deleted

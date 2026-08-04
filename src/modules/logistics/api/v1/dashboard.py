@@ -9,7 +9,11 @@ from typing import Optional
 from datetime import datetime, timedelta
 import logging
 
-from src.modules.logistics.services.logistics import VehicleService, RouteService, ShipmentService
+from src.modules.logistics.services.logistics import (
+    VehicleService,
+    RouteService,
+    ShipmentService,
+)
 from src.modules.logistics.middleware.auth import require_permission, CurrentUser
 from src.modules.logistics.utils.responses import SuccessResponse
 
@@ -22,13 +26,13 @@ router = APIRouter()
     "",
     response_model=SuccessResponse[dict],
     summary="Get logistics dashboard statistics",
-    description="Get comprehensive logistics dashboard statistics including vehicles, routes, and shipments."
+    description="Get comprehensive logistics dashboard statistics including vehicles, routes, and shipments.",
 )
 async def get_dashboard_stats(
     current_user: CurrentUser = Depends(require_permission("logistics.view")),
     vehicle_service: VehicleService = Depends(),
     route_service: RouteService = Depends(),
-    shipment_service: ShipmentService = Depends()
+    shipment_service: ShipmentService = Depends(),
 ):
     """Get comprehensive logistics dashboard statistics"""
 
@@ -46,11 +50,13 @@ async def get_dashboard_stats(
     routes_list, _, _ = await route_service.get_all_routes(page=1, per_page=1000)
 
     total_routes = len(routes_list)
-    active_routes = sum(1 for r in routes_list if hasattr(r, 'isActive') and r.isActive)
+    active_routes = sum(1 for r in routes_list if hasattr(r, "isActive") and r.isActive)
 
     # Get shipment statistics
     # Service returns tuple: (shipments_list, total_count, total_pages)
-    shipments_list, _, _ = await shipment_service.get_all_shipments(page=1, per_page=1000)
+    shipments_list, _, _ = await shipment_service.get_all_shipments(
+        page=1, per_page=1000
+    )
 
     total_shipments = len(shipments_list)
     scheduled_shipments = sum(1 for s in shipments_list if s.status == "scheduled")
@@ -60,23 +66,33 @@ async def get_dashboard_stats(
     # Get recent shipments (last 5)
     recent_shipments = sorted(
         shipments_list,
-        key=lambda x: x.createdAt if hasattr(x, 'createdAt') and x.createdAt else "",
-        reverse=True
+        key=lambda x: x.createdAt if hasattr(x, "createdAt") and x.createdAt else "",
+        reverse=True,
     )[:5]
 
     # Get upcoming maintenance (vehicles with maintenance scheduled in next 30 days)
     upcoming_maintenances = []
     thirty_days_from_now = datetime.utcnow() + timedelta(days=30)
     for vehicle in vehicles_list:
-        if hasattr(vehicle, 'maintenanceSchedule') and vehicle.maintenanceSchedule:
+        if hasattr(vehicle, "maintenanceSchedule") and vehicle.maintenanceSchedule:
             try:
-                maintenance_date = datetime.fromisoformat(str(vehicle.maintenanceSchedule).replace('Z', '+00:00').replace('+00:00', ''))
+                maintenance_date = datetime.fromisoformat(
+                    str(vehicle.maintenanceSchedule)
+                    .replace("Z", "+00:00")
+                    .replace("+00:00", "")
+                )
                 if datetime.utcnow() < maintenance_date < thirty_days_from_now:
-                    upcoming_maintenances.append({
-                        "vehicleId": str(vehicle.vehicleId),
-                        "vehicleName": vehicle.name if hasattr(vehicle, 'name') else vehicle.vehicleCode,
-                        "nextMaintenanceDate": str(vehicle.maintenanceSchedule)
-                    })
+                    upcoming_maintenances.append(
+                        {
+                            "vehicleId": str(vehicle.vehicleId),
+                            "vehicleName": (
+                                vehicle.name
+                                if hasattr(vehicle, "name")
+                                else vehicle.vehicleCode
+                            ),
+                            "nextMaintenanceDate": str(vehicle.maintenanceSchedule),
+                        }
+                    )
             except Exception:
                 continue
 
@@ -98,12 +114,20 @@ async def get_dashboard_stats(
                 "routeId": str(s.routeId) if s.routeId else None,
                 "vehicleId": str(s.vehicleId) if s.vehicleId else None,
                 "status": s.status,
-                "scheduledDate": str(s.scheduledDate) if hasattr(s, 'scheduledDate') and s.scheduledDate else None,
-                "createdAt": str(s.createdAt) if hasattr(s, 'createdAt') and s.createdAt else None
+                "scheduledDate": (
+                    str(s.scheduledDate)
+                    if hasattr(s, "scheduledDate") and s.scheduledDate
+                    else None
+                ),
+                "createdAt": (
+                    str(s.createdAt)
+                    if hasattr(s, "createdAt") and s.createdAt
+                    else None
+                ),
             }
             for s in recent_shipments
         ],
-        "upcomingMaintenances": upcoming_maintenances[:5]
+        "upcomingMaintenances": upcoming_maintenances[:5],
     }
 
     return SuccessResponse(data=dashboard_stats)
@@ -113,19 +137,23 @@ async def get_dashboard_stats(
     "/stats",
     response_model=SuccessResponse[dict],
     summary="Get logistics fleet statistics",
-    description="Get fleet metrics including vehicle counts, active shipments, and delivery statistics. Optionally filter by farming year."
+    description="Get fleet metrics including vehicle counts, active shipments, and delivery statistics. Optionally filter by farming year.",
 )
 async def get_fleet_stats(
-    farmingYear: Optional[int] = Query(None, description="Filter shipments by farming year (e.g., 2025)"),
+    farmingYear: Optional[int] = Query(
+        None, description="Filter shipments by farming year (e.g., 2025)"
+    ),
     current_user: CurrentUser = Depends(require_permission("logistics.view")),
     vehicle_service: VehicleService = Depends(),
     route_service: RouteService = Depends(),
-    shipment_service: ShipmentService = Depends()
+    shipment_service: ShipmentService = Depends(),
 ):
     """Get fleet statistics for logistics dashboard"""
 
     # Get vehicle statistics (not filtered by farming year - vehicles are always current)
-    vehicles_list, total_vehicle_count, _ = await vehicle_service.get_all_vehicles(page=1, per_page=1000)
+    vehicles_list, total_vehicle_count, _ = await vehicle_service.get_all_vehicles(
+        page=1, per_page=1000
+    )
 
     total_vehicles = len(vehicles_list)
     available_vehicles = sum(1 for v in vehicles_list if v.status == "available")
@@ -133,10 +161,12 @@ async def get_fleet_stats(
     maintenance_vehicles = sum(1 for v in vehicles_list if v.status == "maintenance")
 
     # Get route statistics (not filtered by farming year - routes are always current)
-    routes_list, total_route_count, _ = await route_service.get_all_routes(page=1, per_page=1000)
+    routes_list, total_route_count, _ = await route_service.get_all_routes(
+        page=1, per_page=1000
+    )
 
     total_routes = len(routes_list)
-    active_routes = sum(1 for r in routes_list if hasattr(r, 'isActive') and r.isActive)
+    active_routes = sum(1 for r in routes_list if hasattr(r, "isActive") and r.isActive)
 
     # Get shipment statistics (filtered by farmingYear if provided)
     shipments_list, total_shipment_count, _ = await shipment_service.get_all_shipments(
@@ -158,7 +188,7 @@ async def get_fleet_stats(
     # Calculate total cargo weight from all shipments
     total_cargo_weight = 0.0
     for s in shipments_list:
-        if hasattr(s, 'cargo') and s.cargo:
+        if hasattr(s, "cargo") and s.cargo:
             for item in s.cargo:
                 total_cargo_weight += item.weight * item.quantity
 
@@ -168,7 +198,9 @@ async def get_fleet_stats(
             "availableVehicles": available_vehicles,
             "inUseVehicles": in_use_vehicles,
             "maintenanceVehicles": maintenance_vehicles,
-            "utilizationRate": round((in_use_vehicles / total_vehicles * 100) if total_vehicles > 0 else 0, 1)
+            "utilizationRate": round(
+                (in_use_vehicles / total_vehicles * 100) if total_vehicles > 0 else 0, 1
+            ),
         },
         "shipments": {
             "totalShipments": total_shipments,
@@ -178,16 +210,13 @@ async def get_fleet_stats(
             "deliveredShipments": delivered_shipments,
             "cancelledShipments": cancelled_shipments,
             "deliveryRate": delivery_rate,
-            "totalCargoWeight": round(total_cargo_weight, 2)
+            "totalCargoWeight": round(total_cargo_weight, 2),
         },
-        "routes": {
-            "totalRoutes": total_routes,
-            "activeRoutes": active_routes
-        },
+        "routes": {"totalRoutes": total_routes, "activeRoutes": active_routes},
         "farmingYearContext": {
             "farmingYear": farmingYear,
-            "isFiltered": farmingYear is not None
-        }
+            "isFiltered": farmingYear is not None,
+        },
     }
 
     return SuccessResponse(data=fleet_stats)

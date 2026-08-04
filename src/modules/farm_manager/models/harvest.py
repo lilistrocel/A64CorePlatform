@@ -13,29 +13,39 @@ from pydantic import BaseModel, Field
 
 class HarvestEntry(BaseModel):
     """Aggregated harvest record for one plant type"""
+
     plantDataId: UUID = Field(..., description="Plant type harvested")
     plantName: str = Field(..., description="Plant name")
     quantityHarvested: float = Field(..., ge=0, description="Total quantity harvested")
-    qualityGrade: Optional[str] = Field(None, description="Overall quality grade (A, B, C)")
+    qualityGrade: Optional[str] = Field(
+        None, description="Overall quality grade (A, B, C)"
+    )
     notes: Optional[str] = Field(None, description="Harvest notes")
 
 
 class Harvest(BaseModel):
     """Complete harvest summary model"""
-    harvestId: UUID = Field(default_factory=uuid4, description="Unique harvest identifier")
+
+    harvestId: UUID = Field(
+        default_factory=uuid4, description="Unique harvest identifier"
+    )
     plantingId: UUID = Field(..., description="Reference to planting")
     blockId: UUID = Field(..., description="Block harvested")
     farmId: UUID = Field(..., description="Farm ID")
     cycleId: UUID = Field(..., description="Block cycle ID")
 
     # Harvest details (aggregated from daily harvests)
-    entries: List[HarvestEntry] = Field(..., description="Harvest entries by plant type")
+    entries: List[HarvestEntry] = Field(
+        ..., description="Harvest entries by plant type"
+    )
     totalQuantity: float = Field(..., ge=0, description="Total quantity harvested")
     yieldUnit: str = Field(..., description="Unit of yield")
 
     # Comparison with prediction
     predictedYield: float = Field(..., description="Originally predicted yield")
-    yieldEfficiency: float = Field(..., description="Actual/Predicted ratio (percentage)")
+    yieldEfficiency: float = Field(
+        ..., description="Actual/Predicted ratio (percentage)"
+    )
 
     # Harvest information
     harvestedBy: UUID = Field(..., description="User ID who ended harvest")
@@ -65,15 +75,15 @@ class Harvest(BaseModel):
                         "plantName": "Tomato",
                         "quantityHarvested": 240.0,
                         "qualityGrade": "A",
-                        "notes": "Excellent quality"
+                        "notes": "Excellent quality",
                     },
                     {
                         "plantDataId": "d2234567-89ab-cdef-0123-456789abcdef",
                         "plantName": "Basil",
                         "quantityHarvested": 14.0,
                         "qualityGrade": "A",
-                        "notes": "Aromatic"
-                    }
+                        "notes": "Aromatic",
+                    },
                 ],
                 "totalQuantity": 254.0,
                 "yieldUnit": "kg",
@@ -86,6 +96,6 @@ class Harvest(BaseModel):
                 "totalHarvestDays": 5,
                 "notes": "Overall excellent harvest, slight delay due to rain",
                 "createdAt": "2025-04-20T18:30:00Z",
-                "updatedAt": "2025-04-20T18:30:00Z"
+                "updatedAt": "2025-04-20T18:30:00Z",
             }
         }

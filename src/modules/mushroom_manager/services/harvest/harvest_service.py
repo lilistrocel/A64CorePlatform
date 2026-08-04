@@ -35,10 +35,7 @@ class HarvestService:
 
     @staticmethod
     async def create_harvest(
-        facility_id: str,
-        room_id: str,
-        data: HarvestCreate,
-        current_user
+        facility_id: str, room_id: str, data: HarvestCreate, current_user
     ) -> Harvest:
         """
         Record a new harvest event for a growing room.
@@ -70,7 +67,7 @@ class HarvestService:
         if not room_doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Room '{room_id}' not found in facility '{facility_id}'"
+                detail=f"Room '{room_id}' not found in facility '{facility_id}'",
             )
 
         # Auto-fill flush number from room's current flush state
@@ -152,7 +149,12 @@ class HarvestService:
 
         harvest = Harvest(
             **data.model_dump(
-                exclude={"flushNumber", "accessionId", "substrateWeightKg", "protocolId"}
+                exclude={
+                    "flushNumber",
+                    "accessionId",
+                    "substrateWeightKg",
+                    "protocolId",
+                }
             ),
             harvestId=str(uuid4()),
             roomId=room_id,
@@ -176,7 +178,7 @@ class HarvestService:
             logger.error(f"[HarvestService] insert_one failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create harvest record"
+                detail="Failed to create harvest record",
             )
 
         # Update room's totalYieldKg incrementally
@@ -185,7 +187,7 @@ class HarvestService:
             {
                 "$inc": {"totalYieldKg": data.weightKg},
                 "$set": {"updatedAt": datetime.utcnow()},
-            }
+            },
         )
 
         logger.info(
@@ -195,7 +197,6 @@ class HarvestService:
             f"by user {current_user.userId}"
         )
         return harvest
-
 
     # ---------------------------------------------------------------------------
     # Yield attribution by lineage
@@ -240,16 +241,20 @@ class HarvestService:
 
         rows: List[dict] = []
         async for row in db.mushroom_harvests.aggregate(pipeline):
-            rows.append({
-                "lineId": row["_id"]["lineId"],
-                "lineCode": row.get("lineCode"),
-                "cloneGeneration": row["_id"]["generation"],
-                "totalKg": round(row.get("totalKg") or 0, 3),
-                "harvests": row.get("harvests", 0),
-                "avgBE": round(row["avgBE"], 2) if row.get("avgBE") is not None else None,
-                "blockCount": len([b for b in row.get("blocks", []) if b]),
-                "lastHarvestAt": row.get("lastHarvestAt"),
-            })
+            rows.append(
+                {
+                    "lineId": row["_id"]["lineId"],
+                    "lineCode": row.get("lineCode"),
+                    "cloneGeneration": row["_id"]["generation"],
+                    "totalKg": round(row.get("totalKg") or 0, 3),
+                    "harvests": row.get("harvests", 0),
+                    "avgBE": (
+                        round(row["avgBE"], 2) if row.get("avgBE") is not None else None
+                    ),
+                    "blockCount": len([b for b in row.get("blocks", []) if b]),
+                    "lastHarvestAt": row.get("lastHarvestAt"),
+                }
+            )
         return rows
 
     # ---------------------------------------------------------------------------
@@ -257,10 +262,7 @@ class HarvestService:
     # ---------------------------------------------------------------------------
 
     @staticmethod
-    async def list_harvests_for_room(
-        facility_id: str,
-        room_id: str
-    ) -> List[Harvest]:
+    async def list_harvests_for_room(facility_id: str, room_id: str) -> List[Harvest]:
         """
         Return all harvest records for a specific growing room, newest first.
 
@@ -272,11 +274,9 @@ class HarvestService:
             List of Harvest documents ordered by harvestedAt descending.
         """
         db = mushroom_db.get_database()
-        cursor = (
-            db.mushroom_harvests
-            .find({"roomId": room_id, "facilityId": facility_id})
-            .sort("harvestedAt", -1)
-        )
+        cursor = db.mushroom_harvests.find(
+            {"roomId": room_id, "facilityId": facility_id}
+        ).sort("harvestedAt", -1)
 
         harvests: List[Harvest] = []
         async for doc in cursor:
@@ -301,10 +301,8 @@ class HarvestService:
             List of Harvest documents ordered by harvestedAt descending.
         """
         db = mushroom_db.get_database()
-        cursor = (
-            db.mushroom_harvests
-            .find({"facilityId": facility_id})
-            .sort("harvestedAt", -1)
+        cursor = db.mushroom_harvests.find({"facilityId": facility_id}).sort(
+            "harvestedAt", -1
         )
 
         harvests: List[Harvest] = []

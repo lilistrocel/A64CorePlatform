@@ -29,8 +29,7 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     async def __call__(
-        self,
-        current_user: UserResponse = Depends(get_current_active_user)
+        self, current_user: UserResponse = Depends(get_current_active_user)
     ) -> UserResponse:
         """
         Check if user has required role
@@ -47,7 +46,7 @@ class RoleChecker:
         if current_user.role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions. Required roles: {[r.value for r in self.allowed_roles]}"
+                detail=f"Insufficient permissions. Required roles: {[r.value for r in self.allowed_roles]}",
             )
 
         return current_user
@@ -55,8 +54,9 @@ class RoleChecker:
 
 # Pre-defined role checkers for common use cases
 
+
 def require_super_admin(
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ) -> UserResponse:
     """
     Require Super Admin role
@@ -68,14 +68,13 @@ def require_super_admin(
     """
     if current_user.role != UserRole.SUPER_ADMIN:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Super Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required"
         )
     return current_user
 
 
 def require_admin(
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ) -> UserResponse:
     """
     Require Admin or Super Admin role
@@ -87,14 +86,13 @@ def require_admin(
     """
     if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
         )
     return current_user
 
 
 def require_moderator(
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ) -> UserResponse:
     """
     Require Moderator, Admin, or Super Admin role
@@ -107,19 +105,15 @@ def require_moderator(
     if current_user.role not in [
         UserRole.SUPER_ADMIN,
         UserRole.ADMIN,
-        UserRole.MODERATOR
+        UserRole.MODERATOR,
     ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Moderator access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Moderator access required"
         )
     return current_user
 
 
-def can_manage_user(
-    target_user_id: str,
-    current_user: UserResponse
-) -> bool:
+def can_manage_user(target_user_id: str, current_user: UserResponse) -> bool:
     """
     Check if current user can manage target user
 
@@ -147,10 +141,7 @@ def can_manage_user(
     return current_user.userId == target_user_id
 
 
-def can_change_role(
-    current_user: UserResponse,
-    target_role: UserRole
-) -> bool:
+def can_change_role(current_user: UserResponse, target_role: UserRole) -> bool:
     """
     Check if current user can assign target role
 
@@ -198,12 +189,11 @@ def require_role(allowed_roles: List[UserRole], current_user) -> None:
         user_role_str = current_user.get("role")
     else:
         # Pydantic model (UserResponse)
-        user_role_str = current_user.role if hasattr(current_user, 'role') else None
+        user_role_str = current_user.role if hasattr(current_user, "role") else None
 
     if not user_role_str:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User role not found"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User role not found"
         )
 
     # Handle if already a UserRole enum
@@ -214,12 +204,11 @@ def require_role(allowed_roles: List[UserRole], current_user) -> None:
             user_role = UserRole(user_role_str)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid user role"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user role"
             )
 
     if user_role not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Insufficient permissions. Required roles: {[r.value for r in allowed_roles]}"
+            detail=f"Insufficient permissions. Required roles: {[r.value for r in allowed_roles]}",
         )

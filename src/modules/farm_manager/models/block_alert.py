@@ -13,6 +13,7 @@ from enum import Enum
 
 class AlertSeverity(str, Enum):
     """Alert severity levels"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -21,6 +22,7 @@ class AlertSeverity(str, Enum):
 
 class AlertStatus(str, Enum):
     """Alert status"""
+
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     RESOLVED = "resolved"
@@ -29,6 +31,7 @@ class AlertStatus(str, Enum):
 
 class AlertCategory(str, Enum):
     """Alert category"""
+
     PEST = "pest"
     DISEASE = "disease"
     IRRIGATION = "irrigation"
@@ -40,22 +43,30 @@ class AlertCategory(str, Enum):
 
 class BlockAlertCreate(BaseModel):
     """Schema for creating a block alert"""
+
     farmId: UUID = Field(..., description="Farm ID")
     blockId: UUID = Field(..., description="Block ID")
     category: AlertCategory = Field(..., description="Alert category")
     severity: AlertSeverity = Field(AlertSeverity.MEDIUM, description="Alert severity")
-    title: str = Field(..., description="Brief alert title", min_length=3, max_length=100)
+    title: str = Field(
+        ..., description="Brief alert title", min_length=3, max_length=100
+    )
     description: str = Field(..., description="Detailed description", min_length=10)
-    photoUrls: Optional[List[str]] = Field(None, description="Optional photos of the issue")
+    photoUrls: Optional[List[str]] = Field(
+        None, description="Optional photos of the issue"
+    )
 
 
 class AlertComment(BaseModel):
     """Comment/update on an alert"""
+
     commentId: UUID = Field(default_factory=uuid4, description="Unique comment ID")
     userId: UUID = Field(..., description="User who commented")
     userEmail: str = Field(..., description="Email of commenter")
     message: str = Field(..., description="Comment message")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When comment was added")
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow, description="When comment was added"
+    )
 
     class Config:
         json_schema_extra = {
@@ -64,13 +75,14 @@ class AlertComment(BaseModel):
                 "userId": "u1234567-89ab-cdef-0123-456789abcdef",
                 "userEmail": "manager@example.com",
                 "message": "Inspected the block, will apply treatment tomorrow morning",
-                "timestamp": "2025-01-15T14:30:00Z"
+                "timestamp": "2025-01-15T14:30:00Z",
             }
         }
 
 
 class BlockAlert(BlockAlertCreate):
     """Complete block alert model with all fields"""
+
     alertId: UUID = Field(default_factory=uuid4, description="Unique alert identifier")
 
     # Status tracking
@@ -90,8 +102,7 @@ class BlockAlert(BlockAlertCreate):
 
     # Comments/updates
     comments: List[AlertComment] = Field(
-        default_factory=list,
-        description="Comments and updates"
+        default_factory=list, description="Comments and updates"
     )
 
     # Timestamps
@@ -124,35 +135,43 @@ class BlockAlert(BlockAlertCreate):
                         "userId": "m1234567-89ab-cdef-0123-456789abcdef",
                         "userEmail": "manager@example.com",
                         "message": "Inspecting now, will apply treatment",
-                        "timestamp": "2025-01-15T14:30:00Z"
+                        "timestamp": "2025-01-15T14:30:00Z",
                     }
                 ],
                 "createdAt": "2025-01-15T09:00:00Z",
-                "updatedAt": "2025-01-15T14:30:00Z"
+                "updatedAt": "2025-01-15T14:30:00Z",
             }
         }
 
 
 class AlertCommentCreate(BaseModel):
     """Schema for adding a comment to an alert"""
+
     message: str = Field(..., description="Comment message", min_length=1)
 
 
 class AlertUpdate(BaseModel):
     """Schema for updating an alert"""
+
     status: Optional[AlertStatus] = Field(None, description="New status")
     severity: Optional[AlertSeverity] = Field(None, description="Updated severity")
     assignedTo: Optional[UUID] = Field(None, description="Assign to user")
-    resolution: Optional[str] = Field(None, description="Resolution description (when closing)")
+    resolution: Optional[str] = Field(
+        None, description="Resolution description (when closing)"
+    )
 
 
 class AlertResolve(BaseModel):
     """Schema for resolving an alert"""
-    resolution: str = Field(..., description="How the issue was resolved", min_length=10)
+
+    resolution: str = Field(
+        ..., description="How the issue was resolved", min_length=10
+    )
 
 
 class BlockAlertListResponse(BaseModel):
     """Response for listing alerts"""
+
     alerts: List[BlockAlert]
     total: int
     page: int

@@ -34,10 +34,7 @@ class EnvironmentService:
 
     @staticmethod
     async def create_log(
-        facility_id: str,
-        room_id: str,
-        data: EnvironmentLogCreate,
-        current_user
+        facility_id: str, room_id: str, data: EnvironmentLogCreate, current_user
     ) -> EnvironmentLog:
         """
         Create an environment reading log entry for a growing room.
@@ -62,13 +59,12 @@ class EnvironmentService:
 
         # Validate room exists and fetch currentPhase for denormalisation
         room_doc = await db.growing_rooms.find_one(
-            {"roomId": room_id, "facilityId": facility_id},
-            {"currentPhase": 1}
+            {"roomId": room_id, "facilityId": facility_id}, {"currentPhase": 1}
         )
         if not room_doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Room '{room_id}' not found in facility '{facility_id}'"
+                detail=f"Room '{room_id}' not found in facility '{facility_id}'",
             )
 
         log = EnvironmentLog(
@@ -89,7 +85,7 @@ class EnvironmentService:
             logger.error(f"[EnvironmentService] insert_one failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create environment log"
+                detail="Failed to create environment log",
             )
 
         logger.info(
@@ -105,9 +101,7 @@ class EnvironmentService:
 
     @staticmethod
     async def list_logs(
-        facility_id: str,
-        room_id: str,
-        limit: int = 50
+        facility_id: str, room_id: str, limit: int = 50
     ) -> List[EnvironmentLog]:
         """
         Return the most recent environment logs for a growing room.
@@ -122,8 +116,9 @@ class EnvironmentService:
         """
         db = mushroom_db.get_database()
         cursor = (
-            db.room_environment_logs
-            .find({"roomId": room_id, "facilityId": facility_id})
+            db.room_environment_logs.find(
+                {"roomId": room_id, "facilityId": facility_id}
+            )
             .sort("recordedAt", -1)
             .limit(limit)
         )
@@ -140,10 +135,7 @@ class EnvironmentService:
     # ---------------------------------------------------------------------------
 
     @staticmethod
-    async def get_latest(
-        facility_id: str,
-        room_id: str
-    ) -> Optional[EnvironmentLog]:
+    async def get_latest(facility_id: str, room_id: str) -> Optional[EnvironmentLog]:
         """
         Return the single most recent environment log for a growing room.
 
@@ -156,8 +148,7 @@ class EnvironmentService:
         """
         db = mushroom_db.get_database()
         doc = await db.room_environment_logs.find_one(
-            {"roomId": room_id, "facilityId": facility_id},
-            sort=[("recordedAt", -1)]
+            {"roomId": room_id, "facilityId": facility_id}, sort=[("recordedAt", -1)]
         )
 
         if not doc:

@@ -246,7 +246,9 @@ def _build_totals(
     # overrides the computed line gross; the commercial commitment is the
     # stated amount, not the sum of line commitments.
     if agreement_type == "amount_based" and committed_total_amount is not None:
-        total_gross = committed_total_amount.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+        total_gross = committed_total_amount.quantize(
+            _TWOPLACES, rounding=ROUND_HALF_UP
+        )
     else:
         total_gross = line_gross
 
@@ -257,7 +259,9 @@ def _build_totals(
         "net": float(total_net.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)),
         "tax": float(total_tax.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)),
         "gross": float(total_gross),
-        "consumedAmount": float(consumed_amount.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)),
+        "consumedAmount": float(
+            consumed_amount.quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+        ),
         "outstandingAmount": float(outstanding),
     }
 
@@ -285,7 +289,9 @@ def _raw_line_to_response(ln: Dict[str, Any]) -> BlanketAgreementLine:
     """Convert a raw embedded BLA line dict to BlanketAgreementLine."""
     committed = Decimal(str(ln.get("committedQuantity", 0)))
     consumed = Decimal(str(ln.get("consumedQty", 0)))
-    outstanding = max(committed - consumed, _ZERO).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+    outstanding = max(committed - consumed, _ZERO).quantize(
+        _TWOPLACES, rounding=ROUND_HALF_UP
+    )
     return BlanketAgreementLine(
         line_id=ln["lineId"],
         line_number=ln["lineNumber"],
@@ -307,7 +313,9 @@ def _raw_line_to_response(ln: Dict[str, Any]) -> BlanketAgreementLine:
     )
 
 
-def _raw_totals_to_model(raw: Dict[str, Any], consumed_amount: Decimal = _ZERO) -> BlanketAgreementTotals:
+def _raw_totals_to_model(
+    raw: Dict[str, Any], consumed_amount: Decimal = _ZERO
+) -> BlanketAgreementTotals:
     """
     Convert raw MongoDB totals dict + consumedAmount to BlanketAgreementTotals.
 
@@ -319,7 +327,9 @@ def _raw_totals_to_model(raw: Dict[str, Any], consumed_amount: Decimal = _ZERO) 
         BlanketAgreementTotals with outstanding_amount computed.
     """
     gross = Decimal(str(raw.get("gross", 0)))
-    outstanding = max(gross - consumed_amount, _ZERO).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+    outstanding = max(gross - consumed_amount, _ZERO).quantize(
+        _TWOPLACES, rounding=ROUND_HALF_UP
+    )
     return BlanketAgreementTotals(
         net=Decimal(str(raw.get("net", 0))),
         tax=Decimal(str(raw.get("tax", 0))),
@@ -341,7 +351,9 @@ def _doc_to_response(raw: Dict[str, Any]) -> BlanketAgreementResponse:
     target_refs = [DocumentLinkRef(**r) for r in target_refs_raw if r]
 
     committed_total = raw.get("committedTotalAmount")
-    committed_total_decimal = Decimal(str(committed_total)) if committed_total is not None else None
+    committed_total_decimal = (
+        Decimal(str(committed_total)) if committed_total is not None else None
+    )
 
     return BlanketAgreementResponse(
         doc_id=raw["docId"],
@@ -465,7 +477,10 @@ async def create_blanket_agreement(
         )
 
     # Reason: amount_based BLA should have a committed_total_amount supplied.
-    if payload.agreement_type == "amount_based" and payload.committed_total_amount is None:
+    if (
+        payload.agreement_type == "amount_based"
+        and payload.committed_total_amount is None
+    ):
         raise ValueError(
             "committed_total_amount is required for amount_based Blanket Agreements."
         )
@@ -474,7 +489,9 @@ async def create_blanket_agreement(
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
         computed_lines.append(
-            await _build_line_doc(line, line_number=i, org_id=org_id, auth_token=auth_token)
+            await _build_line_doc(
+                line, line_number=i, org_id=org_id, auth_token=auth_token
+            )
         )
 
     totals = _build_totals(
@@ -671,19 +688,23 @@ async def list_blanket_agreements(
     # the validity window [validFrom, validTo].
     if is_active is True:
         now = _now()
-        query["status"] = {"$in": [
-            DocumentStatus.OPEN.value,
-            DocumentStatus.PARTLY_CLOSED.value,
-        ]}
+        query["status"] = {
+            "$in": [
+                DocumentStatus.OPEN.value,
+                DocumentStatus.PARTLY_CLOSED.value,
+            ]
+        }
         query["validFrom"] = {"$lte": now}
         query["validTo"] = {"$gte": now}
     elif is_active is False:
         # Non-active = either closed/cancelled OR outside validity window.
         # Implementation: status is NOT in the active set.
-        query["status"] = {"$nin": [
-            DocumentStatus.OPEN.value,
-            DocumentStatus.PARTLY_CLOSED.value,
-        ]}
+        query["status"] = {
+            "$nin": [
+                DocumentStatus.OPEN.value,
+                DocumentStatus.PARTLY_CLOSED.value,
+            ]
+        }
 
     total = await db[_BLA_COL].count_documents(query)
     skip = (page - 1) * page_size
@@ -756,16 +777,16 @@ async def update_blanket_agreement(
 
     if effective_valid_from and effective_valid_to:
         if effective_valid_to <= effective_valid_from:
-            raise ValueError(
-                "valid_to must be after valid_from."
-            )
+            raise ValueError("valid_to must be after valid_from.")
 
     field_map: Dict[str, Any] = {
         "agreementDate": payload.agreement_date,
         "validFrom": payload.valid_from,
         "validTo": payload.valid_to,
         "currency": payload.currency,
-        "exchangeRate": float(payload.exchange_rate) if payload.exchange_rate is not None else None,
+        "exchangeRate": (
+            float(payload.exchange_rate) if payload.exchange_rate is not None else None
+        ),
         "paymentTermsId": payload.payment_terms_id,
         "bpRefNo": payload.bp_ref_no,
         "journalMemo": payload.journal_memo,
@@ -815,7 +836,9 @@ async def update_blanket_agreement(
         detail={"updatedFields": list(updates.keys())},
     )
 
-    updated_raw = await db[_BLA_COL].find_one({"docId": doc_id, "organizationId": org_id})
+    updated_raw = await db[_BLA_COL].find_one(
+        {"docId": doc_id, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)
@@ -936,10 +959,7 @@ async def transition_status(
         and new_status == DocumentStatus.PENDING_APPROVAL
     ):
         action_label = "submit_for_approval"
-    elif (
-        current_status == DocumentStatus.DRAFT
-        and new_status == DocumentStatus.OPEN
-    ):
+    elif current_status == DocumentStatus.DRAFT and new_status == DocumentStatus.OPEN:
         action_label = "direct_open"
     elif (
         current_status == DocumentStatus.PENDING_APPROVAL
@@ -978,7 +998,9 @@ async def transition_status(
     )
 
     # Reload and return the updated BLA.
-    updated_raw = await db[_BLA_COL].find_one({"docId": doc_id, "organizationId": org_id})
+    updated_raw = await db[_BLA_COL].find_one(
+        {"docId": doc_id, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)

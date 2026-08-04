@@ -16,6 +16,7 @@ from .alert import AlertSeverity
 
 class BlockCycleAlert(BaseModel):
     """Alert summary for cycle history"""
+
     alertId: UUID
     title: str
     severity: AlertSeverity
@@ -26,6 +27,7 @@ class BlockCycleAlert(BaseModel):
 
 class BlockCycleDailyHarvest(BaseModel):
     """Daily harvest summary for cycle history"""
+
     date: datetime
     totalQuantity: float
     entries: List[Dict]  # Simplified plant-wise breakdown
@@ -33,10 +35,13 @@ class BlockCycleDailyHarvest(BaseModel):
 
 class BlockCycle(BaseModel):
     """Complete cycle history for a block"""
+
     cycleId: UUID = Field(default_factory=uuid4, description="Unique cycle identifier")
     blockId: UUID = Field(..., description="Block ID")
     farmId: UUID = Field(..., description="Farm ID")
-    cycleNumber: int = Field(..., gt=0, description="Cycle number for this block (1, 2, 3, ...)")
+    cycleNumber: int = Field(
+        ..., gt=0, description="Cycle number for this block (1, 2, 3, ...)"
+    )
 
     # Planting information (frozen snapshot)
     plantingId: UUID = Field(..., description="Reference to planting")
@@ -54,32 +59,53 @@ class BlockCycle(BaseModel):
     plantedAt: datetime
 
     # Timeline
-    estimatedHarvestStartDate: datetime = Field(..., description="When harvest was expected to start")
-    actualHarvestStartDate: Optional[datetime] = Field(None, description="When harvest actually started")
-    actualHarvestEndDate: Optional[datetime] = Field(None, description="When harvest ended")
-    cycleDurationDays: Optional[int] = Field(None, description="Total days from planting to final harvest")
+    estimatedHarvestStartDate: datetime = Field(
+        ..., description="When harvest was expected to start"
+    )
+    actualHarvestStartDate: Optional[datetime] = Field(
+        None, description="When harvest actually started"
+    )
+    actualHarvestEndDate: Optional[datetime] = Field(
+        None, description="When harvest ended"
+    )
+    cycleDurationDays: Optional[int] = Field(
+        None, description="Total days from planting to final harvest"
+    )
 
     # Harvest performance
     predictedYield: float = Field(..., description="Predicted total yield")
     actualYield: float = Field(0.0, description="Actual total yield")
     yieldUnit: str
-    yieldEfficiency: float = Field(0.0, description="Actual/Predicted ratio (percentage)")
+    yieldEfficiency: float = Field(
+        0.0, description="Actual/Predicted ratio (percentage)"
+    )
 
-    dailyHarvests: List[BlockCycleDailyHarvest] = Field(default_factory=list, description="Day-by-day harvest records")
+    dailyHarvests: List[BlockCycleDailyHarvest] = Field(
+        default_factory=list, description="Day-by-day harvest records"
+    )
     totalHarvestDays: int = Field(0, description="Number of days harvesting occurred")
 
     # Alerts during cycle
-    alerts: List[BlockCycleAlert] = Field(default_factory=list, description="All alerts during this cycle")
+    alerts: List[BlockCycleAlert] = Field(
+        default_factory=list, description="All alerts during this cycle"
+    )
     totalAlerts: int = Field(0, description="Number of alerts")
     criticalAlerts: int = Field(0, description="Number of critical alerts")
 
     # Performance metrics
-    harvestDelayDays: int = Field(0, description="Days delayed past estimated start (0 = on time, negative = early)")
+    harvestDelayDays: int = Field(
+        0,
+        description="Days delayed past estimated start (0 = on time, negative = early)",
+    )
     qualityIssues: int = Field(0, description="Number of quality-related alerts")
 
     # Environmental data (future)
-    avgTemperature: Optional[float] = Field(None, description="Average temperature during cycle")
-    totalRainfall: Optional[float] = Field(None, description="Total rainfall during cycle")
+    avgTemperature: Optional[float] = Field(
+        None, description="Average temperature during cycle"
+    )
+    totalRainfall: Optional[float] = Field(
+        None, description="Total rainfall during cycle"
+    )
 
     # Cycle status
     status: str = Field("active", description="Status: active, completed")
@@ -93,7 +119,9 @@ class BlockCycle(BaseModel):
     # Timestamps
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)
-    completedAt: Optional[datetime] = Field(None, description="When cycle was completed")
+    completedAt: Optional[datetime] = Field(
+        None, description="When cycle was completed"
+    )
 
     class Config:
         json_schema_extra = {
@@ -108,7 +136,7 @@ class BlockCycle(BaseModel):
                         "plantDataId": "d123...",
                         "plantName": "Tomato",
                         "quantity": 50,
-                        "plantDataSnapshot": {"expectedYieldPerPlant": 5.0}
+                        "plantDataSnapshot": {"expectedYieldPerPlant": 5.0},
                     }
                 ],
                 "totalPlants": 50,
@@ -131,6 +159,6 @@ class BlockCycle(BaseModel):
                 "totalAlerts": 1,
                 "criticalAlerts": 0,
                 "status": "completed",
-                "completedAt": "2025-04-22T18:00:00Z"
+                "completedAt": "2025-04-22T18:00:00Z",
             }
         }

@@ -335,11 +335,7 @@ class MediumService:
 
         total = await db[ACCESSIONS].count_documents(query)
         cursor = (
-            db[ACCESSIONS]
-            .find(query)
-            .sort("createdAt", -1)
-            .skip(skip)
-            .limit(limit)
+            db[ACCESSIONS].find(query).sort("createdAt", -1).skip(skip).limit(limit)
         )
         accessions = [
             doc_to_model(doc, Accession, _ACCESSION_ID_KEY) async for doc in cursor

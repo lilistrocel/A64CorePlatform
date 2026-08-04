@@ -73,7 +73,9 @@ _STRING_KEYS = frozenset(
         "CF_ACCESS_DEFAULT_ROLE",
     }
 )
-_BOOL_KEYS = frozenset({"CF_ACCESS_ENABLED", "CF_ACCESS_EXCLUSIVE", "CF_ACCESS_JIT_PROVISION"})
+_BOOL_KEYS = frozenset(
+    {"CF_ACCESS_ENABLED", "CF_ACCESS_EXCLUSIVE", "CF_ACCESS_JIT_PROVISION"}
+)
 MANAGED_KEYS = _STRING_KEYS | _BOOL_KEYS
 
 # Never returned in full — see module docstring. Masked with `_mask_value`
@@ -136,7 +138,9 @@ async def get_resolved() -> Dict[str, ResolvedSetting]:
             # Reason: settings.<key> is already the pydantic-parsed,
             # correctly-typed value of this same env var — no need to
             # re-parse the raw string ourselves.
-            resolved[key] = ResolvedSetting(value=getattr(settings, key), source="env", editable=False)
+            resolved[key] = ResolvedSetting(
+                value=getattr(settings, key), source="env", editable=False
+            )
             continue
 
         db_value = doc.get(key)
@@ -146,7 +150,9 @@ async def get_resolved() -> Dict[str, ResolvedSetting]:
             # Reason: no env var and no DB value -> fall back to the
             # Settings class default, exactly what settings.<key> already
             # holds when the env var was never set.
-            resolved[key] = ResolvedSetting(value=getattr(settings, key), source="unset", editable=True)
+            resolved[key] = ResolvedSetting(
+                value=getattr(settings, key), source="unset", editable=True
+            )
 
     _cache["data"] = resolved
     _cache["fetched_at"] = now
@@ -218,12 +224,16 @@ async def _validate_team_domain(team_domain: str) -> None:
     """
     url = f"https://{team_domain}/cdn-cgi/access/certs"
     try:
-        async with httpx.AsyncClient(timeout=_JWKS_VALIDATION_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(
+            timeout=_JWKS_VALIDATION_TIMEOUT_SECONDS
+        ) as client:
             response = await client.get(url)
             response.raise_for_status()
             data = response.json()
     except (httpx.HTTPError, ValueError) as exc:
-        logger.warning("CF_ACCESS_TEAM_DOMAIN validation failed for %s: %s", team_domain, exc)
+        logger.warning(
+            "CF_ACCESS_TEAM_DOMAIN validation failed for %s: %s", team_domain, exc
+        )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
@@ -296,7 +306,9 @@ async def update(
             401 if `current_password` does not match the actor's stored hash.
     """
     if not changes:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No changes supplied.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No changes supplied."
+        )
 
     unknown = sorted(set(changes) - MANAGED_KEYS)
     if unknown:

@@ -43,12 +43,12 @@ router = APIRouter()
         "Create a new sales order. Requires sales.create permission. "
         "Validates customer exists in CRM. "
         "When status=CONFIRMED and allocations are present, inventory is reserved immediately."
-    )
+    ),
 )
 async def create_order(
     order_data: SalesOrderCreate,
     current_user: CurrentUser = Depends(require_permission("sales.create")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Create a new sales order.
@@ -68,15 +68,9 @@ async def create_order(
     - **shippingAddress**: Shipping address (optional)
     - **notes**: Additional notes (optional)
     """
-    order = await service.create_order(
-        order_data,
-        UUID(current_user.userId)
-    )
+    order = await service.create_order(order_data, UUID(current_user.userId))
 
-    return SuccessResponse(
-        data=order,
-        message="Sales order created successfully"
-    )
+    return SuccessResponse(data=order, message="Sales order created successfully")
 
 
 @router.get(
@@ -88,17 +82,21 @@ async def create_order(
         "Requires sales.view permission. "
         "Soft-deleted orders (cancelled via delete flow) are hidden by default; "
         "pass ?include_deleted=true to include them."
-    )
+    ),
 )
 async def get_orders(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    status: Optional[SalesOrderStatus] = Query(None, description="Filter by order status"),
+    status: Optional[SalesOrderStatus] = Query(
+        None, description="Filter by order status"
+    ),
     customerId: Optional[UUID] = Query(None, description="Filter by customer ID"),
     farmingYear: Optional[int] = Query(None, description="Filter by farming year"),
-    include_deleted: bool = Query(False, description="Include soft-deleted (cancelled via delete) orders"),
+    include_deleted: bool = Query(
+        False, description="Include soft-deleted (cancelled via delete) orders"
+    ),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Get all sales orders with pagination.
@@ -117,11 +115,8 @@ async def get_orders(
     return PaginatedResponse(
         data=orders,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
@@ -129,12 +124,12 @@ async def get_orders(
     "/{order_id}",
     response_model=SuccessResponse[SalesOrder],
     summary="Get sales order by ID",
-    description="Get a specific sales order by ID. Requires sales.view permission."
+    description="Get a specific sales order by ID. Requires sales.view permission.",
 )
 async def get_order(
     order_id: UUID,
     current_user: CurrentUser = Depends(require_permission("sales.view")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Get sales order by ID.
@@ -150,13 +145,13 @@ async def get_order(
     "/{order_id}",
     response_model=SuccessResponse[SalesOrder],
     summary="Update sales order",
-    description="Update a sales order. Requires sales.edit permission."
+    description="Update a sales order. Requires sales.edit permission.",
 )
 async def update_order(
     order_id: UUID,
     update_data: SalesOrderUpdate,
     current_user: CurrentUser = Depends(require_permission("sales.edit")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Update a sales order.
@@ -164,15 +159,9 @@ async def update_order(
     - **order_id**: Sales order UUID
     - All fields are optional (partial update)
     """
-    order = await service.update_order(
-        order_id,
-        update_data
-    )
+    order = await service.update_order(order_id, update_data)
 
-    return SuccessResponse(
-        data=order,
-        message="Sales order updated successfully"
-    )
+    return SuccessResponse(data=order, message="Sales order updated successfully")
 
 
 @router.patch(
@@ -183,13 +172,13 @@ async def update_order(
         "Update sales order status. Requires sales.edit permission. "
         "CONFIRMED→CANCELLED releases inventory reservations. "
         "any→SHIPPED deducts allocated quantities from inventory batches."
-    )
+    ),
 )
 async def update_order_status(
     order_id: UUID,
     new_status: SalesOrderStatus = Query(..., description="New order status"),
     current_user: CurrentUser = Depends(require_permission("sales.edit")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Update sales order status.
@@ -204,8 +193,7 @@ async def update_order_status(
     )
 
     return SuccessResponse(
-        data=order,
-        message=f"Sales order status updated to {new_status.value}"
+        data=order, message=f"Sales order status updated to {new_status.value}"
     )
 
 
@@ -213,12 +201,12 @@ async def update_order_status(
     "/{order_id}/confirm",
     response_model=SuccessResponse[SalesOrder],
     summary="Confirm a sales order",
-    description="Confirm a draft order and reserve inventory. Requires sales.edit permission."
+    description="Confirm a draft order and reserve inventory. Requires sales.edit permission.",
 )
 async def confirm_order(
     order_id: UUID,
     current_user: CurrentUser = Depends(require_permission("sales.edit")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Confirm a sales order and reserve inventory.
@@ -231,20 +219,17 @@ async def confirm_order(
     - Falls back to item.inventoryId reservation for legacy orders
     - Updates order status to confirmed
     """
-    order = await service.confirm_order(
-        order_id,
-        UUID(current_user.userId)
-    )
+    order = await service.confirm_order(order_id, UUID(current_user.userId))
 
     return SuccessResponse(
-        data=order,
-        message="Sales order confirmed and inventory reserved"
+        data=order, message="Sales order confirmed and inventory reserved"
     )
 
 
 # ---------------------------------------------------------------------------
 # Two-step delete — Deliverable 4
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/{order_id}/delete-preview",
@@ -255,12 +240,12 @@ async def confirm_order(
         "so the UI can prompt for per-batch decisions before confirming deletion. "
         "Returns canDelete=false with a reason for SHIPPED, DELIVERED, or CANCELLED orders. "
         "Requires sales.delete permission."
-    )
+    ),
 )
 async def get_delete_preview(
     order_id: UUID,
     current_user: CurrentUser = Depends(require_permission("sales.delete")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Preview what will happen when this order is deleted.
@@ -275,10 +260,7 @@ async def get_delete_preview(
     """
     preview = await service.get_delete_preview(order_id)
 
-    return SuccessResponse(
-        data=preview,
-        message="Delete preview generated"
-    )
+    return SuccessResponse(data=preview, message="Delete preview generated")
 
 
 @router.post(
@@ -289,13 +271,13 @@ async def get_delete_preview(
         "Step 2 of two-step delete. Applies per-batch decisions (restore / revive / waste) "
         "and soft-deletes the order (status → cancelled, deletedAt = now). "
         "Requires sales.delete permission."
-    )
+    ),
 )
 async def confirm_delete_order(
     order_id: UUID,
     request: DeleteOrderRequest,
     current_user: CurrentUser = Depends(require_permission("sales.delete")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Confirm deletion of a sales order with per-batch inventory decisions.
@@ -315,15 +297,13 @@ async def confirm_delete_order(
         deleted_by=UUID(current_user.userId),
     )
 
-    return SuccessResponse(
-        data=result,
-        message="Order deleted successfully"
-    )
+    return SuccessResponse(data=result, message="Order deleted successfully")
 
 
 # ---------------------------------------------------------------------------
 # Report Return — Deliverable 5
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/{order_id}/report-return",
@@ -336,13 +316,13 @@ async def confirm_delete_order(
         "A full record is inserted into return_orders (for the existing returns UI). "
         "A thin summary is appended to the order's returns[] array for display. "
         "Requires sales.edit permission."
-    )
+    ),
 )
 async def report_return(
     order_id: UUID,
     request: ReportReturnRequest,
     current_user: CurrentUser = Depends(require_permission("sales.edit")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Report a customer return against a shipped or delivered order.
@@ -366,15 +346,13 @@ async def report_return(
         returned_by=UUID(current_user.userId),
     )
 
-    return SuccessResponse(
-        data=result,
-        message="Return reported and stock updated"
-    )
+    return SuccessResponse(data=result, message="Return reported and stock updated")
 
 
 # ---------------------------------------------------------------------------
 # Legacy hard-delete — kept for backward compatibility
 # ---------------------------------------------------------------------------
+
 
 @router.delete(
     "/{order_id}",
@@ -385,12 +363,12 @@ async def report_return(
         "delete flow (GET /{id}/delete-preview + POST /{id}/delete) which handles "
         "inventory restoration with per-batch decisions. "
         "Requires sales.delete permission."
-    )
+    ),
 )
 async def delete_order(
     order_id: UUID,
     current_user: CurrentUser = Depends(require_permission("sales.delete")),
-    service: OrderService = Depends()
+    service: OrderService = Depends(),
 ):
     """
     Delete a sales order (legacy hard-delete).
@@ -403,7 +381,4 @@ async def delete_order(
     """
     result = await service.delete_order(order_id)
 
-    return SuccessResponse(
-        data=result,
-        message="Sales order deleted successfully"
-    )
+    return SuccessResponse(data=result, message="Sales order deleted successfully")

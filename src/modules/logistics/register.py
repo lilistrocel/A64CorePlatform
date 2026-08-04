@@ -22,7 +22,9 @@ async def startup_hook():
 
     This connects to the database and performs any necessary initialization.
     """
-    logger.info(f"[Logistics Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Logistics Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await logistics_db.connect()
@@ -62,17 +64,15 @@ def register(app: FastAPI, prefix: Optional[str] = None) -> None:
     logger.info(f"[Logistics Module] Registering routes with prefix: {route_prefix}")
 
     # Register API routes
-    app.include_router(
-        api_router,
-        prefix=route_prefix,
-        tags=["logistics"]
-    )
+    app.include_router(api_router, prefix=route_prefix, tags=["logistics"])
 
     # Register lifecycle hooks
     app.add_event_handler("startup", startup_hook)
     app.add_event_handler("shutdown", shutdown_hook)
 
-    logger.info(f"[Logistics Module] Successfully registered v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Logistics Module] Successfully registered v{settings.MODULE_VERSION}"
+    )
 
 
 # Module metadata (for plugin system discovery)

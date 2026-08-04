@@ -60,7 +60,7 @@ from ..models.module import (
     ModuleStatusResponse,
     ModuleStatus,
     ModuleHealth,
-    ModuleAuditLog
+    ModuleAuditLog,
 )
 from ..utils.encryption import encrypt_license_key, decrypt_license_key
 from ..utils.license_validator import LicenseValidator
@@ -74,6 +74,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Configuration
 # =============================================================================
+
 
 def _get_docker_socket() -> str:
     """
@@ -97,6 +98,7 @@ def _get_docker_socket() -> str:
         # Linux/macOS use Unix socket
         return "unix:///var/run/docker.sock"
 
+
 # Docker socket path (cross-platform)
 DOCKER_SOCKET = _get_docker_socket()
 
@@ -108,8 +110,7 @@ NGINX_CONFIG_PATH = os.getenv("NGINX_CONFIG_PATH", "/app/nginx/nginx.conf")
 
 # Trusted Docker registries (security)
 TRUSTED_REGISTRIES = os.getenv(
-    "TRUSTED_REGISTRIES",
-    "registry.hub.docker.com,ghcr.io,gcr.io,docker.io"
+    "TRUSTED_REGISTRIES", "registry.hub.docker.com,ghcr.io,gcr.io,docker.io"
 ).split(",")
 
 # Module limits
@@ -123,6 +124,7 @@ MODULE_INSTALL_TIMEOUT = int(os.getenv("MODULE_INSTALL_TIMEOUT", "300"))
 # =============================================================================
 # Module Manager Class
 # =============================================================================
+
 
 class ModuleManager:
     """
@@ -156,7 +158,9 @@ class ModuleManager:
         # Database (lazy initialization)
         self._db = None
 
-        logger.info("ModuleManager initialized (Docker client will connect on first use)")
+        logger.info(
+            "ModuleManager initialized (Docker client will connect on first use)"
+        )
 
     def _ensure_docker_client(self):
         """Lazy initialization of Docker client"""
@@ -195,7 +199,7 @@ class ModuleManager:
         config: ModuleConfig,
         user_id: str,
         user_email: str,
-        user_role: str = "super_admin"
+        user_role: str = "super_admin",
     ) -> Dict[str, any]:
         """
         Install a module from Docker image.
@@ -236,18 +240,21 @@ class ModuleManager:
             # Step 1: Validate license key
             logger.info(f"Validating license key for {module_name}")
             license_result = await self.license_validator.validate_license(
-                config.license_key,
-                module_name,
-                config.version
+                config.license_key, module_name, config.version
             )
 
             if not license_result["valid"]:
                 error = license_result.get("error", "License validation failed")
                 await self._log_audit(
-                    user_id, user_email, user_role,
-                    "install", module_name, config.version,
-                    "failure", error,
-                    start_time
+                    user_id,
+                    user_email,
+                    user_role,
+                    "install",
+                    module_name,
+                    config.version,
+                    "failure",
+                    error,
+                    start_time,
                 )
                 raise ValueError(f"License validation failed: {error}")
 
@@ -257,14 +264,21 @@ class ModuleManager:
             await self._check_module_limits(user_id)
 
             # Step 3: Check if module already exists
-            existing = await self.db.installed_modules.find_one({"module_name": module_name})
+            existing = await self.db.installed_modules.find_one(
+                {"module_name": module_name}
+            )
             if existing:
                 error = f"Module '{module_name}' is already installed"
                 await self._log_audit(
-                    user_id, user_email, user_role,
-                    "install", module_name, config.version,
-                    "failure", error,
-                    start_time
+                    user_id,
+                    user_email,
+                    user_role,
+                    "install",
+                    module_name,
+                    config.version,
+                    "failure",
+                    error,
+                    start_time,
                 )
                 raise ValueError(error)
 
@@ -276,45 +290,68 @@ class ModuleManager:
             logger.info(f"Getting Docker image: {config.docker_image}")
             try:
                 # Check if image exists locally (especially for localhost registry)
-                registry = config.docker_image.split("/")[0] if "/" in config.docker_image else "docker.io"
+                registry = (
+                    config.docker_image.split("/")[0]
+                    if "/" in config.docker_image
+                    else "docker.io"
+                )
 
                 if registry == "localhost":
                     # For local images, try to get from local cache first (no pull needed)
-                    logger.info(f"Checking local image cache for: {config.docker_image}")
+                    logger.info(
+                        f"Checking local image cache for: {config.docker_image}"
+                    )
                     try:
                         image = self.docker_client.images.get(config.docker_image)
                         logger.info(f"Found local image: {image.id[:12]}")
                     except ImageNotFound:
                         error = f"Local Docker image not found: {config.docker_image}. Build it first with: docker build -t {config.docker_image} ."
                         await self._log_audit(
-                            user_id, user_email, user_role,
-                            "install", module_name, config.version,
-                            "failure", error,
-                            start_time
+                            user_id,
+                            user_email,
+                            user_role,
+                            "install",
+                            module_name,
+                            config.version,
+                            "failure",
+                            error,
+                            start_time,
                         )
                         raise ValueError(error)
                 else:
                     # For remote registries, pull the image
-                    logger.info(f"Pulling image from remote registry: {config.docker_image}")
+                    logger.info(
+                        f"Pulling image from remote registry: {config.docker_image}"
+                    )
                     image = self.docker_client.images.pull(config.docker_image)
                     logger.info(f"Docker image pulled successfully: {image.id[:12]}")
 
             except ImageNotFound:
                 error = f"Docker image not found: {config.docker_image}"
                 await self._log_audit(
-                    user_id, user_email, user_role,
-                    "install", module_name, config.version,
-                    "failure", error,
-                    start_time
+                    user_id,
+                    user_email,
+                    user_role,
+                    "install",
+                    module_name,
+                    config.version,
+                    "failure",
+                    error,
+                    start_time,
                 )
                 raise ValueError(error)
             except DockerException as e:
                 error = f"Failed to get Docker image: {str(e)}"
                 await self._log_audit(
-                    user_id, user_email, user_role,
-                    "install", module_name, config.version,
-                    "failure", error,
-                    start_time
+                    user_id,
+                    user_email,
+                    user_role,
+                    "install",
+                    module_name,
+                    config.version,
+                    "failure",
+                    error,
+                    start_time,
                 )
                 raise RuntimeError(error)
 
@@ -324,17 +361,23 @@ class ModuleManager:
 
             if self.port_manager:
                 # Parse internal ports from config.ports
-                internal_ports = await self.port_manager.parse_ports_from_config(config.ports)
+                internal_ports = await self.port_manager.parse_ports_from_config(
+                    config.ports
+                )
 
                 # Allocate external ports
-                allocated_ports = await self.port_manager.allocate_ports(module_name, internal_ports)
+                allocated_ports = await self.port_manager.allocate_ports(
+                    module_name, internal_ports
+                )
                 logger.info(f"Allocated ports for {module_name}: {allocated_ports}")
 
                 # Generate proxy route
                 proxy_route = await self.port_manager.generate_proxy_route(module_name)
                 logger.info(f"Generated proxy route for {module_name}: {proxy_route}")
             else:
-                logger.warning("Port Manager not available - using manual port configuration")
+                logger.warning(
+                    "Port Manager not available - using manual port configuration"
+                )
 
             # Step 7: Encrypt license key
             encrypted_license = encrypt_license_key(config.license_key)
@@ -363,7 +406,7 @@ class ModuleManager:
                 installed_by_user_id=user_id,
                 installed_by_email=user_email,
                 installed_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                updated_at=datetime.utcnow(),
             )
 
             await self.db.installed_modules.insert_one(module_doc.dict())
@@ -382,9 +425,9 @@ class ModuleManager:
                         "container_name": container.name,
                         "status": ModuleStatus.RUNNING,
                         "health": ModuleHealth.UNKNOWN,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": datetime.utcnow(),
                     }
-                }
+                },
             )
 
             logger.info(f"Container started: {container.name} ({container.id[:12]})")
@@ -394,34 +437,50 @@ class ModuleManager:
                 # Get primary internal port (first key in allocated_ports)
                 # Note: allocated_ports is {internal_port: external_port}
                 # For proxy routing within Docker network, use internal port
-                primary_internal_port = int(list(allocated_ports.keys())[0]) if allocated_ports else None
+                primary_internal_port = (
+                    int(list(allocated_ports.keys())[0]) if allocated_ports else None
+                )
 
                 if primary_internal_port:
-                    logger.info(f"Creating reverse proxy route: {proxy_route} -> :{primary_internal_port}")
+                    logger.info(
+                        f"Creating reverse proxy route: {proxy_route} -> :{primary_internal_port}"
+                    )
                     proxy_created = await self.proxy_manager.create_proxy_route(
                         module_name,
                         proxy_route,
                         primary_internal_port,
-                        enable_websocket=True
+                        enable_websocket=True,
                     )
 
                     if proxy_created:
                         logger.info(f"Reverse proxy route created: {proxy_route}")
                     else:
-                        logger.warning(f"Failed to create reverse proxy route for {module_name}")
+                        logger.warning(
+                            f"Failed to create reverse proxy route for {module_name}"
+                        )
 
             # Step 11: Log successful installation
             duration = (datetime.utcnow() - start_time).total_seconds()
             await self._log_audit(
-                user_id, user_email, user_role,
-                "install", module_name, config.version,
-                "success", None,
+                user_id,
+                user_email,
+                user_role,
+                "install",
+                module_name,
+                config.version,
+                "success",
+                None,
                 start_time,
                 duration,
-                {"docker_image": config.docker_image, "container_id": container.id[:12]}
+                {
+                    "docker_image": config.docker_image,
+                    "container_id": container.id[:12],
+                },
             )
 
-            logger.info(f"Module installation completed: {module_name} ({duration:.2f}s)")
+            logger.info(
+                f"Module installation completed: {module_name} ({duration:.2f}s)"
+            )
 
             return {
                 "success": True,
@@ -429,7 +488,7 @@ class ModuleManager:
                 "module_name": module_name,
                 "container_id": container.id,
                 "container_name": container.name,
-                "status": ModuleStatus.RUNNING
+                "status": ModuleStatus.RUNNING,
             }
 
         except (ValueError, RuntimeError) as e:
@@ -445,23 +504,30 @@ class ModuleManager:
                         "error_message": str(e),
                         "error_count": {"$inc": 1},
                         "last_error_at": datetime.utcnow(),
-                        "updated_at": datetime.utcnow()
+                        "updated_at": datetime.utcnow(),
                     }
-                }
+                },
             )
 
             raise
 
         except Exception as e:
             # Unexpected errors
-            logger.exception(f"Unexpected error during module installation: {module_name}")
+            logger.exception(
+                f"Unexpected error during module installation: {module_name}"
+            )
             duration = (datetime.utcnow() - start_time).total_seconds()
             await self._log_audit(
-                user_id, user_email, user_role,
-                "install", module_name, config.version,
-                "failure", f"Unexpected error: {str(e)}",
+                user_id,
+                user_email,
+                user_role,
+                "install",
+                module_name,
+                config.version,
+                "failure",
+                f"Unexpected error: {str(e)}",
                 start_time,
-                duration
+                duration,
             )
 
             # Update database status to ERROR
@@ -473,12 +539,14 @@ class ModuleManager:
                         "error_message": str(e),
                         "error_count": {"$inc": 1},
                         "last_error_at": datetime.utcnow(),
-                        "updated_at": datetime.utcnow()
+                        "updated_at": datetime.utcnow(),
                     }
-                }
+                },
             )
 
-            raise RuntimeError(f"Failed to install module '{module_name}': {str(e)}") from e
+            raise RuntimeError(
+                f"Failed to install module '{module_name}': {str(e)}"
+            ) from e
 
     def _get_platform_network(self) -> str:
         """
@@ -496,14 +564,20 @@ class ModuleManager:
 
             if networks:
                 network_name = networks[0]  # Use the first network
-                logger.info(f"Detected platform network from API container: {network_name}")
+                logger.info(
+                    f"Detected platform network from API container: {network_name}"
+                )
                 return network_name
             else:
-                logger.warning("No networks found on API container, using default: a64core-network")
+                logger.warning(
+                    "No networks found on API container, using default: a64core-network"
+                )
                 return "a64core-network"
 
         except Exception as e:
-            logger.warning(f"Failed to detect platform network: {e}, using default: a64core-network")
+            logger.warning(
+                f"Failed to detect platform network: {e}, using default: a64core-network"
+            )
             return "a64core-network"
 
     def _detect_security_profile(self, image, config: ModuleConfig) -> str:
@@ -547,14 +621,16 @@ class ModuleManager:
         # Default: use relaxed for development, strict for production
         env = os.getenv("ENVIRONMENT", "development")
         default_profile = "relaxed" if env == "development" else "strict"
-        logger.info(f"No explicit security profile - using {default_profile} (environment: {env})")
+        logger.info(
+            f"No explicit security profile - using {default_profile} (environment: {env})"
+        )
         return default_profile
 
     async def _create_container(
         self,
         config: ModuleConfig,
         image,
-        allocated_ports: Optional[Dict[str, int]] = None
+        allocated_ports: Optional[Dict[str, int]] = None,
     ) -> docker.models.containers.Container:
         """
         Create and start Docker container with security configuration.
@@ -621,26 +697,26 @@ class ModuleManager:
             "ports": port_bindings,
             "network": network_mode,  # Use detected platform network
             "restart_policy": {"Name": "unless-stopped"},
-
             # Security configuration (CRITICAL - always enforced)
             "privileged": False,  # NEVER allow privileged containers
             "security_opt": ["no-new-privileges"],  # Prevent privilege escalation
-
             # Resource limits (prevent resource exhaustion attacks)
             "cpu_quota": cpu_limit,  # CPU limit
             "mem_limit": memory_limit,  # Memory limit
             "pids_limit": 100,  # Limit number of processes
-
             # Health check (if configured)
-            "healthcheck": self._parse_health_check(config.health_check) if config.health_check else None,
-
+            "healthcheck": (
+                self._parse_health_check(config.health_check)
+                if config.health_check
+                else None
+            ),
             # Labels (for identification and security profile tracking)
             "labels": {
                 "a64core.module": config.module_name,
                 "a64core.version": config.version,
                 "a64core.managed": "true",
-                "a64core.security.profile": security_profile
-            }
+                "a64core.security.profile": security_profile,
+            },
         }
 
         # Apply security profile-specific configuration
@@ -656,7 +732,9 @@ class ModuleManager:
 
         elif security_profile == "relaxed":
             # Development/legacy support: Run as root, necessary capabilities
-            logger.info("Applying RELAXED security profile (development/legacy modules)")
+            logger.info(
+                "Applying RELAXED security profile (development/legacy modules)"
+            )
             # Don't set user (defaults to root)
             # Don't drop capabilities (allows file operations)
             container_config["read_only"] = False  # Writable root filesystem
@@ -666,7 +744,9 @@ class ModuleManager:
 
         else:
             # Should not happen (auto is resolved to strict/relaxed)
-            logger.warning(f"Unknown security profile: {security_profile}, using relaxed")
+            logger.warning(
+                f"Unknown security profile: {security_profile}, using relaxed"
+            )
             container_config["read_only"] = False
 
         # Add volumes if specified
@@ -676,7 +756,7 @@ class ModuleManager:
                 host_path, container_path = volume.split(":")
                 container_config["volumes"][host_path] = {
                     "bind": container_path,
-                    "mode": "rw"
+                    "mode": "rw",
                 }
 
         try:
@@ -701,7 +781,7 @@ class ModuleManager:
         module_name: str,
         user_id: str,
         user_email: str,
-        user_role: str = "super_admin"
+        user_role: str = "super_admin",
     ) -> Dict[str, any]:
         """
         Uninstall a module and remove its container.
@@ -730,27 +810,41 @@ class ModuleManager:
         start_time = datetime.utcnow()
 
         try:
-            logger.info(f"Starting module uninstallation: {module_name} by {user_email}")
+            logger.info(
+                f"Starting module uninstallation: {module_name} by {user_email}"
+            )
 
             # Ensure Docker client is initialized
             self._ensure_docker_client()
 
             # Step 1: Find module in database
-            module_doc = await self.db.installed_modules.find_one({"module_name": module_name})
+            module_doc = await self.db.installed_modules.find_one(
+                {"module_name": module_name}
+            )
             if not module_doc:
                 error = f"Module '{module_name}' not found"
                 await self._log_audit(
-                    user_id, user_email, user_role,
-                    "uninstall", module_name, None,
-                    "failure", error,
-                    start_time
+                    user_id,
+                    user_email,
+                    user_role,
+                    "uninstall",
+                    module_name,
+                    None,
+                    "failure",
+                    error,
+                    start_time,
                 )
                 raise ValueError(error)
 
             # Step 2: Update status to UNINSTALLING
             await self.db.installed_modules.update_one(
                 {"module_name": module_name},
-                {"$set": {"status": ModuleStatus.UNINSTALLING, "updated_at": datetime.utcnow()}}
+                {
+                    "$set": {
+                        "status": ModuleStatus.UNINSTALLING,
+                        "updated_at": datetime.utcnow(),
+                    }
+                },
             )
 
             # Step 3: Stop and remove container
@@ -769,7 +863,9 @@ class ModuleManager:
                     logger.info(f"Container removed: {container.name}")
 
                 except docker.errors.NotFound:
-                    logger.warning(f"Container not found (already removed?): {container_id}")
+                    logger.warning(
+                        f"Container not found (already removed?): {container_id}"
+                    )
                 except APIError as e:
                     logger.error(f"Docker API error removing container: {e}")
                     # Continue with database cleanup even if container removal fails
@@ -782,7 +878,9 @@ class ModuleManager:
                 if proxy_removed:
                     logger.info(f"Reverse proxy route removed for {module_name}")
                 else:
-                    logger.warning(f"Failed to remove reverse proxy route for {module_name}")
+                    logger.warning(
+                        f"Failed to remove reverse proxy route for {module_name}"
+                    )
 
             # Step 5: Release allocated ports
             if self.port_manager:
@@ -796,20 +894,27 @@ class ModuleManager:
             # Step 6: Log successful uninstallation
             duration = (datetime.utcnow() - start_time).total_seconds()
             await self._log_audit(
-                user_id, user_email, user_role,
-                "uninstall", module_name, module_doc.get("version"),
-                "success", None,
+                user_id,
+                user_email,
+                user_role,
+                "uninstall",
+                module_name,
+                module_doc.get("version"),
+                "success",
+                None,
                 start_time,
                 duration,
-                {"container_id": container_id[:12] if container_id else None}
+                {"container_id": container_id[:12] if container_id else None},
             )
 
-            logger.info(f"Module uninstallation completed: {module_name} ({duration:.2f}s)")
+            logger.info(
+                f"Module uninstallation completed: {module_name} ({duration:.2f}s)"
+            )
 
             return {
                 "success": True,
                 "message": f"Module '{module_name}' uninstalled successfully",
-                "module_name": module_name
+                "module_name": module_name,
             }
 
         except ValueError as e:
@@ -819,25 +924,32 @@ class ModuleManager:
 
         except Exception as e:
             # Unexpected error
-            logger.exception(f"Unexpected error during module uninstallation: {module_name}")
+            logger.exception(
+                f"Unexpected error during module uninstallation: {module_name}"
+            )
             duration = (datetime.utcnow() - start_time).total_seconds()
             await self._log_audit(
-                user_id, user_email, user_role,
-                "uninstall", module_name, None,
-                "failure", f"Unexpected error: {str(e)}",
+                user_id,
+                user_email,
+                user_role,
+                "uninstall",
+                module_name,
+                None,
+                "failure",
+                f"Unexpected error: {str(e)}",
                 start_time,
-                duration
+                duration,
             )
-            raise RuntimeError(f"Failed to uninstall module '{module_name}': {str(e)}") from e
+            raise RuntimeError(
+                f"Failed to uninstall module '{module_name}': {str(e)}"
+            ) from e
 
     # =========================================================================
     # Module Status and Info
     # =========================================================================
 
     async def get_installed_modules(
-        self,
-        page: int = 1,
-        per_page: int = 20
+        self, page: int = 1, per_page: int = 20
     ) -> Dict[str, any]:
         """
         Get list of installed modules with pagination.
@@ -862,25 +974,31 @@ class ModuleManager:
         module_responses = []
         for module_doc in modules:
             try:
-                module_responses.append(ModuleResponse(
-                    module_name=module_doc.get("module_name", "unknown"),
-                    display_name=module_doc.get("display_name", module_doc.get("module_name", "unknown")),
-                    description=module_doc.get("description"),
-                    docker_image=module_doc.get("docker_image", "unknown:0.0.0"),
-                    version=module_doc.get("version", "0.0.0"),
-                    status=module_doc.get("status", ModuleStatus.ERROR),
-                    health=module_doc.get("health", ModuleHealth.UNKNOWN),
-                    container_id=module_doc.get("container_id"),
-                    container_name=module_doc.get("container_name"),
-                    ports=module_doc.get("ports", []),
-                    route_prefix=module_doc.get("route_prefix"),
-                    cpu_limit=module_doc.get("cpu_limit", "1.0"),
-                    memory_limit=module_doc.get("memory_limit", "512m"),
-                    installed_by_email=module_doc.get("installed_by_email", "unknown"),
-                    installed_at=module_doc.get("installed_at", datetime.utcnow()),
-                    updated_at=module_doc.get("updated_at", datetime.utcnow()),
-                    error_message=module_doc.get("error_message")
-                ))
+                module_responses.append(
+                    ModuleResponse(
+                        module_name=module_doc.get("module_name", "unknown"),
+                        display_name=module_doc.get(
+                            "display_name", module_doc.get("module_name", "unknown")
+                        ),
+                        description=module_doc.get("description"),
+                        docker_image=module_doc.get("docker_image", "unknown:0.0.0"),
+                        version=module_doc.get("version", "0.0.0"),
+                        status=module_doc.get("status", ModuleStatus.ERROR),
+                        health=module_doc.get("health", ModuleHealth.UNKNOWN),
+                        container_id=module_doc.get("container_id"),
+                        container_name=module_doc.get("container_name"),
+                        ports=module_doc.get("ports", []),
+                        route_prefix=module_doc.get("route_prefix"),
+                        cpu_limit=module_doc.get("cpu_limit", "1.0"),
+                        memory_limit=module_doc.get("memory_limit", "512m"),
+                        installed_by_email=module_doc.get(
+                            "installed_by_email", "unknown"
+                        ),
+                        installed_at=module_doc.get("installed_at", datetime.utcnow()),
+                        updated_at=module_doc.get("updated_at", datetime.utcnow()),
+                        error_message=module_doc.get("error_message"),
+                    )
+                )
             except Exception as e:
                 logger.warning(f"Skipping malformed module document: {e}")
 
@@ -890,8 +1008,8 @@ class ModuleManager:
                 "total": total,
                 "page": page,
                 "per_page": per_page,
-                "total_pages": (total + per_page - 1) // per_page
-            }
+                "total_pages": (total + per_page - 1) // per_page,
+            },
         }
 
     async def get_module_status(self, module_name: str) -> ModuleStatusResponse:
@@ -908,7 +1026,9 @@ class ModuleManager:
             ValueError: If module not found
         """
         # Get module from database
-        module_doc = await self.db.installed_modules.find_one({"module_name": module_name})
+        module_doc = await self.db.installed_modules.find_one(
+            {"module_name": module_name}
+        )
         if not module_doc:
             raise ValueError(f"Module '{module_name}' not found")
 
@@ -932,42 +1052,67 @@ class ModuleManager:
                     "started_at": state.get("StartedAt"),
                     "finished_at": state.get("FinishedAt"),
                     "exit_code": state.get("ExitCode"),
-                    "restart_count": state.get("RestartCount", 0)
+                    "restart_count": state.get("RestartCount", 0),
                 }
 
                 # Get resource usage stats
                 stats = container.stats(stream=False)
                 if stats:
                     # CPU usage
-                    cpu_delta = stats["cpu_stats"]["cpu_usage"]["total_usage"] - \
-                                stats["precpu_stats"]["cpu_usage"]["total_usage"]
-                    system_delta = stats["cpu_stats"]["system_cpu_usage"] - \
-                                   stats["precpu_stats"]["system_cpu_usage"]
-                    num_cpus = len(stats["cpu_stats"]["cpu_usage"].get("percpu_usage", [0]))
-                    cpu_percent = (cpu_delta / system_delta) * num_cpus * 100.0 if system_delta > 0 else 0.0
+                    cpu_delta = (
+                        stats["cpu_stats"]["cpu_usage"]["total_usage"]
+                        - stats["precpu_stats"]["cpu_usage"]["total_usage"]
+                    )
+                    system_delta = (
+                        stats["cpu_stats"]["system_cpu_usage"]
+                        - stats["precpu_stats"]["system_cpu_usage"]
+                    )
+                    num_cpus = len(
+                        stats["cpu_stats"]["cpu_usage"].get("percpu_usage", [0])
+                    )
+                    cpu_percent = (
+                        (cpu_delta / system_delta) * num_cpus * 100.0
+                        if system_delta > 0
+                        else 0.0
+                    )
 
                     # Memory usage
-                    memory_usage = stats["memory_stats"].get("usage", 0) / (1024 * 1024)  # MB
-                    memory_limit = stats["memory_stats"].get("limit", 0) / (1024 * 1024)  # MB
+                    memory_usage = stats["memory_stats"].get("usage", 0) / (
+                        1024 * 1024
+                    )  # MB
+                    memory_limit = stats["memory_stats"].get("limit", 0) / (
+                        1024 * 1024
+                    )  # MB
 
                     # Network usage
                     networks = stats.get("networks", {})
-                    network_rx = sum(net.get("rx_bytes", 0) for net in networks.values())
-                    network_tx = sum(net.get("tx_bytes", 0) for net in networks.values())
+                    network_rx = sum(
+                        net.get("rx_bytes", 0) for net in networks.values()
+                    )
+                    network_tx = sum(
+                        net.get("tx_bytes", 0) for net in networks.values()
+                    )
 
-                    container_stats.update({
-                        "cpu_usage_percent": round(cpu_percent, 2),
-                        "memory_usage_mb": round(memory_usage, 2),
-                        "memory_limit_mb": round(memory_limit, 2),
-                        "network_rx_bytes": network_rx,
-                        "network_tx_bytes": network_tx
-                    })
+                    container_stats.update(
+                        {
+                            "cpu_usage_percent": round(cpu_percent, 2),
+                            "memory_usage_mb": round(memory_usage, 2),
+                            "memory_limit_mb": round(memory_limit, 2),
+                            "network_rx_bytes": network_rx,
+                            "network_tx_bytes": network_tx,
+                        }
+                    )
 
                 # Calculate uptime
                 if state["Status"] == "running" and state.get("StartedAt"):
                     from dateutil import parser
+
                     started_at = parser.isoparse(state["StartedAt"])
-                    uptime_seconds = int((datetime.utcnow() - started_at.replace(tzinfo=None)).total_seconds())
+                    uptime_seconds = int(
+                        (
+                            datetime.utcnow() - started_at.replace(tzinfo=None)
+                        ).total_seconds()
+                    )
                     container_stats["uptime_seconds"] = uptime_seconds
 
             except docker.errors.NotFound:
@@ -986,7 +1131,7 @@ class ModuleManager:
             error_message=module_doc.get("error_message"),
             error_count=module_doc.get("error_count", 0),
             last_error_at=module_doc.get("last_error_at"),
-            **container_stats
+            **container_stats,
         )
 
     # =========================================================================
@@ -1027,9 +1172,7 @@ class ModuleManager:
         # Check for shell injection attempts (paranoid check)
         dangerous_chars = [";", "&", "|", "$", "`", "(", ")", "<", ">"]
         if any(char in image for char in dangerous_chars):
-            raise ValueError(
-                f"Docker image contains suspicious characters: {image}"
-            )
+            raise ValueError(f"Docker image contains suspicious characters: {image}")
 
         logger.debug(f"Docker image validated: {image} (registry: {registry})")
 
@@ -1056,7 +1199,9 @@ class ModuleManager:
             )
 
         # Check per-user modules
-        user_modules = await self.db.installed_modules.count_documents({"installed_by_user_id": user_id})
+        user_modules = await self.db.installed_modules.count_documents(
+            {"installed_by_user_id": user_id}
+        )
         if user_modules >= MAX_MODULES_PER_USER:
             raise ValueError(
                 f"Maximum number of modules per user ({MAX_MODULES_PER_USER}) reached. "
@@ -1075,10 +1220,12 @@ class ModuleManager:
         """
         return {
             "test": health_check.get("test", ""),
-            "interval": int(health_check.get("interval", "30s").rstrip("s")) * 1000000000,
+            "interval": int(health_check.get("interval", "30s").rstrip("s"))
+            * 1000000000,
             "timeout": int(health_check.get("timeout", "10s").rstrip("s")) * 1000000000,
             "retries": int(health_check.get("retries", "3")),
-            "start_period": int(health_check.get("start_period", "0s").rstrip("s")) * 1000000000
+            "start_period": int(health_check.get("start_period", "0s").rstrip("s"))
+            * 1000000000,
         }
 
     # =========================================================================
@@ -1086,10 +1233,7 @@ class ModuleManager:
     # =========================================================================
 
     async def _update_nginx_routing(
-        self,
-        module_name: str,
-        route_prefix: str,
-        ports: List[str]
+        self, module_name: str, route_prefix: str, ports: List[str]
     ) -> None:
         """
         Update NGINX configuration to add routing for module.
@@ -1109,11 +1253,7 @@ class ModuleManager:
         # TODO: Implement NGINX config manipulation
         pass
 
-    async def _remove_nginx_routing(
-        self,
-        module_name: str,
-        route_prefix: str
-    ) -> None:
+    async def _remove_nginx_routing(self, module_name: str, route_prefix: str) -> None:
         """
         Remove NGINX routing configuration for module.
 
@@ -1143,7 +1283,7 @@ class ModuleManager:
         error_message: Optional[str],
         start_time: datetime,
         duration_seconds: Optional[float] = None,
-        metadata: Optional[Dict[str, str]] = None
+        metadata: Optional[Dict[str, str]] = None,
     ) -> None:
         """
         Log module operation to audit trail.
@@ -1174,12 +1314,14 @@ class ModuleManager:
             error_message=error_message,
             timestamp=start_time,
             duration_seconds=duration_seconds,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         try:
             await self.db.module_audit_log.insert_one(audit_log.dict())
-            logger.debug(f"Audit log created: {operation} {module_name} by {user_email} ({status})")
+            logger.debug(
+                f"Audit log created: {operation} {module_name} by {user_email} ({status})"
+            )
         except Exception as e:
             # NEVER let audit logging failure break the operation
             logger.error(f"Failed to write audit log: {e}")

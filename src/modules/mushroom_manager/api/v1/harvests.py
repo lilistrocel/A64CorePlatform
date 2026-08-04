@@ -28,6 +28,7 @@ router = APIRouter()
 
 class LineYieldRow(BaseModel):
     """Harvest performance for one genetic line at one clone generation."""
+
     lineId: str
     lineCode: Optional[str] = None
     cloneGeneration: Optional[int] = Field(None, description="G of the harvested block")
@@ -41,6 +42,7 @@ class LineYieldRow(BaseModel):
 # ---------------------------------------------------------------------------
 # POST /facilities/{facility_id}/rooms/{room_id}/harvests
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/facilities/{facility_id}/rooms/{room_id}/harvests",
@@ -79,6 +81,7 @@ async def create_harvest(
 # GET /facilities/{facility_id}/rooms/{room_id}/harvests
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/facilities/{facility_id}/rooms/{room_id}/harvests",
     response_model=SuccessResponse[List[Harvest]],
@@ -104,6 +107,7 @@ async def list_harvests_for_room(
 # GET /facilities/{facility_id}/harvests
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/facilities/{facility_id}/harvests",
     response_model=SuccessResponse[List[Harvest]],
@@ -124,6 +128,7 @@ async def list_harvests_for_facility(
 # ---------------------------------------------------------------------------
 # GET /harvests/by-line
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/harvests/by-line",

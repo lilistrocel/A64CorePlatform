@@ -35,11 +35,17 @@ async def _try_cache_fallback(
         if tool_name == "get_equipment_list":
             equipment = await SenseHubCacheQueryService.get_equipment_as_list(block_id)
             if equipment:
-                return {"equipment": equipment, "count": len(equipment), "_cached": True}
+                return {
+                    "equipment": equipment,
+                    "count": len(equipment),
+                    "_cached": True,
+                }
 
         elif tool_name == "get_alerts":
             severity = tool_input.get("severity")
-            alerts = await SenseHubCacheQueryService.get_alerts_as_list(block_id, severity=severity)
+            alerts = await SenseHubCacheQueryService.get_alerts_as_list(
+                block_id, severity=severity
+            )
             if alerts:
                 return {"alerts": alerts, "count": len(alerts), "_cached": True}
 
@@ -97,9 +103,7 @@ async def execute_read_tool(
             limit = int(tool_input.get("limit", 10))
 
             # Try historical readings first
-            readings = await client.get_equipment_history(
-                equipment_id, limit=limit
-            )
+            readings = await client.get_equipment_history(equipment_id, limit=limit)
 
             # Always fetch the equipment's latest reading as well.
             # The /history endpoint may be empty on fresh SenseHub instances,
@@ -113,7 +117,9 @@ async def execute_read_tool(
                         latest_reading = eq.get("last_reading") or eq.get("lastReading")
                         break
             except Exception as e:
-                logger.debug(f"Could not fetch latest reading for equipment {equipment_id}: {e}")
+                logger.debug(
+                    f"Could not fetch latest reading for equipment {equipment_id}: {e}"
+                )
 
             result = {
                 "equipment_id": equipment_id,
@@ -147,7 +153,9 @@ async def execute_read_tool(
 
     except Exception as e:
         # On connection errors, try cache fallback before returning error
-        if isinstance(e, (httpx.ConnectError, httpx.TimeoutException, ConnectionError, OSError)):
+        if isinstance(
+            e, (httpx.ConnectError, httpx.TimeoutException, ConnectionError, OSError)
+        ):
             logger.warning(f"SenseHub unreachable for {tool_name}, trying cache: {e}")
             cached = await _try_cache_fallback(tool_name, tool_input, block_id)
             if cached:
@@ -298,9 +306,7 @@ def describe_write_action(tool_name: str, tool_input: dict) -> tuple[str, str]:
         return desc, "high"
 
     elif tool_name == "delete_automation":
-        desc = (
-            f"PERMANENTLY DELETE automation #{tool_input.get('automation_id', '?')}"
-        )
+        desc = f"PERMANENTLY DELETE automation #{tool_input.get('automation_id', '?')}"
         return desc, "high"
 
     return f"Execute {tool_name}", "high"
@@ -352,10 +358,12 @@ async def execute_web_search(query: str) -> dict:
             for chunk in getattr(grounding, "grounding_chunks", []):
                 web = getattr(chunk, "web", None)
                 if web:
-                    sources.append({
-                        "title": getattr(web, "title", ""),
-                        "url": getattr(web, "uri", ""),
-                    })
+                    sources.append(
+                        {
+                            "title": getattr(web, "title", ""),
+                            "url": getattr(web, "uri", ""),
+                        }
+                    )
 
         return {
             "search_results": text or "No results found.",

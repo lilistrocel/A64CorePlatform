@@ -31,12 +31,12 @@ router = APIRouter()
     response_model=SuccessResponse[Farm],
     status_code=status.HTTP_201_CREATED,
     summary="Create a new farm",
-    description="Create a new farm. Requires farm.manage permission. Creator is automatically assigned as farm manager."
+    description="Create a new farm. Requires farm.manage permission. Creator is automatically assigned as farm manager.",
 )
 async def create_farm(
     farm_data: FarmCreate,
     current_user: CurrentUser = Depends(require_permission("farm.manage")),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Create a new farm
@@ -48,22 +48,17 @@ async def create_farm(
     - **areaUnit**: Area unit (default: hectares)
     """
     farm = await service.create_farm(
-        farm_data,
-        UUID(current_user.userId),
-        current_user.email
+        farm_data, UUID(current_user.userId), current_user.email
     )
 
-    return SuccessResponse(
-        data=farm,
-        message="Farm created successfully"
-    )
+    return SuccessResponse(data=farm, message="Farm created successfully")
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[Farm],
     summary="Get all farms",
-    description="Get all farms with pagination. Users see only their assigned farms unless admin."
+    description="Get all farms with pagination. Users see only their assigned farms unless admin.",
 )
 @cache_response(ttl=60, key_prefix="farm")
 async def get_farms(
@@ -71,7 +66,7 @@ async def get_farms(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     isActive: Optional[bool] = Query(None, description="Filter by active status"),
     current_user: CurrentUser = Depends(get_current_active_user),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Get all farms with pagination
@@ -86,15 +81,10 @@ async def get_farms(
     # Check if user is admin
     if current_user.role in ["super_admin", "admin"]:
         # Admins see all farms
-        farms, total, total_pages = await service.get_all_farms(
-            page, perPage, isActive
-        )
+        farms, total, total_pages = await service.get_all_farms(page, perPage, isActive)
     else:
         # Regular users see only their farms
-        farms = await service.get_user_farms(
-            UUID(current_user.userId),
-            isActive
-        )
+        farms = await service.get_user_farms(UUID(current_user.userId), isActive)
         total = len(farms)
         total_pages = (total + perPage - 1) // perPage
 
@@ -106,11 +96,8 @@ async def get_farms(
     return PaginatedResponse(
         data=farms,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
@@ -118,12 +105,12 @@ async def get_farms(
     "/{farm_id}",
     response_model=SuccessResponse[Farm],
     summary="Get farm by ID",
-    description="Get a specific farm by ID. User must have access to the farm."
+    description="Get a specific farm by ID. User must have access to the farm.",
 )
 async def get_farm(
     farm_id: UUID,
     current_user: CurrentUser = Depends(get_current_active_user),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Get farm by ID
@@ -138,7 +125,7 @@ async def get_farm(
             # TODO: Check farm assignments
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: Not assigned to this farm"
+                detail="Access denied: Not assigned to this farm",
             )
 
     return SuccessResponse(data=farm)
@@ -148,13 +135,13 @@ async def get_farm(
     "/{farm_id}",
     response_model=SuccessResponse[Farm],
     summary="Update farm",
-    description="Update a farm. Only the farm manager or super_admin can update a farm."
+    description="Update a farm. Only the farm manager or super_admin can update a farm.",
 )
 async def update_farm(
     farm_id: UUID,
     update_data: FarmUpdate,
     current_user: CurrentUser = Depends(require_permission("farm.manage")),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Update a farm
@@ -167,29 +154,23 @@ async def update_farm(
     is_admin = current_user.role == "super_admin"
 
     farm = await service.update_farm(
-        farm_id,
-        update_data,
-        UUID(current_user.userId),
-        is_admin=is_admin
+        farm_id, update_data, UUID(current_user.userId), is_admin=is_admin
     )
 
-    return SuccessResponse(
-        data=farm,
-        message="Farm updated successfully"
-    )
+    return SuccessResponse(data=farm, message="Farm updated successfully")
 
 
 @router.delete(
     "/{farm_id}",
     response_model=SuccessResponse[dict],
     summary="Delete farm",
-    description="Delete a farm (soft delete). Super admins, admins, or the farm manager can delete."
+    description="Delete a farm (soft delete). Super admins, admins, or the farm manager can delete.",
 )
 async def delete_farm(
     farm_id: UUID,
     reason: Optional[str] = Query(None, description="Deletion reason"),
     current_user: CurrentUser = Depends(require_permission("farm.manage")),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Delete a farm with CASCADE deletion.
@@ -205,27 +186,27 @@ async def delete_farm(
         if str(farm.managerId) != str(current_user.userId):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the farm manager can delete this farm"
+                detail="Only the farm manager can delete this farm",
             )
 
     result = await CascadeDeletionService.delete_farm_with_cascade(
         farm_id=farm_id,
         user_id=UUID(current_user.userId),
         user_email=current_user.email,
-        reason=reason
+        reason=reason,
     )
 
     if not result.get("success"):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result.get("error", "Failed to delete farm")
+            detail=result.get("error", "Failed to delete farm"),
         )
 
     return SuccessResponse(
         data={
             "message": "Farm and all related data deleted successfully",
             "farmId": str(farm_id),
-            "statistics": result.get("statistics")
+            "statistics": result.get("statistics"),
         }
     )
 
@@ -234,7 +215,7 @@ async def delete_farm(
     "/{farm_id}/summary",
     response_model=SuccessResponse[dict],
     summary="Get farm summary",
-    description="Get farm summary with statistics (blocks, predicted yield, etc.)"
+    description="Get farm summary with statistics (blocks, predicted yield, etc.)",
 )
 async def get_farm_summary(
     farm_id: UUID,
@@ -243,7 +224,7 @@ async def get_farm_summary(
         description="Filter by farming year (e.g., 2025). When set, predicted yield is summed across blocks planted in that year and actual yield comes from harvests recorded in that year.",
     ),
     current_user: CurrentUser = Depends(get_current_active_user),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Get farm summary with statistics
@@ -271,7 +252,7 @@ async def get_farm_summary(
         if str(farm.managerId) != current_user.userId:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: Not assigned to this farm"
+                detail="Access denied: Not assigned to this farm",
             )
 
     from ...services.block.block_repository_new import BlockRepository
@@ -280,10 +261,10 @@ async def get_farm_summary(
     # Get blocks. Physicals are year-agnostic containers; virtuals are
     # crop-cycle-bound so we filter them by farmingYear when provided.
     physical_block_objs, _ = await BlockRepository.get_by_farm(
-        farm_id, skip=0, limit=1000, block_category='physical'
+        farm_id, skip=0, limit=1000, block_category="physical"
     )
     virtual_block_objs, _ = await BlockRepository.get_by_farm(
-        farm_id, skip=0, limit=1000, block_category='virtual', farming_year=farmingYear
+        farm_id, skip=0, limit=1000, block_category="virtual", farming_year=farmingYear
     )
 
     # Render-side block list: virtuals (year-filtered) + all physicals.
@@ -335,7 +316,8 @@ async def get_farm_summary(
     # If a year is selected, narrow further to blocks planted in that year.
     if farmingYear is not None:
         current_cycle_blocks = [
-            b for b in current_cycle_blocks
+            b
+            for b in current_cycle_blocks
             if getattr(b, "farmingYearPlanted", None) == farmingYear
         ]
 
@@ -349,6 +331,7 @@ async def get_farm_summary(
     actual_yield = 0.0
     if current_cycle_blocks:
         from ...services.database import farm_db
+
         db = farm_db.get_database()
         or_clauses = []
         for b in current_cycle_blocks:
@@ -372,7 +355,7 @@ async def get_farm_summary(
         "planned": 0,
         "planted": 0,
         "harvesting": 0,
-        "alert": 0
+        "alert": 0,
     }
 
     active_plantings = 0
@@ -403,7 +386,7 @@ async def get_farm_summary(
         "activePlantings": active_plantings,
         "totalPlantedPlants": total_planted_plants,
         "predictedYield": predicted_yield,
-        "actualYield": actual_yield
+        "actualYield": actual_yield,
     }
 
     return SuccessResponse(data=summary)
@@ -413,18 +396,18 @@ async def get_farm_summary(
     "/{farm_id}/analytics",
     response_model=SuccessResponse[FarmAnalyticsResponse],
     summary="Get farm analytics",
-    description="Get comprehensive farm-level analytics aggregated from all blocks"
+    description="Get comprehensive farm-level analytics aggregated from all blocks",
 )
 async def get_farm_analytics(
     farm_id: UUID,
     period: str = Query(
         "30d",
         description="Time period: '30d', '90d', '6m', '1y', 'all'",
-        regex="^(30d|90d|6m|1y|all)$"
+        regex="^(30d|90d|6m|1y|all)$",
     ),
     farmingYear: Optional[int] = Query(None, description="Filter by farming year"),
     current_user: CurrentUser = Depends(get_current_active_user),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Get comprehensive farm analytics aggregated from all blocks
@@ -453,19 +436,16 @@ async def get_farm_analytics(
         if str(farm.managerId) != current_user.userId:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: Not assigned to this farm"
+                detail="Access denied: Not assigned to this farm",
             )
 
     # Generate analytics
     analytics = await FarmAnalyticsService.get_farm_analytics(
-        farm_id=farm_id,
-        period=period,
-        farming_year=farmingYear
+        farm_id=farm_id, period=period, farming_year=farmingYear
     )
 
     return SuccessResponse(
-        data=analytics,
-        message="Farm analytics retrieved successfully"
+        data=analytics, message="Farm analytics retrieved successfully"
     )
 
 
@@ -473,15 +453,15 @@ async def get_farm_analytics(
     "/analytics/global",
     response_model=SuccessResponse[GlobalAnalyticsResponse],
     summary="Get global analytics across all farms",
-    description="Get comprehensive analytics aggregated across ALL farms in the system. Admin access required."
+    description="Get comprehensive analytics aggregated across ALL farms in the system. Admin access required.",
 )
 async def get_global_analytics(
     period: str = Query(
         "30d",
         description="Time period: '30d', '90d', '6m', '1y', 'all'",
-        regex="^(30d|90d|6m|1y|all)$"
+        regex="^(30d|90d|6m|1y|all)$",
     ),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get comprehensive analytics aggregated across ALL farms in the system.
@@ -514,21 +494,24 @@ async def get_global_analytics(
     if current_user.role not in ["super_admin", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: Admin privileges required for global analytics"
+            detail="Access denied: Admin privileges required for global analytics",
         )
 
-    logger.info(f"[Global Analytics API] User {current_user.email} requesting global analytics for period: {period}")
+    logger.info(
+        f"[Global Analytics API] User {current_user.email} requesting global analytics for period: {period}"
+    )
 
     # Generate global analytics
     analytics = await GlobalAnalyticsService.get_global_analytics(period)
 
-    logger.info(f"[Global Analytics API] Generated analytics: {analytics.aggregatedMetrics.totalFarms} farms, "
-                f"{analytics.aggregatedMetrics.totalBlocks} blocks, "
-                f"{analytics.aggregatedMetrics.totalYieldKg} kg total yield")
+    logger.info(
+        f"[Global Analytics API] Generated analytics: {analytics.aggregatedMetrics.totalFarms} farms, "
+        f"{analytics.aggregatedMetrics.totalBlocks} blocks, "
+        f"{analytics.aggregatedMetrics.totalYieldKg} kg total yield"
+    )
 
     return SuccessResponse(
-        data=analytics,
-        message="Global analytics retrieved successfully"
+        data=analytics, message="Global analytics retrieved successfully"
     )
 
 
@@ -536,12 +519,12 @@ async def get_global_analytics(
     "/{farm_id}/farming-years",
     response_model=SuccessResponse[dict],
     summary="Get available farming years for a farm",
-    description="Get a list of all farming years that have data for this farm, used for year selector dropdown."
+    description="Get a list of all farming years that have data for this farm, used for year selector dropdown.",
 )
 async def get_farm_farming_years(
     farm_id: UUID,
     current_user: CurrentUser = Depends(get_current_active_user),
-    service: FarmService = Depends()
+    service: FarmService = Depends(),
 ):
     """
     Get all farming years that have data for a specific farm.
@@ -570,7 +553,7 @@ async def get_farm_farming_years(
         if str(farm.managerId) != current_user.userId:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: Not assigned to this farm"
+                detail="Access denied: Not assigned to this farm",
             )
 
     db = farm_db.get_database()
@@ -581,22 +564,26 @@ async def get_farm_farming_years(
     current_year = await fy_service.get_current_farming_year()
 
     # Query distinct farmingYear values from block_harvests for this farm
-    harvest_years_cursor = db.block_harvests.aggregate([
-        {"$match": {"farmId": str(farm_id)}},
-        {"$group": {"_id": "$farmingYear"}},
-        {"$match": {"_id": {"$ne": None}}}
-    ])
+    harvest_years_cursor = db.block_harvests.aggregate(
+        [
+            {"$match": {"farmId": str(farm_id)}},
+            {"$group": {"_id": "$farmingYear"}},
+            {"$match": {"_id": {"$ne": None}}},
+        ]
+    )
     harvest_years = set()
     async for doc in harvest_years_cursor:
         if doc["_id"] is not None:
             harvest_years.add(doc["_id"])
 
     # Query distinct farmingYearPlanted values from blocks for this farm
-    block_years_cursor = db.blocks.aggregate([
-        {"$match": {"farmId": str(farm_id)}},
-        {"$group": {"_id": "$farmingYearPlanted"}},
-        {"$match": {"_id": {"$ne": None}}}
-    ])
+    block_years_cursor = db.blocks.aggregate(
+        [
+            {"$match": {"farmId": str(farm_id)}},
+            {"$group": {"_id": "$farmingYearPlanted"}},
+            {"$match": {"_id": {"$ne": None}}},
+        ]
+    )
     block_years = set()
     async for doc in block_years_cursor:
         if doc["_id"] is not None:
@@ -614,14 +601,18 @@ async def get_farm_farming_years(
     # Build response with formatted display strings
     years_list = []
     for year in sorted_years:
-        display = fy_service.format_farming_year_display(year, config.farmingYearStartMonth)
-        years_list.append({
-            "year": year,
-            "display": display,
-            "isCurrent": year == current_year,
-            "hasHarvests": year in harvest_years,
-            "hasBlocks": year in block_years
-        })
+        display = fy_service.format_farming_year_display(
+            year, config.farmingYearStartMonth
+        )
+        years_list.append(
+            {
+                "year": year,
+                "display": display,
+                "isCurrent": year == current_year,
+                "hasHarvests": year in harvest_years,
+                "hasBlocks": year in block_years,
+            }
+        )
 
     return SuccessResponse(
         data={
@@ -631,8 +622,10 @@ async def get_farm_farming_years(
             "currentFarmingYear": current_year,
             "config": {
                 "startMonth": config.farmingYearStartMonth,
-                "startMonthName": MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
-            }
+                "startMonthName": MONTH_NAMES.get(
+                    config.farmingYearStartMonth, "Unknown"
+                ),
+            },
         },
-        message=f"Found {len(years_list)} farming years with data"
+        message=f"Found {len(years_list)} farming years with data",
     )

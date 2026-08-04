@@ -29,7 +29,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install black flake8
+          # black is PINNED on purpose. Its stable style changes between
+          # releases, so an unpinned install turns this job red across the
+          # whole codebase the day a new version lands — through no change of
+          # ours. src/ was formatted with exactly this version; bump it
+          # deliberately and reformat in the same commit.
+          pip install black==26.5.1 flake8
 
       - name: Check formatting with black
         run: black --check --diff src/

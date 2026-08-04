@@ -61,7 +61,9 @@ class SenseHubConnectionService:
         # Also handle legacy format {"setupCompleted": true}
         try:
             setup = await client.get_setup_status()
-            needs_setup = setup.get("needsSetup", not setup.get("setupCompleted", False))
+            needs_setup = setup.get(
+                "needsSetup", not setup.get("setupCompleted", False)
+            )
             if needs_setup:
                 raise HTTPException(
                     status_code=400,
@@ -304,7 +306,9 @@ class SenseHubConnectionService:
 
         mcp_port = iot.get("mcpPort") or 3001
 
-        client = SenseHubMCPClient(address=address, mcp_port=mcp_port, api_key=mcp_api_key)
+        client = SenseHubMCPClient(
+            address=address, mcp_port=mcp_port, api_key=mcp_api_key
+        )
         # Probe the connection now so callers can fall back to HTTP if port 3001 is down
         await client._initialize_session()
         return client

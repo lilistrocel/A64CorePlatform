@@ -29,41 +29,49 @@ class SystemHealthChecker:
                 resp = await client.get(HEALTH_URL)
 
             if resp.status_code != 200:
-                issues.append(WatchdogIssue(
-                    checkType=CheckType.SYSTEM_HEALTH,
-                    severity=Severity.CRITICAL,
-                    title="API Health Check Failed",
-                    description=f"Health endpoint returned HTTP {resp.status_code}",
-                    entityId="api_health",
-                ))
+                issues.append(
+                    WatchdogIssue(
+                        checkType=CheckType.SYSTEM_HEALTH,
+                        severity=Severity.CRITICAL,
+                        title="API Health Check Failed",
+                        description=f"Health endpoint returned HTTP {resp.status_code}",
+                        entityId="api_health",
+                    )
+                )
                 return issues
 
             data = resp.json()
 
             # Check individual components if the response includes them
             components = data.get("components", data.get("services", {}))
-            for name, status in components.items() if isinstance(components, dict) else []:
+            for name, status in (
+                components.items() if isinstance(components, dict) else []
+            ):
                 if isinstance(status, dict):
                     is_healthy = status.get("healthy", status.get("status") == "ok")
                 else:
                     is_healthy = status in (True, "ok", "healthy")
 
                 if not is_healthy:
-                    issues.append(WatchdogIssue(
-                        checkType=CheckType.SYSTEM_HEALTH,
-                        severity=Severity.CRITICAL,
-                        title=f"Unhealthy Service: {name}",
-                        description=f"Component '{name}' reported unhealthy status",
-                        entityId=f"system:{name}",
-                    ))
+                    issues.append(
+                        WatchdogIssue(
+                            checkType=CheckType.SYSTEM_HEALTH,
+                            severity=Severity.CRITICAL,
+                            title=f"Unhealthy Service: {name}",
+                            description=f"Component '{name}' reported unhealthy status",
+                            entityId=f"system:{name}",
+                        )
+                    )
 
         except Exception as e:
-            issues.append(WatchdogIssue(
-                checkType=CheckType.SYSTEM_HEALTH,
-                severity=Severity.CRITICAL,
-                title="API Unreachable",
-                description=f"Health endpoint unreachable: {str(e)}",
-                entityId="api_health",
-            ))
+            issues.append(
+                WatchdogIssue(
+                    checkType=CheckType.SYSTEM_HEALTH,
+                    severity=Severity.CRITICAL,
+                    title="API Unreachable",
+                    description=f"Health endpoint unreachable: {str(e)}",
+                    entityId="api_health",
+                )
+            )
 
         return issues

@@ -98,35 +98,37 @@ LEGAL_TRANSITIONS: Dict[str, Dict[DocumentStatus, FrozenSet[DocumentStatus]]] = 
     # Purchasing documents
     # -----------------------------------------------------------------------
     "PR": {
-        _D:  frozenset({_PA, _O, _CA}),         # submit (→PA or →O if no approval gate) or cancel
-        _PA: frozenset({_O, _CA}),               # approve (→O) or cancel
-        _O:  frozenset({_CL, _CA}),              # close (PR→PO created) or cancel
+        _D: frozenset(
+            {_PA, _O, _CA}
+        ),  # submit (→PA or →O if no approval gate) or cancel
+        _PA: frozenset({_O, _CA}),  # approve (→O) or cancel
+        _O: frozenset({_CL, _CA}),  # close (PR→PO created) or cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "PO": {
-        _D:  frozenset({_PA, _O, _CA}),          # submit
-        _PA: frozenset({_O, _CA}),               # approve
-        _O:  frozenset({_PC, _CL, _CA}),         # partial GR or full GR or cancel
-        _PC: frozenset({_CL}),                   # final GR closes PO
+        _D: frozenset({_PA, _O, _CA}),  # submit
+        _PA: frozenset({_O, _CA}),  # approve
+        _O: frozenset({_PC, _CL, _CA}),  # partial GR or full GR or cancel
+        _PC: frozenset({_CL}),  # final GR closes PO
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "GR": {
-        _D: frozenset({_O}),                     # post (Draft → Open means "Posted")
-        _O: frozenset(),                         # terminal once posted
+        _D: frozenset({_O}),  # post (Draft → Open means "Posted")
+        _O: frozenset(),  # terminal once posted
     },
     "AP_INVOICE": {
-        _D:  frozenset({_PA}),                   # submit for approval
-        _PA: frozenset({_O, _D}),                # approve (→Open=posted) or push back to Draft
-        _O:  frozenset({_CL}),                   # payment closes the AP
+        _D: frozenset({_PA}),  # submit for approval
+        _PA: frozenset({_O, _D}),  # approve (→Open=posted) or push back to Draft
+        _O: frozenset({_CL}),  # payment closes the AP
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "AP_CREDIT": {
-        _D:  frozenset({_PA}),
+        _D: frozenset({_PA}),
         _PA: frozenset({_O, _D}),
-        _O:  frozenset({_CL}),
+        _O: frozenset({_CL}),
         _CL: frozenset(),
     },
     # -----------------------------------------------------------------------
@@ -157,10 +159,12 @@ LEGAL_TRANSITIONS: Dict[str, Dict[DocumentStatus, FrozenSet[DocumentStatus]]] = 
     #   PARTLY_CLOSED → OPEN          when consumedAmount drops back to zero
     # -----------------------------------------------------------------------
     "AP_DPI": {
-        _D:  frozenset({_PA, _CA}),          # submit for approval or cancel draft
-        _PA: frozenset({_O, _D, _CA}),       # approve / reject (→ D) / cancel
-        _O:  frozenset({_PC, _CL, _CA}),     # partial AP netting / full consumption / cancel
-        _PC: frozenset({_CL, _CA}),          # full consumption from partial / cancel
+        _D: frozenset({_PA, _CA}),  # submit for approval or cancel draft
+        _PA: frozenset({_O, _D, _CA}),  # approve / reject (→ D) / cancel
+        _O: frozenset(
+            {_PC, _CL, _CA}
+        ),  # partial AP netting / full consumption / cancel
+        _PC: frozenset({_CL, _CA}),  # full consumption from partial / cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
@@ -195,10 +199,12 @@ LEGAL_TRANSITIONS: Dict[str, Dict[DocumentStatus, FrozenSet[DocumentStatus]]] = 
     #   PARTLY_CLOSED → OPEN          when all consumption is released
     # -----------------------------------------------------------------------
     "BLA": {
-        _D:  frozenset({_PA, _O, _CA}),      # submit (→PA) / direct-open small orgs / cancel
-        _PA: frozenset({_O, _D, _CA}),       # approve / reject (→D) / cancel
-        _O:  frozenset({_PC, _CL, _CA}),     # partial consumption / full consumption / cancel
-        _PC: frozenset({_CL, _CA}),          # full consumption from partial / cancel
+        _D: frozenset({_PA, _O, _CA}),  # submit (→PA) / direct-open small orgs / cancel
+        _PA: frozenset({_O, _D, _CA}),  # approve / reject (→D) / cancel
+        _O: frozenset(
+            {_PC, _CL, _CA}
+        ),  # partial consumption / full consumption / cancel
+        _PC: frozenset({_CL, _CA}),  # full consumption from partial / cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
@@ -206,56 +212,58 @@ LEGAL_TRANSITIONS: Dict[str, Dict[DocumentStatus, FrozenSet[DocumentStatus]]] = 
     # Sales documents
     # -----------------------------------------------------------------------
     "QUOTE": {
-        _D:  frozenset({_O, _CL, _CA}),          # send to customer (→O), expire (→CL), cancel
-        _O:  frozenset({_CL, _CA}),              # customer accepts (→CL=converted to SO), or cancel
+        _D: frozenset({_O, _CL, _CA}),  # send to customer (→O), expire (→CL), cancel
+        _O: frozenset({_CL, _CA}),  # customer accepts (→CL=converted to SO), or cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "SO": {
-        _D:  frozenset({_O, _CA}),               # confirm order
-        _O:  frozenset({_PC, _CL, _CA}),         # partial delivery or full delivery or cancel
-        _PC: frozenset({_CL, _CA}),              # final delivery or cancel
+        _D: frozenset({_O, _CA}),  # confirm order
+        _O: frozenset({_PC, _CL, _CA}),  # partial delivery or full delivery or cancel
+        _PC: frozenset({_CL, _CA}),  # final delivery or cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "DELIVERY": {
-        _D:  frozenset({_O, _CA}),               # post / ship, or cancel draft
-        _O:  frozenset({_PC, _CL, _CA}),         # partial return, terminal close, or cancel (T-100.8)
-        _PC: frozenset({_CL, _CA}),              # final close or cancel
+        _D: frozenset({_O, _CA}),  # post / ship, or cancel draft
+        _O: frozenset(
+            {_PC, _CL, _CA}
+        ),  # partial return, terminal close, or cancel (T-100.8)
+        _PC: frozenset({_CL, _CA}),  # final close or cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "AR_INVOICE": {
-        _D:  frozenset({_PA, _O}),               # submit or auto-post
+        _D: frozenset({_PA, _O}),  # submit or auto-post
         _PA: frozenset({_O, _D}),
-        _O:  frozenset({_PC, _CL}),              # partial payment or full payment
+        _O: frozenset({_PC, _CL}),  # partial payment or full payment
         _PC: frozenset({_CL}),
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "AR_CREDIT": {
-        _D:  frozenset({_O}),
-        _O:  frozenset({_CL}),
+        _D: frozenset({_O}),
+        _O: frozenset({_CL}),
         _CL: frozenset(),
     },
     # -----------------------------------------------------------------------
     # T-100.11 — Returns flow
     # -----------------------------------------------------------------------
     "RR": {
-        _D:  frozenset({_O, _CA}),              # submit (→O) or cancel
-        _O:  frozenset({_CL, _CA}),             # fully consumed (→CL) or cancel
+        _D: frozenset({_O, _CA}),  # submit (→O) or cancel
+        _O: frozenset({_CL, _CA}),  # fully consumed (→CL) or cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "RTN": {
-        _D:  frozenset({_O, _CA}),              # post return (→O) or cancel draft
-        _O:  frozenset({_CL, _CA}),             # fully credited (→CL) or cancel
+        _D: frozenset({_O, _CA}),  # post return (→O) or cancel draft
+        _O: frozenset({_CL, _CA}),  # fully credited (→CL) or cancel
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "ARC": {
-        _D:  frozenset({_O, _CA}),              # post credit note (→O) or cancel draft
-        _O:  frozenset({_CL, _CA}),             # terminal close or cancel (super_admin)
+        _D: frozenset({_O, _CA}),  # post credit note (→O) or cancel draft
+        _O: frozenset({_CL, _CA}),  # terminal close or cancel (super_admin)
         _CL: frozenset(),
         _CA: frozenset(),
     },
@@ -263,14 +271,14 @@ LEGAL_TRANSITIONS: Dict[str, Dict[DocumentStatus, FrozenSet[DocumentStatus]]] = 
     # Payments
     # -----------------------------------------------------------------------
     "IPAY": {
-        _D:  frozenset({_O, _CA}),
-        _O:  frozenset({_CL}),
+        _D: frozenset({_O, _CA}),
+        _O: frozenset({_CL}),
         _CL: frozenset(),
         _CA: frozenset(),
     },
     "OPAY": {
-        _D:  frozenset({_O, _CA}),
-        _O:  frozenset({_CL}),
+        _D: frozenset({_O, _CA}),
+        _O: frozenset({_CL}),
         _CL: frozenset(),
         _CA: frozenset(),
     },

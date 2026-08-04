@@ -112,7 +112,8 @@ class MaintenanceService:
         async for doc in db[PROPAGATIONS].find({}):
             referenced = {
                 lid
-                for lid in (doc.get("sourceLineIds") or []) + (doc.get("resultLineIds") or [])
+                for lid in (doc.get("sourceLineIds") or [])
+                + (doc.get("resultLineIds") or [])
                 if lid
             }
             # Reason: only orphaned when there is something to check (a
@@ -143,7 +144,9 @@ class MaintenanceService:
     # -------------------------------------------------------------------
 
     @staticmethod
-    async def delete_orphans(current_user: Any, dry_run: bool = False) -> Dict[str, Any]:
+    async def delete_orphans(
+        current_user: Any, dry_run: bool = False
+    ) -> Dict[str, Any]:
         """Remove orphaned records found by ``find_orphans``.
 
         Deletes strictly by the explicit id lists ``find_orphans`` just
@@ -172,7 +175,9 @@ class MaintenanceService:
             a["accessionId"] for a in orphans["accessions"] if a.get("accessionId")
         ]
         observation_ids = [
-            o["observationId"] for o in orphans["observations"] if o.get("observationId")
+            o["observationId"]
+            for o in orphans["observations"]
+            if o.get("observationId")
         ]
         event_ids = [
             e["eventId"] for e in orphans["propagationEvents"] if e.get("eventId")
@@ -181,7 +186,9 @@ class MaintenanceService:
         if accession_ids:
             await db[ACCESSIONS].delete_many({"accessionId": {"$in": accession_ids}})
         if observation_ids:
-            await db[OBSERVATIONS].delete_many({"observationId": {"$in": observation_ids}})
+            await db[OBSERVATIONS].delete_many(
+                {"observationId": {"$in": observation_ids}}
+            )
         if event_ids:
             await db[PROPAGATIONS].delete_many({"eventId": {"$in": event_ids}})
 

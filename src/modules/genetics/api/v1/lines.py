@@ -30,6 +30,7 @@ router = APIRouter()
 
 class LinkedProfileCounts(BaseModel):
     """How many genetic lines carry each growing profile."""
+
     strains: Dict[str, int] = Field(
         default_factory=dict, description="mushroom_strains strainId -> line count"
     )
@@ -85,9 +86,13 @@ async def list_lines(
     page: int = Query(1, ge=1),
     perPage: int = Query(20, ge=1, le=100),
     kind: Optional[str] = Query(None, description="plant, fungus, animal or other"),
-    search: Optional[str] = Query(None, description="Match name, code or scientific name"),
+    search: Optional[str] = Query(
+        None, description="Match name, code or scientific name"
+    ),
     tag: Optional[str] = Query(None),
-    parentLineId: Optional[str] = Query(None, description="Only lines derived from this line"),
+    parentLineId: Optional[str] = Query(
+        None, description="Only lines derived from this line"
+    ),
     linkedStrainId: Optional[str] = Query(
         None, description="Only lines linked to this mushroom_strains growing profile"
     ),
@@ -213,8 +218,8 @@ async def line_dependents(
         "**`?cascade=true` (T-809):** the deliberate escalation for a "
         "cancelled test/demo line — removes the line AND every accession, "
         "propagation event and observation recorded against it. "
-        "**super_admin only.** Body must be `{\"confirm\": \"<the line's exact "
-        "code>\"}` — a mismatch is 400 and nothing is deleted, mirroring the "
+        '**super_admin only.** Body must be `{"confirm": "<the line\'s exact '
+        'code>"}` — a mismatch is 400 and nothing is deleted, mirroring the '
         "GitHub repo-deletion confirmation pattern. Hard-refuses with 409, "
         "regardless of `confirm`, if the line has harvests (real production "
         "yield) or child lines (real downstream work) — neither is ever "

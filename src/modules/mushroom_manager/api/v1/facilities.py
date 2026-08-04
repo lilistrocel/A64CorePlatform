@@ -29,6 +29,7 @@ router = APIRouter()
 # POST /facilities
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "",
     response_model=SuccessResponse[Facility],
@@ -52,6 +53,7 @@ async def create_facility(
 # ---------------------------------------------------------------------------
 # GET /facilities
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "",
@@ -88,6 +90,7 @@ async def list_facilities(
 # GET /facilities/{facility_id}
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/{facility_id}",
     response_model=SuccessResponse[Facility],
@@ -108,6 +111,7 @@ async def get_facility(
 # ---------------------------------------------------------------------------
 # PATCH /facilities/{facility_id}
 # ---------------------------------------------------------------------------
+
 
 @router.patch(
     "/{facility_id}",
@@ -132,6 +136,7 @@ async def update_facility(
 # ---------------------------------------------------------------------------
 # DELETE /facilities/{facility_id}
 # ---------------------------------------------------------------------------
+
 
 @router.delete(
     "/{facility_id}",

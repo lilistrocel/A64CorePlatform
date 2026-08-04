@@ -27,7 +27,8 @@ class DeploymentSettingItem(BaseModel):
         ..., description="False when source is 'env' — pinned, cannot be edited here"
     )
     value: Optional[Union[str, bool]] = Field(
-        None, description="Effective value. Omitted for CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD."
+        None,
+        description="Effective value. Omitted for CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD.",
     )
     isSet: Optional[bool] = Field(
         None,
@@ -58,7 +59,9 @@ class DeploymentSettingsPatchRequest(BaseModel):
     being modified; sending an env-pinned key or an unknown key is a 409/422.
     """
 
-    currentPassword: str = Field(..., min_length=1, description="Actor's current password")
+    currentPassword: str = Field(
+        ..., min_length=1, description="Actor's current password"
+    )
     changes: Dict[str, Union[str, bool]] = Field(
         ..., description="Managed key -> new value; only the keys being changed"
     )

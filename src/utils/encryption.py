@@ -38,7 +38,6 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -49,12 +48,15 @@ ENCRYPTION_KEY = os.getenv("LICENSE_ENCRYPTION_KEY", "")
 
 # PBKDF2 parameters for key derivation
 PBKDF2_ITERATIONS = 100000  # 100k iterations for key stretching
-PBKDF2_SALT = b"a64core_module_license_salt_v1"  # Fixed salt for deterministic key derivation
+PBKDF2_SALT = (
+    b"a64core_module_license_salt_v1"  # Fixed salt for deterministic key derivation
+)
 
 
 # =============================================================================
 # Key Derivation
 # =============================================================================
+
 
 def _derive_fernet_key(password: str, salt: bytes = PBKDF2_SALT) -> bytes:
     """
@@ -125,6 +127,7 @@ def validate_encryption_key() -> bool:
 # =============================================================================
 # Encryption Functions
 # =============================================================================
+
 
 def encrypt_license_key(license_key: str) -> str:
     """
@@ -250,6 +253,7 @@ def encrypt_sensehub_password(password: str) -> str:
         - NEVER return decrypted password in API responses
     """
     from src.config.settings import settings
+
     secret_key = settings.SECRET_KEY
     if not secret_key or len(secret_key) < 16:
         raise ValueError(
@@ -282,6 +286,7 @@ def decrypt_sensehub_password(encrypted_password: str) -> str:
         - Only use for SenseHub authentication
     """
     from src.config.settings import settings
+
     secret_key = settings.SECRET_KEY
     if not secret_key or len(secret_key) < 16:
         raise ValueError(
@@ -328,6 +333,7 @@ def encrypt_telegram_token(token: str) -> str:
         - NEVER return decrypted token in API responses
     """
     from src.config.settings import settings
+
     secret_key = settings.SECRET_KEY
     if not secret_key or len(secret_key) < 16:
         raise ValueError(
@@ -360,6 +366,7 @@ def decrypt_telegram_token(encrypted_token: str) -> str:
         - Only use for Telegram Bot API calls
     """
     from src.config.settings import settings
+
     secret_key = settings.SECRET_KEY
     if not secret_key or len(secret_key) < 16:
         raise ValueError(
@@ -384,6 +391,7 @@ def decrypt_telegram_token(encrypted_token: str) -> str:
 # =============================================================================
 # Utility Functions
 # =============================================================================
+
 
 def hash_license_key(license_key: str) -> str:
     """
@@ -436,6 +444,7 @@ def generate_secure_key(length: int = 32) -> str:
         $ python -c "from src.utils.encryption import generate_secure_key; print(generate_secure_key())"
     """
     import secrets
+
     return secrets.token_urlsafe(length)
 
 
@@ -494,6 +503,7 @@ except ValueError as e:
     # Allow import to succeed but log warning
     # This allows the app to start and show proper error in API
     import warnings
+
     warnings.warn(f"Encryption configuration warning: {str(e)}", UserWarning)
 
 
@@ -522,8 +532,12 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python -m src.utils.encryption generate              # Generate new key")
-        print("  python -m src.utils.encryption test                  # Test encryption")
+        print(
+            "  python -m src.utils.encryption generate              # Generate new key"
+        )
+        print(
+            "  python -m src.utils.encryption test                  # Test encryption"
+        )
         print("  python -m src.utils.encryption encrypt <license_key> # Encrypt key")
         print("  python -m src.utils.encryption decrypt <encrypted>   # Decrypt key")
         sys.exit(1)
@@ -533,15 +547,17 @@ if __name__ == "__main__":
     if command == "generate":
         # Generate new encryption key
         new_key = generate_secure_key()
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("Generated new LICENSE_ENCRYPTION_KEY:")
-        print("="*80)
+        print("=" * 80)
         print(new_key)
-        print("="*80)
+        print("=" * 80)
         print("\nAdd this to your .env file:")
         print(f"LICENSE_ENCRYPTION_KEY={new_key}")
-        print("\nWARNING: If you change this key, you must re-encrypt all existing license keys!")
-        print("="*80 + "\n")
+        print(
+            "\nWARNING: If you change this key, you must re-encrypt all existing license keys!"
+        )
+        print("=" * 80 + "\n")
 
     elif command == "test":
         # Test encryption roundtrip

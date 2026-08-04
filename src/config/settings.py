@@ -31,13 +31,13 @@ class Settings(BaseSettings):
     # CORS Settings
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
-        "http://localhost:5173",        # Vite dev server (user-portal)
+        "http://localhost:5173",  # Vite dev server (user-portal)
         "http://localhost:8000",
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",        # Vite dev server (127.0.0.1)
+        "http://127.0.0.1:5173",  # Vite dev server (127.0.0.1)
         "http://127.0.0.1:8000",
-        "http://localhost:80",          # Nginx proxy
-        "http://localhost",             # Nginx proxy (shorthand)
+        "http://localhost:80",  # Nginx proxy
+        "http://localhost",  # Nginx proxy (shorthand)
     ]
 
     # Database Settings - MongoDB
@@ -131,13 +131,15 @@ class Settings(BaseSettings):
     # that later makes it the only way in (password login survives only for
     # local/break-glass requests — see middleware/cf_access.is_local_request).
     CF_ACCESS_ENABLED: bool = False
-    CF_ACCESS_TEAM_DOMAIN: str = ""  # host only, no scheme, e.g. "myteam.cloudflareaccess.com"
+    CF_ACCESS_TEAM_DOMAIN: str = (
+        ""  # host only, no scheme, e.g. "myteam.cloudflareaccess.com"
+    )
     CF_ACCESS_AUD: str = ""  # Access application Audience (AUD) tag
     CF_ACCESS_EXCLUSIVE: bool = False
     CF_ACCESS_JIT_PROVISION: bool = True
     CF_ACCESS_DEFAULT_ROLE: str = "user"
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_production_settings(self):
         if self.ENVIRONMENT != "development":
             if self.SECRET_KEY == "dev_secret_key_change_in_production":
@@ -149,7 +151,7 @@ class Settings(BaseSettings):
                 raise ValueError("DEBUG must be False in production!")
         return self
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_cf_access_settings(self):
         """
         Fail fast at boot if Cloudflare Access is enabled without the two
@@ -185,6 +187,7 @@ class Settings(BaseSettings):
 
     class Config:
         """Pydantic config class"""
+
         # Disable .env file loading - use environment variables only
         # This prevents parsing errors with comma-separated values
         env_file = None

@@ -71,7 +71,7 @@ class SalesDatabaseManager:
             # Text search index for customer name and order code
             await db.sales_orders.create_index(
                 [("customerName", "text"), ("orderCode", "text")],
-                name="sales_order_search_text"
+                name="sales_order_search_text",
             )
 
             # Note: inventory_harvest indexes are now owned by farm_manager module.
@@ -89,7 +89,7 @@ class SalesDatabaseManager:
             # Text search index for supplier name and PO code
             await db.purchase_orders.create_index(
                 [("supplierName", "text"), ("poCode", "text")],
-                name="purchase_order_search_text"
+                name="purchase_order_search_text",
             )
 
             logger.info("[Sales Module] MongoDB indexes created successfully")

@@ -18,32 +18,38 @@ from src.modules.farm_manager.middleware.auth import (  # noqa: F401
 )
 
 # Roles allowed to write vendor / purchase item master data
-PROCUREMENT_WRITE_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-})
+PROCUREMENT_WRITE_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+    }
+)
 
 # Roles allowed to read any purchasing endpoint
-PROCUREMENT_READ_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-    "moderator",
-    "user",
-    "accountant",
-    "finance_admin",
-    "auditor",
-})
+PROCUREMENT_READ_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+        "moderator",
+        "user",
+        "accountant",
+        "finance_admin",
+        "auditor",
+    }
+)
 
 # Roles allowed to manage payment_terms (admin-only write)
-PAYMENT_TERMS_WRITE_ROLES = frozenset({
-    "admin",
-    "super_admin",
-    "finance_admin",
-})
+PAYMENT_TERMS_WRITE_ROLES = frozenset(
+    {
+        "admin",
+        "super_admin",
+        "finance_admin",
+    }
+)
 
 
 def require_purchasing_write(current_user: "CurrentUser") -> None:

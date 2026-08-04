@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class QualityGrade(str, Enum):
     """Harvest quality grading"""
+
     A = "A"
     B = "B"
     C = "C"
@@ -21,6 +22,7 @@ class QualityGrade(str, Enum):
 
 class HarvestBase(BaseModel):
     """Base harvest fields"""
+
     weightKg: float = Field(..., gt=0, description="Harvest weight in kg")
     qualityGrade: QualityGrade = Field(QualityGrade.A, description="Quality grading")
     notes: Optional[str] = Field(None, max_length=500)
@@ -28,7 +30,10 @@ class HarvestBase(BaseModel):
 
 class HarvestCreate(HarvestBase):
     """Schema for creating a harvest record"""
-    flushNumber: Optional[int] = Field(None, ge=1, description="Flush number (auto-filled if omitted)")
+
+    flushNumber: Optional[int] = Field(
+        None, ge=1, description="Flush number (auto-filled if omitted)"
+    )
     accessionId: Optional[str] = Field(
         None,
         description=(
@@ -52,19 +57,36 @@ class HarvestCreate(HarvestBase):
 
 class Harvest(HarvestBase):
     """Complete harvest model"""
-    harvestId: str = Field(default_factory=lambda: str(uuid4()), description="Unique harvest ID")
+
+    harvestId: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique harvest ID"
+    )
     roomId: str = Field(..., description="Growing room ID")
     facilityId: str = Field(..., description="Facility ID")
-    strainId: Optional[str] = Field(None, description="Mushroom strain ID (species-level)")
+    strainId: Optional[str] = Field(
+        None, description="Mushroom strain ID (species-level)"
+    )
 
     # Lineage attribution. strainId answers "what species was this"; these
     # answer "which of my cultures produced it", which is the question the
     # genetics repo exists to make answerable.
-    accessionId: Optional[str] = Field(None, description="genetic_accessions id of the harvested block")
-    accessionCode: Optional[str] = Field(None, description="Denormalised for display, e.g. PO-BLU-G2-014")
-    lineId: Optional[str] = Field(None, description="genetic_lines id, denormalised for grouping")
-    lineCode: Optional[str] = Field(None, description="Denormalised line code, e.g. PO-BLU")
-    cloneGeneration: Optional[int] = Field(None, ge=0, description="G at harvest — lets yield be compared across generations")
+    accessionId: Optional[str] = Field(
+        None, description="genetic_accessions id of the harvested block"
+    )
+    accessionCode: Optional[str] = Field(
+        None, description="Denormalised for display, e.g. PO-BLU-G2-014"
+    )
+    lineId: Optional[str] = Field(
+        None, description="genetic_lines id, denormalised for grouping"
+    )
+    lineCode: Optional[str] = Field(
+        None, description="Denormalised line code, e.g. PO-BLU"
+    )
+    cloneGeneration: Optional[int] = Field(
+        None,
+        ge=0,
+        description="G at harvest — lets yield be compared across generations",
+    )
     filialGeneration: Optional[int] = Field(None, ge=0, description="F at harvest")
 
     substrateWeightKg: Optional[float] = Field(

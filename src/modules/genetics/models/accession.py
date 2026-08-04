@@ -53,12 +53,20 @@ class ParentRef(BaseModel):
     known dam alongside an unknown sire keeps the half you do have, rather
     than forcing the whole cross to be anonymous.
     """
-    accessionId: Optional[str] = Field(None, description="Parent accession; null when the parent is unidentified")
+
+    accessionId: Optional[str] = Field(
+        None, description="Parent accession; null when the parent is unidentified"
+    )
     role: ParentRole = Field(ParentRole.CLONE_SOURCE)
-    lineId: Optional[str] = Field(None, description="Denormalised parent line for fast lineage queries")
-    note: Optional[str] = Field(None, max_length=500, description="e.g. 'sire unrecorded, purchased litter'")
+    lineId: Optional[str] = Field(
+        None, description="Denormalised parent line for fast lineage queries"
+    )
+    note: Optional[str] = Field(
+        None, max_length=500, description="e.g. 'sire unrecorded, purchased litter'"
+    )
     vesselNo: Optional[int] = Field(
-        None, ge=1,
+        None,
+        ge=1,
         description=(
             "Which physical vessel of the parent batch this material was taken "
             "from, e.g. plate #4 of a 6-plate batch. Optional: plenty of real "
@@ -81,11 +89,18 @@ class StorageLocation(BaseModel):
     ``facility`` / ``room`` remain as free text for exactly that case, and for
     material recorded before rooms were modelled.
     """
-    facilityId: Optional[str] = Field(None, description="mushroom_facilities facilityId")
+
+    facilityId: Optional[str] = Field(
+        None, description="mushroom_facilities facilityId"
+    )
     roomId: Optional[str] = Field(None, description="growing_rooms roomId")
-    facility: Optional[str] = Field(None, max_length=120, description="Free-text fallback")
+    facility: Optional[str] = Field(
+        None, max_length=120, description="Free-text fallback"
+    )
     room: Optional[str] = Field(None, max_length=120, description="Free-text fallback")
-    unit: Optional[str] = Field(None, max_length=120, description="Incubator, fridge, shelf, pen")
+    unit: Optional[str] = Field(
+        None, max_length=120, description="Incubator, fridge, shelf, pen"
+    )
     position: Optional[str] = Field(None, max_length=120, description="Rack/row/slot")
     temperatureC: Optional[float] = Field(None, description="Holding temperature")
 
@@ -97,19 +112,29 @@ class AccessionBase(BaseModel):
 
     # Physical form
     form: VesselForm = Field(..., description="Vessel / physical form")
-    quantity: int = Field(1, ge=0, description="Vessel or head count held under this record")
+    quantity: int = Field(
+        1, ge=0, description="Vessel or head count held under this record"
+    )
     unit: str = Field("vessels", max_length=32, description="plates, jars, seeds, head")
 
     # What it is growing on
-    mediumBatchId: Optional[str] = Field(None, description="Medium batch this material sits on")
+    mediumBatchId: Optional[str] = Field(
+        None, description="Medium batch this material sits on"
+    )
 
     location: StorageLocation = Field(default_factory=StorageLocation)
 
     # Dates
-    acquiredAt: Optional[datetime] = Field(None, description="Inoculation / sowing / birth date")
-    colonizedAt: Optional[datetime] = Field(None, description="Fully colonised / established date")
+    acquiredAt: Optional[datetime] = Field(
+        None, description="Inoculation / sowing / birth date"
+    )
+    colonizedAt: Optional[datetime] = Field(
+        None, description="Fully colonised / established date"
+    )
 
-    label: Optional[str] = Field(None, max_length=200, description="Human label written on the vessel")
+    label: Optional[str] = Field(
+        None, max_length=200, description="Human label written on the vessel"
+    )
     notes: Optional[str] = Field(None, max_length=2000)
     tags: List[str] = Field(default_factory=list)
 
@@ -121,7 +146,9 @@ class AccessionCreate(AccessionBase):
     endpoint instead, which derives generations and parentage automatically.
     """
 
-    cloneGeneration: int = Field(0, ge=0, description="G — defaults to 0 for founding material")
+    cloneGeneration: int = Field(
+        0, ge=0, description="G — defaults to 0 for founding material"
+    )
     filialGeneration: int = Field(0, ge=0, description="F — defaults to 0")
     parents: List[ParentRef] = Field(
         default_factory=list,
@@ -165,6 +192,7 @@ class AccessionSplit(BaseModel):
     The split child keeps the same generations and parents; it is the *same*
     material, just separately tracked.
     """
+
     quantity: int = Field(..., ge=1, description="How many vessels to move out")
     reason: Optional[str] = Field(None, max_length=500)
     status: Optional[AccessionStatus] = Field(
@@ -197,13 +225,17 @@ class Accession(AccessionBase):
     filialGeneration: int = Field(0, ge=0, description="F — sexual generations")
 
     parents: List[ParentRef] = Field(default_factory=list)
-    provenance: Optional[Provenance] = Field(None, description="Set for parentless founding material")
+    provenance: Optional[Provenance] = Field(
+        None, description="Set for parentless founding material"
+    )
 
     status: AccessionStatus = Field(AccessionStatus.ACTIVE)
 
     # Link back to the propagation that produced this record
     sourceEventId: Optional[str] = Field(None, description="propagation_events id")
-    splitFromAccessionId: Optional[str] = Field(None, description="Set when created via a batch split")
+    splitFromAccessionId: Optional[str] = Field(
+        None, description="Set when created via a batch split"
+    )
 
     # Label / QR (T-804) — see module docstring below and
     # Docs/2-Working-Progress/genetics-label-qr-spec.md §3-4 for the reasoning.

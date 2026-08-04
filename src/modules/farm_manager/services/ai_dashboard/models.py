@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 import uuid
 
-
 # ---------------------------------------------------------------------------
 # Raw Data Collection Models
 # ---------------------------------------------------------------------------
@@ -301,7 +300,9 @@ class DashboardReport(BaseModel):
     """
 
     reportId: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    status: str  # "collecting", "generating", "completed", "generation_failed", "failed"
+    status: (
+        str  # "collecting", "generating", "completed", "generation_failed", "failed"
+    )
     triggeredBy: str  # "scheduler", "scheduler_startup", or "manual"
     startedAt: datetime = Field(default_factory=datetime.utcnow)
     completedAt: Optional[datetime] = None

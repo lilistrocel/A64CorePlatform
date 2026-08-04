@@ -13,6 +13,7 @@ from enum import Enum
 
 class ContractType(str, Enum):
     """Contract type enumeration"""
+
     FULL_TIME = "full_time"
     PART_TIME = "part_time"
     CONTRACTOR = "contractor"
@@ -21,6 +22,7 @@ class ContractType(str, Enum):
 
 class ContractStatus(str, Enum):
     """Contract status enumeration"""
+
     ACTIVE = "active"
     EXPIRED = "expired"
     TERMINATED = "terminated"
@@ -28,24 +30,33 @@ class ContractStatus(str, Enum):
 
 class ContractBase(BaseModel):
     """Base contract fields"""
+
     employeeId: UUID = Field(..., description="Employee ID this contract belongs to")
     type: ContractType = Field(..., description="Contract type")
     startDate: date = Field(..., description="Contract start date")
-    endDate: Optional[date] = Field(None, description="Contract end date (null for indefinite)")
+    endDate: Optional[date] = Field(
+        None, description="Contract end date (null for indefinite)"
+    )
     salary: float = Field(..., gt=0, description="Salary amount")
     currency: str = Field("USD", max_length=3, description="Currency code (ISO 4217)")
-    benefits: List[str] = Field(default_factory=list, description="List of benefits included in contract")
+    benefits: List[str] = Field(
+        default_factory=list, description="List of benefits included in contract"
+    )
     status: ContractStatus = Field(ContractStatus.ACTIVE, description="Contract status")
-    documentUrl: Optional[str] = Field(None, max_length=500, description="URL to contract document")
+    documentUrl: Optional[str] = Field(
+        None, max_length=500, description="URL to contract document"
+    )
 
 
 class ContractCreate(ContractBase):
     """Schema for creating a new contract"""
+
     pass
 
 
 class ContractUpdate(BaseModel):
     """Schema for updating a contract"""
+
     type: Optional[ContractType] = None
     startDate: Optional[date] = None
     endDate: Optional[date] = None
@@ -58,7 +69,10 @@ class ContractUpdate(BaseModel):
 
 class Contract(ContractBase):
     """Complete contract model with all fields"""
-    contractId: UUID = Field(default_factory=uuid4, description="Unique contract identifier")
+
+    contractId: UUID = Field(
+        default_factory=uuid4, description="Unique contract identifier"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
@@ -82,6 +96,6 @@ class Contract(ContractBase):
                 "status": "active",
                 "documentUrl": "https://docs.company.com/contracts/c47ac10b.pdf",
                 "createdAt": "2025-01-15T10:00:00Z",
-                "updatedAt": "2025-01-15T10:00:00Z"
+                "updatedAt": "2025-01-15T10:00:00Z",
             }
         }

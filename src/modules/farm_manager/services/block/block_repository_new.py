@@ -10,8 +10,13 @@ from datetime import datetime
 import logging
 
 from ...models.block import (
-    Block, BlockCreate, BlockUpdate, BlockStatus,
-    BlockStatusUpdate, StatusChange, BlockKPI
+    Block,
+    BlockCreate,
+    BlockUpdate,
+    BlockStatus,
+    BlockStatusUpdate,
+    StatusChange,
+    BlockKPI,
 )
 from ..database import farm_db
 
@@ -30,14 +35,13 @@ class BlockRepository:
         result = await db.farms.find_one_and_update(
             {"farmId": str(farm_id)},
             {"$inc": {"nextBlockSequence": 1}},
-            return_document=True
+            return_document=True,
         )
 
         if not result or "nextBlockSequence" not in result:
             # Initialize if not exists
             await db.farms.update_one(
-                {"farmId": str(farm_id)},
-                {"$set": {"nextBlockSequence": 2}}
+                {"farmId": str(farm_id)}, {"$set": {"nextBlockSequence": 2}}
             )
             return 1
 
@@ -54,12 +58,16 @@ class BlockRepository:
             raise Exception(f"Farm not found: {farm_id}")
 
         if "farmCode" not in farm or not farm["farmCode"]:
-            raise Exception(f"Farm {farm_id} has no farm code. Please initialize farm code first.")
+            raise Exception(
+                f"Farm {farm_id} has no farm code. Please initialize farm code first."
+            )
 
         return farm["farmCode"]
 
     @staticmethod
-    async def check_name_unique_in_farm(farm_id: UUID, name: str, exclude_block_id: UUID = None) -> bool:
+    async def check_name_unique_in_farm(
+        farm_id: UUID, name: str, exclude_block_id: UUID = None
+    ) -> bool:
         """
         Check if a block name is unique within a farm.
 
@@ -76,11 +84,7 @@ class BlockRepository:
 
         db = farm_db.get_database()
 
-        query = {
-            "farmId": str(farm_id),
-            "name": name,
-            "isActive": True
-        }
+        query = {"farmId": str(farm_id), "name": name, "isActive": True}
 
         # Exclude current block when checking for updates
         if exclude_block_id:
@@ -90,7 +94,13 @@ class BlockRepository:
         return existing is None
 
     @staticmethod
-    async def create(block_data: BlockCreate, farm_id: UUID, farm_code: str, user_id: UUID, user_email: str) -> Block:
+    async def create(
+        block_data: BlockCreate,
+        farm_id: UUID,
+        farm_code: str,
+        user_id: UUID,
+        user_email: str,
+    ) -> Block:
         """Create a new block with auto-generated block code"""
         from fastapi import HTTPException
 
@@ -98,11 +108,13 @@ class BlockRepository:
 
         # Check if block name is unique within the farm
         if block_data.name:
-            is_unique = await BlockRepository.check_name_unique_in_farm(farm_id, block_data.name)
+            is_unique = await BlockRepository.check_name_unique_in_farm(
+                farm_id, block_data.name
+            )
             if not is_unique:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Block name '{block_data.name}' already exists in this farm. Block names must be unique within a farm."
+                    detail=f"Block name '{block_data.name}' already exists in this farm. Block names must be unique within a farm.",
                 )
 
         # Get next sequence number
@@ -116,7 +128,7 @@ class BlockRepository:
             status=BlockStatus.EMPTY,
             changedBy=user_id,
             changedByEmail=user_email,
-            notes="Block created"
+            notes="Block created",
         )
 
         # Create block document
@@ -128,7 +140,7 @@ class BlockRepository:
             sequenceNumber=sequence,
             status=BlockStatus.EMPTY,
             kpi=BlockKPI(),
-            statusChanges=[initial_status_change]
+            statusChanges=[initial_status_change],
         )
 
         block_dict = block.model_dump()
@@ -152,8 +164,9 @@ class BlockRepository:
                 "changedAt": change["changedAt"],
                 "changedBy": str(change["changedBy"]),
                 "changedByEmail": change["changedByEmail"],
-                "notes": change.get("notes")
-            } for change in block_dict["statusChanges"]
+                "notes": change.get("notes"),
+            }
+            for change in block_dict["statusChanges"]
         ]
 
         block_dict["kpi"] = dict(block_dict["kpi"])
@@ -171,7 +184,9 @@ class BlockRepository:
         """Get block by ID"""
         db = farm_db.get_database()
 
-        block_doc = await db.blocks.find_one({"blockId": str(block_id), "isActive": True})
+        block_doc = await db.blocks.find_one(
+            {"blockId": str(block_id), "isActive": True}
+        )
 
         if not block_doc:
             return None
@@ -183,7 +198,9 @@ class BlockRepository:
         """Get block by block code"""
         db = farm_db.get_database()
 
-        block_doc = await db.blocks.find_one({"blockCode": block_code, "isActive": True})
+        block_doc = await db.blocks.find_one(
+            {"blockCode": block_code, "isActive": True}
+        )
 
         if not block_doc:
             return None
@@ -198,8 +215,8 @@ class BlockRepository:
         status: Optional[BlockStatus] = None,
         block_type: Optional[str] = None,
         target_crop: Optional[UUID] = None,
-        block_category: Optional[str] = 'all',
-        farming_year: Optional[int] = None
+        block_category: Optional[str] = "all",
+        farming_year: Optional[int] = None,
     ) -> tuple[List[Block], int]:
         """Get blocks by farm with filters and pagination"""
         db = farm_db.get_database()
@@ -217,7 +234,7 @@ class BlockRepository:
             query["targetCrop"] = str(target_crop)
 
         # Filter by block category
-        if block_category and block_category != 'all':
+        if block_category and block_category != "all":
             query["blockCategory"] = block_category
 
         # Filter by farming year (blocks planted in a specific farming year)
@@ -240,7 +257,7 @@ class BlockRepository:
         skip: int = 0,
         limit: int = 100,
         status: Optional[BlockStatus] = None,
-        block_category: Optional[str] = 'all'
+        block_category: Optional[str] = "all",
     ) -> tuple[List[Block], int]:
         """Get all blocks with pagination"""
         db = farm_db.get_database()
@@ -252,7 +269,7 @@ class BlockRepository:
             query["state"] = status.value
 
         # Filter by block category
-        if block_category and block_category != 'all':
+        if block_category and block_category != "all":
             query["blockCategory"] = block_category
 
         # Get total count
@@ -275,7 +292,8 @@ class BlockRepository:
 
         # Only update fields that are provided
         update_dict = {
-            k: v for k, v in update_data.model_dump(exclude_unset=True).items()
+            k: v
+            for k, v in update_data.model_dump(exclude_unset=True).items()
             if v is not None
         }
 
@@ -289,14 +307,12 @@ class BlockRepository:
             current_block = await BlockRepository.get_by_id(block_id)
             if current_block:
                 is_unique = await BlockRepository.check_name_unique_in_farm(
-                    current_block.farmId,
-                    update_dict["name"],
-                    exclude_block_id=block_id
+                    current_block.farmId, update_dict["name"], exclude_block_id=block_id
                 )
                 if not is_unique:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Block name '{update_dict['name']}' already exists in this farm. Block names must be unique within a farm."
+                        detail=f"Block name '{update_dict['name']}' already exists in this farm. Block names must be unique within a farm.",
                     )
 
         # Convert location if provided
@@ -307,8 +323,7 @@ class BlockRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await db.blocks.update_one(
-            {"blockId": str(block_id), "isActive": True},
-            {"$set": update_dict}
+            {"blockId": str(block_id), "isActive": True}, {"$set": update_dict}
         )
 
         if result.matched_count == 0:
@@ -328,7 +343,7 @@ class BlockRepository:
         target_crop_name: Optional[str] = None,
         actual_plant_count: Optional[int] = None,
         expected_harvest_date: Optional[datetime] = None,
-        expected_status_changes: Optional[dict] = None
+        expected_status_changes: Optional[dict] = None,
     ) -> Optional[Block]:
         """
         Update block status with history tracking
@@ -353,19 +368,19 @@ class BlockRepository:
             "changedAt": datetime.utcnow(),
             "changedBy": str(user_id),
             "changedByEmail": user_email,
-            "notes": notes
+            "notes": notes,
         }
 
-        update_dict = {
-            "updatedAt": datetime.utcnow()
-        }
+        update_dict = {"updatedAt": datetime.utcnow()}
 
         # Handle alert status
         if new_status == BlockStatus.ALERT:
             # Save current status to previousState
             update_dict["previousState"] = current_block.state.value
             update_dict["state"] = BlockStatus.ALERT.value
-        elif current_block.state == BlockStatus.ALERT and new_status != BlockStatus.ALERT:
+        elif (
+            current_block.state == BlockStatus.ALERT and new_status != BlockStatus.ALERT
+        ):
             # Resuming from alert - clear previousState
             update_dict["state"] = new_status.value
             update_dict["previousState"] = None
@@ -392,12 +407,14 @@ class BlockRepository:
             # plantedDate is only set when actually planting (GROWING).
             if new_status in (BlockStatus.GROWING, BlockStatus.PLANNED):
                 from ..farming_year_service import get_farming_year_service
+
                 farming_year_service = get_farming_year_service()
                 config = await farming_year_service.get_farming_year_config()
                 reference_date = datetime.utcnow()
-                update_dict["farmingYearPlanted"] = farming_year_service.get_farming_year_for_date(
-                    reference_date,
-                    config.farmingYearStartMonth
+                update_dict["farmingYearPlanted"] = (
+                    farming_year_service.get_farming_year_for_date(
+                        reference_date, config.farmingYearStartMonth
+                    )
                 )
 
                 # Only set plantedDate when actually planting, not for planned
@@ -407,45 +424,47 @@ class BlockRepository:
         # Handle emptying (status = empty)
         if new_status == BlockStatus.EMPTY:
             # Clear all cycle data - archival should happen before this
-            update_dict.update({
-                "targetCrop": None,
-                "targetCropName": None,
-                "actualPlantCount": None,
-                "plantedDate": None,
-                "farmingYearPlanted": None,  # Clear farming year when cycle ends
-                "expectedHarvestDate": None,
-                "expectedStatusChanges": None,
-                # Clear plant-data version tracking for the new cycle
-                "plantDataVersion": None,
-                "plantDataSnapshot": None,
-                "kpi": {
-                    "predictedYieldKg": 0.0,
-                    "actualYieldKg": 0.0,
-                    "yieldEfficiencyPercent": 0.0,
-                    "totalHarvests": 0
-                },
-                "statusChanges": [status_change]  # Start fresh with only the empty status
-            })
+            update_dict.update(
+                {
+                    "targetCrop": None,
+                    "targetCropName": None,
+                    "actualPlantCount": None,
+                    "plantedDate": None,
+                    "farmingYearPlanted": None,  # Clear farming year when cycle ends
+                    "expectedHarvestDate": None,
+                    "expectedStatusChanges": None,
+                    # Clear plant-data version tracking for the new cycle
+                    "plantDataVersion": None,
+                    "plantDataSnapshot": None,
+                    "kpi": {
+                        "predictedYieldKg": 0.0,
+                        "actualYieldKg": 0.0,
+                        "yieldEfficiencyPercent": 0.0,
+                        "totalHarvests": 0,
+                    },
+                    "statusChanges": [
+                        status_change
+                    ],  # Start fresh with only the empty status
+                }
+            )
 
             # Don't use $push when we're clearing - just $set
             result = await db.blocks.update_one(
-                {"blockId": str(block_id), "isActive": True},
-                {"$set": update_dict}
+                {"blockId": str(block_id), "isActive": True}, {"$set": update_dict}
             )
         else:
             # Add status change to history (use $push for array)
             result = await db.blocks.update_one(
                 {"blockId": str(block_id), "isActive": True},
-                {
-                    "$set": update_dict,
-                    "$push": {"statusChanges": status_change}
-                }
+                {"$set": update_dict, "$push": {"statusChanges": status_change}},
             )
 
         if result.matched_count == 0:
             return None
 
-        logger.info(f"[Block Repository] Updated block status: {block_id} -> {new_status.value}")
+        logger.info(
+            f"[Block Repository] Updated block status: {block_id} -> {new_status.value}"
+        )
         return await BlockRepository.get_by_id(block_id)
 
     @staticmethod
@@ -453,7 +472,7 @@ class BlockRepository:
         block_id: UUID,
         predicted_yield_kg: Optional[float] = None,
         actual_yield_kg: Optional[float] = None,
-        total_harvests: Optional[int] = None
+        total_harvests: Optional[int] = None,
     ) -> Optional[Block]:
         """Update block KPI metrics"""
         db = farm_db.get_database()
@@ -475,8 +494,16 @@ class BlockRepository:
             # Get current values if not provided
             current_block = await BlockRepository.get_by_id(block_id)
             if current_block:
-                pred = predicted_yield_kg if predicted_yield_kg is not None else current_block.kpi.predictedYieldKg
-                actual = actual_yield_kg if actual_yield_kg is not None else current_block.kpi.actualYieldKg
+                pred = (
+                    predicted_yield_kg
+                    if predicted_yield_kg is not None
+                    else current_block.kpi.predictedYieldKg
+                )
+                actual = (
+                    actual_yield_kg
+                    if actual_yield_kg is not None
+                    else current_block.kpi.actualYieldKg
+                )
 
                 if pred > 0:
                     efficiency = (actual / pred) * 100
@@ -485,8 +512,7 @@ class BlockRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await db.blocks.update_one(
-            {"blockId": str(block_id), "isActive": True},
-            {"$set": update_dict}
+            {"blockId": str(block_id), "isActive": True}, {"$set": update_dict}
         )
 
         if result.matched_count == 0:
@@ -497,9 +523,7 @@ class BlockRepository:
 
     @staticmethod
     async def increment_kpi(
-        block_id: UUID,
-        yield_kg_delta: float = 0.0,
-        harvest_count_delta: int = 0
+        block_id: UUID, yield_kg_delta: float = 0.0, harvest_count_delta: int = 0
     ) -> Optional[Block]:
         """
         Atomically increment block KPI using MongoDB $inc.
@@ -527,10 +551,7 @@ class BlockRepository:
 
         result = await db.blocks.update_one(
             {"blockId": str(block_id), "isActive": True},
-            {
-                "$inc": inc_dict,
-                "$set": {"updatedAt": datetime.utcnow()}
-            }
+            {"$inc": inc_dict, "$set": {"updatedAt": datetime.utcnow()}},
         )
 
         if result.matched_count == 0:
@@ -539,10 +560,12 @@ class BlockRepository:
         # Recalculate efficiency from the updated values
         updated_block = await BlockRepository.get_by_id(block_id)
         if updated_block and updated_block.kpi.predictedYieldKg > 0:
-            efficiency = (updated_block.kpi.actualYieldKg / updated_block.kpi.predictedYieldKg) * 100
+            efficiency = (
+                updated_block.kpi.actualYieldKg / updated_block.kpi.predictedYieldKg
+            ) * 100
             await db.blocks.update_one(
                 {"blockId": str(block_id), "isActive": True},
-                {"$set": {"kpi.yieldEfficiencyPercent": round(efficiency, 2)}}
+                {"$set": {"kpi.yieldEfficiencyPercent": round(efficiency, 2)}},
             )
             updated_block = await BlockRepository.get_by_id(block_id)
 
@@ -593,7 +616,7 @@ class BlockRepository:
 
         result = await db.blocks.update_one(
             {"blockId": str(block_id)},
-            {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}}
+            {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}},
         )
 
         if result.matched_count == 0:
@@ -606,7 +629,9 @@ class BlockRepository:
     async def get_farm_block_count(farm_id: UUID) -> int:
         """Get total number of active blocks in a farm"""
         db = farm_db.get_database()
-        return await db.blocks.count_documents({"farmId": str(farm_id), "isActive": True})
+        return await db.blocks.count_documents(
+            {"farmId": str(farm_id), "isActive": True}
+        )
 
     @staticmethod
     async def get_farm_blocks_by_status(farm_id: UUID) -> Dict[str, int]:
@@ -615,7 +640,7 @@ class BlockRepository:
 
         pipeline = [
             {"$match": {"farmId": str(farm_id), "isActive": True}},
-            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}},
         ]
 
         result = await db.blocks.aggregate(pipeline).to_list(length=10)
@@ -627,7 +652,7 @@ class BlockRepository:
             "fruiting": 0,
             "harvesting": 0,
             "cleaning": 0,
-            "alert": 0
+            "alert": 0,
         }
 
         for item in result:
@@ -674,7 +699,7 @@ class BlockRepository:
             status=BlockStatus.EMPTY,
             changedBy=user_id,
             changedByEmail=user_email,
-            notes="Virtual block created"
+            notes="Virtual block created",
         )
 
         # Derive a human-friendly name from parent.name + the counter suffix
@@ -694,7 +719,7 @@ class BlockRepository:
             farmId=parent.farmId,
             farmCode=parent.farmCode,
             sequenceNumber=None,  # Virtual blocks don't have sequence numbers
-            blockCategory='virtual',
+            blockCategory="virtual",
             parentBlockId=parent.blockId,
             allocatedArea=allocated_area,
             area=allocated_area,  # For display consistency
@@ -704,7 +729,7 @@ class BlockRepository:
             # Reason: record density so allocatedArea is always reproducible from plantCount.
             plantsPer100m2=plants_per_100m2,
             state=BlockStatus.EMPTY,
-            statusChanges=[initial_status_change]
+            statusChanges=[initial_status_change],
         )
 
         virtual_block_dict = virtual_block.model_dump()
@@ -722,8 +747,9 @@ class BlockRepository:
                 "changedAt": change["changedAt"],
                 "changedBy": str(change["changedBy"]),
                 "changedByEmail": change["changedByEmail"],
-                "notes": change.get("notes")
-            } for change in virtual_block_dict["statusChanges"]
+                "notes": change.get("notes"),
+            }
+            for change in virtual_block_dict["statusChanges"]
         ]
 
         virtual_block_dict["kpi"] = dict(virtual_block_dict["kpi"])
@@ -740,10 +766,7 @@ class BlockRepository:
 
     @staticmethod
     async def update_parent_for_virtual_child(
-        parent_id: UUID,
-        child_id: str,
-        allocated_area: float,
-        new_counter: int
+        parent_id: UUID, child_id: str, allocated_area: float, new_counter: int
     ) -> None:
         """
         Update parent block after creating virtual child.
@@ -769,10 +792,10 @@ class BlockRepository:
                 "$set": {
                     "virtualBlockCounter": new_counter,
                     "state": "partial",  # Physical block now has virtual children
-                    "updatedAt": datetime.utcnow()
+                    "updatedAt": datetime.utcnow(),
                 },
-                "$push": {"childBlockIds": child_id}
-            }
+                "$push": {"childBlockIds": child_id},
+            },
         )
 
         if result.matched_count == 0:
@@ -797,10 +820,9 @@ class BlockRepository:
         db = farm_db.get_database()
 
         # Query for virtual blocks with this parent
-        cursor = db.blocks.find({
-            "parentBlockId": str(parent_id),
-            "isActive": True
-        }).sort("blockCode", 1)
+        cursor = db.blocks.find(
+            {"parentBlockId": str(parent_id), "isActive": True}
+        ).sort("blockCode", 1)
 
         block_docs = await cursor.to_list(length=1000)
 
@@ -823,24 +845,19 @@ class BlockRepository:
 
         result = await db.blocks.update_one(
             {"blockId": str(block_id), "isActive": True},
-            {
-                "$set": {
-                    "availableArea": area,
-                    "updatedAt": datetime.utcnow()
-                }
-            }
+            {"$set": {"availableArea": area, "updatedAt": datetime.utcnow()}},
         )
 
         if result.matched_count == 0:
             raise Exception(f"Failed to initialize area budget for block: {block_id}")
 
-        logger.info(f"[Block Repository] Initialized availableArea={area} for block {block_id}")
+        logger.info(
+            f"[Block Repository] Initialized availableArea={area} for block {block_id}"
+        )
 
     @staticmethod
     async def return_area_to_parent(
-        parent_id: UUID,
-        area: float,
-        child_id: str
+        parent_id: UUID, area: float, child_id: str
     ) -> None:
         """
         Return area to parent budget and remove child from childBlockIds.
@@ -863,8 +880,8 @@ class BlockRepository:
             {
                 "$inc": {"availableArea": area},
                 "$pull": {"childBlockIds": child_id},
-                "$set": {"updatedAt": datetime.utcnow()}
-            }
+                "$set": {"updatedAt": datetime.utcnow()},
+            },
         )
 
         if result.matched_count == 0:
@@ -897,5 +914,7 @@ class BlockRepository:
             logger.info(f"[Block Repository] Hard deleted block: {block_id}")
             return True
         else:
-            logger.warning(f"[Block Repository] Block not found for hard deletion: {block_id}")
+            logger.warning(
+                f"[Block Repository] Block not found for hard deletion: {block_id}"
+            )
             return False

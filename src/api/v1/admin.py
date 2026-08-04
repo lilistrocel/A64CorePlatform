@@ -35,7 +35,6 @@ from ...middleware.auth import get_current_user
 from ...middleware.permissions import require_role
 from .organizations import _require_super_admin
 
-
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 # Secrets that must never be returned in full — see
@@ -61,7 +60,9 @@ def _build_deployment_settings_response(
                 source=resolved_setting.source,
                 editable=resolved_setting.editable,
                 isSet=is_set,
-                maskedHint=deployment_settings_service.mask_value(value) if is_set else None,
+                maskedHint=(
+                    deployment_settings_service.mask_value(value) if is_set else None
+                ),
             )
         else:
             items[key] = DeploymentSettingItem(
@@ -155,9 +156,13 @@ async def list_users(
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     role: Optional[str] = Query(None, description="Filter by role"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    is_email_verified: Optional[bool] = Query(None, description="Filter by email verification"),
-    search: Optional[str] = Query(None, max_length=200, description="Search email, firstName, lastName"),
-    current_user: UserResponse = Depends(get_current_user)
+    is_email_verified: Optional[bool] = Query(
+        None, description="Filter by email verification"
+    ),
+    search: Optional[str] = Query(
+        None, max_length=200, description="Search email, firstName, lastName"
+    ),
+    current_user: UserResponse = Depends(get_current_user),
 ):
     """
     List all users (paginated)
@@ -203,7 +208,7 @@ async def list_users(
         query_filter["$or"] = [
             {"email": {"$regex": search, "$options": "i"}},
             {"firstName": {"$regex": search, "$options": "i"}},
-            {"lastName": {"$regex": search, "$options": "i"}}
+            {"lastName": {"$regex": search, "$options": "i"}},
         ]
 
     # Exclude soft-deleted users
@@ -217,44 +222,47 @@ async def list_users(
     skip = (page - 1) * per_page
 
     # Fetch users
-    cursor = db.users.find(query_filter).skip(skip).limit(per_page).sort("createdAt", -1)
+    cursor = (
+        db.users.find(query_filter).skip(skip).limit(per_page).sort("createdAt", -1)
+    )
     users = await cursor.to_list(length=per_page)
 
     # Convert to UserResponse models (exclude passwordHash)
     user_responses = []
     for user in users:
-        user_responses.append(UserResponse(
-            userId=user.get("userId"),
-            email=user.get("email"),
-            firstName=user.get("firstName"),
-            lastName=user.get("lastName"),
-            role=UserRole(user.get("role")),
-            isActive=user.get("isActive"),
-            isEmailVerified=user.get("isEmailVerified"),
-            phone=user.get("phone"),
-            avatar=user.get("avatar"),
-            timezone=user.get("timezone"),
-            locale=user.get("locale"),
-            lastLoginAt=user.get("lastLoginAt"),
-            createdAt=user.get("createdAt"),
-            updatedAt=user.get("updatedAt"),
-            authProvider=user.get("authProvider", "password"),
-            nameAutoDerived=user.get("nameAutoDerived", False),
-        ))
+        user_responses.append(
+            UserResponse(
+                userId=user.get("userId"),
+                email=user.get("email"),
+                firstName=user.get("firstName"),
+                lastName=user.get("lastName"),
+                role=UserRole(user.get("role")),
+                isActive=user.get("isActive"),
+                isEmailVerified=user.get("isEmailVerified"),
+                phone=user.get("phone"),
+                avatar=user.get("avatar"),
+                timezone=user.get("timezone"),
+                locale=user.get("locale"),
+                lastLoginAt=user.get("lastLoginAt"),
+                createdAt=user.get("createdAt"),
+                updatedAt=user.get("updatedAt"),
+                authProvider=user.get("authProvider", "password"),
+                nameAutoDerived=user.get("nameAutoDerived", False),
+            )
+        )
 
     return UserListResponse(
         data=user_responses,
         total=total,
         page=page,
         perPage=per_page,
-        totalPages=total_pages
+        totalPages=total_pages,
     )
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user_by_id(
-    user_id: str,
-    current_user: UserResponse = Depends(get_current_user)
+    user_id: str, current_user: UserResponse = Depends(get_current_user)
 ):
     """
     Get user details by ID
@@ -275,8 +283,7 @@ async def get_user_by_id(
     user = await db.users.find_one({"userId": user_id, "deletedAt": None})
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     return UserResponse(
@@ -303,7 +310,7 @@ async def get_user_by_id(
 async def update_user_role(
     user_id: str,
     role_update: UserRoleUpdate,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ):
     """
     Update user role
@@ -332,7 +339,7 @@ async def update_user_role(
         if role_update.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admins cannot assign admin or super_admin roles"
+                detail="Admins cannot assign admin or super_admin roles",
             )
 
     db = mongodb.get_database()
@@ -341,39 +348,34 @@ async def update_user_role(
     user = await db.users.find_one({"userId": user_id, "deletedAt": None})
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Prevent modifying own role
     if user_id == current_user.userId:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot modify your own role"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Cannot modify your own role"
         )
 
     # Prevent non-super-admins from modifying super admin roles
-    if user.get("role") == UserRole.SUPER_ADMIN.value and current_user.role != UserRole.SUPER_ADMIN:
+    if (
+        user.get("role") == UserRole.SUPER_ADMIN.value
+        and current_user.role != UserRole.SUPER_ADMIN
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super admins can modify other super admin roles"
+            detail="Only super admins can modify other super admin roles",
         )
 
     # Update role
     result = await db.users.update_one(
         {"userId": user_id},
-        {
-            "$set": {
-                "role": role_update.role.value,
-                "updatedAt": datetime.utcnow()
-            }
-        }
+        {"$set": {"role": role_update.role.value, "updatedAt": datetime.utcnow()}},
     )
 
     if result.modified_count == 0:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to update user role"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update user role"
         )
 
     # Fetch updated user
@@ -403,7 +405,7 @@ async def update_user_role(
 async def update_user_status(
     user_id: str,
     status_update: UserStatusUpdate,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ):
     """
     Activate or deactivate user account
@@ -428,39 +430,36 @@ async def update_user_status(
     user = await db.users.find_one({"userId": user_id, "deletedAt": None})
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Prevent modifying own status
     if user_id == current_user.userId:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot modify your own status"
+            detail="Cannot modify your own status",
         )
 
     # Prevent non-super-admins from modifying super admin status
-    if user.get("role") == UserRole.SUPER_ADMIN.value and current_user.role != UserRole.SUPER_ADMIN:
+    if (
+        user.get("role") == UserRole.SUPER_ADMIN.value
+        and current_user.role != UserRole.SUPER_ADMIN
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super admins can modify other super admin accounts"
+            detail="Only super admins can modify other super admin accounts",
         )
 
     # Update status
     result = await db.users.update_one(
         {"userId": user_id},
-        {
-            "$set": {
-                "isActive": status_update.isActive,
-                "updatedAt": datetime.utcnow()
-            }
-        }
+        {"$set": {"isActive": status_update.isActive, "updatedAt": datetime.utcnow()}},
     )
 
     if result.modified_count == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to update user status"
+            detail="Failed to update user status",
         )
 
     # Fetch updated user
@@ -528,8 +527,7 @@ async def assign_user_organization(
 
 @router.delete("/users/{user_id}")
 async def delete_user(
-    user_id: str,
-    current_user: UserResponse = Depends(get_current_user)
+    user_id: str, current_user: UserResponse = Depends(get_current_user)
 ):
     """
     Soft delete user account
@@ -554,22 +552,24 @@ async def delete_user(
     user = await db.users.find_one({"userId": user_id, "deletedAt": None})
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Prevent deleting own account
     if user_id == current_user.userId:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot delete your own account"
+            detail="Cannot delete your own account",
         )
 
     # Prevent non-super-admins from deleting super admins
-    if user.get("role") == UserRole.SUPER_ADMIN.value and current_user.role != UserRole.SUPER_ADMIN:
+    if (
+        user.get("role") == UserRole.SUPER_ADMIN.value
+        and current_user.role != UserRole.SUPER_ADMIN
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super admins can delete other super admin accounts"
+            detail="Only super admins can delete other super admin accounts",
         )
 
     # Soft delete
@@ -579,28 +579,26 @@ async def delete_user(
             "$set": {
                 "deletedAt": datetime.utcnow(),
                 "isActive": False,
-                "updatedAt": datetime.utcnow()
+                "updatedAt": datetime.utcnow(),
             }
-        }
+        },
     )
 
     if result.modified_count == 0:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to delete user"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete user"
         )
 
     return {
         "message": "User deleted successfully",
         "userId": user_id,
-        "deletedAt": datetime.utcnow().isoformat()
+        "deletedAt": datetime.utcnow().isoformat(),
     }
 
 
 @router.put("/users/{user_id}/mfa/reset")
 async def reset_user_mfa(
-    user_id: str,
-    current_user: UserResponse = Depends(get_current_user)
+    user_id: str, current_user: UserResponse = Depends(get_current_user)
 ):
     """
     Reset MFA for a user (admin action)
@@ -632,22 +630,24 @@ async def reset_user_mfa(
     user = await db.users.find_one({"userId": user_id, "deletedAt": None})
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Check if MFA is enabled for this user
     if not user.get("mfaEnabled", False):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="MFA is not enabled for this user"
+            detail="MFA is not enabled for this user",
         )
 
     # Prevent admins from resetting super_admin MFA (only super_admins can)
-    if user.get("role") == UserRole.SUPER_ADMIN.value and current_user.role != UserRole.SUPER_ADMIN:
+    if (
+        user.get("role") == UserRole.SUPER_ADMIN.value
+        and current_user.role != UserRole.SUPER_ADMIN
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super admins can reset MFA for other super admin accounts"
+            detail="Only super admins can reset MFA for other super admin accounts",
         )
 
     # Reset MFA - remove TOTP secret, backup codes, and set mfaSetupRequired
@@ -661,7 +661,7 @@ async def reset_user_mfa(
                 "mfaResetAt": reset_time,
                 "mfaResetBy": current_user.userId,
                 "mfaResetByEmail": current_user.email,
-                "updatedAt": reset_time
+                "updatedAt": reset_time,
             },
             "$unset": {
                 "mfaSecret": "",
@@ -672,15 +672,14 @@ async def reset_user_mfa(
                 "mfaPendingSecretEncrypted": "",
                 "mfaPendingSetupAt": "",
                 "mfaLastUsedCounter": "",
-                "mfaLastUsedAt": ""
-            }
-        }
+                "mfaLastUsedAt": "",
+            },
+        },
     )
 
     if result.modified_count == 0:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to reset MFA"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to reset MFA"
         )
 
     # Log admin action in audit trail
@@ -690,11 +689,13 @@ async def reset_user_mfa(
         "targetUserEmail": user.get("email"),
         "performedBy": current_user.userId,
         "performedByEmail": current_user.email,
-        "performedByRole": current_user.role.value if hasattr(current_user.role, 'value') else current_user.role,
+        "performedByRole": (
+            current_user.role.value
+            if hasattr(current_user.role, "value")
+            else current_user.role
+        ),
         "timestamp": reset_time,
-        "details": {
-            "reason": "Admin MFA reset for locked out user"
-        }
+        "details": {"reason": "Admin MFA reset for locked out user"},
     }
     await db.admin_audit_log.insert_one(audit_entry)
 
@@ -716,5 +717,5 @@ async def reset_user_mfa(
         "userId": user_id,
         "userEmail": user.get("email"),
         "resetAt": reset_time.isoformat(),
-        "resetBy": current_user.email
+        "resetBy": current_user.email,
     }

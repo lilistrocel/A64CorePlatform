@@ -363,7 +363,9 @@ async def test_create_single_allocation_happy_path() -> None:
     db["ar_invoices_v2"]._add(_make_ar_invoice())
 
     payload = _make_create_payload()
-    receipt = await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+    receipt = await create_customer_receipt(
+        db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+    )
 
     assert receipt.status == DocumentStatus.DRAFT
     assert receipt.doc_number.startswith("IPAY-")
@@ -385,7 +387,9 @@ async def test_create_multiple_allocations_summing_correctly() -> None:
     db = _FakeDB()
     db["ar_invoices_v2"]._add(_make_ar_invoice(doc_entry=ARI_1_DOC_ENTRY, gross=300.0))
     db["ar_invoices_v2"]._add(
-        _make_ar_invoice(doc_entry=ARI_2_DOC_ENTRY, doc_number=ARI_2_DOC_NUMBER, gross=200.0)
+        _make_ar_invoice(
+            doc_entry=ARI_2_DOC_ENTRY, doc_number=ARI_2_DOC_NUMBER, gross=200.0
+        )
     )
 
     payload = _make_create_payload(
@@ -403,7 +407,9 @@ async def test_create_multiple_allocations_summing_correctly() -> None:
             ),
         ],
     )
-    receipt = await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+    receipt = await create_customer_receipt(
+        db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+    )
 
     assert receipt.status == DocumentStatus.DRAFT
     assert len(receipt.allocations) == 2
@@ -452,7 +458,9 @@ async def test_create_allocation_against_draft_invoice() -> None:
 
     payload = _make_create_payload()
     with pytest.raises(ValueError, match="in status 'draft'"):
-        await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        await create_customer_receipt(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
 
 @pytest.mark.asyncio
@@ -465,7 +473,9 @@ async def test_create_allocation_against_closed_invoice() -> None:
 
     payload = _make_create_payload()
     with pytest.raises(ValueError, match="in status 'closed'"):
-        await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        await create_customer_receipt(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
 
 @pytest.mark.asyncio
@@ -487,7 +497,9 @@ async def test_create_allocation_amount_exceeds_invoice_open_amount() -> None:
         ],
     )
     with pytest.raises(ValueError, match="open_amount"):
-        await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        await create_customer_receipt(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
 
 @pytest.mark.asyncio
@@ -523,7 +535,9 @@ async def test_create_allocation_wrong_customer() -> None:
         ],
     )
     with pytest.raises(ValueError, match="customer"):
-        await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+        await create_customer_receipt(
+            db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+        )
 
 
 @pytest.mark.asyncio
@@ -617,8 +631,11 @@ async def test_open_transition_increments_ar_invoice_paid_amount() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         result = await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     assert result.status == DocumentStatus.OPEN
@@ -667,8 +684,11 @@ async def test_open_transition_partial_payment_sets_partly_closed() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     ari_raw = await db["ar_invoices_v2"].find_one(
@@ -687,7 +707,9 @@ async def test_open_transition_two_allocations_both_invoices_closed() -> None:
     db = _FakeDB()
     db["ar_invoices_v2"]._add(_make_ar_invoice(doc_entry=ARI_1_DOC_ENTRY, gross=300.0))
     db["ar_invoices_v2"]._add(
-        _make_ar_invoice(doc_entry=ARI_2_DOC_ENTRY, doc_number=ARI_2_DOC_NUMBER, gross=200.0)
+        _make_ar_invoice(
+            doc_entry=ARI_2_DOC_ENTRY, doc_number=ARI_2_DOC_NUMBER, gross=200.0
+        )
     )
 
     payload = _make_create_payload(
@@ -715,8 +737,11 @@ async def test_open_transition_two_allocations_both_invoices_closed() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     ari1 = await db["ar_invoices_v2"].find_one(
@@ -753,8 +778,11 @@ async def test_cancel_reverses_ar_invoice_paid_amount() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         opened = await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
         assert opened.status == DocumentStatus.OPEN
 
@@ -764,8 +792,11 @@ async def test_cancel_reverses_ar_invoice_paid_amount() -> None:
         return_value="event-cancel-001",
     ):
         cancelled = await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_cancel_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_cancel_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     assert cancelled.status == DocumentStatus.CANCELLED
@@ -809,8 +840,11 @@ async def test_cancel_restores_partly_closed_when_other_receipts_remain() -> Non
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     # paid_amount is now 300 (100 pre-existing + 200 this receipt)
@@ -821,8 +855,11 @@ async def test_cancel_restores_partly_closed_when_other_receipts_remain() -> Non
         return_value="event-partly-cancel-001",
     ):
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_cancel_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_cancel_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     # After cancelling this receipt (-200), paid_amount = 100 (the other receipt remains).
@@ -865,15 +902,21 @@ async def test_concurrent_payment_second_open_fails_cleanly() -> None:
 
         # First receipt posts successfully.
         await transition_status(
-            db, doc_entry=receipt1.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt1.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
         # Second receipt tries to post against the same now-paid invoice → should fail.
         with pytest.raises(ValueError, match="open_amount|status"):
             await transition_status(
-                db, doc_entry=receipt2.doc_entry, request_body=_open_transition(),
-                org_id=ORG_ID, user_id=USER_ID,
+                db,
+                doc_entry=receipt2.doc_entry,
+                request_body=_open_transition(),
+                org_id=ORG_ID,
+                user_id=USER_ID,
             )
 
 
@@ -891,7 +934,9 @@ async def test_patch_draft_receipt_succeeds() -> None:
     db["ar_invoices_v2"]._add(_make_ar_invoice())
 
     payload = _make_create_payload()
-    receipt = await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+    receipt = await create_customer_receipt(
+        db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+    )
 
     update = CustomerReceiptUpdate(notes="Updated notes", payment_ref="NEW-REF-999")
     updated = await update_customer_receipt(
@@ -921,14 +966,21 @@ async def test_patch_open_receipt_rejected() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     update = CustomerReceiptUpdate(notes="Attempt to update")
     with pytest.raises(ValueError, match="only DRAFT"):
         await update_customer_receipt(
-            db, doc_entry=receipt.doc_entry, payload=update, org_id=ORG_ID, user_id=USER_ID
+            db,
+            doc_entry=receipt.doc_entry,
+            payload=update,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
 
@@ -941,7 +993,9 @@ async def test_delete_draft_receipt_succeeds() -> None:
     db["ar_invoices_v2"]._add(_make_ar_invoice())
 
     payload = _make_create_payload()
-    receipt = await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+    receipt = await create_customer_receipt(
+        db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+    )
 
     deleted = await delete_customer_receipt(
         db, doc_entry=receipt.doc_entry, org_id=ORG_ID, user_id=USER_ID
@@ -949,7 +1003,9 @@ async def test_delete_draft_receipt_succeeds() -> None:
     assert deleted is True
 
     # Receipt should be gone.
-    retrieved = await get_customer_receipt(db, doc_entry=receipt.doc_entry, org_id=ORG_ID)
+    retrieved = await get_customer_receipt(
+        db, doc_entry=receipt.doc_entry, org_id=ORG_ID
+    )
     assert retrieved is None
 
 
@@ -972,8 +1028,11 @@ async def test_delete_open_receipt_rejected() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
     with pytest.raises(ValueError, match="only DRAFT"):
@@ -1005,7 +1064,9 @@ async def test_list_receipts_pagination() -> None:
     db = _FakeDB()
     db["ar_invoices_v2"]._add(_make_ar_invoice(doc_entry=ARI_1_DOC_ENTRY, gross=300.0))
     db["ar_invoices_v2"]._add(
-        _make_ar_invoice(doc_entry=ARI_2_DOC_ENTRY, doc_number=ARI_2_DOC_NUMBER, gross=200.0)
+        _make_ar_invoice(
+            doc_entry=ARI_2_DOC_ENTRY, doc_number=ARI_2_DOC_NUMBER, gross=200.0
+        )
     )
 
     p1 = _make_create_payload(
@@ -1045,10 +1106,14 @@ async def test_cross_org_isolation() -> None:
     db["ar_invoices_v2"]._add(_make_ar_invoice())
 
     payload = _make_create_payload()
-    receipt = await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+    receipt = await create_customer_receipt(
+        db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+    )
 
     # Query from different org should find nothing.
-    retrieved = await get_customer_receipt(db, doc_entry=receipt.doc_entry, org_id=OTHER_ORG_ID)
+    retrieved = await get_customer_receipt(
+        db, doc_entry=receipt.doc_entry, org_id=OTHER_ORG_ID
+    )
     assert retrieved is None
 
     result = await list_customer_receipts(db, org_id=OTHER_ORG_ID)
@@ -1079,8 +1144,11 @@ async def test_open_transition_emits_outbox_event() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         result = await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
         mock_publish.assert_called_once()
@@ -1111,12 +1179,18 @@ async def test_cancel_transition_emits_cancellation_event() -> None:
             db, payload=payload, org_id=ORG_ID, user_id=USER_ID
         )
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_open_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_open_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=_cancel_transition(),
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=_cancel_transition(),
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )
 
         # publish was called twice (once for open, once for cancel)
@@ -1139,11 +1213,18 @@ async def test_illegal_transition_raises_value_error() -> None:
     db["ar_invoices_v2"]._add(_make_ar_invoice())
 
     payload = _make_create_payload()
-    receipt = await create_customer_receipt(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+    receipt = await create_customer_receipt(
+        db, payload=payload, org_id=ORG_ID, user_id=USER_ID
+    )
 
-    bad_transition = CustomerReceiptStatusTransitionRequest(new_status=DocumentStatus.CLOSED)
+    bad_transition = CustomerReceiptStatusTransitionRequest(
+        new_status=DocumentStatus.CLOSED
+    )
     with pytest.raises(ValueError):
         await transition_status(
-            db, doc_entry=receipt.doc_entry, request_body=bad_transition,
-            org_id=ORG_ID, user_id=USER_ID,
+            db,
+            doc_entry=receipt.doc_entry,
+            request_body=bad_transition,
+            org_id=ORG_ID,
+            user_id=USER_ID,
         )

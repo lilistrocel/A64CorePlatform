@@ -14,7 +14,11 @@ from typing import Any, Dict, List, Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from ..models.purchase_item import PurchaseItemCreate, PurchaseItemResponse, PurchaseItemUpdate
+from ..models.purchase_item import (
+    PurchaseItemCreate,
+    PurchaseItemResponse,
+    PurchaseItemUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +136,9 @@ class PurchaseItemService:
             "totalPages": max(1, -(-total // per_page)),
         }
 
-    async def get_item(self, organization_id: str, item_id: str) -> Optional[PurchaseItemResponse]:
+    async def get_item(
+        self, organization_id: str, item_id: str
+    ) -> Optional[PurchaseItemResponse]:
         """
         Fetch a single purchase item by itemId.
 
@@ -181,7 +187,9 @@ class PurchaseItemService:
             {"organizationId": org_id, "itemCode": item_code}
         )
         if existing:
-            raise ValueError(f"Item code '{item_code}' already exists in this organisation")
+            raise ValueError(
+                f"Item code '{item_code}' already exists in this organisation"
+            )
 
         now = datetime.now(tz=timezone.utc)
         item_id = str(uuid.uuid4())
@@ -195,7 +203,11 @@ class PurchaseItemService:
             "uom": data.uom,
             "description": data.description,
             "defaultWarehouseId": data.defaultWarehouseId,
-            "defaultUnitCost": float(data.defaultUnitCost) if data.defaultUnitCost is not None else None,
+            "defaultUnitCost": (
+                float(data.defaultUnitCost)
+                if data.defaultUnitCost is not None
+                else None
+            ),
             "barcode": data.barcode,
             "manufacturer": data.manufacturer,
             "isActive": True,
@@ -308,7 +320,14 @@ class PurchaseItemService:
         now = datetime.now(tz=timezone.utc)
         await self._col.update_one(
             {"itemId": item_id},
-            {"$set": {"deletedAt": now, "isActive": False, "updatedAt": now, "updatedBy": deleted_by}},
+            {
+                "$set": {
+                    "deletedAt": now,
+                    "isActive": False,
+                    "updatedAt": now,
+                    "updatedBy": deleted_by,
+                }
+            },
         )
 
         await self._emit_event(
@@ -321,7 +340,9 @@ class PurchaseItemService:
             is_deleted=True,
         )
 
-        logger.info("Soft-deleted purchase item itemId=%s org=%s", item_id, organization_id)
+        logger.info(
+            "Soft-deleted purchase item itemId=%s org=%s", item_id, organization_id
+        )
         return True
 
     async def _emit_event(
@@ -361,5 +382,6 @@ class PurchaseItemService:
         except Exception as exc:
             logger.warning(
                 "Failed to emit purchase_item_changed event for item %s: %s",
-                item_id, exc,
+                item_id,
+                exc,
             )

@@ -19,7 +19,9 @@ class PlantDataRepository:
     """Repository for PlantData data access"""
 
     @staticmethod
-    async def create(plant_data: PlantDataCreate, created_by: str, created_by_email: str) -> PlantData:
+    async def create(
+        plant_data: PlantDataCreate, created_by: str, created_by_email: str
+    ) -> PlantData:
         """
         Create new plant data
 
@@ -41,20 +43,24 @@ class PlantDataRepository:
             **plant_data.model_dump(),
             createdBy=created_by,
             createdByEmail=created_by_email,
-            dataVersion=1
+            dataVersion=1,
         )
 
         # Convert to dict and convert UUID fields to strings for MongoDB
         plant_dict = plant.model_dump()
         plant_dict["plantDataId"] = str(plant_dict["plantDataId"])
-        plant_dict["createdBy"] = str(plant_dict["createdBy"])  # Also convert createdBy UUID
+        plant_dict["createdBy"] = str(
+            plant_dict["createdBy"]
+        )  # Also convert createdBy UUID
 
         result = await db.plant_data.insert_one(plant_dict)
 
         if not result.inserted_id:
             raise Exception("Failed to create plant data")
 
-        logger.info(f"[PlantData Repository] Created plant data: {plant.plantDataId} - {plant.plantName}")
+        logger.info(
+            f"[PlantData Repository] Created plant data: {plant.plantDataId} - {plant.plantName}"
+        )
         return plant
 
     @staticmethod
@@ -102,7 +108,7 @@ class PlantDataRepository:
         skip: int = 0,
         limit: int = 100,
         search: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> tuple[List[PlantData], int]:
         """
         Get all plant data with pagination and optional filters
@@ -123,7 +129,7 @@ class PlantDataRepository:
         if search:
             query["$or"] = [
                 {"plantName": {"$regex": search, "$options": "i"}},
-                {"scientificName": {"$regex": search, "$options": "i"}}
+                {"scientificName": {"$regex": search, "$options": "i"}},
             ]
         if is_active is not None:
             query["isActive"] = is_active
@@ -143,7 +149,9 @@ class PlantDataRepository:
         return plants, total
 
     @staticmethod
-    async def update(plant_data_id: UUID, update_data: PlantDataUpdate) -> Optional[PlantData]:
+    async def update(
+        plant_data_id: UUID, update_data: PlantDataUpdate
+    ) -> Optional[PlantData]:
         """
         Update plant data (creates new version)
 
@@ -163,7 +171,8 @@ class PlantDataRepository:
 
         # Only update fields that are provided
         update_dict = {
-            k: v for k, v in update_data.model_dump(exclude_unset=True).items()
+            k: v
+            for k, v in update_data.model_dump(exclude_unset=True).items()
             if v is not None
         }
 
@@ -176,14 +185,15 @@ class PlantDataRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await db.plant_data.update_one(
-            {"plantDataId": str(plant_data_id)},
-            {"$set": update_dict}
+            {"plantDataId": str(plant_data_id)}, {"$set": update_dict}
         )
 
         if result.matched_count == 0:
             return None
 
-        logger.info(f"[PlantData Repository] Updated plant data: {plant_data_id} (v{update_dict['dataVersion']})")
+        logger.info(
+            f"[PlantData Repository] Updated plant data: {plant_data_id} (v{update_dict['dataVersion']})"
+        )
         return await PlantDataRepository.get_by_id(plant_data_id)
 
     @staticmethod
@@ -201,7 +211,7 @@ class PlantDataRepository:
 
         result = await db.plant_data.update_one(
             {"plantDataId": str(plant_data_id)},
-            {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}}
+            {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}},
         )
 
         if result.matched_count == 0:
@@ -232,7 +242,9 @@ class PlantDataRepository:
         return True
 
     @staticmethod
-    async def bulk_create(plants: List[PlantDataCreate], created_by: str, created_by_email: str) -> List[PlantData]:
+    async def bulk_create(
+        plants: List[PlantDataCreate], created_by: str, created_by_email: str
+    ) -> List[PlantData]:
         """
         Bulk create plant data (for CSV import)
 
@@ -258,13 +270,15 @@ class PlantDataRepository:
                 **plant_data.model_dump(),
                 createdBy=created_by,
                 createdByEmail=created_by_email,
-                dataVersion=1
+                dataVersion=1,
             )
             plant_objects.append(plant)
 
             plant_dict = plant.model_dump()
             plant_dict["plantDataId"] = str(plant_dict["plantDataId"])
-            plant_dict["createdBy"] = str(plant_dict["createdBy"])  # Convert UUID to string for MongoDB
+            plant_dict["createdBy"] = str(
+                plant_dict["createdBy"]
+            )  # Convert UUID to string for MongoDB
             plant_dicts.append(plant_dict)
 
         # Bulk insert
@@ -273,7 +287,9 @@ class PlantDataRepository:
         if not result.inserted_ids:
             raise Exception("Bulk insert failed")
 
-        logger.info(f"[PlantData Repository] Bulk created {len(plant_objects)} plant data records")
+        logger.info(
+            f"[PlantData Repository] Bulk created {len(plant_objects)} plant data records"
+        )
         return plant_objects
 
     @staticmethod
@@ -299,21 +315,23 @@ class PlantDataRepository:
 
             # Update
             update_dict = {
-                k: v for k, v in update_data.model_dump(exclude_unset=True).items()
+                k: v
+                for k, v in update_data.model_dump(exclude_unset=True).items()
                 if v is not None
             }
             update_dict["dataVersion"] = plant.dataVersion + 1
             update_dict["updatedAt"] = datetime.utcnow()
 
             result = await db.plant_data.update_one(
-                {"plantName": plant_name},
-                {"$set": update_dict}
+                {"plantName": plant_name}, {"$set": update_dict}
             )
 
             if result.matched_count > 0:
                 updated_count += 1
 
-        logger.info(f"[PlantData Repository] Bulk updated {updated_count} plant data records")
+        logger.info(
+            f"[PlantData Repository] Bulk updated {updated_count} plant data records"
+        )
         return updated_count
 
     @staticmethod

@@ -26,11 +26,11 @@ router = APIRouter(prefix="/plant-data-enhanced", tags=["plant-data-enhanced"])
     "",
     response_model=SuccessResponse[PlantDataEnhanced],
     status_code=status.HTTP_201_CREATED,
-    summary="Create enhanced plant data"
+    summary="Create enhanced plant data",
 )
 async def create_plant_data(
     plant_data: PlantDataEnhancedCreate,
-    current_user: CurrentUser = Depends(require_permission("agronomist"))
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
 ):
     """
     Create new comprehensive plant cultivation data with enhanced schema.
@@ -60,34 +60,45 @@ async def create_plant_data(
     - Humidity range must be valid (if provided)
     """
     plant = await PlantDataEnhancedService.create_plant_data(
-        plant_data,
-        UUID(current_user.userId),
-        current_user.email
+        plant_data, UUID(current_user.userId), current_user.email
     )
 
     return SuccessResponse(
-        data=plant,
-        message="Enhanced plant data created successfully"
+        data=plant, message="Enhanced plant data created successfully"
     )
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[PlantDataEnhanced],
-    summary="Search enhanced plant data"
+    summary="Search enhanced plant data",
 )
 async def search_plant_data(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    search: Optional[str] = Query(None, description="Text search on name, scientific name, tags"),
-    farmType: Optional[str] = Query(None, description="Filter by farm type compatibility"),
-    minGrowthCycle: Optional[int] = Query(None, ge=0, description="Minimum growth cycle days"),
-    maxGrowthCycle: Optional[int] = Query(None, ge=0, description="Maximum growth cycle days"),
+    search: Optional[str] = Query(
+        None, description="Text search on name, scientific name, tags"
+    ),
+    farmType: Optional[str] = Query(
+        None, description="Filter by farm type compatibility"
+    ),
+    minGrowthCycle: Optional[int] = Query(
+        None, ge=0, description="Minimum growth cycle days"
+    ),
+    maxGrowthCycle: Optional[int] = Query(
+        None, ge=0, description="Maximum growth cycle days"
+    ),
     tags: Optional[str] = Query(None, description="Comma-separated tags to filter"),
-    contributor: Optional[str] = Query(None, description="Filter by data contributor (e.g., 'Tayeb')"),
-    targetRegion: Optional[str] = Query(None, description="Filter by target region (e.g., 'UAE')"),
-    isActive: Optional[bool] = Query(None, description="Filter by active status (true/false)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    contributor: Optional[str] = Query(
+        None, description="Filter by data contributor (e.g., 'Tayeb')"
+    ),
+    targetRegion: Optional[str] = Query(
+        None, description="Filter by target region (e.g., 'UAE')"
+    ),
+    isActive: Optional[bool] = Query(
+        None, description="Filter by active status (true/false)"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Search and filter comprehensive plant data with advanced filters.
@@ -123,27 +134,24 @@ async def search_plant_data(
         tags=tag_list,
         contributor=contributor,
         target_region=targetRegion,
-        is_active=isActive
+        is_active=isActive,
     )
 
     return PaginatedResponse(
         data=plants,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
 @router.get(
     "/filter-options",
     summary="Get filter options for plant data",
-    response_model=SuccessResponse[dict]
+    response_model=SuccessResponse[dict],
 )
 async def get_filter_options(
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get distinct values for filter dropdowns.
@@ -164,10 +172,10 @@ async def get_filter_options(
 @router.get(
     "/active",
     response_model=SuccessResponse[List[PlantDataEnhanced]],
-    summary="Get all active plant data for dropdowns"
+    summary="Get all active plant data for dropdowns",
 )
 async def get_active_plants(
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get all active plant data for use in dropdowns (e.g., block planting).
@@ -187,11 +195,10 @@ async def get_active_plants(
 @router.get(
     "/{plant_data_id}",
     response_model=SuccessResponse[PlantDataEnhanced],
-    summary="Get enhanced plant data by ID"
+    summary="Get enhanced plant data by ID",
 )
 async def get_plant_data(
-    plant_data_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    plant_data_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Get specific enhanced plant data by ID.
@@ -218,12 +225,12 @@ async def get_plant_data(
 @router.patch(
     "/{plant_data_id}",
     response_model=SuccessResponse[PlantDataEnhanced],
-    summary="Update enhanced plant data"
+    summary="Update enhanced plant data",
 )
 async def update_plant_data(
     plant_data_id: UUID,
     update_data: PlantDataEnhancedUpdate,
-    current_user: CurrentUser = Depends(require_permission("agronomist"))
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
 ):
     """
     Update comprehensive plant cultivation data.
@@ -240,25 +247,23 @@ async def update_plant_data(
     - All range validations apply
     """
     updated_plant = await PlantDataEnhancedService.update_plant_data(
-        plant_data_id,
-        update_data,
-        UUID(current_user.userId)
+        plant_data_id, update_data, UUID(current_user.userId)
     )
 
     return SuccessResponse(
         data=updated_plant,
-        message=f"Plant data updated successfully (version {updated_plant.dataVersion})"
+        message=f"Plant data updated successfully (version {updated_plant.dataVersion})",
     )
 
 
 @router.delete(
     "/{plant_data_id}",
     response_model=SuccessResponse[dict],
-    summary="Delete enhanced plant data"
+    summary="Delete enhanced plant data",
 )
 async def delete_plant_data(
     plant_data_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("agronomist"))
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
 ):
     """
     Delete enhanced plant data (soft delete).
@@ -270,13 +275,12 @@ async def delete_plant_data(
     allows recovery if needed.
     """
     await PlantDataEnhancedService.delete_plant_data(
-        plant_data_id,
-        UUID(current_user.userId)
+        plant_data_id, UUID(current_user.userId)
     )
 
     return SuccessResponse(
         data={"plantDataId": str(plant_data_id)},
-        message="Plant data deleted successfully"
+        message="Plant data deleted successfully",
     )
 
 
@@ -284,12 +288,12 @@ async def delete_plant_data(
     "/{plant_data_id}/clone",
     response_model=SuccessResponse[PlantDataEnhanced],
     status_code=status.HTTP_201_CREATED,
-    summary="Clone plant data"
+    summary="Clone plant data",
 )
 async def clone_plant_data(
     plant_data_id: UUID,
     newName: str = Query(..., description="New plant name for the clone"),
-    current_user: CurrentUser = Depends(require_permission("agronomist"))
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
 ):
     """
     Clone existing plant data with a new name.
@@ -309,30 +313,21 @@ async def clone_plant_data(
     - All cultivation details copied from source
     """
     cloned = await PlantDataEnhancedService.clone_plant_data(
-        plant_data_id,
-        newName,
-        UUID(current_user.userId),
-        current_user.email
+        plant_data_id, newName, UUID(current_user.userId), current_user.email
     )
 
     return SuccessResponse(
-        data=cloned,
-        message=f"Plant data cloned successfully as '{newName}'"
+        data=cloned, message=f"Plant data cloned successfully as '{newName}'"
     )
 
 
 @router.get(
     "/template/csv",
     summary="Download CSV template for basic fields",
-    responses={
-        200: {
-            "content": {"text/csv": {}},
-            "description": "CSV template file"
-        }
-    }
+    responses={200: {"content": {"text/csv": {}}, "description": "CSV template file"}},
 )
 async def download_csv_template(
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Download CSV template for enhanced plant data import (basic fields only).
@@ -361,7 +356,7 @@ async def download_csv_template(
         media_type="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=plant_data_enhanced_template.csv"
-        }
+        },
     )
 
 
@@ -371,12 +366,12 @@ async def download_csv_template(
     responses={
         200: {
             "content": {"text/csv": {}},
-            "description": "CSV file with all active plant data"
+            "description": "CSV file with all active plant data",
         }
-    }
+    },
 )
 async def export_plant_data_csv(
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Export all active plant data to CSV format.
@@ -404,9 +399,7 @@ async def export_plant_data_csv(
     return Response(
         content=csv_content,
         media_type="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=plant_data_export.csv"
-        }
+        headers={"Content-Disposition": "attachment; filename=plant_data_export.csv"},
     )
 
 
@@ -414,11 +407,11 @@ async def export_plant_data_csv(
     "/import/csv",
     response_model=SuccessResponse[dict],
     status_code=status.HTTP_200_OK,
-    summary="Import plant data from CSV file"
+    summary="Import plant data from CSV file",
 )
 async def import_plant_data_csv(
     file: UploadFile = File(..., description="CSV file to import"),
-    current_user: CurrentUser = Depends(require_permission("agronomist"))
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
 ):
     """
     Import plant data from CSV file.
@@ -457,27 +450,25 @@ async def import_plant_data_csv(
 
     # Import CSV
     result = await PlantDataEnhancedService.import_from_csv(
-        csv_string,
-        UUID(current_user.userId),
-        current_user.email
+        csv_string, UUID(current_user.userId), current_user.email
     )
 
     return SuccessResponse(
         data=result,
-        message=f"CSV import completed: {result['created']} created, {result['updated']} updated"
+        message=f"CSV import completed: {result['created']} created, {result['updated']} updated",
     )
 
 
 @router.get(
     "/by-farm-type/{farm_type}",
     response_model=PaginatedResponse[PlantDataEnhanced],
-    summary="Get plants by farm type compatibility"
+    summary="Get plants by farm type compatibility",
 )
 async def get_by_farm_type(
     farm_type: FarmTypeEnum,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get plant data compatible with specific farm type.
@@ -494,32 +485,27 @@ async def get_by_farm_type(
     - Plan crop selection based on farm capabilities
     """
     plants, total, total_pages = await PlantDataEnhancedService.get_by_farm_type(
-        farm_type,
-        page=page,
-        per_page=perPage
+        farm_type, page=page, per_page=perPage
     )
 
     return PaginatedResponse(
         data=plants,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
 @router.get(
     "/by-tags/{tags}",
     response_model=PaginatedResponse[PlantDataEnhanced],
-    summary="Get plants by tags"
+    summary="Get plants by tags",
 )
 async def get_by_tags(
     tags: str,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get plant data by tags (any match).
@@ -540,17 +526,12 @@ async def get_by_tags(
     tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
 
     plants, total, total_pages = await PlantDataEnhancedService.get_by_tags(
-        tag_list,
-        page=page,
-        per_page=perPage
+        tag_list, page=page, per_page=perPage
     )
 
     return PaginatedResponse(
         data=plants,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )

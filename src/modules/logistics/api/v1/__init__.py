@@ -13,7 +13,9 @@ api_router = APIRouter()
 
 # Include route modules
 api_router.include_router(config_router, prefix="/config", tags=["logistics-config"])
-api_router.include_router(dashboard_router, prefix="/dashboard", tags=["logistics-dashboard"])
+api_router.include_router(
+    dashboard_router, prefix="/dashboard", tags=["logistics-dashboard"]
+)
 api_router.include_router(vehicles_router, prefix="/vehicles", tags=["vehicles"])
 api_router.include_router(routes_router, prefix="/routes", tags=["routes"])
 api_router.include_router(shipments_router, prefix="/shipments", tags=["shipments"])

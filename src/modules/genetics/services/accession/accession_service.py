@@ -52,7 +52,9 @@ def _is_public_token_collision(error: DuplicateKeyError) -> bool:
     """Distinguish a publicToken unique-index collision from any other
     duplicate-key error (accessionId, accessionCode) so only the former is
     retried here — the latter already has its own handling upstream."""
-    key_pattern = (error.details or {}).get("keyPattern", {}) if hasattr(error, "details") else {}
+    key_pattern = (
+        (error.details or {}).get("keyPattern", {}) if hasattr(error, "details") else {}
+    )
     if "publicToken" in key_pattern:
         return True
     return "publicToken" in str(error)
@@ -143,7 +145,10 @@ class AccessionService:
                 await db[ACCESSIONS].insert_one(model_to_doc(accession, _ID_KEY))
                 break
             except DuplicateKeyError as e:
-                if not _is_public_token_collision(e) or attempt == _MAX_TOKEN_ATTEMPTS - 1:
+                if (
+                    not _is_public_token_collision(e)
+                    or attempt == _MAX_TOKEN_ATTEMPTS - 1
+                ):
                     logger.error(f"[AccessionService] insert_one failed: {e}")
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -252,8 +257,10 @@ class AccessionService:
     async def list_children(accession_id: str) -> List[Accession]:
         """Direct descendants of an accession, in generation order."""
         db = genetics_db.get_database()
-        cursor = db[ACCESSIONS].find({"parents.accessionId": accession_id}).sort(
-            "accessionCode", 1
+        cursor = (
+            db[ACCESSIONS]
+            .find({"parents.accessionId": accession_id})
+            .sort("accessionCode", 1)
         )
         return [doc_to_model(doc, Accession, _ID_KEY) async for doc in cursor]
 
@@ -283,7 +290,9 @@ class AccessionService:
         update_fields["updatedAt"] = datetime.utcnow()
 
         db = genetics_db.get_database()
-        await db[ACCESSIONS].update_one({_ID_KEY: accession_id}, {"$set": update_fields})
+        await db[ACCESSIONS].update_one(
+            {_ID_KEY: accession_id}, {"$set": update_fields}
+        )
 
         logger.info(
             f"[AccessionService] Updated accession {accession_id}: {list(update_fields.keys())}"
@@ -345,8 +354,7 @@ class AccessionService:
                 )
 
             out_of_range = sorted(
-                n for n in data.vesselNumbers
-                if n < 1 or n > source.labelledVesselCount
+                n for n in data.vesselNumbers if n < 1 or n > source.labelledVesselCount
             )
             if out_of_range:
                 raise HTTPException(
@@ -466,10 +474,12 @@ class AccessionService:
 
         match: Dict[str, Any] = {
             "location.roomId": {"$ne": None},
-            "status": {"$nin": [
-                AccessionStatus.DISCARDED.value,
-                AccessionStatus.CONSUMED.value,
-            ]},
+            "status": {
+                "$nin": [
+                    AccessionStatus.DISCARDED.value,
+                    AccessionStatus.CONSUMED.value,
+                ]
+            },
         }
         if facility_id:
             match["location.facilityId"] = facility_id
@@ -507,6 +517,5 @@ class AccessionService:
         db = genetics_db.get_database()
         cursor = db[ACCESSIONS].find({_ID_KEY: {"$in": list(set(accession_ids))}})
         return {
-            doc[_ID_KEY]: doc_to_model(doc, Accession, _ID_KEY)
-            async for doc in cursor
+            doc[_ID_KEY]: doc_to_model(doc, Accession, _ID_KEY) async for doc in cursor
         }

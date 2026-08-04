@@ -41,9 +41,7 @@ class SenseHubCacheQueryService:
         if equipment_type:
             query["type"] = equipment_type
 
-        cursor = db["sensehub_equipment_cache"].find(
-            query, {"_id": 0}
-        ).sort("name", 1)
+        cursor = db["sensehub_equipment_cache"].find(query, {"_id": 0}).sort("name", 1)
         return await cursor.to_list(length=500)
 
     @staticmethod
@@ -63,7 +61,11 @@ class SenseHubCacheQueryService:
                 "status": doc.get("status"),
                 "last_reading": doc.get("lastReading"),
                 "_cached": True,
-                "_syncedAt": doc.get("syncedAt").isoformat() if isinstance(doc.get("syncedAt"), datetime) else doc.get("syncedAt"),
+                "_syncedAt": (
+                    doc.get("syncedAt").isoformat()
+                    if isinstance(doc.get("syncedAt"), datetime)
+                    else doc.get("syncedAt")
+                ),
             }
             # Merge extra metadata back in
             if doc.get("metadata"):
@@ -95,13 +97,15 @@ class SenseHubCacheQueryService:
         if severity:
             query["severity"] = severity
 
-        cursor = db["sensehub_alerts_cache"].find(
-            query, {"_id": 0}
-        ).sort("syncedAt", -1)
+        cursor = (
+            db["sensehub_alerts_cache"].find(query, {"_id": 0}).sort("syncedAt", -1)
+        )
         return await cursor.to_list(length=500)
 
     @staticmethod
-    async def get_alerts_as_list(block_id: str, severity: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def get_alerts_as_list(
+        block_id: str, severity: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Return cached alerts in the same shape as live SenseHub response.
         """
@@ -114,7 +118,11 @@ class SenseHubCacheQueryService:
                 "message": doc.get("message"),
                 "acknowledged": doc.get("acknowledged", False),
                 "_cached": True,
-                "_syncedAt": doc.get("syncedAt").isoformat() if isinstance(doc.get("syncedAt"), datetime) else doc.get("syncedAt"),
+                "_syncedAt": (
+                    doc.get("syncedAt").isoformat()
+                    if isinstance(doc.get("syncedAt"), datetime)
+                    else doc.get("syncedAt")
+                ),
             }
             if doc.get("alertData"):
                 item.update(doc["alertData"])
@@ -322,7 +330,9 @@ class SenseHubCacheQueryService:
             {"$sort": {"cameraId": 1}},
         ]
 
-        docs = await db["sensehub_snapshots_cache"].aggregate(pipeline).to_list(length=50)
+        docs = (
+            await db["sensehub_snapshots_cache"].aggregate(pipeline).to_list(length=50)
+        )
 
         for doc in docs:
             for key, val in list(doc.items()):

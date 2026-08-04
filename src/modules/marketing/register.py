@@ -22,7 +22,9 @@ async def startup_hook():
 
     This connects to the database and performs any necessary initialization.
     """
-    logger.info(f"[Marketing Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Marketing Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await marketing_db.connect()
@@ -62,20 +64,20 @@ def register(app: FastAPI, prefix: Optional[str] = None) -> None:
     logger.info(f"[Marketing Module] Registering routes with prefix: {route_prefix}")
 
     # Register API routes
-    app.include_router(
-        api_router,
-        prefix=route_prefix,
-        tags=["marketing"]
-    )
+    app.include_router(api_router, prefix=route_prefix, tags=["marketing"])
 
     # Register lifecycle hooks
     app.add_event_handler("startup", startup_hook)
     app.add_event_handler("shutdown", shutdown_hook)
 
-    logger.info(f"[Marketing Module] Successfully registered v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Marketing Module] Successfully registered v{settings.MODULE_VERSION}"
+    )
 
 
 # Module metadata (for plugin system discovery)
 __module_name__ = "marketing"
 __version__ = settings.MODULE_VERSION
-__description__ = "Marketing management system for campaigns, budgets, channels, and events"
+__description__ = (
+    "Marketing management system for campaigns, budgets, channels, and events"
+)

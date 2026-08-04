@@ -58,7 +58,9 @@ class VendorCreate(BaseModel):
     organizationId: UUID
     vendorCode: Optional[str] = Field(None, max_length=20)
     name: str = Field(..., min_length=1, max_length=200)
-    trn: Optional[str] = Field(None, description="UAE TRN — exactly 15 digits if supplied")
+    trn: Optional[str] = Field(
+        None, description="UAE TRN — exactly 15 digits if supplied"
+    )
     addressLine1: Optional[str] = Field(None, max_length=200)
     addressLine2: Optional[str] = Field(None, max_length=200)
     city: Optional[str] = Field(None, max_length=100)

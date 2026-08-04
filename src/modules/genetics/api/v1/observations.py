@@ -35,6 +35,7 @@ router = APIRouter()
 
 class PromotionResult(BaseModel):
     """The new line, and the founding accession if one was minted."""
+
     line: Line
     foundingAccession: Optional[Accession] = None
 
@@ -66,7 +67,9 @@ async def list_observations(
     accessionId: Optional[str] = Query(None),
     lineId: Optional[str] = Query(None),
     type_: Optional[str] = Query(None, alias="type"),
-    novelOnly: bool = Query(False, description="Only observations flagged as novel traits"),
+    novelOnly: bool = Query(
+        False, description="Only observations flagged as novel traits"
+    ),
     current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[Observation]:
     observations, total = await ObservationService.list_observations(

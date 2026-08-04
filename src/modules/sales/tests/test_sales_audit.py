@@ -117,7 +117,9 @@ def _make_db(
         col.find = MagicMock(return_value=_AsyncCursor(docs or []))
 
     db = MagicMock()
-    db.__getitem__ = MagicMock(side_effect=lambda name: col if name == collection_name else MagicMock())
+    db.__getitem__ = MagicMock(
+        side_effect=lambda name: col if name == collection_name else MagicMock()
+    )
     return db
 
 
@@ -167,6 +169,7 @@ async def _call_audit_handler(
         SalesAuditResponse,
     )
     import logging
+
     logger = logging.getLogger("test_sales_audit")
 
     doc_type_upper = doc_type.upper()
@@ -577,6 +580,6 @@ def test_all_8_sales_doc_types_covered():
 def test_collection_names_follow_naming_convention():
     """Each audit collection name ends with '_v2_audit'."""
     for col_name in _SALES_AUDIT_COLLECTIONS.values():
-        assert col_name.endswith("_v2_audit"), (
-            f"Collection {col_name!r} does not follow the _v2_audit naming convention"
-        )
+        assert col_name.endswith(
+            "_v2_audit"
+        ), f"Collection {col_name!r} does not follow the _v2_audit naming convention"

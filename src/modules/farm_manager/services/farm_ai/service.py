@@ -24,7 +24,11 @@ from ..sensehub import SenseHubConnectionService
 from .context_builder import build_system_prompt
 from .tool_definitions import get_gemini_tools, WRITE_TOOL_NAMES
 from .tool_executor import execute_read_tool, execute_write_tool, describe_write_action
-from .pending_actions import store_pending_action, load_pending_action, delete_pending_action
+from .pending_actions import (
+    store_pending_action,
+    load_pending_action,
+    delete_pending_action,
+)
 from .models import (
     FarmAIChatResponse,
     PendingAction,
@@ -217,10 +221,14 @@ class FarmAIChatService:
                         # Read tool: execute immediately and return result.
                         # web_search doesn't need SenseHub; other tools do.
                         if tool_name == "web_search":
-                            result = await execute_read_tool(client, tool_name, tool_input)
+                            result = await execute_read_tool(
+                                client, tool_name, tool_input
+                            )
                         elif client:
                             result = await execute_read_tool(
-                                client, tool_name, tool_input,
+                                client,
+                                tool_name,
+                                tool_input,
                                 block_id=str(block_id),
                             )
                             # Refresh cached auth token after SenseHub call
@@ -253,12 +261,14 @@ class FarmAIChatService:
 
         except GoogleAPICallError as e:
             logger.error(f"Vertex AI API error: {e}")
-            if '429' in str(e) or 'Resource exhausted' in str(e):
+            if "429" in str(e) or "Resource exhausted" in str(e):
                 detail = "Vertex AI rate limit exceeded (429). Please wait a moment and try again."
-            elif '403' in str(e) or 'Permission' in str(e):
+            elif "403" in str(e) or "Permission" in str(e):
                 detail = "Vertex AI permission denied (403). Check service account credentials."
-            elif '404' in str(e):
-                detail = "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+            elif "404" in str(e):
+                detail = (
+                    "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+                )
             else:
                 detail = f"Vertex AI error: {str(e)[:200]}"
             return FarmAIChatResponse(
@@ -277,16 +287,18 @@ class FarmAIChatService:
         # Log the interaction to MongoDB (non-blocking; failures are warnings)
         try:
             db = farm_db.get_database()
-            await db.farm_ai_chat_log.insert_one({
-                "farmId": str(farm_id),
-                "blockId": str(block_id),
-                "userId": user_id,
-                "userMessage": message,
-                "assistantMessage": final_text,
-                "toolsUsed": tools_used,
-                "hasPendingAction": pending_action is not None,
-                "timestamp": datetime.utcnow(),
-            })
+            await db.farm_ai_chat_log.insert_one(
+                {
+                    "farmId": str(farm_id),
+                    "blockId": str(block_id),
+                    "userId": user_id,
+                    "userMessage": message,
+                    "assistantMessage": final_text,
+                    "toolsUsed": tools_used,
+                    "hasPendingAction": pending_action is not None,
+                    "timestamp": datetime.utcnow(),
+                }
+            )
         except Exception as e:
             logger.warning(f"Failed to log AI chat: {e}")
 
@@ -328,10 +340,9 @@ class FarmAIChatService:
             )
 
         # Verify farm/block match to prevent cross-block action execution
-        if (
-            action_data.get("farm_id") != str(farm_id)
-            or action_data.get("block_id") != str(block_id)
-        ):
+        if action_data.get("farm_id") != str(farm_id) or action_data.get(
+            "block_id"
+        ) != str(block_id):
             return ConfirmActionResponse(
                 status="not_found",
                 message="Action does not belong to this block.",
@@ -349,7 +360,9 @@ class FarmAIChatService:
         # Execute the write tool via SenseHub (prefer MCP, fall back to HTTP)
         try:
             try:
-                client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
+                client = await SenseHubConnectionService.get_mcp_client(
+                    farm_id, block_id
+                )
             except Exception:
                 client = await SenseHubConnectionService.get_client(farm_id, block_id)
             result = await execute_write_tool(
@@ -357,7 +370,9 @@ class FarmAIChatService:
                 action_data["tool_name"],
                 action_data["tool_input"],
             )
-            await SenseHubConnectionService._update_token_cache(farm_id, block_id, client)
+            await SenseHubConnectionService._update_token_cache(
+                farm_id, block_id, client
+            )
 
             return ConfirmActionResponse(
                 status="executed",

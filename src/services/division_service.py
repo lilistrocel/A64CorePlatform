@@ -223,9 +223,7 @@ class DivisionService:
         return _doc_to_response(updated_doc)
 
     @staticmethod
-    async def select_division(
-        user_id: str, division_id: str
-    ) -> DivisionSelectResponse:
+    async def select_division(user_id: str, division_id: str) -> DivisionSelectResponse:
         """
         Set the active division for a user by updating their defaultDivisionId.
 

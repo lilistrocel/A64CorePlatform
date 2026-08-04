@@ -10,27 +10,31 @@ from uuid import UUID
 from datetime import datetime
 
 from ...models.block_harvest import (
-    BlockHarvest, BlockHarvestCreate, BlockHarvestUpdate,
-    BlockHarvestSummary
+    BlockHarvest,
+    BlockHarvestCreate,
+    BlockHarvestUpdate,
+    BlockHarvestSummary,
 )
 from ...services.block.harvest_service import HarvestService
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 
-router = APIRouter(prefix="/farms/{farm_id}/blocks/{block_id}/harvests", tags=["block-harvests"])
+router = APIRouter(
+    prefix="/farms/{farm_id}/blocks/{block_id}/harvests", tags=["block-harvests"]
+)
 
 
 @router.post(
     "",
     response_model=SuccessResponse[BlockHarvest],
     status_code=status.HTTP_201_CREATED,
-    summary="Record a harvest"
+    summary="Record a harvest",
 )
 async def record_harvest(
     farm_id: UUID,
     block_id: UUID,
     harvest_data: BlockHarvestCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+    current_user: CurrentUser = Depends(require_permission("farm.operate")),
 ):
     """
     Record a new harvest event.
@@ -50,27 +54,23 @@ async def record_harvest(
     # Verify blockId in harvest_data matches URL parameter
     if harvest_data.blockId != block_id:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Block ID in request body must match URL parameter"
+            detail="Block ID in request body must match URL parameter",
         )
 
     harvest = await HarvestService.record_harvest(
-        harvest_data,
-        current_user.userId,
-        current_user.email
+        harvest_data, current_user.userId, current_user.email
     )
 
-    return SuccessResponse(
-        data=harvest,
-        message="Harvest recorded successfully"
-    )
+    return SuccessResponse(data=harvest, message="Harvest recorded successfully")
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[BlockHarvest],
-    summary="List harvests for a block"
+    summary="List harvests for a block",
 )
 async def list_block_harvests(
     farm_id: UUID,
@@ -79,8 +79,10 @@ async def list_block_harvests(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     startDate: Optional[datetime] = Query(None, description="Filter by start date"),
     endDate: Optional[datetime] = Query(None, description="Filter by end date"),
-    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    farmingYear: Optional[int] = Query(
+        None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of harvest events for a block with pagination.
@@ -101,29 +103,26 @@ async def list_block_harvests(
         per_page=perPage,
         start_date=startDate,
         end_date=endDate,
-        farming_year=farmingYear
+        farming_year=farmingYear,
     )
 
     return PaginatedResponse(
         data=harvests,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
 @router.get(
     "/summary",
     response_model=SuccessResponse[BlockHarvestSummary],
-    summary="Get harvest summary for a block"
+    summary="Get harvest summary for a block",
 )
 async def get_block_harvest_summary(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get comprehensive harvest summary for a block.
@@ -143,13 +142,13 @@ async def get_block_harvest_summary(
 @router.get(
     "/{harvest_id}",
     response_model=SuccessResponse[BlockHarvest],
-    summary="Get harvest by ID"
+    summary="Get harvest by ID",
 )
 async def get_harvest(
     farm_id: UUID,
     block_id: UUID,
     harvest_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get a specific harvest event by ID.
@@ -159,9 +158,10 @@ async def get_harvest(
     # Verify harvest belongs to the specified block
     if harvest.blockId != block_id:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Harvest not found in this block"
+            detail="Harvest not found in this block",
         )
 
     return SuccessResponse(data=harvest)
@@ -170,14 +170,14 @@ async def get_harvest(
 @router.patch(
     "/{harvest_id}",
     response_model=SuccessResponse[BlockHarvest],
-    summary="Update a harvest"
+    summary="Update a harvest",
 )
 async def update_harvest(
     farm_id: UUID,
     block_id: UUID,
     harvest_id: UUID,
     update_data: BlockHarvestUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+    current_user: CurrentUser = Depends(require_permission("farm.operate")),
 ):
     """
     Update a harvest record.
@@ -191,32 +191,25 @@ async def update_harvest(
     # Verify harvest belongs to the specified block
     if harvest.blockId != block_id:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Harvest not found in this block"
+            detail="Harvest not found in this block",
         )
 
-    updated_harvest = await HarvestService.update_harvest(
-        harvest_id,
-        update_data
-    )
+    updated_harvest = await HarvestService.update_harvest(harvest_id, update_data)
 
-    return SuccessResponse(
-        data=updated_harvest,
-        message="Harvest updated successfully"
-    )
+    return SuccessResponse(data=updated_harvest, message="Harvest updated successfully")
 
 
 @router.delete(
-    "/{harvest_id}",
-    response_model=SuccessResponse[dict],
-    summary="Delete a harvest"
+    "/{harvest_id}", response_model=SuccessResponse[dict], summary="Delete a harvest"
 )
 async def delete_harvest(
     farm_id: UUID,
     block_id: UUID,
     harvest_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Delete a harvest record.
@@ -230,16 +223,16 @@ async def delete_harvest(
     # Verify harvest belongs to the specified block
     if harvest.blockId != block_id:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Harvest not found in this block"
+            detail="Harvest not found in this block",
         )
 
     await HarvestService.delete_harvest(harvest_id)
 
     return SuccessResponse(
-        data={"harvestId": str(harvest_id)},
-        message="Harvest deleted successfully"
+        data={"harvestId": str(harvest_id)}, message="Harvest deleted successfully"
     )
 
 
@@ -250,7 +243,7 @@ farm_router = APIRouter(prefix="/farms/{farm_id}/harvests", tags=["farm-harvests
 @farm_router.get(
     "",
     response_model=PaginatedResponse[BlockHarvest],
-    summary="List all harvests in a farm"
+    summary="List all harvests in a farm",
 )
 async def list_farm_harvests(
     farm_id: UUID,
@@ -258,8 +251,10 @@ async def list_farm_harvests(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     startDate: Optional[datetime] = Query(None, description="Filter by start date"),
     endDate: Optional[datetime] = Query(None, description="Filter by end date"),
-    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    farmingYear: Optional[int] = Query(
+        None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of all harvest events across all blocks in a farm.
@@ -280,15 +275,12 @@ async def list_farm_harvests(
         per_page=perPage,
         start_date=startDate,
         end_date=endDate,
-        farming_year=farmingYear
+        farming_year=farmingYear,
     )
 
     return PaginatedResponse(
         data=harvests,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )

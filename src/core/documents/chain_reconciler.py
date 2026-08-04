@@ -122,9 +122,7 @@ def line_open_qty(
         on that case.
     """
     ordered = Decimal(str(line.get("orderedQty", line.get(qty_field, 0))))
-    consumed = sum(
-        Decimal(str(line.get(field, 0))) for field in consumed_fields
-    )
+    consumed = sum(Decimal(str(line.get(field, 0))) for field in consumed_fields)
     return ordered - consumed
 
 
@@ -168,7 +166,10 @@ def is_doc_fully_consumed(
         line_loader(doc_raw) if line_loader is not None else doc_raw.get("lines", [])
     )
     for ln in lines:
-        if line_open_qty(ln, qty_field=qty_field, consumed_fields=consumed_fields) > TOLERANCE:
+        if (
+            line_open_qty(ln, qty_field=qty_field, consumed_fields=consumed_fields)
+            > TOLERANCE
+        ):
             return False
     return True
 
@@ -516,7 +517,7 @@ async def pull_dangling_chain_refs(
     # Step 2: $pull per-line targetDocRefs for each affected source line.
     # Reason: only performed when affected_line_ids is explicitly provided
     # (not None) so callers that only have a header ref can skip it cheaply.
-    for line_id in (affected_line_ids or []):
+    for line_id in affected_line_ids or []:
         line_query = dict(query)
         line_query["lines.lineId"] = line_id
         await db[source_collection].update_one(
@@ -618,9 +619,7 @@ async def reconcile_line_counters(
     """
     # Filter out near-zero deltas up-front.
     significant = {
-        lid: delta
-        for lid, delta in line_deltas.items()
-        if abs(delta) > TOLERANCE
+        lid: delta for lid, delta in line_deltas.items() if abs(delta) > TOLERANCE
     }
     if not significant:
         return
@@ -638,9 +637,7 @@ async def reconcile_line_counters(
         source_doc = await db[source_collection].find_one(source_query)
         source_lines_map: Dict[str, Dict[str, Any]] = {}
         if source_doc:
-            source_lines_map = {
-                ln["lineId"]: ln for ln in source_doc.get("lines", [])
-            }
+            source_lines_map = {ln["lineId"]: ln for ln in source_doc.get("lines", [])}
 
         for line_id, delta in significant.items():
             if delta > _ZERO:
@@ -674,7 +671,10 @@ async def reconcile_line_counters(
             )
         else:
             # Reason: embedded lines shape (Sales DN/SO, AP Invoice lines).
-            line_query: Dict[str, Any] = {doc_key: source_doc_entry, "lines.lineId": line_id}
+            line_query: Dict[str, Any] = {
+                doc_key: source_doc_entry,
+                "lines.lineId": line_id,
+            }
             if org_id is not None:
                 line_query["organizationId"] = org_id
             await db[source_collection].update_one(

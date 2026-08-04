@@ -50,10 +50,7 @@ class StrainService:
     # ---------------------------------------------------------------------------
 
     @staticmethod
-    async def create_strain(
-        data: StrainCreate,
-        current_user
-    ) -> Strain:
+    async def create_strain(data: StrainCreate, current_user) -> Strain:
         db = mushroom_db.get_database()
 
         strain = Strain(
@@ -72,7 +69,7 @@ class StrainService:
             logger.error(f"[StrainService] insert_one failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create strain"
+                detail="Failed to create strain",
             )
 
         logger.info(
@@ -92,7 +89,7 @@ class StrainService:
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Strain '{strain_id}' not found"
+                detail=f"Strain '{strain_id}' not found",
             )
         return _doc_to_model(doc)
 
@@ -102,9 +99,7 @@ class StrainService:
 
     @staticmethod
     async def list_strains(
-        skip: int = 0,
-        limit: int = 20,
-        active_only: bool = False
+        skip: int = 0, limit: int = 20, active_only: bool = False
     ) -> Tuple[List[Strain], int]:
         db = mushroom_db.get_database()
         query: dict = {}
@@ -113,8 +108,7 @@ class StrainService:
 
         total = await db.mushroom_strains.count_documents(query)
         cursor = (
-            db.mushroom_strains
-            .find(query)
+            db.mushroom_strains.find(query)
             .sort("commonName", 1)
             .skip(skip)
             .limit(limit)
@@ -138,16 +132,17 @@ class StrainService:
         if not update_fields:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No fields provided for update"
+                detail="No fields provided for update",
             )
 
         update_fields["updatedAt"] = datetime.utcnow()
 
         db = mushroom_db.get_database()
         await db.mushroom_strains.update_one(
-            {_MONGO_ID_KEY: strain_id},
-            {"$set": update_fields}
+            {_MONGO_ID_KEY: strain_id}, {"$set": update_fields}
         )
 
-        logger.info(f"[StrainService] Updated strain {strain_id}: {list(update_fields.keys())}")
+        logger.info(
+            f"[StrainService] Updated strain {strain_id}: {list(update_fields.keys())}"
+        )
         return await StrainService.get_strain(strain_id)

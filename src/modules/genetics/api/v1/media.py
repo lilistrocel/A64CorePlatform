@@ -41,6 +41,7 @@ router = APIRouter()
 
 class AdditiveReadout(BaseModel):
     """Material exposed to a given additive, with the batches responsible."""
+
     additive: str
     accessions: List[Accession]
     batches: List[Batch]
@@ -50,6 +51,7 @@ class AdditiveReadout(BaseModel):
 # ===========================================================================
 # Recipes
 # ===========================================================================
+
 
 @router.post(
     "/recipes",
@@ -75,7 +77,9 @@ async def list_recipes(
     page: int = Query(1, ge=1),
     perPage: int = Query(20, ge=1, le=100),
     type_: Optional[str] = Query(None, alias="type"),
-    additive: Optional[str] = Query(None, description="Recipes containing this additive"),
+    additive: Optional[str] = Query(
+        None, description="Recipes containing this additive"
+    ),
     search: Optional[str] = Query(None),
     activeOnly: bool = Query(False),
     current_user: CurrentUser = Depends(require_view),
@@ -127,6 +131,7 @@ async def update_recipe(
 # Batches
 # ===========================================================================
 
+
 @router.post(
     "/batches",
     response_model=SuccessResponse[Batch],
@@ -152,7 +157,9 @@ async def list_batches(
     perPage: int = Query(20, ge=1, le=100),
     recipeId: Optional[str] = Query(None),
     status_: Optional[str] = Query(None, alias="status"),
-    additive: Optional[str] = Query(None, description="Batches whose snapshot contains this additive"),
+    additive: Optional[str] = Query(
+        None, description="Batches whose snapshot contains this additive"
+    ),
     search: Optional[str] = Query(None, description="Match batch code"),
     current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[Batch]:
@@ -198,6 +205,7 @@ async def update_batch(
 # ===========================================================================
 # Experiment readout
 # ===========================================================================
+
 
 @router.get(
     "/additives/{additive_name}/accessions",

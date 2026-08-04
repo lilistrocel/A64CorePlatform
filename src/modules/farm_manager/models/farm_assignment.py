@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class FarmAssignmentCreate(BaseModel):
     """Schema for creating a farm assignment"""
+
     userId: UUID = Field(..., description="User ID to assign")
     userEmail: str = Field(..., description="User email")
     farmId: UUID = Field(..., description="Farm ID")
@@ -20,7 +21,10 @@ class FarmAssignmentCreate(BaseModel):
 
 class FarmAssignment(FarmAssignmentCreate):
     """Complete farm assignment model with all fields"""
-    assignmentId: UUID = Field(default_factory=uuid4, description="Unique assignment identifier")
+
+    assignmentId: UUID = Field(
+        default_factory=uuid4, description="Unique assignment identifier"
+    )
 
     # Assignment details
     assignedBy: UUID = Field(..., description="User who made assignment")
@@ -49,6 +53,6 @@ class FarmAssignment(FarmAssignmentCreate):
                 "role": "farmer",
                 "isActive": True,
                 "createdAt": "2025-01-10T10:00:00Z",
-                "updatedAt": "2025-01-10T10:00:00Z"
+                "updatedAt": "2025-01-10T10:00:00Z",
             }
         }

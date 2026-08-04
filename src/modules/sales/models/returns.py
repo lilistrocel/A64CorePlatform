@@ -67,7 +67,9 @@ class ReturnLineCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     returned_qty: Decimal = Field(..., gt=Decimal("0"))
     uom: str = Field(..., max_length=20)
-    warehouse_id: str = Field(..., description="Destination warehouse for returned goods")
+    warehouse_id: str = Field(
+        ..., description="Destination warehouse for returned goods"
+    )
     unit_price: Decimal = Field(..., ge=Decimal("0"))
     discount_percent: Decimal = Field(Decimal("0"), ge=Decimal("0"), le=Decimal("100"))
     tax_code_id: Optional[str] = None
@@ -167,7 +169,11 @@ class ReturnFromRequestRequest(BaseModel):
         notes:              Free-text notes.
     """
 
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     doc_date: date
     actual_return_date: date
     received_by_user_id: Optional[str] = None
@@ -193,15 +199,17 @@ class ReturnCreate(BaseModel):
         notes:              Free-text notes.
     """
 
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     customer_id: str = Field(..., description="FK to customer")
     customer_name: str = Field(..., max_length=200)
     doc_date: date
     actual_return_date: date
     received_by_user_id: Optional[str] = None
-    base_doc_ref: DocumentLinkRef = Field(
-        ..., description="Source Delivery header ref"
-    )
+    base_doc_ref: DocumentLinkRef = Field(..., description="Source Delivery header ref")
     lines: List[ReturnLineCreate] = Field(..., min_length=1)
     notes: Optional[str] = Field(None, max_length=1000)
 

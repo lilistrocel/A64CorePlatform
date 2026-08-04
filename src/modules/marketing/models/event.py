@@ -13,6 +13,7 @@ from enum import Enum
 
 class EventType(str, Enum):
     """Marketing event type enumeration"""
+
     TRADE_SHOW = "trade_show"
     WEBINAR = "webinar"
     WORKSHOP = "workshop"
@@ -22,6 +23,7 @@ class EventType(str, Enum):
 
 class EventStatus(str, Enum):
     """Event status enumeration"""
+
     PLANNED = "planned"
     ONGOING = "ongoing"
     COMPLETED = "completed"
@@ -30,8 +32,11 @@ class EventStatus(str, Enum):
 
 class EventBase(BaseModel):
     """Base event fields"""
+
     name: str = Field(..., min_length=1, max_length=200, description="Event name")
-    description: Optional[str] = Field(None, max_length=1000, description="Event description")
+    description: Optional[str] = Field(
+        None, max_length=1000, description="Event description"
+    )
     type: EventType = Field(..., description="Event type")
     campaignId: Optional[UUID] = Field(None, description="Associated campaign ID")
     date: Optional[datetime] = Field(None, description="Event date and time")
@@ -46,11 +51,13 @@ class EventBase(BaseModel):
 
 class EventCreate(EventBase):
     """Schema for creating a new event"""
+
     pass
 
 
 class EventUpdate(BaseModel):
     """Schema for updating an event"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
     type: Optional[EventType] = None
@@ -67,8 +74,11 @@ class EventUpdate(BaseModel):
 
 class Event(EventBase):
     """Complete event model with all fields"""
+
     eventId: UUID = Field(default_factory=uuid4, description="Unique event identifier")
-    eventCode: Optional[str] = Field(None, description="Human-readable event code (e.g., EV001)")
+    eventCode: Optional[str] = Field(
+        None, description="Human-readable event code (e.g., EV001)"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
@@ -98,6 +108,6 @@ class Event(EventBase):
                 "notes": "Very successful event with positive feedback",
                 "createdBy": "d4e5f6a7-b8c9-0123-def1-234567890123",
                 "createdAt": "2025-01-20T10:00:00Z",
-                "updatedAt": "2025-01-20T10:00:00Z"
+                "updatedAt": "2025-01-20T10:00:00Z",
             }
         }

@@ -14,9 +14,11 @@ from src.modules.logistics.services.database import logistics_db
 from src.modules.farm_manager.models.farming_year_config import (
     get_farming_year,
     MONTH_NAMES,
-    DEFAULT_FARMING_YEAR_START_MONTH
+    DEFAULT_FARMING_YEAR_START_MONTH,
 )
-from src.modules.farm_manager.services.farming_year_service import get_farming_year_service
+from src.modules.farm_manager.services.farming_year_service import (
+    get_farming_year_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +28,13 @@ router = APIRouter()
 @router.get(
     "/farming-years",
     summary="Get available farming years for logistics",
-    description="Get all farming years that have shipment data, plus current year."
+    description="Get all farming years that have shipment data, plus current year.",
 )
 async def get_logistics_farming_years(
-    include_current: bool = Query(True, description="Include current farming year even if no data"),
-    current_user: CurrentUser = Depends(require_permission("logistics.view"))
+    include_current: bool = Query(
+        True, description="Include current farming year even if no data"
+    ),
+    current_user: CurrentUser = Depends(require_permission("logistics.view")),
 ):
     """
     Get all farming years that have shipment data.
@@ -55,7 +59,7 @@ async def get_logistics_farming_years(
     pipeline = [
         {"$match": {"farmingYear": {"$exists": True, "$ne": None}}},
         {"$group": {"_id": "$farmingYear", "count": {"$sum": 1}}},
-        {"$sort": {"_id": -1}}
+        {"$sort": {"_id": -1}},
     ]
 
     cursor = db.shipments.aggregate(pipeline)
@@ -78,13 +82,15 @@ async def get_logistics_farming_years(
         # Calculate display string
         display = fy_service.format_farming_year_display(year, start_month)
 
-        years_list.append({
-            "year": year,
-            "display": display,
-            "isCurrent": year == current_year,
-            "hasShipments": year in years_with_data,
-            "shipmentCount": years_with_data.get(year, 0)
-        })
+        years_list.append(
+            {
+                "year": year,
+                "display": display,
+                "isCurrent": year == current_year,
+                "hasShipments": year in years_with_data,
+                "shipmentCount": years_with_data.get(year, 0),
+            }
+        )
 
     # Get start month name
     start_month_name = MONTH_NAMES.get(start_month, "Unknown")
@@ -94,5 +100,5 @@ async def get_logistics_farming_years(
         "count": len(years_list),
         "currentYear": current_year,
         "startMonth": start_month,
-        "startMonthName": start_month_name
+        "startMonthName": start_month_name,
     }

@@ -11,8 +11,9 @@ from datetime import datetime
 from enum import Enum
 
 from ...models.block_archive import (
-    BlockArchive, BlockArchiveAnalytics,
-    CropPerformanceComparison
+    BlockArchive,
+    BlockArchiveAnalytics,
+    CropPerformanceComparison,
 )
 from ...services.block.archive_service import ArchiveService
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
@@ -25,19 +26,21 @@ router = APIRouter(tags=["block-archives"])
 @router.get(
     "/farms/{farm_id}/blocks/{block_id}/archives",
     response_model=PaginatedResponse[BlockArchive],
-    summary="List archived cycles for a block"
+    summary="List archived cycles for a block",
 )
 async def list_block_archives(
     farm_id: UUID,
     block_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025)"),
+    farmingYear: Optional[int] = Query(
+        None, description="Filter by farming year (e.g., 2025)"
+    ),
     farmingYearFilter: Literal["planted", "harvested", "both"] = Query(
         "planted",
-        description="Which farming year field to filter on: 'planted' (when cycle started), 'harvested' (when cycle completed), or 'both' (matches either)"
+        description="Which farming year field to filter on: 'planted' (when cycle started), 'harvested' (when cycle completed), or 'both' (matches either)",
     ),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of archived cycles for a specific block.
@@ -57,29 +60,26 @@ async def list_block_archives(
         page=page,
         per_page=perPage,
         farming_year=farmingYear,
-        farming_year_filter=farmingYearFilter
+        farming_year_filter=farmingYearFilter,
     )
 
     return PaginatedResponse(
         data=archives,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
 @router.get(
     "/farms/{farm_id}/blocks/{block_id}/archives/history",
     response_model=SuccessResponse[dict],
-    summary="Get complete cycle history for a block"
+    summary="Get complete cycle history for a block",
 )
 async def get_block_cycle_history(
     farm_id: UUID,
     block_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get complete cycle history with statistics for a block.
@@ -100,21 +100,27 @@ async def get_block_cycle_history(
 @router.get(
     "/farms/{farm_id}/archives",
     response_model=PaginatedResponse[BlockArchive],
-    summary="List all archived cycles in a farm"
+    summary="List all archived cycles in a farm",
 )
 async def list_farm_archives(
     farm_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     cropId: Optional[UUID] = Query(None, description="Filter by crop ID"),
-    startDate: Optional[datetime] = Query(None, description="Filter by planting start date"),
-    endDate: Optional[datetime] = Query(None, description="Filter by planting end date"),
-    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025)"),
+    startDate: Optional[datetime] = Query(
+        None, description="Filter by planting start date"
+    ),
+    endDate: Optional[datetime] = Query(
+        None, description="Filter by planting end date"
+    ),
+    farmingYear: Optional[int] = Query(
+        None, description="Filter by farming year (e.g., 2025)"
+    ),
     farmingYearFilter: Literal["planted", "harvested", "both"] = Query(
         "planted",
-        description="Which farming year field to filter on: 'planted', 'harvested', or 'both'"
+        description="Which farming year field to filter on: 'planted', 'harvested', or 'both'",
     ),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of all archived cycles across all blocks in a farm.
@@ -136,28 +142,24 @@ async def list_farm_archives(
         start_date=startDate,
         end_date=endDate,
         farming_year=farmingYear,
-        farming_year_filter=farmingYearFilter
+        farming_year_filter=farmingYearFilter,
     )
 
     return PaginatedResponse(
         data=archives,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
 @router.get(
     "/farms/{farm_id}/archives/performance",
     response_model=SuccessResponse[BlockArchiveAnalytics],
-    summary="Get performance analytics for a farm"
+    summary="Get performance analytics for a farm",
 )
 async def get_farm_performance_analytics(
-    farm_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    farm_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Get comprehensive performance analytics for all archived cycles in a farm.
@@ -179,11 +181,10 @@ async def get_farm_performance_analytics(
 @router.get(
     "/farms/{farm_id}/archives/crop-comparison",
     response_model=SuccessResponse[List[CropPerformanceComparison]],
-    summary="Compare crop performance across farm"
+    summary="Compare crop performance across farm",
 )
 async def compare_crop_performance(
-    farm_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    farm_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Compare performance metrics across different crops grown in the farm.
@@ -203,12 +204,12 @@ async def compare_crop_performance(
 @router.get(
     "/farms/{farm_id}/archives/top-blocks",
     response_model=SuccessResponse[List[dict]],
-    summary="Get top performing blocks in farm"
+    summary="Get top performing blocks in farm",
 )
 async def get_top_performing_blocks(
     farm_id: UUID,
     limit: int = Query(10, ge=1, le=50, description="Number of top blocks to return"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get top performing blocks in the farm ranked by average yield efficiency.
@@ -226,11 +227,10 @@ async def get_top_performing_blocks(
 @router.get(
     "/farms/{farm_id}/archives/report",
     response_model=SuccessResponse[dict],
-    summary="Generate comprehensive performance report"
+    summary="Generate comprehensive performance report",
 )
 async def export_farm_performance_report(
-    farm_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    farm_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Generate comprehensive performance report for the farm.
@@ -256,13 +256,13 @@ async def export_farm_performance_report(
 @router.get(
     "/crops/{crop_id}/archives",
     response_model=PaginatedResponse[BlockArchive],
-    summary="List all archived cycles for a crop"
+    summary="List all archived cycles for a crop",
 )
 async def list_crop_archives(
     crop_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of all archived cycles for a specific crop across all farms.
@@ -270,30 +270,24 @@ async def list_crop_archives(
     Useful for analyzing crop-specific performance across different locations and conditions.
     """
     archives, total, total_pages = await ArchiveService.list_archives_by_crop(
-        crop_id,
-        page=page,
-        per_page=perPage
+        crop_id, page=page, per_page=perPage
     )
 
     return PaginatedResponse(
         data=archives,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
 @router.get(
     "/crops/{crop_id}/archives/analytics",
     response_model=SuccessResponse[BlockArchiveAnalytics],
-    summary="Get performance analytics for a crop"
+    summary="Get performance analytics for a crop",
 )
 async def get_crop_performance_analytics(
-    crop_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    crop_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Get performance analytics for all archived cycles of a specific crop.
@@ -309,11 +303,10 @@ async def get_crop_performance_analytics(
 @router.get(
     "/archives/{archive_id}",
     response_model=SuccessResponse[BlockArchive],
-    summary="Get archive by ID"
+    summary="Get archive by ID",
 )
 async def get_archive(
-    archive_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    archive_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Get a specific archived cycle by ID.
@@ -328,11 +321,10 @@ async def get_archive(
 @router.delete(
     "/archives/{archive_id}",
     response_model=SuccessResponse[dict],
-    summary="Delete an archive"
+    summary="Delete an archive",
 )
 async def delete_archive(
-    archive_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("admin"))
+    archive_id: UUID, current_user: CurrentUser = Depends(require_permission("admin"))
 ):
     """
     Delete an archived cycle permanently.
@@ -345,8 +337,7 @@ async def delete_archive(
     await ArchiveService.delete_archive(archive_id)
 
     return SuccessResponse(
-        data={"archiveId": str(archive_id)},
-        message="Archive deleted successfully"
+        data={"archiveId": str(archive_id)}, message="Archive deleted successfully"
     )
 
 
@@ -354,10 +345,10 @@ async def delete_archive(
 @router.get(
     "/archives/analytics/system-wide",
     response_model=SuccessResponse[BlockArchiveAnalytics],
-    summary="Get system-wide performance analytics"
+    summary="Get system-wide performance analytics",
 )
 async def get_system_wide_analytics(
-    current_user: CurrentUser = Depends(require_permission("admin"))
+    current_user: CurrentUser = Depends(require_permission("admin")),
 ):
     """
     Get performance analytics across all farms in the system.
@@ -374,10 +365,10 @@ async def get_system_wide_analytics(
 @router.get(
     "/archives/crop-comparison/system-wide",
     response_model=SuccessResponse[List[CropPerformanceComparison]],
-    summary="Compare crop performance system-wide"
+    summary="Compare crop performance system-wide",
 )
 async def compare_crop_performance_system_wide(
-    current_user: CurrentUser = Depends(require_permission("admin"))
+    current_user: CurrentUser = Depends(require_permission("admin")),
 ):
     """
     Compare crop performance across all farms in the system.

@@ -13,6 +13,7 @@ from enum import Enum
 
 class VisaStatus(str, Enum):
     """Visa status enumeration"""
+
     VALID = "valid"
     EXPIRED = "expired"
     PENDING_RENEWAL = "pending_renewal"
@@ -20,22 +21,34 @@ class VisaStatus(str, Enum):
 
 class VisaBase(BaseModel):
     """Base visa fields"""
+
     employeeId: UUID = Field(..., description="Employee ID this visa belongs to")
-    visaType: str = Field(..., min_length=1, max_length=100, description="Type of visa (e.g., H1B, L1, etc.)")
-    country: str = Field(..., min_length=1, max_length=100, description="Country the visa is for")
+    visaType: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Type of visa (e.g., H1B, L1, etc.)",
+    )
+    country: str = Field(
+        ..., min_length=1, max_length=100, description="Country the visa is for"
+    )
     issueDate: date = Field(..., description="Visa issue date")
     expiryDate: date = Field(..., description="Visa expiry date")
     status: VisaStatus = Field(VisaStatus.VALID, description="Visa status")
-    documentUrl: Optional[str] = Field(None, max_length=500, description="URL to visa document")
+    documentUrl: Optional[str] = Field(
+        None, max_length=500, description="URL to visa document"
+    )
 
 
 class VisaCreate(VisaBase):
     """Schema for creating a new visa"""
+
     pass
 
 
 class VisaUpdate(BaseModel):
     """Schema for updating a visa"""
+
     visaType: Optional[str] = Field(None, min_length=1, max_length=100)
     country: Optional[str] = Field(None, min_length=1, max_length=100)
     issueDate: Optional[date] = None
@@ -46,6 +59,7 @@ class VisaUpdate(BaseModel):
 
 class Visa(VisaBase):
     """Complete visa model with all fields"""
+
     visaId: UUID = Field(default_factory=uuid4, description="Unique visa identifier")
 
     # Multi-industry scoping
@@ -68,6 +82,6 @@ class Visa(VisaBase):
                 "status": "valid",
                 "documentUrl": "https://docs.company.com/visas/v47ac10b.pdf",
                 "createdAt": "2025-01-15T10:00:00Z",
-                "updatedAt": "2025-01-15T10:00:00Z"
+                "updatedAt": "2025-01-15T10:00:00Z",
             }
         }

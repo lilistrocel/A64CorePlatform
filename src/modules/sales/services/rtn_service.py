@@ -172,7 +172,11 @@ async def _get_moving_avg_cost(
         )
         return Decimal("0.00")
 
-    raw_cost = record.get("avgCost") or record.get("avg_cost") or record.get("movingAvgCost", 0)
+    raw_cost = (
+        record.get("avgCost")
+        or record.get("avg_cost")
+        or record.get("movingAvgCost", 0)
+    )
     return Decimal(str(raw_cost)).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
 
 
@@ -214,7 +218,9 @@ def _build_line_doc(
     """
     line_id = str(uuid.uuid4())
     desc = line.description if line.description is not None else line.item_name
-    line_cogs = (line.returned_qty * unit_cost).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+    line_cogs = (line.returned_qty * unit_cost).quantize(
+        _TWOPLACES, rounding=ROUND_HALF_UP
+    )
     amounts = _compute_line_amounts(
         quantity=line.returned_qty,
         unit_price=line.unit_price,
@@ -413,16 +419,18 @@ def _build_outbox_payload(
 
     lines_payload = []
     for ln in sorted(return_raw.get("lines", []), key=lambda x: x.get("lineNumber", 0)):
-        lines_payload.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln["itemId"],
-            "itemCode": ln.get("itemCode", ""),
-            "returnedQty": str(ln.get("returnedQty", 0)),
-            "unitCost": str(ln.get("unitCost", 0)),
-            "lineCogs": str(ln.get("lineCogs", 0)),
-            "warehouseId": ln.get("warehouseId", ""),
-            "costCenterId": ln.get("costCenterId"),
-        })
+        lines_payload.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln["itemId"],
+                "itemCode": ln.get("itemCode", ""),
+                "returnedQty": str(ln.get("returnedQty", 0)),
+                "unitCost": str(ln.get("unitCost", 0)),
+                "lineCogs": str(ln.get("lineCogs", 0)),
+                "warehouseId": ln.get("warehouseId", ""),
+                "costCenterId": ln.get("costCenterId"),
+            }
+        )
 
     base_ref = return_raw.get("baseDocRef") or {}
 
@@ -505,14 +513,20 @@ async def create_return_from_request(
     for rl in payload.lines:
         base_ref = rl.base_doc_ref
         rr_line_id = (
-            base_ref.line_id
-            if hasattr(base_ref, "line_id")
-            else (base_ref.get("line_id") or base_ref.get("lineId"))
-        ) if base_ref else None
+            (
+                base_ref.line_id
+                if hasattr(base_ref, "line_id")
+                else (base_ref.get("line_id") or base_ref.get("lineId"))
+            )
+            if base_ref
+            else None
+        )
 
         if rr_line_id and rr_line_id in rr_lines_map:
             rr_line = rr_lines_map[rr_line_id]
-            ordered = Decimal(str(rr_line.get("orderedQty", rr_line.get("requestedQty", 0))))
+            ordered = Decimal(
+                str(rr_line.get("orderedQty", rr_line.get("requestedQty", 0)))
+            )
             consumed = Decimal(str(rr_line.get("consumedQty", 0)))
             available = ordered - consumed
             if available <= _TOLERANCE:
@@ -718,9 +732,7 @@ async def get_return(
     Returns:
         ReturnResponse if found, None otherwise.
     """
-    raw = await db[_RTN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RTN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
     raw.pop("_id", None)
@@ -820,9 +832,7 @@ async def update_return(
     Raises:
         ValueError: If the Return status is not DRAFT.
     """
-    raw = await db[_RTN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RTN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -836,7 +846,11 @@ async def update_return(
 
     field_map = {
         "docDate": _to_dt(payload.doc_date) if payload.doc_date is not None else None,
-        "actualReturnDate": _to_dt(payload.actual_return_date) if payload.actual_return_date is not None else None,
+        "actualReturnDate": (
+            _to_dt(payload.actual_return_date)
+            if payload.actual_return_date is not None
+            else None
+        ),
         "receivedByUserId": payload.received_by_user_id,
         "notes": payload.notes,
     }
@@ -897,9 +911,7 @@ async def delete_return(
     Raises:
         ValueError: If the Return status is not DRAFT.
     """
-    raw = await db[_RTN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RTN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return False
 
@@ -917,9 +929,7 @@ async def delete_return(
         detail={"docNumber": raw.get("docNumber")},
     )
 
-    await db[_RTN_COL].delete_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    await db[_RTN_COL].delete_one({"docEntry": doc_entry, "organizationId": org_id})
     return True
 
 
@@ -950,9 +960,7 @@ async def transition_status(
     Raises:
         ValueError: If the transition is illegal.
     """
-    raw = await db[_RTN_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_RTN_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -995,9 +1003,13 @@ async def transition_status(
                 "itemId": ln["itemId"],
                 "itemCode": ln.get("itemCode", ""),
                 "warehouseId": ln["warehouseId"],
-                "quantity": float(Decimal(str(ln.get("returnedQty", 0)))),   # Positive = incoming
+                "quantity": float(
+                    Decimal(str(ln.get("returnedQty", 0)))
+                ),  # Positive = incoming
                 "unitCost": float(ln["unitCost"]),
-                "totalCost": float(Decimal(str(ln.get("lineCogs", 0)))),   # Positive = value in
+                "totalCost": float(
+                    Decimal(str(ln.get("lineCogs", 0)))
+                ),  # Positive = value in
                 "movementType": "return",
                 "sourceDocType": "RTN",
                 "sourceDocEntry": doc_entry,
@@ -1026,7 +1038,9 @@ async def transition_status(
             )
             if rr_raw:
                 rr_base = rr_raw.get("baseDocRef") or {}
-                if (rr_base.get("docType") or rr_base.get("doc_type", "")) == "DELIVERY":
+                if (
+                    rr_base.get("docType") or rr_base.get("doc_type", "")
+                ) == "DELIVERY":
                     delivery_doc_entry = rr_base.get("docId") or rr_base.get("doc_id")
 
         if delivery_doc_entry:
@@ -1035,12 +1049,18 @@ async def transition_status(
                 # Find the Delivery line ID — may be direct or via RR line
                 dn_line_id: Optional[str] = None
 
-                if (ln_base_ref.get("docType") or ln_base_ref.get("doc_type", "")) == "DELIVERY":
+                if (
+                    ln_base_ref.get("docType") or ln_base_ref.get("doc_type", "")
+                ) == "DELIVERY":
                     dn_line_id = ln_base_ref.get("lineId") or ln_base_ref.get("line_id")
-                elif (ln_base_ref.get("docType") or ln_base_ref.get("doc_type", "")) == "RR":
+                elif (
+                    ln_base_ref.get("docType") or ln_base_ref.get("doc_type", "")
+                ) == "RR":
                     # Line references an RR line — look up that RR line's base
                     rr_line_id = ln_base_ref.get("lineId") or ln_base_ref.get("line_id")
-                    rr_doc_entry_ref = ln_base_ref.get("docId") or ln_base_ref.get("doc_id")
+                    rr_doc_entry_ref = ln_base_ref.get("docId") or ln_base_ref.get(
+                        "doc_id"
+                    )
                     if rr_doc_entry_ref and rr_line_id:
                         rr_raw_ref = await db[_RR_COL].find_one(
                             {"docEntry": rr_doc_entry_ref, "organizationId": org_id}
@@ -1049,8 +1069,13 @@ async def transition_status(
                             for rr_ln in rr_raw_ref.get("lines", []):
                                 if rr_ln.get("lineId") == rr_line_id:
                                     rr_ln_base = rr_ln.get("baseDocRef") or {}
-                                    if (rr_ln_base.get("docType") or rr_ln_base.get("doc_type", "")) == "DELIVERY":
-                                        dn_line_id = rr_ln_base.get("lineId") or rr_ln_base.get("line_id")
+                                    if (
+                                        rr_ln_base.get("docType")
+                                        or rr_ln_base.get("doc_type", "")
+                                    ) == "DELIVERY":
+                                        dn_line_id = rr_ln_base.get(
+                                            "lineId"
+                                        ) or rr_ln_base.get("line_id")
                                     break
 
                 if dn_line_id:
@@ -1094,11 +1119,17 @@ async def transition_status(
             )
             if rr_refreshed:
                 all_consumed = all(
-                    Decimal(str(rr_ln.get("consumedQty", 0))) >=
-                    Decimal(str(rr_ln.get("orderedQty", rr_ln.get("requestedQty", 0)))) - _TOLERANCE
+                    Decimal(str(rr_ln.get("consumedQty", 0)))
+                    >= Decimal(
+                        str(rr_ln.get("orderedQty", rr_ln.get("requestedQty", 0)))
+                    )
+                    - _TOLERANCE
                     for rr_ln in rr_refreshed.get("lines", [])
                 )
-                if all_consumed and DocumentStatus(rr_refreshed["status"]) == DocumentStatus.OPEN:
+                if (
+                    all_consumed
+                    and DocumentStatus(rr_refreshed["status"]) == DocumentStatus.OPEN
+                ):
                     await db[_RR_COL].update_one(
                         {"docEntry": base_doc_entry, "organizationId": org_id},
                         {
@@ -1120,11 +1151,15 @@ async def transition_status(
         updated_totals = _build_totals(updated_lines)
         return_for_payload["totals"] = updated_totals
 
-        event_payload = _build_outbox_payload(return_for_payload, event_type="return_posted")
+        event_payload = _build_outbox_payload(
+            return_for_payload, event_type="return_posted"
+        )
         emitted_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             emitted_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1183,9 +1218,13 @@ async def transition_status(
                 "itemId": ln["itemId"],
                 "itemCode": ln.get("itemCode", ""),
                 "warehouseId": ln["warehouseId"],
-                "quantity": -float(Decimal(str(ln.get("returnedQty", 0)))),   # Negative = outgoing
+                "quantity": -float(
+                    Decimal(str(ln.get("returnedQty", 0)))
+                ),  # Negative = outgoing
                 "unitCost": float(ln.get("unitCost", 0)),
-                "totalCost": -float(Decimal(str(ln.get("lineCogs", 0)))),  # Negative = value out
+                "totalCost": -float(
+                    Decimal(str(ln.get("lineCogs", 0)))
+                ),  # Negative = value out
                 "movementType": "return_reversal",
                 "sourceDocType": "RTN",
                 "sourceDocEntry": doc_entry,
@@ -1210,14 +1249,18 @@ async def transition_status(
             )
             if rr_raw:
                 rr_base = rr_raw.get("baseDocRef") or {}
-                if (rr_base.get("docType") or rr_base.get("doc_type", "")) == "DELIVERY":
+                if (
+                    rr_base.get("docType") or rr_base.get("doc_type", "")
+                ) == "DELIVERY":
                     delivery_doc_entry = rr_base.get("docId") or rr_base.get("doc_id")
 
         if delivery_doc_entry:
             for ln in return_lines:
                 ln_base_ref = ln.get("baseDocRef") or {}
                 dn_line_id = None
-                if (ln_base_ref.get("docType") or ln_base_ref.get("doc_type", "")) == "DELIVERY":
+                if (
+                    ln_base_ref.get("docType") or ln_base_ref.get("doc_type", "")
+                ) == "DELIVERY":
                     dn_line_id = ln_base_ref.get("lineId") or ln_base_ref.get("line_id")
 
                 if dn_line_id:
@@ -1259,7 +1302,10 @@ async def transition_status(
             rr_raw_post = await db[_RR_COL].find_one(
                 {"docEntry": base_doc_entry, "organizationId": org_id}
             )
-            if rr_raw_post and DocumentStatus(rr_raw_post["status"]) == DocumentStatus.CLOSED:
+            if (
+                rr_raw_post
+                and DocumentStatus(rr_raw_post["status"]) == DocumentStatus.CLOSED
+            ):
                 rr_target_refs = rr_raw_post.get("targetDocRefs", [])
                 this_rtn_ref_exists = any(
                     ref.get("docId") == doc_entry for ref in rr_target_refs
@@ -1289,7 +1335,9 @@ async def transition_status(
         cancelled_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             cancelled_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1326,7 +1374,9 @@ async def transition_status(
                 "from": current_status.value,
                 "to": new_status.value,
                 "reason": request_body.reason,
-                "cancelledOutboxEventId": str(cancelled_event_id) if cancelled_event_id else None,
+                "cancelledOutboxEventId": (
+                    str(cancelled_event_id) if cancelled_event_id else None
+                ),
                 "originalOutboxEventId": original_event_id,
             },
         )

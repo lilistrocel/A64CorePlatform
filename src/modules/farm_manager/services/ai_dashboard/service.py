@@ -79,9 +79,7 @@ class AIDashboardService:
     # Core Inspection Runner
     # -------------------------------------------------------------------------
 
-    async def run_inspection(
-        self, triggered_by: str = "scheduler"
-    ) -> DashboardReport:
+    async def run_inspection(self, triggered_by: str = "scheduler") -> DashboardReport:
         """
         Run a full automated farm inspection and store the report.
 
@@ -140,8 +138,7 @@ class AIDashboardService:
             report.aiSummary = ai_summary
             report.status = "completed"
             logger.info(
-                f"[AIDashboardService] Inspection completed "
-                f"(id={report.reportId})"
+                f"[AIDashboardService] Inspection completed " f"(id={report.reportId})"
             )
         except Exception as exc:
             logger.error(
@@ -152,9 +149,7 @@ class AIDashboardService:
             report.error = f"AI generation failed: {str(exc)}"
 
         report.completedAt = datetime.utcnow()
-        report.durationSeconds = (
-            report.completedAt - report.startedAt
-        ).total_seconds()
+        report.durationSeconds = (report.completedAt - report.startedAt).total_seconds()
         await self._save_report(report)
 
         return report
@@ -195,12 +190,7 @@ class AIDashboardService:
         """
         collection = self._db[COLLECTION_NAME]
         total = await collection.count_documents({})
-        cursor = (
-            collection.find({})
-            .sort("startedAt", -1)
-            .skip(skip)
-            .limit(limit)
-        )
+        cursor = collection.find({}).sort("startedAt", -1).skip(skip).limit(limit)
         docs = await cursor.to_list(length=limit)
         reports: List[DashboardReport] = []
         for doc in docs:

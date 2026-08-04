@@ -83,7 +83,8 @@ def _format_fertigation_context(
         return "Fertigation schedule has no cards."
 
     active_cards = [
-        c for c in cards
+        c
+        for c in cards
         if c.get("growthStage") == current_stage or c.get("growthStage") == "general"
     ]
     if not active_cards:
@@ -95,7 +96,9 @@ def _format_fertigation_context(
 
     card = active_cards[0]
     lines = [f"Active fertigation card: {card.get('cardName', 'Unnamed')}"]
-    lines.append(f"  Stage: {card.get('growthStage', 'unknown')}, Days {card.get('dayStart', '?')}-{card.get('dayEnd', '?')}")
+    lines.append(
+        f"  Stage: {card.get('growthStage', 'unknown')}, Days {card.get('dayStart', '?')}-{card.get('dayEnd', '?')}"
+    )
 
     for rule in card.get("rules", []):
         rule_name = rule.get("name", "Unnamed rule")
@@ -104,7 +107,9 @@ def _format_fertigation_context(
             freq = rule.get("frequencyDays", "?")
             lines.append(f"  Rule: {rule_name} (every {freq} days)")
             for ing in rule.get("ingredients", []):
-                lines.append(f"    - {ing.get('name')}: {ing.get('dosagePerPoint')} {ing.get('unit', 'g')}/point")
+                lines.append(
+                    f"    - {ing.get('name')}: {ing.get('dosagePerPoint')} {ing.get('unit', 'g')}/point"
+                )
         elif rule_type == "custom":
             apps = rule.get("applications", [])
             lines.append(f"  Rule: {rule_name} (custom, {len(apps)} applications)")
@@ -170,7 +175,9 @@ async def build_system_prompt(
     if not target_crop_id and virtual_children:
         crop_sections = []
         total_plants = 0
-        primary_growth_stage = None  # Use first child with growth stage for header badge
+        primary_growth_stage = (
+            None  # Use first child with growth stage for header badge
+        )
 
         for child in virtual_children:
             child_crop_id = child.get("targetCrop")
@@ -181,7 +188,9 @@ async def build_system_prompt(
             child_planted = child.get("plantedDate")
             total_plants += child_plants
 
-            section = f"  [{child.get('blockCode', '?')}] {child_crop_name} ({child_state})"
+            section = (
+                f"  [{child.get('blockCode', '?')}] {child_crop_name} ({child_state})"
+            )
             section += f" - {child_plants} plants, {child_area} {area_unit}"
 
             if child_crop_id:
@@ -238,7 +247,9 @@ async def build_system_prompt(
                             "stage": mapped_stage,
                             "day": days,
                             "total_cycle_days": total,
-                            "progress_percent": min(round((days / total) * 100, 1), 100.0),
+                            "progress_percent": min(
+                                round((days / total) * 100, 1), 100.0
+                            ),
                         }
                         section += (
                             f"\n    Growth: {child_growth['stage'].upper()} "
@@ -280,9 +291,7 @@ async def build_system_prompt(
         )
         if not crop:
             # Try legacy plant_data collection
-            crop = await db.plant_data.find_one(
-                {"plantDataId": str(target_crop_id)}
-            )
+            crop = await db.plant_data.find_one({"plantDataId": str(target_crop_id)})
 
         if crop:
             crop_name = crop.get("plantName", crop_name)
@@ -328,7 +337,9 @@ async def build_system_prompt(
             # Watering
             water_str = ""
             if water_req:
-                water_str = f"Watering: every {water_req.get('frequencyDays', '?')} days"
+                water_str = (
+                    f"Watering: every {water_req.get('frequencyDays', '?')} days"
+                )
                 amt = water_req.get("amountPerPlantLiters")
                 if amt:
                     water_str += f", {amt}L/plant"
@@ -365,7 +376,9 @@ async def build_system_prompt(
                 days = 0
                 if planted_date:
                     if isinstance(planted_date, str):
-                        planted_date = datetime.fromisoformat(planted_date.replace("Z", "+00:00"))
+                        planted_date = datetime.fromisoformat(
+                            planted_date.replace("Z", "+00:00")
+                        )
                     days = max(0, (datetime.utcnow() - planted_date).days)
                 growth_stage_info = {
                     "stage": override_stage,
@@ -375,7 +388,9 @@ async def build_system_prompt(
                 }
             elif planted_date and growth_cycle:
                 if isinstance(planted_date, str):
-                    planted_date = datetime.fromisoformat(planted_date.replace("Z", "+00:00"))
+                    planted_date = datetime.fromisoformat(
+                        planted_date.replace("Z", "+00:00")
+                    )
                 growth_stage_info = _calculate_growth_stage(planted_date, growth_cycle)
 
             # Fertigation
@@ -388,7 +403,9 @@ async def build_system_prompt(
     # Build growth stage string
     growth_stage_str = "No active planting."
     if growth_stage_info:
-        prefix = "Primary crop growth stage" if virtual_children else "Current growth stage"
+        prefix = (
+            "Primary crop growth stage" if virtual_children else "Current growth stage"
+        )
         growth_stage_str = (
             f"{prefix}: {growth_stage_info['stage'].upper()}\n"
             f"Day {growth_stage_info['day']} of {growth_stage_info['total_cycle_days']} "

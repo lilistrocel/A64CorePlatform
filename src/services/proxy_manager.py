@@ -30,7 +30,11 @@ class ProxyManager:
     Automatically generates, updates, and removes proxy rules.
     """
 
-    def __init__(self, nginx_config_dir: str = "/etc/nginx/conf.d", nginx_container_name: str = "a64core-nginx-dev"):
+    def __init__(
+        self,
+        nginx_config_dir: str = "/etc/nginx/conf.d",
+        nginx_container_name: str = "a64core-nginx-dev",
+    ):
         """
         Initialize Proxy Manager
 
@@ -53,7 +57,9 @@ class ProxyManager:
         # Create modules config directory if it doesn't exist
         os.makedirs(self.modules_config_dir, exist_ok=True)
 
-        logger.info(f"Proxy Manager initialized: Config dir = {self.modules_config_dir}")
+        logger.info(
+            f"Proxy Manager initialized: Config dir = {self.modules_config_dir}"
+        )
 
     def generate_module_config(
         self,
@@ -61,7 +67,7 @@ class ProxyManager:
         route_path: str,
         upstream_host: str,
         upstream_port: int,
-        enable_websocket: bool = True
+        enable_websocket: bool = True,
     ) -> str:
         """
         Generate NGINX reverse proxy configuration for a module.
@@ -107,40 +113,44 @@ class ProxyManager:
         ]
 
         if enable_websocket:
-            lines.extend([
-                "    # WebSocket support",
-                "    proxy_set_header Upgrade $http_upgrade;",
-                '    proxy_set_header Connection "upgrade";',
-                "",
-            ])
+            lines.extend(
+                [
+                    "    # WebSocket support",
+                    "    proxy_set_header Upgrade $http_upgrade;",
+                    '    proxy_set_header Connection "upgrade";',
+                    "",
+                ]
+            )
 
-        lines.extend([
-            "    # Timeouts",
-            "    proxy_connect_timeout 60s;",
-            "    proxy_send_timeout 60s;",
-            "    proxy_read_timeout 60s;",
-            "",
-            "    # Buffering",
-            "    proxy_buffering on;",
-            "    proxy_buffer_size 4k;",
-            "    proxy_buffers 8 4k;",
-            "    proxy_busy_buffers_size 8k;",
-            "",
-            "    # Security headers",
-            '    add_header X-Content-Type-Options "nosniff" always;',
-            '    add_header X-Frame-Options "SAMEORIGIN" always;',
-            '    add_header X-XSS-Protection "1; mode=block" always;',
-            "}",
-            "",
-            "# Health check endpoint",
-            f"location {route_path}/health {{",
-            "    resolver 127.0.0.11 valid=30s;",
-            f"    set $backend_health {upstream_host}:{upstream_port};",
-            "    proxy_pass http://$backend_health/health;",
-            "    proxy_http_version 1.1;",
-            "    access_log off;",
-            "}",
-        ])
+        lines.extend(
+            [
+                "    # Timeouts",
+                "    proxy_connect_timeout 60s;",
+                "    proxy_send_timeout 60s;",
+                "    proxy_read_timeout 60s;",
+                "",
+                "    # Buffering",
+                "    proxy_buffering on;",
+                "    proxy_buffer_size 4k;",
+                "    proxy_buffers 8 4k;",
+                "    proxy_busy_buffers_size 8k;",
+                "",
+                "    # Security headers",
+                '    add_header X-Content-Type-Options "nosniff" always;',
+                '    add_header X-Frame-Options "SAMEORIGIN" always;',
+                '    add_header X-XSS-Protection "1; mode=block" always;',
+                "}",
+                "",
+                "# Health check endpoint",
+                f"location {route_path}/health {{",
+                "    resolver 127.0.0.11 valid=30s;",
+                f"    set $backend_health {upstream_host}:{upstream_port};",
+                "    proxy_pass http://$backend_health/health;",
+                "    proxy_http_version 1.1;",
+                "    access_log off;",
+                "}",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -149,7 +159,7 @@ class ProxyManager:
         module_name: str,
         route_path: str,
         upstream_port: int,
-        enable_websocket: bool = True
+        enable_websocket: bool = True,
     ) -> bool:
         """
         Create reverse proxy route for a module.
@@ -163,27 +173,24 @@ class ProxyManager:
         Returns:
             True if successful, False otherwise
         """
-        logger.info(f"Creating proxy route for {module_name}: {route_path} -> :{upstream_port}")
+        logger.info(
+            f"Creating proxy route for {module_name}: {route_path} -> :{upstream_port}"
+        )
 
         try:
             # Generate configuration
             # Use container name as upstream host (Docker DNS resolution)
             upstream_host = f"a64core-{module_name}"
             config_content = self.generate_module_config(
-                module_name,
-                route_path,
-                upstream_host,
-                upstream_port,
-                enable_websocket
+                module_name, route_path, upstream_host, upstream_port, enable_websocket
             )
 
             # Write configuration file
             config_file_path = os.path.join(
-                self.modules_config_dir,
-                f"{module_name}.conf"
+                self.modules_config_dir, f"{module_name}.conf"
             )
 
-            with open(config_file_path, 'w') as f:
+            with open(config_file_path, "w") as f:
                 f.write(config_content)
 
             logger.info(f"Created NGINX config file: {config_file_path}")
@@ -254,10 +261,7 @@ class ProxyManager:
         Returns:
             True if file was removed, False if didn't exist
         """
-        config_file_path = os.path.join(
-            self.modules_config_dir,
-            f"{module_name}.conf"
-        )
+        config_file_path = os.path.join(self.modules_config_dir, f"{module_name}.conf")
 
         if os.path.exists(config_file_path):
             os.remove(config_file_path)
@@ -329,9 +333,7 @@ class ProxyManager:
             return False
 
     async def get_module_route_url(
-        self,
-        module_name: str,
-        base_url: str = "http://localhost"
+        self, module_name: str, base_url: str = "http://localhost"
     ) -> str:
         """
         Get the full URL for accessing a module via reverse proxy.

@@ -35,11 +35,14 @@ class ObservationMetrics(BaseModel):
     All nullable — a contamination note carries none of these, a growth check
     carries two or three.
     """
+
     growthRateMmPerDay: Optional[float] = Field(None, ge=0)
     colonizationPercent: Optional[float] = Field(None, ge=0, le=100)
     daysToFull: Optional[int] = Field(None, ge=0)
     contaminationPercent: Optional[float] = Field(None, ge=0, le=100)
-    vigorScore: Optional[float] = Field(None, ge=0, le=10, description="Subjective 0-10 vigour rating")
+    vigorScore: Optional[float] = Field(
+        None, ge=0, le=10, description="Subjective 0-10 vigour rating"
+    )
     temperatureC: Optional[float] = None
     humidityPercent: Optional[float] = Field(None, ge=0, le=100)
 
@@ -69,18 +72,21 @@ class ObservationBase(BaseModel):
     )
 
     vesselNo: Optional[int] = Field(
-        None, ge=1,
+        None,
+        ge=1,
         description="Which physical vessel of the batch this observation is about, e.g. plate #13.",
     )
 
 
 class ObservationCreate(ObservationBase):
     """Payload for recording an observation."""
+
     pass
 
 
 class ObservationUpdate(BaseModel):
     """Partial update — every field optional."""
+
     type: Optional[ObservationType] = None
     observedAt: Optional[datetime] = None
     text: Optional[str] = Field(None, max_length=4000)
@@ -120,7 +126,12 @@ class PromoteTraitRequest(BaseModel):
     unbroken.
     """
 
-    code: str = Field(..., min_length=1, max_length=32, description="Code for the new line, e.g. 'PO-BLU-S1'")
+    code: str = Field(
+        ...,
+        min_length=1,
+        max_length=32,
+        description="Code for the new line, e.g. 'PO-BLU-S1'",
+    )
     commonName: str = Field(..., min_length=1, max_length=200)
     derivation: DerivationType = Field(DerivationType.SECTOR)
     description: Optional[str] = Field(None, max_length=2000)

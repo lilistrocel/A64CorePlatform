@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 class DifficultyLevel(str, Enum):
     """Growing difficulty level"""
+
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"
@@ -27,8 +28,10 @@ class DifficultyLevel(str, Enum):
 # Supporting classes — kept for potential future use; not used by Strain itself
 # ---------------------------------------------------------------------------
 
+
 class PhaseRequirement(BaseModel):
     """Climate requirements for a specific growth phase (reserved for future use)"""
+
     tempMin: Optional[float] = Field(None, description="Min temp (Celsius)")
     tempMax: Optional[float] = Field(None, description="Max temp (Celsius)")
     humidityMin: Optional[float] = Field(None, ge=0, le=100)
@@ -41,6 +44,7 @@ class PhaseRequirement(BaseModel):
 
 class SubstrateIngredient(BaseModel):
     """Ingredient in a substrate recipe (reserved for future use)"""
+
     name: str = Field(..., min_length=1, max_length=100)
     proportion: float = Field(..., ge=0, le=100, description="Percentage of total")
     unit: str = Field("percent", description="Unit of measurement")
@@ -50,41 +54,78 @@ class SubstrateIngredient(BaseModel):
 # Strain schemas — flat fields matching the frontend contract
 # ---------------------------------------------------------------------------
 
+
 class StrainBase(BaseModel):
     """Base strain fields shared by create, update, and document models"""
 
     # Identity
-    commonName: str = Field(..., min_length=1, max_length=200, description="Common name (e.g., Oyster Mushroom)")
-    scientificName: Optional[str] = Field(None, max_length=200, description="Scientific name")
-    species: Optional[str] = Field(None, max_length=100, description="Species (e.g., Pleurotus)")
+    commonName: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Common name (e.g., Oyster Mushroom)",
+    )
+    scientificName: Optional[str] = Field(
+        None, max_length=200, description="Scientific name"
+    )
+    species: Optional[str] = Field(
+        None, max_length=100, description="Species (e.g., Pleurotus)"
+    )
     description: Optional[str] = Field(None, max_length=1000)
     notes: Optional[str] = Field(None, max_length=1000)
 
     # Growing properties
-    difficulty: Optional[DifficultyLevel] = Field(None, description="Growing difficulty level")
-    expectedYieldKgPerKgSubstrate: Optional[float] = Field(None, gt=0, description="Expected yield kg per kg substrate")
+    difficulty: Optional[DifficultyLevel] = Field(
+        None, description="Growing difficulty level"
+    )
+    expectedYieldKgPerKgSubstrate: Optional[float] = Field(
+        None, gt=0, description="Expected yield kg per kg substrate"
+    )
     maxFlushes: Optional[int] = Field(None, ge=1, le=10)
 
     # Colonization environment
-    colonizationTempMin: Optional[float] = Field(None, description="Colonization min temp (Celsius)")
-    colonizationTempMax: Optional[float] = Field(None, description="Colonization max temp (Celsius)")
-    colonizationHumidityMin: Optional[float] = Field(None, ge=0, le=100, description="Colonization min humidity %")
-    colonizationDaysMin: Optional[int] = Field(None, ge=1, description="Min colonization duration (days)")
-    colonizationDaysMax: Optional[int] = Field(None, ge=1, description="Max colonization duration (days)")
+    colonizationTempMin: Optional[float] = Field(
+        None, description="Colonization min temp (Celsius)"
+    )
+    colonizationTempMax: Optional[float] = Field(
+        None, description="Colonization max temp (Celsius)"
+    )
+    colonizationHumidityMin: Optional[float] = Field(
+        None, ge=0, le=100, description="Colonization min humidity %"
+    )
+    colonizationDaysMin: Optional[int] = Field(
+        None, ge=1, description="Min colonization duration (days)"
+    )
+    colonizationDaysMax: Optional[int] = Field(
+        None, ge=1, description="Max colonization duration (days)"
+    )
 
     # Fruiting environment
-    fruitingTempMin: Optional[float] = Field(None, description="Fruiting min temp (Celsius)")
-    fruitingTempMax: Optional[float] = Field(None, description="Fruiting max temp (Celsius)")
-    fruitingHumidityMin: Optional[float] = Field(None, ge=0, le=100, description="Fruiting min humidity %")
-    fruitingDaysMin: Optional[int] = Field(None, ge=1, description="Min fruiting duration (days)")
-    fruitingDaysMax: Optional[int] = Field(None, ge=1, description="Max fruiting duration (days)")
+    fruitingTempMin: Optional[float] = Field(
+        None, description="Fruiting min temp (Celsius)"
+    )
+    fruitingTempMax: Optional[float] = Field(
+        None, description="Fruiting max temp (Celsius)"
+    )
+    fruitingHumidityMin: Optional[float] = Field(
+        None, ge=0, le=100, description="Fruiting min humidity %"
+    )
+    fruitingDaysMin: Optional[int] = Field(
+        None, ge=1, description="Min fruiting duration (days)"
+    )
+    fruitingDaysMax: Optional[int] = Field(
+        None, ge=1, description="Max fruiting duration (days)"
+    )
 
     # Air quality
-    co2TolerancePpm: Optional[int] = Field(None, ge=0, description="CO2 tolerance (ppm)")
+    co2TolerancePpm: Optional[int] = Field(
+        None, ge=0, description="CO2 tolerance (ppm)"
+    )
 
 
 class StrainCreate(StrainBase):
     """Schema for creating a new strain — all non-identity fields optional"""
+
     pass
 
 
@@ -132,7 +173,9 @@ class Strain(StrainBase):
     The service layer renames id <-> strainId when reading/writing MongoDB.
     """
 
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique strain ID")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique strain ID"
+    )
 
     # Stable defaults for required document fields
     difficulty: DifficultyLevel = Field(DifficultyLevel.INTERMEDIATE)
@@ -140,7 +183,9 @@ class Strain(StrainBase):
     isActive: bool = Field(True)
 
     # Audit fields
-    createdBy: Optional[str] = Field(None, description="User ID who created this strain")
+    createdBy: Optional[str] = Field(
+        None, description="User ID who created this strain"
+    )
     divisionId: Optional[str] = Field(None, description="Division scope")
     organizationId: Optional[str] = Field(None, description="Organization scope")
 

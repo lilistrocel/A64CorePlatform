@@ -77,7 +77,9 @@ class FarmDatabaseManager:
             await db.blocks.create_index("currentCycleId")
             await db.blocks.create_index("estimatedHarvestDate")
             await db.blocks.create_index([("createdAt", -1)])
-            await db.blocks.create_index([("farmId", 1), ("farmingYearPlanted", 1)])  # For farming year queries
+            await db.blocks.create_index(
+                [("farmId", 1), ("farmingYearPlanted", 1)]
+            )  # For farming year queries
 
             # Plant data collection
             await db.plant_data.create_index("plantDataId", unique=True)
@@ -146,7 +148,9 @@ class FarmDatabaseManager:
             await db.stock_inventory.create_index("harvestDate")
             await db.stock_inventory.create_index([("createdAt", -1)])
             # Compound index for FIFO queries
-            await db.stock_inventory.create_index([("farmId", 1), ("plantDataId", 1), ("harvestDate", 1)])
+            await db.stock_inventory.create_index(
+                [("farmId", 1), ("plantDataId", 1), ("harvestDate", 1)]
+            )
 
             # Farm assignments collection
             await db.farm_assignments.create_index("assignmentId", unique=True)
@@ -155,8 +159,7 @@ class FarmDatabaseManager:
             await db.farm_assignments.create_index("isActive")
             # Compound unique index to prevent duplicate assignments
             await db.farm_assignments.create_index(
-                [("userId", 1), ("farmId", 1)],
-                unique=True
+                [("userId", 1), ("farmId", 1)], unique=True
             )
 
             # Product catalog collection (Master product database)
@@ -178,9 +181,15 @@ class FarmDatabaseManager:
             await db.inventory_harvest.create_index([("harvestDate", -1)])
             await db.inventory_harvest.create_index([("createdAt", -1)])
             # Compound indexes for default inventory queries
-            await db.inventory_harvest.create_index([("organizationId", 1), ("inventoryScope", 1)])
-            await db.inventory_harvest.create_index([("organizationId", 1), ("farmId", 1)])
-            await db.inventory_harvest.create_index([("organizationId", 1), ("plantDataId", 1), ("inventoryScope", 1)])
+            await db.inventory_harvest.create_index(
+                [("organizationId", 1), ("inventoryScope", 1)]
+            )
+            await db.inventory_harvest.create_index(
+                [("organizationId", 1), ("farmId", 1)]
+            )
+            await db.inventory_harvest.create_index(
+                [("organizationId", 1), ("plantDataId", 1), ("inventoryScope", 1)]
+            )
 
             # Input inventory collection
             await db.inventory_input.create_index("inventoryId", unique=True)
@@ -192,10 +201,18 @@ class FarmDatabaseManager:
             await db.inventory_input.create_index("isLowStock")
             await db.inventory_input.create_index([("createdAt", -1)])
             # Compound indexes for default inventory queries
-            await db.inventory_input.create_index([("organizationId", 1), ("inventoryScope", 1)])
-            await db.inventory_input.create_index([("organizationId", 1), ("category", 1), ("inventoryScope", 1)])
-            await db.inventory_input.create_index([("organizationId", 1), ("isLowStock", 1)])
-            await db.inventory_input.create_index([("organizationId", 1), ("farmId", 1)])
+            await db.inventory_input.create_index(
+                [("organizationId", 1), ("inventoryScope", 1)]
+            )
+            await db.inventory_input.create_index(
+                [("organizationId", 1), ("category", 1), ("inventoryScope", 1)]
+            )
+            await db.inventory_input.create_index(
+                [("organizationId", 1), ("isLowStock", 1)]
+            )
+            await db.inventory_input.create_index(
+                [("organizationId", 1), ("farmId", 1)]
+            )
 
             # Asset inventory collection
             await db.inventory_asset.create_index("inventoryId", unique=True)
@@ -209,9 +226,15 @@ class FarmDatabaseManager:
             await db.inventory_asset.create_index("currentAllocation.allocatedTo")
             await db.inventory_asset.create_index("currentAllocation.farmId")
             # Compound indexes for default inventory queries
-            await db.inventory_asset.create_index([("organizationId", 1), ("inventoryScope", 1)])
-            await db.inventory_asset.create_index([("organizationId", 1), ("status", 1), ("inventoryScope", 1)])
-            await db.inventory_asset.create_index([("organizationId", 1), ("currentAllocation.farmId", 1)])
+            await db.inventory_asset.create_index(
+                [("organizationId", 1), ("inventoryScope", 1)]
+            )
+            await db.inventory_asset.create_index(
+                [("organizationId", 1), ("status", 1), ("inventoryScope", 1)]
+            )
+            await db.inventory_asset.create_index(
+                [("organizationId", 1), ("currentAllocation.farmId", 1)]
+            )
 
             # Inventory movements collection
             await db.inventory_movements.create_index("movementId", unique=True)
@@ -221,14 +244,24 @@ class FarmDatabaseManager:
             await db.inventory_movements.create_index("organizationId")
             await db.inventory_movements.create_index([("performedAt", -1)])
             # Transfer tracking indexes
-            await db.inventory_movements.create_index([("fromScope", 1), ("toScope", 1)])
+            await db.inventory_movements.create_index(
+                [("fromScope", 1), ("toScope", 1)]
+            )
             await db.inventory_movements.create_index("fromFarmId")
             await db.inventory_movements.create_index("toFarmId")
             # Compound indexes for transfer queries
-            await db.inventory_movements.create_index([("organizationId", 1), ("movementType", 1), ("performedAt", -1)])
-            await db.inventory_movements.create_index([("inventoryId", 1), ("movementType", 1), ("performedAt", -1)])
-            await db.inventory_movements.create_index([("fromFarmId", 1), ("movementType", 1), ("performedAt", -1)])
-            await db.inventory_movements.create_index([("toFarmId", 1), ("movementType", 1), ("performedAt", -1)])
+            await db.inventory_movements.create_index(
+                [("organizationId", 1), ("movementType", 1), ("performedAt", -1)]
+            )
+            await db.inventory_movements.create_index(
+                [("inventoryId", 1), ("movementType", 1), ("performedAt", -1)]
+            )
+            await db.inventory_movements.create_index(
+                [("fromFarmId", 1), ("movementType", 1), ("performedAt", -1)]
+            )
+            await db.inventory_movements.create_index(
+                [("toFarmId", 1), ("movementType", 1), ("performedAt", -1)]
+            )
 
             # Block harvests collection
             await db.block_harvests.create_index("harvestId", unique=True)
@@ -251,9 +284,15 @@ class FarmDatabaseManager:
             await db.block_archives.create_index([("plantedDate", -1)])
             await db.block_archives.create_index([("archivedAt", -1)])
             # Compound indexes for farming year queries on archives
-            await db.block_archives.create_index([("farmId", 1), ("farmingYearPlanted", 1)])
-            await db.block_archives.create_index([("farmId", 1), ("farmingYearHarvested", 1)])
-            await db.block_archives.create_index([("blockId", 1), ("farmingYearPlanted", 1)])
+            await db.block_archives.create_index(
+                [("farmId", 1), ("farmingYearPlanted", 1)]
+            )
+            await db.block_archives.create_index(
+                [("farmId", 1), ("farmingYearHarvested", 1)]
+            )
+            await db.block_archives.create_index(
+                [("blockId", 1), ("farmingYearPlanted", 1)]
+            )
 
             # ---------------------------------------------------------------
             # Fertilizer Cost Calculator collections
@@ -280,7 +319,9 @@ class FarmDatabaseManager:
             # fertilizer_calculation_lists — saved lists
             await db.fertilizer_calculation_lists.create_index("listId", unique=True)
             await db.fertilizer_calculation_lists.create_index("organizationId")
-            await db.fertilizer_calculation_lists.create_index([("organizationId", 1), ("createdAt", -1)])
+            await db.fertilizer_calculation_lists.create_index(
+                [("organizationId", 1), ("createdAt", -1)]
+            )
 
             logger.info("[Farm Module] MongoDB indexes created successfully")
         except Exception as e:

@@ -24,12 +24,12 @@ router = APIRouter()
     response_model=SuccessResponse[Campaign],
     status_code=status.HTTP_201_CREATED,
     summary="Create a new marketing campaign",
-    description="Create a new marketing campaign. Requires marketing.create permission."
+    description="Create a new marketing campaign. Requires marketing.create permission.",
 )
 async def create_campaign(
     campaign_data: CampaignCreate,
     current_user: CurrentUser = Depends(require_permission("marketing.create")),
-    service: CampaignService = Depends()
+    service: CampaignService = Depends(),
 ):
     """
     Create a new marketing campaign
@@ -47,31 +47,27 @@ async def create_campaign(
     - **spent**: Amount spent on campaign (default: 0)
     - **metrics**: Campaign metrics (optional)
     """
-    campaign = await service.create_campaign(
-        campaign_data,
-        UUID(current_user.userId)
-    )
+    campaign = await service.create_campaign(campaign_data, UUID(current_user.userId))
 
-    return SuccessResponse(
-        data=campaign,
-        message="Campaign created successfully"
-    )
+    return SuccessResponse(data=campaign, message="Campaign created successfully")
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[Campaign],
     summary="Get all marketing campaigns",
-    description="Get all marketing campaigns with pagination and filters. Requires marketing.view permission."
+    description="Get all marketing campaigns with pagination and filters. Requires marketing.view permission.",
 )
 async def get_campaigns(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    status: Optional[CampaignStatus] = Query(None, description="Filter by campaign status"),
+    status: Optional[CampaignStatus] = Query(
+        None, description="Filter by campaign status"
+    ),
     budgetId: Optional[UUID] = Query(None, description="Filter by budget ID"),
     search: Optional[str] = Query(None, description="Search campaigns by name"),
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
-    service: CampaignService = Depends()
+    service: CampaignService = Depends(),
 ):
     """
     Get all marketing campaigns with pagination
@@ -89,11 +85,8 @@ async def get_campaigns(
     return PaginatedResponse(
         data=campaigns,
         meta=PaginationMeta(
-            total=total,
-            page=page,
-            perPage=perPage,
-            totalPages=total_pages
-        )
+            total=total, page=page, perPage=perPage, totalPages=total_pages
+        ),
     )
 
 
@@ -101,12 +94,12 @@ async def get_campaigns(
     "/{campaign_id}",
     response_model=SuccessResponse[Campaign],
     summary="Get campaign by ID",
-    description="Get a specific campaign by ID. Requires marketing.view permission."
+    description="Get a specific campaign by ID. Requires marketing.view permission.",
 )
 async def get_campaign(
     campaign_id: UUID,
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
-    service: CampaignService = Depends()
+    service: CampaignService = Depends(),
 ):
     """
     Get campaign by ID
@@ -122,12 +115,12 @@ async def get_campaign(
     "/{campaign_id}/performance",
     response_model=SuccessResponse[dict],
     summary="Get campaign performance metrics",
-    description="Get campaign performance metrics and analytics. Requires marketing.view permission."
+    description="Get campaign performance metrics and analytics. Requires marketing.view permission.",
 )
 async def get_campaign_performance(
     campaign_id: UUID,
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
-    service: CampaignService = Depends()
+    service: CampaignService = Depends(),
 ):
     """
     Get campaign performance metrics
@@ -145,8 +138,7 @@ async def get_campaign_performance(
     performance = await service.get_campaign_performance(campaign_id)
 
     return SuccessResponse(
-        data=performance,
-        message="Campaign performance retrieved successfully"
+        data=performance, message="Campaign performance retrieved successfully"
     )
 
 
@@ -154,13 +146,13 @@ async def get_campaign_performance(
     "/{campaign_id}",
     response_model=SuccessResponse[Campaign],
     summary="Update campaign",
-    description="Update a campaign. Requires marketing.edit permission."
+    description="Update a campaign. Requires marketing.edit permission.",
 )
 async def update_campaign(
     campaign_id: UUID,
     update_data: CampaignUpdate,
     current_user: CurrentUser = Depends(require_permission("marketing.edit")),
-    service: CampaignService = Depends()
+    service: CampaignService = Depends(),
 ):
     """
     Update a campaign
@@ -168,27 +160,21 @@ async def update_campaign(
     - **campaign_id**: Campaign UUID
     - All fields are optional (partial update)
     """
-    campaign = await service.update_campaign(
-        campaign_id,
-        update_data
-    )
+    campaign = await service.update_campaign(campaign_id, update_data)
 
-    return SuccessResponse(
-        data=campaign,
-        message="Campaign updated successfully"
-    )
+    return SuccessResponse(data=campaign, message="Campaign updated successfully")
 
 
 @router.delete(
     "/{campaign_id}",
     response_model=SuccessResponse[dict],
     summary="Delete campaign",
-    description="Delete a campaign. Requires marketing.delete permission."
+    description="Delete a campaign. Requires marketing.delete permission.",
 )
 async def delete_campaign(
     campaign_id: UUID,
     current_user: CurrentUser = Depends(require_permission("marketing.delete")),
-    service: CampaignService = Depends()
+    service: CampaignService = Depends(),
 ):
     """
     Delete a campaign
@@ -197,7 +183,4 @@ async def delete_campaign(
     """
     result = await service.delete_campaign(campaign_id)
 
-    return SuccessResponse(
-        data=result,
-        message="Campaign deleted successfully"
-    )
+    return SuccessResponse(data=result, message="Campaign deleted successfully")

@@ -117,7 +117,9 @@ class AncestryStep(BaseModel):
     method: Optional[PropagationMethod] = None
     performedAt: Optional[datetime] = None
     mediumBatchCode: Optional[str] = None
-    isUnknown: bool = Field(False, description="Parent slot exists but was never identified")
+    isUnknown: bool = Field(
+        False, description="Parent slot exists but was never identified"
+    )
 
 
 class AncestryChain(BaseModel):

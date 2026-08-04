@@ -98,8 +98,12 @@ def _today_utc() -> date:
     ),
 )
 async def get_ar_aging(
-    organization_id: Optional[str] = Query(None, description="Organisation UUID (defaults to JWT claim)"),
-    customer_id: Optional[str] = Query(None, description="Filter to a single customer UUID"),
+    organization_id: Optional[str] = Query(
+        None, description="Organisation UUID (defaults to JWT claim)"
+    ),
+    customer_id: Optional[str] = Query(
+        None, description="Filter to a single customer UUID"
+    ),
     as_of_date: Optional[date] = Query(
         None,
         description="Reference date for computing daysOverdue (ISO YYYY-MM-DD; defaults to today UTC)",

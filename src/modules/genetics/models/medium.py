@@ -30,16 +30,21 @@ class Ingredient(BaseModel):
     why. Without it the same quantity ends up stored four ways and any later
     ratio or scaling calculation splits across the spellings.
     """
-    name: str = Field(..., min_length=1, max_length=120, description="e.g. 'Malt extract'")
+
+    name: str = Field(
+        ..., min_length=1, max_length=120, description="e.g. 'Malt extract'"
+    )
     amount: Optional[float] = Field(None, ge=0)
     unit: Optional[IngredientUnit] = Field(
-        None, description="Controlled unit, e.g. g/L. Free text is deliberately not accepted."
+        None,
+        description="Controlled unit, e.g. g/L. Free text is deliberately not accepted.",
     )
     notes: Optional[str] = Field(None, max_length=500)
 
 
 class Additive(Ingredient):
     """A trialled element layered on top of the base formulation."""
+
     purpose: Optional[str] = Field(
         None,
         max_length=300,
@@ -53,6 +58,7 @@ class Additive(Ingredient):
 
 class Sterilization(BaseModel):
     """Sterilisation / pasteurisation parameters for the batch."""
+
     method: SterilizationMethod = Field(SterilizationMethod.AUTOCLAVE)
     temperatureC: Optional[float] = Field(None, description="e.g. 121")
     minutes: Optional[int] = Field(None, ge=0, description="e.g. 15")
@@ -62,8 +68,12 @@ class Sterilization(BaseModel):
 class RecipeBase(BaseModel):
     """Fields shared by recipe create, update and document models."""
 
-    name: str = Field(..., min_length=1, max_length=200, description="e.g. 'MEA + activated carbon'")
-    code: str = Field(..., min_length=1, max_length=32, description="Short code, e.g. 'MEA-AC'")
+    name: str = Field(
+        ..., min_length=1, max_length=200, description="e.g. 'MEA + activated carbon'"
+    )
+    code: str = Field(
+        ..., min_length=1, max_length=32, description="Short code, e.g. 'MEA-AC'"
+    )
     type: MediumType = Field(MediumType.AGAR)
     description: Optional[str] = Field(None, max_length=2000)
 
@@ -72,12 +82,15 @@ class RecipeBase(BaseModel):
 
     targetPh: Optional[float] = Field(None, ge=0, le=14)
     sterilization: Sterilization = Field(default_factory=Sterilization)
-    yieldsVessels: Optional[int] = Field(None, ge=0, description="Typical vessels per prepared batch")
+    yieldsVessels: Optional[int] = Field(
+        None, ge=0, description="Typical vessels per prepared batch"
+    )
     notes: Optional[str] = Field(None, max_length=2000)
 
 
 class RecipeCreate(RecipeBase):
     """Payload for creating a medium recipe."""
+
     pass
 
 
@@ -118,6 +131,7 @@ class Recipe(RecipeBase):
 
 class BatchQC(BaseModel):
     """Quality outcome for a prepared batch."""
+
     contaminatedCount: int = Field(0, ge=0, description="Vessels lost to contamination")
     notes: Optional[str] = Field(None, max_length=1000)
 
@@ -132,10 +146,16 @@ class BatchCreate(BaseModel):
         description="Auto-generated from the recipe code and date when omitted",
     )
     preparedAt: Optional[datetime] = Field(None, description="Defaults to now")
-    preparedBy: Optional[str] = Field(None, description="userId; defaults to the caller")
+    preparedBy: Optional[str] = Field(
+        None, description="userId; defaults to the caller"
+    )
     vesselCount: int = Field(1, ge=0, description="Plates/jars poured")
-    vesselType: Optional[str] = Field(None, max_length=64, description="e.g. '90mm plates'")
-    sterilizerRun: Optional[str] = Field(None, max_length=64, description="Autoclave run reference")
+    vesselType: Optional[str] = Field(
+        None, max_length=64, description="e.g. '90mm plates'"
+    )
+    sterilizerRun: Optional[str] = Field(
+        None, max_length=64, description="Autoclave run reference"
+    )
     sterilizationOverride: Optional[Sterilization] = Field(
         None,
         description="Actual parameters when they differed from the recipe",
@@ -148,6 +168,7 @@ class BatchCreate(BaseModel):
 
 class BatchUpdate(BaseModel):
     """Partial update for a prepared batch."""
+
     batchCode: Optional[str] = Field(None, max_length=64)
     vesselCount: Optional[int] = Field(None, ge=0)
     vesselType: Optional[str] = Field(None, max_length=64)
@@ -169,7 +190,9 @@ class Batch(BaseModel):
 
     recipeId: str
     recipeVersion: int = Field(1, ge=1)
-    recipeName: Optional[str] = Field(None, max_length=200, description="Denormalised for display")
+    recipeName: Optional[str] = Field(
+        None, max_length=200, description="Denormalised for display"
+    )
     type: MediumType = Field(MediumType.AGAR)
 
     ingredientsSnapshot: List[Ingredient] = Field(default_factory=list)

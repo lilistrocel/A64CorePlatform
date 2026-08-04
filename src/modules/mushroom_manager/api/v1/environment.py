@@ -27,6 +27,7 @@ router = APIRouter()
 # POST /facilities/{facility_id}/rooms/{room_id}/environment
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/facilities/{facility_id}/rooms/{room_id}/environment",
     response_model=SuccessResponse[EnvironmentLog],
@@ -55,12 +56,15 @@ async def create_log(
         data=log_data,
         current_user=current_user,
     )
-    return SuccessResponse(data=log, message="Environment reading recorded successfully")
+    return SuccessResponse(
+        data=log, message="Environment reading recorded successfully"
+    )
 
 
 # ---------------------------------------------------------------------------
 # GET /facilities/{facility_id}/rooms/{room_id}/environment
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/facilities/{facility_id}/rooms/{room_id}/environment",
@@ -71,7 +75,9 @@ async def create_log(
 async def list_logs(
     facility_id: str,
     room_id: str,
-    limit: int = Query(50, ge=1, le=500, description="Max number of recent readings to return"),
+    limit: int = Query(
+        50, ge=1, le=500, description="Max number of recent readings to return"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse[List[EnvironmentLog]]:
     """
@@ -88,6 +94,7 @@ async def list_logs(
 # ---------------------------------------------------------------------------
 # GET /facilities/{facility_id}/rooms/{room_id}/environment/latest
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/facilities/{facility_id}/rooms/{room_id}/environment/latest",

@@ -12,5 +12,5 @@ __all__ = [
     "get_redis_cache",
     "close_redis_cache",
     "cache_response",
-    "invalidate_cache_pattern"
+    "invalidate_cache_pattern",
 ]

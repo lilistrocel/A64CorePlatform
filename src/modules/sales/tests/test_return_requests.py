@@ -36,7 +36,6 @@ from src.modules.sales.services.return_request_service import (
     update_return_request,
 )
 
-
 # ---------------------------------------------------------------------------
 # Minimal fake Motor DB (reused from test_deliveries.py pattern)
 # ---------------------------------------------------------------------------
@@ -256,7 +255,9 @@ async def test_get_return_request_found():
     """Get a Return Request that exists."""
     db = _FakeDB()
     payload = _make_rr_payload()
-    created = await create_return_request(db, payload=payload, org_id=_ORG, user_id=_USER)
+    created = await create_return_request(
+        db, payload=payload, org_id=_ORG, user_id=_USER
+    )
 
     fetched = await get_return_request(db, doc_entry=created.doc_entry, org_id=_ORG)
 
@@ -282,7 +283,9 @@ async def test_list_return_requests_pagination():
     """List Return Requests with pagination."""
     db = _FakeDB()
     for _ in range(3):
-        await create_return_request(db, payload=_make_rr_payload(), org_id=_ORG, user_id=_USER)
+        await create_return_request(
+            db, payload=_make_rr_payload(), org_id=_ORG, user_id=_USER
+        )
 
     result = await list_return_requests(db, org_id=_ORG, page=1, page_size=2)
 
@@ -328,7 +331,9 @@ async def test_update_open_return_request_raises():
     await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.OPEN
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -375,7 +380,9 @@ async def test_delete_non_draft_raises():
     await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.OPEN
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -402,7 +409,9 @@ async def test_transition_draft_to_open():
     result = await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.OPEN
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -421,7 +430,9 @@ async def test_transition_draft_to_cancelled():
     result = await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.CANCELLED
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -439,7 +450,9 @@ async def test_transition_open_to_closed():
     await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.OPEN
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -447,7 +460,9 @@ async def test_transition_open_to_closed():
     result = await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.CLOSED),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.CLOSED
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -465,7 +480,9 @@ async def test_transition_illegal_raises():
     await transition_status(
         db,
         doc_entry=created.doc_entry,
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.CANCELLED),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.CANCELLED
+        ),
         org_id=_ORG,
         user_id=_USER,
     )
@@ -474,7 +491,9 @@ async def test_transition_illegal_raises():
         await transition_status(
             db,
             doc_entry=created.doc_entry,
-            request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+            request_body=ReturnRequestStatusTransitionRequest(
+                new_status=DocumentStatus.OPEN
+            ),
             org_id=_ORG,
             user_id=_USER,
         )
@@ -487,7 +506,9 @@ async def test_transition_not_found_returns_none():
     result = await transition_status(
         db,
         doc_entry=str(uuid.uuid4()),
-        request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+        request_body=ReturnRequestStatusTransitionRequest(
+            new_status=DocumentStatus.OPEN
+        ),
         org_id=_ORG,
         user_id=_USER,
     )

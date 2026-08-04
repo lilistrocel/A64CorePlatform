@@ -195,11 +195,11 @@ def _compute_line(line: SalesOrderLineCreate, *, line_number: int) -> Dict[str, 
         "costCenterId": line.cost_center_id,
         # Quantity tracking
         "orderedQty": float(line.quantity),
-        "consumedQty": 0.0,         # upstream Quote consumed qty — set in from-quote path
+        "consumedQty": 0.0,  # upstream Quote consumed qty — set in from-quote path
         "deliveredQty": 0.0,
         "invoicedQty": 0.0,
         "cancelledQty": 0.0,
-        "committedQty": 0.0,         # set to orderedQty on DRAFT → OPEN transition
+        "committedQty": 0.0,  # set to orderedQty on DRAFT → OPEN transition
         # Links
         "baseDocRef": None,
         "targetDocRefs": [],
@@ -567,7 +567,9 @@ async def _check_credit_limit(
 
     return {
         "checkedAt": _now(),
-        "customerCreditLimit": float(credit_limit) if credit_limit is not None else None,
+        "customerCreditLimit": (
+            float(credit_limit) if credit_limit is not None else None
+        ),
         "outstandingAr": float(outstanding_ar),
         "thisOrderTotal": float(this_order_total),
         "result": result,
@@ -720,7 +722,9 @@ async def create_sales_order(
         # Reason: Motor/PyMongo cannot encode datetime.date — convert to
         # timezone-aware datetime.datetime before the MongoDB write.
         "docDate": _to_dt(payload.doc_date),
-        "deliveryDate": _to_dt(payload.delivery_date) if payload.delivery_date is not None else None,
+        "deliveryDate": (
+            _to_dt(payload.delivery_date) if payload.delivery_date is not None else None
+        ),
         "status": DocumentStatus.DRAFT.value,
         "currency": payload.currency,
         "exchangeRate": float(payload.exchange_rate),
@@ -810,13 +814,10 @@ async def create_sales_order_from_quote(
     # Step 2: Assert all Quote lines have open_qty > 0.
     quote_lines = quote_raw.get("lines", [])
     if not quote_lines:
-        raise ValueError(
-            f"Quote '{quote_doc_entry}' has no lines — cannot create SO"
-        )
+        raise ValueError(f"Quote '{quote_doc_entry}' has no lines — cannot create SO")
 
     closed_lines = [
-        ql for ql in quote_lines
-        if _quote_line_open_qty(ql) <= _OPEN_QTY_TOLERANCE
+        ql for ql in quote_lines if _quote_line_open_qty(ql) <= _OPEN_QTY_TOLERANCE
     ]
     if closed_lines:
         raise ValueError(
@@ -842,7 +843,7 @@ async def create_sales_order_from_quote(
             "unitPrice": ql.get("unitPrice", 0.0),
             "discountPercent": ql.get("discountPercent", 0.0),
             # Recompute line totals for the SO line quantity (= open_qty).
-            "lineNet": 0.0,   # will be overwritten below
+            "lineNet": 0.0,  # will be overwritten below
             "taxCodeId": ql.get("taxCodeId"),
             "taxPercent": ql.get("taxPercent", 0.0),
             "lineTax": 0.0,
@@ -851,7 +852,7 @@ async def create_sales_order_from_quote(
             "costCenterId": ql.get("costCenterId"),
             # Quantity tracking
             "orderedQty": float(open_qty),
-            "consumedQty": float(open_qty),   # records how much was taken from the Quote
+            "consumedQty": float(open_qty),  # records how much was taken from the Quote
             "deliveredQty": 0.0,
             "invoicedQty": 0.0,
             "cancelledQty": 0.0,
@@ -908,7 +909,9 @@ async def create_sales_order_from_quote(
         # Reason: Motor/PyMongo cannot encode datetime.date — convert to
         # timezone-aware datetime.datetime before the MongoDB write.
         "docDate": _to_dt(now.date()),
-        "deliveryDate": _to_dt(payload.delivery_date) if payload.delivery_date is not None else None,
+        "deliveryDate": (
+            _to_dt(payload.delivery_date) if payload.delivery_date is not None else None
+        ),
         "status": DocumentStatus.DRAFT.value,
         "currency": quote_raw.get("currency", "AED"),
         "exchangeRate": quote_raw.get("exchangeRate", 1.0),
@@ -924,7 +927,7 @@ async def create_sales_order_from_quote(
             "docType": "QUOTE",
             "docId": quote_doc_entry,
             "docNumber": quote_raw.get("docNumber", ""),
-            "lineId": None,   # header-level reference
+            "lineId": None,  # header-level reference
         },
         "targetDocRefs": [],
         "lines": so_lines,
@@ -1038,9 +1041,7 @@ async def get_sales_order(
     Returns:
         SalesOrderResponse if found, None otherwise.
     """
-    raw = await db[_SO_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_SO_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
     raw.pop("_id", None)
@@ -1128,11 +1129,7 @@ async def list_sales_orders(
         # Fetch all matching documents (no skip/limit) so the post-filter can run
         # over the full result set before re-slicing to the requested page.
         total_unfiltered = await db[_SO_COL].count_documents(query)
-        cursor_all = (
-            db[_SO_COL]
-            .find(query)
-            .sort("docDate", -1)
-        )
+        cursor_all = db[_SO_COL].find(query).sort("docDate", -1)
         all_raw = await cursor_all.to_list(length=total_unfiltered or 1)
 
         # Compute aggregate and filter post-Mongo.
@@ -1140,11 +1137,13 @@ async def list_sales_orders(
         for doc in all_raw:
             svc_qty = await _compute_service_open_invoice_qty(doc, org_id, auth_token)
             if svc_qty > TOLERANCE:
-                filtered_items.append(_doc_to_list_item(doc, service_open_invoice_qty=svc_qty))
+                filtered_items.append(
+                    _doc_to_list_item(doc, service_open_invoice_qty=svc_qty)
+                )
 
         total = len(filtered_items)
         skip = (page - 1) * size
-        items = filtered_items[skip: skip + size]
+        items = filtered_items[skip : skip + size]
         return {
             "items": items,
             "total": total,
@@ -1157,13 +1156,7 @@ async def list_sales_orders(
     total = await db[_SO_COL].count_documents(query)
     skip = (page - 1) * size
 
-    cursor = (
-        db[_SO_COL]
-        .find(query)
-        .sort("docDate", -1)
-        .skip(skip)
-        .limit(size)
-    )
+    cursor = db[_SO_COL].find(query).sort("docDate", -1).skip(skip).limit(size)
     raw_docs = await cursor.to_list(length=size)
 
     items_list: List[SalesOrderListItem] = []
@@ -1207,9 +1200,7 @@ async def update_sales_order(
     Raises:
         ValueError: If the SO status is not DRAFT.
     """
-    raw = await db[_SO_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_SO_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -1226,7 +1217,9 @@ async def update_sales_order(
         "customerName": payload.customer_name,
         # Reason: Motor/PyMongo cannot encode datetime.date — convert before write.
         "docDate": _to_dt(payload.doc_date) if payload.doc_date is not None else None,
-        "deliveryDate": _to_dt(payload.delivery_date) if payload.delivery_date is not None else None,
+        "deliveryDate": (
+            _to_dt(payload.delivery_date) if payload.delivery_date is not None else None
+        ),
         "currency": payload.currency,
         "exchangeRate": (
             float(payload.exchange_rate) if payload.exchange_rate is not None else None
@@ -1321,9 +1314,7 @@ async def transition_status(
                     without an authorized override, or CLOSED is requested
                     while lines still have open_qty.
     """
-    raw = await db[_SO_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_SO_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return None
 
@@ -1382,10 +1373,7 @@ async def transition_status(
 
     # ----- → CANCELLED: clear committed_qty + restore Quote consumed_qty -----
     elif new_status == DocumentStatus.CANCELLED:
-        updated_lines = [
-            {**ln, "committedQty": 0.0}
-            for ln in raw.get("lines", [])
-        ]
+        updated_lines = [{**ln, "committedQty": 0.0} for ln in raw.get("lines", [])]
         extra_updates["lines"] = updated_lines
 
         # Back-decrement the source Quote's consumed_qty if this was from-quote.
@@ -1416,7 +1404,10 @@ async def transition_status(
             refreshed_quote = await db[_QUOTES_COL].find_one(
                 {"docEntry": quote_doc_entry, "organizationId": org_id}
             )
-            if refreshed_quote and DocumentStatus(refreshed_quote["status"]) == DocumentStatus.CLOSED:
+            if (
+                refreshed_quote
+                and DocumentStatus(refreshed_quote["status"]) == DocumentStatus.CLOSED
+            ):
                 # Only reopen if the auto-close was caused by this SO (check targetDocRefs).
                 target_refs = refreshed_quote.get("targetDocRefs", [])
                 this_so_ref_exists = any(
@@ -1518,9 +1509,7 @@ async def delete_sales_order(
     Raises:
         ValueError: If the SO status is not DRAFT.
     """
-    raw = await db[_SO_COL].find_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    raw = await db[_SO_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
     if raw is None:
         return False
 
@@ -1562,7 +1551,5 @@ async def delete_sales_order(
         detail={"docNumber": raw.get("docNumber")},
     )
 
-    await db[_SO_COL].delete_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    await db[_SO_COL].delete_one({"docEntry": doc_entry, "organizationId": org_id})
     return True

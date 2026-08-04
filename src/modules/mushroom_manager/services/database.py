@@ -73,8 +73,7 @@ class MushroomDatabaseManager:
             await db.growing_rooms.create_index([("createdAt", -1)])
             # Compound index for facility-room lookups
             await db.growing_rooms.create_index(
-                [("facilityId", 1), ("roomCode", 1)],
-                unique=True
+                [("facilityId", 1), ("roomCode", 1)], unique=True
             )
 
             # mushroom_strains collection
@@ -101,11 +100,15 @@ class MushroomDatabaseManager:
             # Lineage attribution — supports the yield-by-line rollup.
             await db.mushroom_harvests.create_index("accessionId")
             await db.mushroom_harvests.create_index("lineId")
-            await db.mushroom_harvests.create_index([("lineId", 1), ("cloneGeneration", 1)])
+            await db.mushroom_harvests.create_index(
+                [("lineId", 1), ("cloneGeneration", 1)]
+            )
             await db.mushroom_harvests.create_index([("createdAt", -1)])
             # Compound index for room harvest queries
             await db.mushroom_harvests.create_index([("roomId", 1), ("flushNumber", 1)])
-            await db.mushroom_harvests.create_index([("facilityId", 1), ("harvestedAt", -1)])
+            await db.mushroom_harvests.create_index(
+                [("facilityId", 1), ("harvestedAt", -1)]
+            )
 
             # room_environment_logs collection
             await db.room_environment_logs.create_index("logId", unique=True)
@@ -141,7 +144,9 @@ class MushroomDatabaseManager:
         Kept for backward compatibility with the module lifecycle pattern.
         Actual disconnection is handled by core services during shutdown.
         """
-        logger.info("[Mushroom Module] Mushroom module shutdown (database managed by core)")
+        logger.info(
+            "[Mushroom Module] Mushroom module shutdown (database managed by core)"
+        )
 
     @classmethod
     async def health_check(cls) -> bool:

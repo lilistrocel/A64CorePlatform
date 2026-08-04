@@ -22,7 +22,9 @@ async def startup_hook():
 
     This connects to the database and performs any necessary initialization.
     """
-    logger.info(f"[Sales Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
+    logger.info(
+        f"[Sales Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}"
+    )
 
     try:
         await sales_db.connect()
@@ -62,11 +64,7 @@ def register(app: FastAPI, prefix: Optional[str] = None) -> None:
     logger.info(f"[Sales Module] Registering routes with prefix: {route_prefix}")
 
     # Register API routes
-    app.include_router(
-        api_router,
-        prefix=route_prefix,
-        tags=["sales"]
-    )
+    app.include_router(api_router, prefix=route_prefix, tags=["sales"])
 
     # Register lifecycle hooks
     app.add_event_handler("startup", startup_hook)

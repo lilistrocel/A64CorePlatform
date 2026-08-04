@@ -19,10 +19,12 @@ class AlertChecker:
 
     async def run(self) -> List[WatchdogIssue]:
         """Query alerts collection for active high/critical alerts."""
-        cursor = self.db["alerts"].find({
-            "status": "active",
-            "severity": {"$in": ["high", "critical"]},
-        })
+        cursor = self.db["alerts"].find(
+            {
+                "status": "active",
+                "severity": {"$in": ["high", "critical"]},
+            }
+        )
 
         alerts = await cursor.to_list(length=200)
         if not alerts:
@@ -41,7 +43,9 @@ class AlertChecker:
             async for block in blocks_cursor:
                 blocks_map[block["blockId"]] = block
 
-            farm_ids = list({b.get("farmId") for b in blocks_map.values() if b.get("farmId")})
+            farm_ids = list(
+                {b.get("farmId") for b in blocks_map.values() if b.get("farmId")}
+            )
             if farm_ids:
                 farms_cursor = self.db["farms"].find(
                     {"farmId": {"$in": farm_ids}},
@@ -54,7 +58,9 @@ class AlertChecker:
 
         for alert in alerts:
             alert_severity = alert.get("severity", "high")
-            severity = Severity.CRITICAL if alert_severity == "critical" else Severity.HIGH
+            severity = (
+                Severity.CRITICAL if alert_severity == "critical" else Severity.HIGH
+            )
 
             block_id = alert.get("blockId", "")
             block_info = blocks_map.get(block_id, {})
@@ -76,14 +82,16 @@ class AlertChecker:
 
             alert_type = alert.get("alertType", alert.get("type", "Unknown"))
 
-            issues.append(WatchdogIssue(
-                checkType=CheckType.ACTIVE_ALERTS,
-                severity=severity,
-                title=f"Active Alert: {alert_type}",
-                description=f"Farm: {farm_name} > Block {block_name}\nSeverity: {alert_severity.upper()} | Since: {since_str}",
-                entityId=alert.get("alertId", block_id),
-                farmName=farm_name,
-                blockName=block_name,
-            ))
+            issues.append(
+                WatchdogIssue(
+                    checkType=CheckType.ACTIVE_ALERTS,
+                    severity=severity,
+                    title=f"Active Alert: {alert_type}",
+                    description=f"Farm: {farm_name} > Block {block_name}\nSeverity: {alert_severity.upper()} | Since: {since_str}",
+                    entityId=alert.get("alertId", block_id),
+                    farmName=farm_name,
+                    blockName=block_name,
+                )
+            )
 
         return issues

@@ -25,6 +25,7 @@ security = HTTPBearer()
 
 class CurrentUser:
     """Current authenticated user"""
+
     def __init__(
         self,
         userId: str,
@@ -47,7 +48,7 @@ class CurrentUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> CurrentUser:
     """
     Get current authenticated user from JWT token
@@ -73,9 +74,7 @@ async def get_current_user(
         # Decode JWT token using core API's SECRET_KEY
         token = credentials.credentials
         payload = jwt.decode(
-            token,
-            core_settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            token, core_settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
 
         user_id: str = payload.get("userId")
@@ -101,8 +100,7 @@ async def get_current_user(
     # Verify user is active
     if not user_doc.get("isActive", False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
 
     return CurrentUser(
@@ -118,7 +116,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> CurrentUser:
     """
     Get current active user
@@ -136,8 +134,7 @@ async def get_current_active_user(
     """
     if not current_user.isActive:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
 
     return current_user
@@ -153,8 +150,9 @@ def require_permission(permission: str):
     Returns:
         Dependency function
     """
+
     async def permission_checker(
-        current_user: CurrentUser = Depends(get_current_active_user)
+        current_user: CurrentUser = Depends(get_current_active_user),
     ) -> CurrentUser:
         # For now, simple role-based checks
         # TODO: Implement proper permission system
@@ -163,14 +161,20 @@ def require_permission(permission: str):
             if current_user.role not in ["admin", "super_admin", "moderator", "user"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}"
+                    detail=f"Permission denied: Missing {permission}",
                 )
         elif permission == "sales.view":
             # Guest users have read-only access to view data
-            if current_user.role not in ["admin", "super_admin", "moderator", "user", "guest"]:
+            if current_user.role not in [
+                "admin",
+                "super_admin",
+                "moderator",
+                "user",
+                "guest",
+            ]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}"
+                    detail=f"Permission denied: Missing {permission}",
                 )
 
         return current_user

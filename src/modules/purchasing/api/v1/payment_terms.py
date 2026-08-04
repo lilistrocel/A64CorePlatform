@@ -18,7 +18,11 @@ from ...middleware.auth import (
     get_current_active_user,
     require_payment_terms_write,
 )
-from ...models.payment_terms import PaymentTermsCreate, PaymentTermsResponse, PaymentTermsUpdate
+from ...models.payment_terms import (
+    PaymentTermsCreate,
+    PaymentTermsResponse,
+    PaymentTermsUpdate,
+)
 from ...services.payment_terms_service import PaymentTermsService
 from src.modules.farm_manager.utils.responses import SuccessResponse
 from src.modules.farm_manager.services.database import farm_db

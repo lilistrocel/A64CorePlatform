@@ -39,7 +39,9 @@ class HarvestAggregatorService:
         logger.info(f"Running harvest aggregation for {today_start.date()}")
 
         # Get all daily harvest tasks scheduled for today that need aggregation
-        tasks_to_aggregate = await TaskRepository.get_daily_harvest_tasks_to_aggregate(today_start)
+        tasks_to_aggregate = await TaskRepository.get_daily_harvest_tasks_to_aggregate(
+            today_start
+        )
 
         stats = {
             "date": today_start.date().isoformat(),
@@ -48,20 +50,24 @@ class HarvestAggregatorService:
             "tasks_skipped": 0,
             "total_harvest_kg": 0.0,
             "new_tasks_generated": 0,
-            "errors": []
+            "errors": [],
         }
 
         for task in tasks_to_aggregate:
             try:
                 # Aggregate harvest entries
-                aggregated_task = await TaskRepository.aggregate_daily_harvest(task.taskId)
+                aggregated_task = await TaskRepository.aggregate_daily_harvest(
+                    task.taskId
+                )
 
                 if aggregated_task:
                     stats["tasks_aggregated"] += 1
 
                     # Add to total harvest
                     if aggregated_task.taskData.totalHarvest:
-                        stats["total_harvest_kg"] += aggregated_task.taskData.totalHarvest.totalQuantity
+                        stats[
+                            "total_harvest_kg"
+                        ] += aggregated_task.taskData.totalHarvest.totalQuantity
 
                     logger.info(
                         f"Aggregated task {task.taskId}: "
@@ -89,21 +95,26 @@ class HarvestAggregatorService:
                                 scheduledDate=tomorrow,
                                 dueDate=tomorrow.replace(hour=23, minute=59, second=59),
                                 assignedTo=None,
-                                description=f"Daily harvest for {block.get('name', block.get('blockCode'))}"
+                                description=f"Daily harvest for {block.get('name', block.get('blockCode'))}",
                             )
 
                             # Create next day's task
                             next_task = await TaskRepository.create(
                                 next_task_data,
                                 is_auto_generated=True,
-                                generated_from_cycle_id=task.generatedFromCycleId
+                                generated_from_cycle_id=task.generatedFromCycleId,
                             )
 
                             stats["new_tasks_generated"] += 1
-                            logger.info(f"Generated next day's harvest task {next_task.taskId} for block {task.blockId}")
+                            logger.info(
+                                f"Generated next day's harvest task {next_task.taskId} for block {task.blockId}"
+                            )
 
                     except Exception as e:
-                        logger.error(f"Failed to generate next day's task for block {task.blockId}: {e}", exc_info=True)
+                        logger.error(
+                            f"Failed to generate next day's task for block {task.blockId}: {e}",
+                            exc_info=True,
+                        )
                         # Don't fail the aggregation if task generation fails
 
                 else:
@@ -115,7 +126,9 @@ class HarvestAggregatorService:
                 stats["tasks_skipped"] += 1
                 error_msg = f"Task {task.taskId}: {str(e)}"
                 stats["errors"].append(error_msg)
-                logger.error(f"Error aggregating task {task.taskId}: {e}", exc_info=True)
+                logger.error(
+                    f"Error aggregating task {task.taskId}: {e}", exc_info=True
+                )
 
         # Log summary
         logger.info(
@@ -127,7 +140,9 @@ class HarvestAggregatorService:
         )
 
         if stats["errors"]:
-            logger.warning(f"Aggregation had {len(stats['errors'])} errors: {stats['errors']}")
+            logger.warning(
+                f"Aggregation had {len(stats['errors'])} errors: {stats['errors']}"
+            )
 
         return stats
 
@@ -155,7 +170,9 @@ class HarvestAggregatorService:
                 return False
 
             if task.taskType != TaskType.DAILY_HARVEST:
-                logger.error(f"Task {task_id} is not a daily_harvest task: {task.taskType}")
+                logger.error(
+                    f"Task {task_id} is not a daily_harvest task: {task.taskType}"
+                )
                 return False
 
             aggregated_task = await TaskRepository.aggregate_daily_harvest(task_uuid)
@@ -214,11 +231,8 @@ class HarvestAggregatorService:
         query = {
             "taskType": TaskType.DAILY_HARVEST.value,
             "status": TaskStatus.COMPLETED.value,
-            "scheduledDate": {
-                "$gte": start_date,
-                "$lte": end_date
-            },
-            "taskData.totalHarvest": {"$exists": True}
+            "scheduledDate": {"$gte": start_date, "$lte": end_date},
+            "taskData.totalHarvest": {"$exists": True},
         }
 
         cursor = db.farm_tasks.find(query).sort("scheduledDate", 1)
@@ -230,7 +244,7 @@ class HarvestAggregatorService:
             "total_harvest_kg": 0.0,
             "total_entries": 0,
             "unique_contributors": set(),
-            "daily_breakdown": []
+            "daily_breakdown": [],
         }
 
         daily_totals = {}
@@ -260,7 +274,7 @@ class HarvestAggregatorService:
                             "date": date_key,
                             "tasks": 0,
                             "total_kg": 0.0,
-                            "entries": 0
+                            "entries": 0,
                         }
                     daily_totals[date_key]["tasks"] += 1
                     daily_totals[date_key]["total_kg"] += quantity
@@ -270,7 +284,9 @@ class HarvestAggregatorService:
         report["unique_contributors"] = len(report["unique_contributors"])
 
         # Add daily breakdown sorted by date
-        report["daily_breakdown"] = sorted(daily_totals.values(), key=lambda x: x["date"])
+        report["daily_breakdown"] = sorted(
+            daily_totals.values(), key=lambda x: x["date"]
+        )
 
         logger.info(
             f"Generated aggregation report for {start_date.date()} to {end_date.date()}: "

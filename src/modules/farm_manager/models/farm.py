@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class FarmLocation(BaseModel):
     """Geographic location of a farm"""
+
     latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude")
     longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude")
     address: Optional[str] = Field(None, description="Physical address")
@@ -22,39 +23,50 @@ class FarmLocation(BaseModel):
 
 class GeoJSONPolygon(BaseModel):
     """GeoJSON Polygon format for geo-fencing boundaries"""
+
     type: Literal["Polygon"] = Field("Polygon", description="GeoJSON type")
     coordinates: List[List[List[float]]] = Field(
         ...,
-        description="Array of linear rings. First ring is exterior, rest are holes. Each ring is array of [lng, lat] positions"
+        description="Array of linear rings. First ring is exterior, rest are holes. Each ring is array of [lng, lat] positions",
     )
 
 
 class FarmBoundary(BaseModel):
     """Farm boundary with metadata for geo-fencing"""
+
     geometry: GeoJSONPolygon = Field(..., description="GeoJSON polygon geometry")
-    area: Optional[float] = Field(None, ge=0, description="Calculated area in square meters")
+    area: Optional[float] = Field(
+        None, ge=0, description="Calculated area in square meters"
+    )
     center: Optional[FarmLocation] = Field(None, description="Centroid of the polygon")
 
 
 class FarmBase(BaseModel):
     """Base farm fields"""
+
     name: str = Field(..., min_length=1, max_length=200, description="Farm name")
     description: Optional[str] = Field(None, description="Farm description")
     owner: Optional[str] = Field(None, max_length=200, description="Farm owner name")
     location: Optional[FarmLocation] = Field(None, description="Geographic location")
     totalArea: Optional[float] = Field(None, gt=0, description="Total farm area")
     areaUnit: str = Field("hectares", description="Area unit (hectares, acres)")
-    numberOfStaff: Optional[int] = Field(None, ge=0, description="Number of staff members")
-    boundary: Optional[FarmBoundary] = Field(None, description="Geo-fence polygon boundary for map visualization")
+    numberOfStaff: Optional[int] = Field(
+        None, ge=0, description="Number of staff members"
+    )
+    boundary: Optional[FarmBoundary] = Field(
+        None, description="Geo-fence polygon boundary for map visualization"
+    )
 
 
 class FarmCreate(FarmBase):
     """Schema for creating a new farm"""
+
     pass
 
 
 class FarmUpdate(BaseModel):
     """Schema for updating a farm"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = None
     owner: Optional[str] = Field(None, max_length=200)
@@ -63,15 +75,24 @@ class FarmUpdate(BaseModel):
     areaUnit: Optional[str] = None
     numberOfStaff: Optional[int] = Field(None, ge=0)
     isActive: Optional[bool] = None
-    boundary: Optional[FarmBoundary] = Field(None, description="Geo-fence polygon boundary")
-    managerId: Optional[UUID] = Field(None, description="User ID of farm manager (admin only)")
-    managerEmail: Optional[str] = Field(None, description="Email of farm manager (admin only)")
+    boundary: Optional[FarmBoundary] = Field(
+        None, description="Geo-fence polygon boundary"
+    )
+    managerId: Optional[UUID] = Field(
+        None, description="User ID of farm manager (admin only)"
+    )
+    managerEmail: Optional[str] = Field(
+        None, description="Email of farm manager (admin only)"
+    )
 
 
 class Farm(FarmBase):
     """Complete farm model with all fields"""
+
     farmId: UUID = Field(default_factory=uuid4, description="Unique farm identifier")
-    farmCode: Optional[str] = Field(None, description="Human-readable farm code (e.g., F001)")
+    farmCode: Optional[str] = Field(
+        None, description="Human-readable farm code (e.g., F001)"
+    )
 
     # Manager information
     managerId: UUID = Field(..., description="User ID of farm manager")
@@ -99,7 +120,7 @@ class Farm(FarmBase):
                 "location": {
                     "latitude": 40.7128,
                     "longitude": -74.0060,
-                    "address": "123 Farm Road, Valley City"
+                    "address": "123 Farm Road, Valley City",
                 },
                 "totalArea": 50.5,
                 "areaUnit": "hectares",
@@ -110,18 +131,20 @@ class Farm(FarmBase):
                 "boundary": {
                     "geometry": {
                         "type": "Polygon",
-                        "coordinates": [[
-                            [-74.0065, 40.7125],
-                            [-74.0055, 40.7125],
-                            [-74.0055, 40.7135],
-                            [-74.0065, 40.7135],
-                            [-74.0065, 40.7125]
-                        ]]
+                        "coordinates": [
+                            [
+                                [-74.0065, 40.7125],
+                                [-74.0055, 40.7125],
+                                [-74.0055, 40.7135],
+                                [-74.0065, 40.7135],
+                                [-74.0065, 40.7125],
+                            ]
+                        ],
                     },
                     "area": 50500,
-                    "center": {"latitude": 40.713, "longitude": -74.006}
+                    "center": {"latitude": 40.713, "longitude": -74.006},
                 },
                 "createdAt": "2025-01-15T10:00:00Z",
-                "updatedAt": "2025-01-15T10:00:00Z"
+                "updatedAt": "2025-01-15T10:00:00Z",
             }
         }

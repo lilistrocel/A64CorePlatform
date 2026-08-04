@@ -271,7 +271,8 @@ class PublicVesselInfo(BaseModel):
     number: int
     of: int = Field(..., description="labelledVesselCount at the time of the scan")
     splitOff: bool = Field(
-        ..., description="True when this ordinal resolved to a different accession than the token addressed"
+        ...,
+        description="True when this ordinal resolved to a different accession than the token addressed",
     )
     # T-805b (display half of T-805): sourced straight from the resolved
     # accession's `parents[0].vesselNo` — see `_primary_from_vessel_no`.
@@ -294,6 +295,7 @@ class PublicLineInfo(BaseModel):
 
 class PublicIngredientInfo(BaseModel):
     """Only present when the tenant opts into showMediumIngredients."""
+
     name: str
     amount: Optional[float] = None
     unit: Optional[str] = None
@@ -323,13 +325,15 @@ class PublicLineageStep(BaseModel):
     for every step including the root, per spec §5.2 rule 3 ("no internal
     UUIDs, including parents in the lineage array").
     """
+
     depth: int
     accessionCode: str
     generationLabel: str
     method: Optional[str] = None
     performedAt: Optional[datetime] = None
     provenance: Optional[str] = Field(
-        None, description="Set instead of method/performedAt for founding material with no propagation event"
+        None,
+        description="Set instead of method/performedAt for founding material with no propagation event",
     )
     # T-805b: this step accession's own `parents[0].vesselNo` — same source
     # and same exposure judgement as `PublicVesselInfo.fromVesselNo` above,
@@ -350,12 +354,14 @@ class PublicLineageGraphNode(BaseModel):
     these six fields; see ``_build_lineage_graph`` for the UUID -> code
     translation that makes this safe to build from ``LineageNode``.
     """
+
     code: str
     generationLabel: str
     form: str
     status: str
     isScanned: bool = Field(
-        ..., description="True for the accession the scanned label/vessel ordinal resolved to"
+        ...,
+        description="True for the accession the scanned label/vessel ordinal resolved to",
     )
     depth: int
 
@@ -370,6 +376,7 @@ class PublicLineageGraphEdge(BaseModel):
     — ``populate_by_name`` only affects construction (this module builds
     instances with the ``from_=`` keyword), not serialization.
     """
+
     model_config = ConfigDict(populate_by_name=True)
 
     from_: str = Field(..., alias="from")
@@ -403,6 +410,7 @@ class PublicLineageGraph(BaseModel):
     node-capped tighter than the authenticated route's own caps — see
     ``PUBLIC_LINEAGE_DEPTH`` / ``PUBLIC_LINEAGE_NODES`` below for why.
     """
+
     nodes: List[PublicLineageGraphNode] = Field(default_factory=list)
     edges: List[PublicLineageGraphEdge] = Field(default_factory=list)
     truncated: bool = Field(
@@ -416,7 +424,8 @@ class PublicAccessionInfo(BaseModel):
 
     accessionCode: str
     vessel: Optional[PublicVesselInfo] = Field(
-        None, description="null when the request omitted a vessel ordinal (batch-level info)"
+        None,
+        description="null when the request omitted a vessel ordinal (batch-level info)",
     )
     generationLabel: str
     line: PublicLineInfo
@@ -425,8 +434,12 @@ class PublicAccessionInfo(BaseModel):
     acquiredAt: Optional[datetime] = None
     medium: Optional[PublicMediumInfo] = None
     protocol: Optional[PublicProtocolInfo] = None
-    operator: Optional[str] = Field(None, description="Initials unless the tenant enabled showOperatorName")
-    facility: Optional[str] = Field(None, description="null unless the tenant enabled showFacilityName")
+    operator: Optional[str] = Field(
+        None, description="Initials unless the tenant enabled showOperatorName"
+    )
+    facility: Optional[str] = Field(
+        None, description="null unless the tenant enabled showFacilityName"
+    )
     lineage: List[PublicLineageStep] = Field(default_factory=list)
     lineageGraph: PublicLineageGraph = Field(
         default_factory=PublicLineageGraph,
@@ -462,6 +475,7 @@ class AuthenticatedLineageGraphNode(BaseModel):
     the same ``PUBLIC_LINEAGE_DEPTH`` / ``PUBLIC_LINEAGE_NODES`` caps as the
     anonymous graph — see ``_build_lineage_graph``.
     """
+
     code: str
     generationLabel: str
     form: str
@@ -474,6 +488,7 @@ class AuthenticatedLineageGraphNode(BaseModel):
 class AuthenticatedLineageGraph(BaseModel):
     """``PublicLineageGraph``'s authenticated counterpart — same edges (an
     edge never carried a token to begin with), nodes carry ``token`` too."""
+
     nodes: List[AuthenticatedLineageGraphNode] = Field(default_factory=list)
     edges: List[PublicLineageGraphEdge] = Field(default_factory=list)
     truncated: bool = Field(
@@ -499,10 +514,13 @@ class AuthenticatedAccessionInfo(BaseModel):
     ``_assemble_authenticated_info`` for where those flags are overridden.
     """
 
-    accessionId: str = Field(..., description="Internal accession id — safe once the caller is authenticated")
+    accessionId: str = Field(
+        ..., description="Internal accession id — safe once the caller is authenticated"
+    )
     accessionCode: str
     vessel: Optional[PublicVesselInfo] = Field(
-        None, description="null when the request omitted a vessel ordinal (batch-level info)"
+        None,
+        description="null when the request omitted a vessel ordinal (batch-level info)",
     )
     generationLabel: str
     line: PublicLineInfo
@@ -511,8 +529,12 @@ class AuthenticatedAccessionInfo(BaseModel):
     acquiredAt: Optional[datetime] = None
     medium: Optional[PublicMediumInfo] = None
     protocol: Optional[PublicProtocolInfo] = None
-    operator: Optional[str] = Field(None, description="Initials unless the tenant enabled showOperatorName")
-    facility: Optional[str] = Field(None, description="null unless the tenant enabled showFacilityName")
+    operator: Optional[str] = Field(
+        None, description="Initials unless the tenant enabled showOperatorName"
+    )
+    facility: Optional[str] = Field(
+        None, description="null unless the tenant enabled showFacilityName"
+    )
     lineage: List[PublicLineageStep] = Field(default_factory=list)
     lineageGraph: AuthenticatedLineageGraph = Field(
         default_factory=AuthenticatedLineageGraph,
@@ -584,7 +606,9 @@ async def _build_line_info(line_id: str) -> PublicLineInfo:
     try:
         line = await LineService.get_line(line_id)
     except HTTPException:
-        logger.warning("[public.genetics] line %s not found for public info page", line_id)
+        logger.warning(
+            "[public.genetics] line %s not found for public info page", line_id
+        )
         return PublicLineInfo(code="", commonName="", scientificName=None, kind="other")
     return PublicLineInfo(
         code=line.code,
@@ -594,7 +618,9 @@ async def _build_line_info(line_id: str) -> PublicLineInfo:
     )
 
 
-async def _build_medium_info(medium_batch_id: Optional[str], show_ingredients: bool) -> Optional[PublicMediumInfo]:
+async def _build_medium_info(
+    medium_batch_id: Optional[str], show_ingredients: bool
+) -> Optional[PublicMediumInfo]:
     if not medium_batch_id:
         return None
     try:
@@ -635,7 +661,9 @@ async def _fetch_protocol_steps(protocol_id: str) -> Optional[List[str]]:
     try:
         doc = await db[_PROTOCOLS_COLLECTION].find_one({"protocolId": protocol_id})
     except Exception:
-        logger.warning("[public.genetics] protocol steps lookup failed for %s", protocol_id)
+        logger.warning(
+            "[public.genetics] protocol steps lookup failed for %s", protocol_id
+        )
         return None
     if not doc:
         return None
@@ -645,7 +673,9 @@ async def _fetch_protocol_steps(protocol_id: str) -> Optional[List[str]]:
     return texts or None
 
 
-async def _build_protocol_info(source_event_id: Optional[str], show_steps: bool) -> Optional[PublicProtocolInfo]:
+async def _build_protocol_info(
+    source_event_id: Optional[str], show_steps: bool
+) -> Optional[PublicProtocolInfo]:
     if not source_event_id:
         return None
     try:
@@ -669,7 +699,9 @@ async def _build_protocol_info(source_event_id: Optional[str], show_steps: bool)
     )
 
 
-async def _build_operator(created_by: Optional[str], show_full_name: bool) -> Optional[str]:
+async def _build_operator(
+    created_by: Optional[str], show_full_name: bool
+) -> Optional[str]:
     if not created_by:
         return None
     try:
@@ -699,7 +731,9 @@ def _primary_from_vessel_no(accession: Accession) -> Optional[int]:
     return accession.parents[0].vesselNo
 
 
-def _vessel_no_cited_by_child(child: Optional[Accession], from_accession_id: Optional[str]) -> Optional[int]:
+def _vessel_no_cited_by_child(
+    child: Optional[Accession], from_accession_id: Optional[str]
+) -> Optional[int]:
     """The vessel number on `child`'s specific `ParentRef` entry that cites
     `from_accession_id` — used for `PublicLineageGraphEdge.fromVesselNo`.
 
@@ -771,7 +805,11 @@ async def _build_lineage(accession: Accession) -> List[PublicLineageStep]:
                 generationLabel=step.generationLabel or "",
                 method=step.method.value if step.method else None,
                 performedAt=step.performedAt,
-                provenance=provenance_map.get(step.accessionId) if step.method is None else None,
+                provenance=(
+                    provenance_map.get(step.accessionId)
+                    if step.method is None
+                    else None
+                ),
                 fromVesselNo=_primary_from_vessel_no(related) if related else None,
             )
         )
@@ -831,7 +869,9 @@ async def _build_lineage_graph(
             max_depth=PUBLIC_LINEAGE_DEPTH,
         )
     except Exception:
-        logger.warning("[public.genetics] lineage graph build failed for %s", accession.id)
+        logger.warning(
+            "[public.genetics] lineage graph build failed for %s", accession.id
+        )
         return AuthenticatedLineageGraph() if authenticated else PublicLineageGraph()
 
     nodes = graph.nodes
@@ -920,7 +960,9 @@ async def _build_lineage_graph(
 
     public_edges: List[PublicLineageGraphEdge] = []
     for edge in graph.edges:
-        from_code = code_by_id.get(edge.fromAccessionId) if edge.fromAccessionId else None
+        from_code = (
+            code_by_id.get(edge.fromAccessionId) if edge.fromAccessionId else None
+        )
         to_code = code_by_id.get(edge.toAccessionId)
         if from_code is None or to_code is None:
             continue
@@ -936,8 +978,12 @@ async def _build_lineage_graph(
         )
 
     if authenticated:
-        return AuthenticatedLineageGraph(nodes=public_nodes, edges=public_edges, truncated=truncated)
-    return PublicLineageGraph(nodes=public_nodes, edges=public_edges, truncated=truncated)
+        return AuthenticatedLineageGraph(
+            nodes=public_nodes, edges=public_edges, truncated=truncated
+        )
+    return PublicLineageGraph(
+        nodes=public_nodes, edges=public_edges, truncated=truncated
+    )
 
 
 async def _assemble_anonymous_info(
@@ -953,8 +999,12 @@ async def _assemble_anonymous_info(
     ``_assemble_authenticated_info`` for the tier that ignores those flags.
     """
     line_info = await _build_line_info(accession.lineId)
-    medium_info = await _build_medium_info(accession.mediumBatchId, config.showMediumIngredients)
-    protocol_info = await _build_protocol_info(accession.sourceEventId, config.showProtocolSteps)
+    medium_info = await _build_medium_info(
+        accession.mediumBatchId, config.showMediumIngredients
+    )
+    protocol_info = await _build_protocol_info(
+        accession.sourceEventId, config.showProtocolSteps
+    )
     operator = await _build_operator(accession.createdBy, config.showOperatorName)
     facility = accession.location.facility if config.showFacilityName else None
     lineage = await _build_lineage(accession)
@@ -1119,7 +1169,9 @@ async def _handle_public_info(
         # has no auth *requirement* even though it now recognises a session
         # when one is offered; nothing beyond "not found" should ever reach
         # a caller in either tier.
-        logger.exception("[public.genetics] failed to assemble public info for a valid token")
+        logger.exception(
+            "[public.genetics] failed to assemble public info for a valid token"
+        )
         raise _not_found()
 
 

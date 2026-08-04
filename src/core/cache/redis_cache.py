@@ -36,8 +36,7 @@ class RedisCache:
             redis_url: Redis connection URL (default: from env or redis://localhost:6379)
         """
         self.redis_url = redis_url or os.getenv(
-            "REDIS_URL",
-            "redis://redis:6379"  # Docker network default
+            "REDIS_URL", "redis://redis:6379"  # Docker network default
         )
         self._redis: Optional[Redis] = None
         self._pool: Optional[ConnectionPool] = None
@@ -57,7 +56,7 @@ class RedisCache:
                 max_connections=10,
                 decode_responses=True,  # Auto-decode bytes to strings
                 socket_timeout=5,
-                socket_connect_timeout=5
+                socket_connect_timeout=5,
             )
 
             self._redis = Redis(connection_pool=self._pool)
@@ -81,11 +80,7 @@ class RedisCache:
             await self._redis.close()
             logger.info("[Redis Cache] Disconnected")
 
-    async def get(
-        self,
-        key: str,
-        prefix: Optional[str] = None
-    ) -> Optional[Any]:
+    async def get(self, key: str, prefix: Optional[str] = None) -> Optional[Any]:
         """
         Get value from cache with automatic JSON deserialization.
 
@@ -121,7 +116,7 @@ class RedisCache:
         key: str,
         value: Any,
         ttl: Optional[int] = None,
-        prefix: Optional[str] = None
+        prefix: Optional[str] = None,
     ) -> bool:
         """
         Set value in cache with JSON serialization and optional TTL.
@@ -142,7 +137,9 @@ class RedisCache:
             full_key = f"{prefix}:{key}" if prefix else key
 
             # Serialize to JSON
-            serialized = json.dumps(value, default=str)  # default=str handles datetime, UUID
+            serialized = json.dumps(
+                value, default=str
+            )  # default=str handles datetime, UUID
 
             # Set with TTL if provided
             if ttl:
@@ -158,11 +155,7 @@ class RedisCache:
             logger.warning(f"[Redis Cache] Set error for key {key}: {str(e)}")
             return False
 
-    async def delete(
-        self,
-        key: str,
-        prefix: Optional[str] = None
-    ) -> bool:
+    async def delete(self, key: str, prefix: Optional[str] = None) -> bool:
         """
         Delete a key from cache.
 
@@ -190,11 +183,7 @@ class RedisCache:
             logger.warning(f"[Redis Cache] Delete error for key {key}: {str(e)}")
             return False
 
-    async def delete_pattern(
-        self,
-        pattern: str,
-        prefix: Optional[str] = None
-    ) -> int:
+    async def delete_pattern(self, pattern: str, prefix: Optional[str] = None) -> int:
         """
         Delete all keys matching a pattern (for cache invalidation).
 
@@ -217,7 +206,9 @@ class RedisCache:
                 keys.append(key)
 
             if not keys:
-                logger.debug(f"[Redis Cache] DELETE_PATTERN: {full_pattern} (0 keys found)")
+                logger.debug(
+                    f"[Redis Cache] DELETE_PATTERN: {full_pattern} (0 keys found)"
+                )
                 return 0
 
             # Delete all matching keys
@@ -234,11 +225,7 @@ class RedisCache:
             )
             return 0
 
-    async def exists(
-        self,
-        key: str,
-        prefix: Optional[str] = None
-    ) -> bool:
+    async def exists(self, key: str, prefix: Optional[str] = None) -> bool:
         """
         Check if a key exists in cache.
 
@@ -261,11 +248,7 @@ class RedisCache:
             logger.warning(f"[Redis Cache] Exists check error for key {key}: {str(e)}")
             return False
 
-    async def ttl(
-        self,
-        key: str,
-        prefix: Optional[str] = None
-    ) -> Optional[int]:
+    async def ttl(self, key: str, prefix: Optional[str] = None) -> Optional[int]:
         """
         Get remaining TTL for a key.
 

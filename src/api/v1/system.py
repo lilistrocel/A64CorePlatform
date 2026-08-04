@@ -31,6 +31,7 @@ router = APIRouter(prefix="/system", tags=["System"])
 
 class FinanceModuleCapability(BaseModel):
     """Status of the finance module for the current tenant."""
+
     enabled: bool = Field(
         ...,
         description=(
@@ -53,11 +54,13 @@ class FinanceModuleCapability(BaseModel):
 
 class ModuleCapabilities(BaseModel):
     """Per-tenant module-status map."""
+
     finance: FinanceModuleCapability
 
 
 class CapabilitiesResponse(BaseModel):
     """Shape returned by GET /api/v1/system/capabilities."""
+
     tenantId: Optional[str] = Field(
         None,
         description=(

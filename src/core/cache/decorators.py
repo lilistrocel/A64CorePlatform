@@ -17,10 +17,7 @@ from .redis_cache import get_redis_cache
 logger = logging.getLogger(__name__)
 
 
-def cache_response(
-    ttl: int = 60,
-    key_prefix: Optional[str] = None
-):
+def cache_response(ttl: int = 60, key_prefix: Optional[str] = None):
     """
     Decorator to cache FastAPI endpoint responses with Redis.
 
@@ -42,6 +39,7 @@ def cache_response(
         {key_prefix}:{func_name}:{args_hash}
         Example: "farm:get_farms:a1b2c3d4"
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
@@ -79,22 +77,17 @@ def cache_response(
 
                 # Cache the response
                 # CRITICAL: Convert Pydantic models to dict for JSON serialization
-                if hasattr(result, 'model_dump'):
+                if hasattr(result, "model_dump"):
                     # Pydantic v2
                     cacheable_result = result.model_dump()
-                elif hasattr(result, 'dict'):
+                elif hasattr(result, "dict"):
                     # Pydantic v1
                     cacheable_result = result.dict()
                 else:
                     # Already dict/list or primitive
                     cacheable_result = result
 
-                await cache.set(
-                    cache_key,
-                    cacheable_result,
-                    ttl=ttl,
-                    prefix=key_prefix
-                )
+                await cache.set(cache_key, cacheable_result, ttl=ttl, prefix=key_prefix)
 
                 logger.info(
                     f"[Cache] STORED: {key_prefix}:{cache_key} "
@@ -108,11 +101,12 @@ def cache_response(
                 logger.error(
                     f"[Cache] Error in cache decorator for {func.__name__}: {str(e)}. "
                     "Falling back to direct call.",
-                    exc_info=True
+                    exc_info=True,
                 )
                 return await func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -133,9 +127,10 @@ def _generate_cache_key_from_args(func_name: str, kwargs: dict) -> str:
     """
     # Filter out non-cacheable arguments (like current_user, request, dependencies)
     cacheable_args = {
-        k: v for k, v in kwargs.items()
-        if k not in ['current_user', 'request', 'service', 'db']
-        and not k.startswith('_')
+        k: v
+        for k, v in kwargs.items()
+        if k not in ["current_user", "request", "service", "db"]
+        and not k.startswith("_")
     }
 
     if cacheable_args:
@@ -154,10 +149,7 @@ def _generate_cache_key_from_args(func_name: str, kwargs: dict) -> str:
         return func_name
 
 
-def invalidate_cache_pattern(
-    pattern: str,
-    prefix: Optional[str] = None
-) -> Callable:
+def invalidate_cache_pattern(pattern: str, prefix: Optional[str] = None) -> Callable:
     """
     Decorator to invalidate cache patterns after function execution.
 
@@ -175,6 +167,7 @@ def invalidate_cache_pattern(
             # After creating farm, invalidate all farm list caches
             return created_farm
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
@@ -199,10 +192,11 @@ def invalidate_cache_pattern(
                 # CRITICAL: Never break the application due to cache errors
                 logger.error(
                     f"[Cache] Error invalidating pattern {pattern}: {str(e)}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
             return result
 
         return wrapper
+
     return decorator

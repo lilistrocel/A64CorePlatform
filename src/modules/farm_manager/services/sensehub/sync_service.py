@@ -417,14 +417,14 @@ class SenseHubSyncService:
                 )
             except Exception as exc:
                 blocks_failed += 1
-                errors.append({
-                    "blockId": block_id_str,
-                    "blockName": block_name,
-                    "error": str(exc),
-                })
-                logger.warning(
-                    f"[SenseHubSync] Block '{block_name}' failed: {exc}"
+                errors.append(
+                    {
+                        "blockId": block_id_str,
+                        "blockName": block_name,
+                        "error": str(exc),
+                    }
                 )
+                logger.warning(f"[SenseHubSync] Block '{block_name}' failed: {exc}")
 
             # Throttle between blocks
             await asyncio.sleep(INTER_BLOCK_DELAY)
@@ -471,10 +471,12 @@ class SenseHubSyncService:
 
     async def _get_iot_blocks(self) -> List[Dict[str, Any]]:
         db = self._db if self._db is not None else farm_db.get_database()
-        cursor = db.blocks.find({
-            "isActive": True,
-            "iotController.enabled": True,
-        })
+        cursor = db.blocks.find(
+            {
+                "isActive": True,
+                "iotController.enabled": True,
+            }
+        )
         return await cursor.to_list(length=1000)
 
     async def _sync_block(
@@ -509,7 +511,9 @@ class SenseHubSyncService:
                     farm_uuid, block_uuid, client
                 )
         except Exception as exc:
-            logger.debug(f"[SenseHubSync] Equipment sync failed for {block_id_str}: {exc}")
+            logger.debug(
+                f"[SenseHubSync] Equipment sync failed for {block_id_str}: {exc}"
+            )
 
         # 2. Alerts via REST client
         try:
@@ -562,7 +566,9 @@ class SenseHubSyncService:
                     {"$set": {"iotController.lastSyncedAt": now}},
                 )
             except Exception as exc:
-                logger.debug(f"[SenseHubSync] Failed to update lastSyncedAt for {block_id_str}: {exc}")
+                logger.debug(
+                    f"[SenseHubSync] Failed to update lastSyncedAt for {block_id_str}: {exc}"
+                )
 
         return eq_count, alert_count, lab_count, snap_count
 
@@ -585,7 +591,9 @@ class SenseHubSyncService:
             if not isinstance(eq, dict):
                 continue
 
-            equipment_id = eq.get("id") or eq.get("equipment_id") or eq.get("equipmentId")
+            equipment_id = (
+                eq.get("id") or eq.get("equipment_id") or eq.get("equipmentId")
+            )
             if equipment_id is None:
                 continue
 
@@ -599,9 +607,20 @@ class SenseHubSyncService:
                 "status": eq.get("status", "unknown"),
                 "lastReading": eq.get("last_reading") or eq.get("lastReading"),
                 "metadata": {
-                    k: v for k, v in eq.items()
-                    if k not in ("id", "equipment_id", "equipmentId", "name",
-                                 "type", "zone", "status", "last_reading", "lastReading")
+                    k: v
+                    for k, v in eq.items()
+                    if k
+                    not in (
+                        "id",
+                        "equipment_id",
+                        "equipmentId",
+                        "name",
+                        "type",
+                        "zone",
+                        "status",
+                        "last_reading",
+                        "lastReading",
+                    )
                 },
                 "syncedAt": synced_at,
             }
@@ -642,9 +661,17 @@ class SenseHubSyncService:
                 "message": alert.get("message", ""),
                 "acknowledged": alert.get("acknowledged", False),
                 "alertData": {
-                    k: v for k, v in alert.items()
-                    if k not in ("id", "alert_id", "alertId", "severity",
-                                 "message", "acknowledged")
+                    k: v
+                    for k, v in alert.items()
+                    if k
+                    not in (
+                        "id",
+                        "alert_id",
+                        "alertId",
+                        "severity",
+                        "message",
+                        "acknowledged",
+                    )
                 },
                 "syncedAt": synced_at,
             }
@@ -764,11 +791,13 @@ class SenseHubSyncService:
                         continue
 
                     # Check if already synced
-                    existing = await col.find_one({
-                        "blockId": block_id,
-                        "cameraId": int(camera_id),
-                        "snapshotId": int(snapshot_id),
-                    })
+                    existing = await col.find_one(
+                        {
+                            "blockId": block_id,
+                            "cameraId": int(camera_id),
+                            "snapshotId": int(snapshot_id),
+                        }
+                    )
                     if existing:
                         continue
 
@@ -782,9 +811,7 @@ class SenseHubSyncService:
                         if not image_url:
                             continue
                     except Exception:
-                        logger.debug(
-                            f"[SenseHubSync] Failed to get URL for {filename}"
-                        )
+                        logger.debug(f"[SenseHubSync] Failed to get URL for {filename}")
                         continue
 
                     # Download image
@@ -794,22 +821,28 @@ class SenseHubSyncService:
                             timeout=30.0,
                         )
                     except Exception:
-                        logger.debug(
-                            f"[SenseHubSync] Failed to download {image_url}"
-                        )
+                        logger.debug(f"[SenseHubSync] Failed to download {image_url}")
                         continue
 
                     # Save to filesystem
-                    captured_at_str = snap.get("captured_at") or snap.get("capturedAt") or ""
+                    captured_at_str = (
+                        snap.get("captured_at") or snap.get("capturedAt") or ""
+                    )
                     try:
-                        captured_dt = datetime.fromisoformat(
-                            captured_at_str.replace("Z", "+00:00")
-                        ) if captured_at_str else synced_at
+                        captured_dt = (
+                            datetime.fromisoformat(
+                                captured_at_str.replace("Z", "+00:00")
+                            )
+                            if captured_at_str
+                            else synced_at
+                        )
                     except (ValueError, AttributeError):
                         captured_dt = synced_at
 
                     date_dir = captured_dt.strftime("%Y-%m-%d")
-                    local_dir = SNAPSHOT_STORAGE_DIR / block_id / str(camera_id) / date_dir
+                    local_dir = (
+                        SNAPSHOT_STORAGE_DIR / block_id / str(camera_id) / date_dir
+                    )
                     local_dir.mkdir(parents=True, exist_ok=True)
                     local_path = local_dir / filename
 
@@ -863,9 +896,7 @@ class SenseHubSyncService:
     # Crop-data reconciliation
     # =========================================================================
 
-    async def _reconcile_crop_data(
-        self, iot_blocks: List[Dict[str, Any]]
-    ) -> dict:
+    async def _reconcile_crop_data(self, iot_blocks: List[Dict[str, Any]]) -> dict:
         """
         Compare A64Core's authoritative block state against SenseHub's stored
         crop data and repush on drift.
@@ -899,7 +930,9 @@ class SenseHubSyncService:
         # Import here to avoid circular imports at module load time.
         from ...models.block import Block, BlockStatus
         from ..block.block_repository_new import BlockRepository
-        from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+        from ..plant_data.plant_data_enhanced_repository import (
+            PlantDataEnhancedRepository,
+        )
         from ..planting.planting_repository import PlantingRepository
         from .sensehub_crop_sync import SenseHubCropSync
         from .sensehub_stage_mapper import compute_stage
@@ -927,7 +960,9 @@ class SenseHubSyncService:
                 continue
 
             try:
-                virtual_children = await BlockRepository.get_children_by_parent(parent_uuid)
+                virtual_children = await BlockRepository.get_children_by_parent(
+                    parent_uuid
+                )
             except Exception as exc:
                 logger.warning(
                     "[SenseHubSync:Reconcile] Could not fetch virtual children of"
@@ -941,7 +976,11 @@ class SenseHubSyncService:
                 # Expand parent → children.  Each child will resolve MCP creds
                 # via from_block's parent-walk (T-007 from_block change).
                 for child in virtual_children:
-                    child_dict = {k: v for k, v in child.model_dump(mode="json").items() if k != "_id"}
+                    child_dict = {
+                        k: v
+                        for k, v in child.model_dump(mode="json").items()
+                        if k != "_id"
+                    }
                     # Ensure UUID fields are strings (MongoDB stores them as str in our schema).
                     for field in ("blockId", "farmId", "parentBlockId", "targetCrop"):
                         if child_dict.get(field) is not None:
@@ -1150,8 +1189,13 @@ class SenseHubSyncService:
                         block_id_str,
                     )
                     ok = await _safe_set_crop_data(
-                        sync, block, planting.plantingId, a64_stage, plant_data,
-                        counters, block_id_str,
+                        sync,
+                        block,
+                        planting.plantingId,
+                        a64_stage,
+                        plant_data,
+                        counters,
+                        block_id_str,
                     )
                     if ok:
                         counters["drift_resolved_by_repush"] += 1
@@ -1171,8 +1215,13 @@ class SenseHubSyncService:
                         planting_id_str,
                     )
                     ok = await _safe_set_crop_data(
-                        sync, block, planting.plantingId, a64_stage, plant_data,
-                        counters, block_id_str,
+                        sync,
+                        block,
+                        planting.plantingId,
+                        a64_stage,
+                        plant_data,
+                        counters,
+                        block_id_str,
                     )
                     if ok:
                         counters["drift_resolved_by_repush"] += 1
@@ -1238,7 +1287,9 @@ class SenseHubSyncService:
             "blocks_checked": counters["blocks_checked"],
             "in_sync": counters["in_sync"],
             "drift_resolved_by_repush": counters["drift_resolved_by_repush"],
-            "drift_resolved_by_stage_update": counters["drift_resolved_by_stage_update"],
+            "drift_resolved_by_stage_update": counters[
+                "drift_resolved_by_stage_update"
+            ],
             "drift_resolved_by_complete": counters["drift_resolved_by_complete"],
             "errors": counters["errors"],
             "error_samples": counters["error_samples"][:5],

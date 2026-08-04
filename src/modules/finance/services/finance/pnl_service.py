@@ -33,20 +33,40 @@ logger = logging.getLogger(__name__)
 # Keywords in purchase_register item names that classify as OPEX (not COGS).
 # The check is case-insensitive substring match.
 OPEX_KEYWORDS: Tuple[str, ...] = (
-    "service", "repair", "maintenance", "labor", "labour",
-    "salary", "wage", "insurance", "rent", "lease",
-    "fuel", "transport", "freight", "vehicle",
-    "admin", "office", "utility", "electricity",
+    "service",
+    "repair",
+    "maintenance",
+    "labor",
+    "labour",
+    "salary",
+    "wage",
+    "insurance",
+    "rent",
+    "lease",
+    "fuel",
+    "transport",
+    "freight",
+    "vehicle",
+    "admin",
+    "office",
+    "utility",
+    "electricity",
 )
 
 # Keywords that specifically indicate maintenance opex
 MAINTENANCE_KEYWORDS: Tuple[str, ...] = (
-    "repair", "maintenance", "service",
+    "repair",
+    "maintenance",
+    "service",
 )
 
 # Keywords that indicate logistics opex
 LOGISTICS_KEYWORDS: Tuple[str, ...] = (
-    "fuel", "transport", "freight", "vehicle", "delivery",
+    "fuel",
+    "transport",
+    "freight",
+    "vehicle",
+    "delivery",
 )
 
 
@@ -94,6 +114,7 @@ def _margin(profit: float, revenue: float) -> float:
 # Date filter helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_date_match(
     start_date: Optional[date],
     end_date: Optional[date],
@@ -113,6 +134,7 @@ def _build_date_match(
 # ---------------------------------------------------------------------------
 # Main service class
 # ---------------------------------------------------------------------------
+
 
 class PnLService:
     """
@@ -166,7 +188,9 @@ class PnLService:
         if price_source_filter:
             match["metadata.priceSource"] = price_source_filter
         elif not include_imputed:
-            match["metadata.priceSource"] = {"$in": ["excel_match", "excel_alias_match"]}
+            match["metadata.priceSource"] = {
+                "$in": ["excel_match", "excel_alias_match"]
+            }
 
         pipeline = [
             {"$match": match},
@@ -182,7 +206,9 @@ class PnLService:
                         }
                     },
                     "tax": {"$sum": {"$ifNull": ["$excel_data.vatAmount", 0]}},
-                    "net": {"$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}},
+                    "net": {
+                        "$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}
+                    },
                     "paidAmount": {"$sum": {"$ifNull": ["$excel_data.paidAmount", 0]}},
                     "lineCount": {"$sum": 1},
                     "kgSold": {"$sum": {"$ifNull": ["$totalKg", 0]}},
@@ -206,11 +232,15 @@ class PnLService:
             {
                 "$group": {
                     "_id": {"$ifNull": ["$metadata.priceSource", "unknown"]},
-                    "revenue": {"$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}},
+                    "revenue": {
+                        "$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}
+                    },
                 }
             },
         ]
-        source_rows = await db.sales_order_lines.aggregate(by_source_pipeline).to_list(20)
+        source_rows = await db.sales_order_lines.aggregate(by_source_pipeline).to_list(
+            20
+        )
         by_source: Dict[str, float] = {
             "excel_match": 0.0,
             "excel_alias_match": 0.0,
@@ -358,7 +388,12 @@ class PnLService:
 
         pipeline = [
             {"$match": match},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$quantityKg", 0]}}}},
+            {
+                "$group": {
+                    "_id": None,
+                    "total": {"$sum": {"$ifNull": ["$quantityKg", 0]}},
+                }
+            },
         ]
         result = await db.block_harvests.aggregate(pipeline).to_list(1)
         return _safe_round(result[0]["total"] if result else 0.0)
@@ -411,14 +446,24 @@ class PnLService:
         """Aggregate data for the /summary endpoint."""
 
         revenue_data = await self._revenue_pipeline(
-            farm_id, farming_year, start_date, end_date,
-            include_imputed, price_source_filter,
+            farm_id,
+            farming_year,
+            start_date,
+            end_date,
+            include_imputed,
+            price_source_filter,
         )
         costs_data = await self._cogs_and_opex(
-            farm_id, farming_year, start_date, end_date,
+            farm_id,
+            farming_year,
+            start_date,
+            end_date,
         )
         order_counts = await self._order_counts(
-            farm_id, farming_year, start_date, end_date,
+            farm_id,
+            farming_year,
+            start_date,
+            end_date,
         )
         kg_harvested = await self._kg_harvested(farm_id, start_date, end_date)
 
@@ -503,7 +548,9 @@ class PnLService:
         if price_source_filter:
             match["metadata.priceSource"] = price_source_filter
         elif not include_imputed:
-            match["metadata.priceSource"] = {"$in": ["excel_match", "excel_alias_match"]}
+            match["metadata.priceSource"] = {
+                "$in": ["excel_match", "excel_alias_match"]
+            }
 
         pipeline = [
             {"$match": match},
@@ -513,7 +560,9 @@ class PnLService:
                         "year": {"$year": "$createdAt"},
                         "month": {"$month": "$createdAt"},
                     },
-                    "revenue": {"$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}},
+                    "revenue": {
+                        "$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}
+                    },
                     "kgSold": {"$sum": {"$ifNull": ["$totalKg", 0]}},
                     "orderRefs": {"$addToSet": "$orderRef"},
                 }
@@ -556,16 +605,18 @@ class PnLService:
             opex = 0.0  # Opex not broken by month yet (purchase_register has no classification in this query)
             gross = _safe_round(revenue - cogs)
             net = _safe_round(gross - opex)
-            buckets.append({
-                "yearMonth": ym,
-                "revenue": revenue,
-                "cogs": cogs,
-                "opex": opex,
-                "grossProfit": gross,
-                "netProfit": net,
-                "kgSold": _safe_round(row["kgSold"]),
-                "orderCount": len(row.get("orderRefs", [])),
-            })
+            buckets.append(
+                {
+                    "yearMonth": ym,
+                    "revenue": revenue,
+                    "cogs": cogs,
+                    "opex": opex,
+                    "grossProfit": gross,
+                    "netProfit": net,
+                    "kgSold": _safe_round(row["kgSold"]),
+                    "orderCount": len(row.get("orderRefs", [])),
+                }
+            )
 
         return buckets
 
@@ -594,14 +645,18 @@ class PnLService:
         if price_source_filter:
             match["metadata.priceSource"] = price_source_filter
         elif not include_imputed:
-            match["metadata.priceSource"] = {"$in": ["excel_match", "excel_alias_match"]}
+            match["metadata.priceSource"] = {
+                "$in": ["excel_match", "excel_alias_match"]
+            }
 
         pipeline = [
             {"$match": match},
             {
                 "$group": {
                     "_id": "$farmId",
-                    "revenue": {"$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}},
+                    "revenue": {
+                        "$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}
+                    },
                     "kgSold": {"$sum": {"$ifNull": ["$totalKg", 0]}},
                     "orderRefs": {"$addToSet": "$orderRef"},
                 }
@@ -632,32 +687,34 @@ class PnLService:
                     "items.mappedCropName": None,
                 }
             },
-            {
-                "$group": {"_id": None, "totalFarmCogs": {"$sum": "$items.amount"}}
-            },
+            {"$group": {"_id": None, "totalFarmCogs": {"$sum": "$items.amount"}}},
         ]
         pr_result = await db.purchase_register.aggregate(pr_pipeline).to_list(1)
         total_farm_cogs = float((pr_result[0]["totalFarmCogs"] if pr_result else 0.0))
 
         buckets: List[Dict[str, Any]] = []
         for farm_id, farm_name in farm_map.items():
-            data = revenue_by_farm.get(farm_id, {"revenue": 0.0, "kgSold": 0.0, "orderCount": 0})
+            data = revenue_by_farm.get(
+                farm_id, {"revenue": 0.0, "kgSold": 0.0, "orderCount": 0}
+            )
             revenue = data["revenue"]
             # Allocate farm COGS proportionally by revenue share
             farm_share = revenue / total_revenue if revenue > 0 else 0.0
             cogs = _safe_round(total_farm_cogs * farm_share)
             gross = _safe_round(revenue - cogs)
             margin = _margin(gross, revenue)
-            buckets.append({
-                "farmId": farm_id,
-                "farmName": farm_name,
-                "revenue": revenue,
-                "cogs": cogs,
-                "grossProfit": gross,
-                "marginPercent": margin,
-                "kgSold": data["kgSold"],
-                "orderCount": data["orderCount"],
-            })
+            buckets.append(
+                {
+                    "farmId": farm_id,
+                    "farmName": farm_name,
+                    "revenue": revenue,
+                    "cogs": cogs,
+                    "grossProfit": gross,
+                    "marginPercent": margin,
+                    "kgSold": data["kgSold"],
+                    "orderCount": data["orderCount"],
+                }
+            )
 
         # Sort by revenue descending
         buckets.sort(key=lambda x: x["revenue"], reverse=True)
@@ -685,14 +742,18 @@ class PnLService:
         if price_source_filter:
             match["metadata.priceSource"] = price_source_filter
         elif not include_imputed:
-            match["metadata.priceSource"] = {"$in": ["excel_match", "excel_alias_match"]}
+            match["metadata.priceSource"] = {
+                "$in": ["excel_match", "excel_alias_match"]
+            }
 
         pipeline = [
             {"$match": match},
             {
                 "$group": {
                     "_id": "$cropName",
-                    "revenue": {"$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}},
+                    "revenue": {
+                        "$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}
+                    },
                     "kgSold": {"$sum": {"$ifNull": ["$totalKg", 0]}},
                 }
             },
@@ -713,7 +774,9 @@ class PnLService:
             },
         ]
         pr_rows = await db.purchase_register.aggregate(pr_pipeline).to_list(200)
-        cogs_by_crop: Dict[str, float] = {r["_id"]: _safe_round(r["cogs"]) for r in pr_rows}
+        cogs_by_crop: Dict[str, float] = {
+            r["_id"]: _safe_round(r["cogs"]) for r in pr_rows
+        }
 
         buckets: List[Dict[str, Any]] = []
         for row in rows:
@@ -723,14 +786,16 @@ class PnLService:
             cogs = cogs_by_crop.get(crop, 0.0)
             gross = _safe_round(revenue - cogs)
             avg_price = _safe_round(revenue / kg) if kg > 0 else 0.0
-            buckets.append({
-                "cropName": crop,
-                "revenue": revenue,
-                "cogs": cogs,
-                "grossProfit": gross,
-                "kgSold": kg,
-                "avgPricePerKg": avg_price,
-            })
+            buckets.append(
+                {
+                    "cropName": crop,
+                    "revenue": revenue,
+                    "cogs": cogs,
+                    "grossProfit": gross,
+                    "kgSold": kg,
+                    "avgPricePerKg": avg_price,
+                }
+            )
 
         return buckets
 
@@ -852,10 +917,22 @@ class PnLService:
             tc["overdue"] = _safe_round(tc["overdue"])
 
         return {
-            "current": {"count": current["count"], "amount": _safe_round(current["amount"])},
-            "aging_30_60": {"count": aging_30_60["count"], "amount": _safe_round(aging_30_60["amount"])},
-            "aging_60_90": {"count": aging_60_90["count"], "amount": _safe_round(aging_60_90["amount"])},
-            "over_90": {"count": over_90["count"], "amount": _safe_round(over_90["amount"])},
+            "current": {
+                "count": current["count"],
+                "amount": _safe_round(current["amount"]),
+            },
+            "aging_30_60": {
+                "count": aging_30_60["count"],
+                "amount": _safe_round(aging_30_60["amount"]),
+            },
+            "aging_60_90": {
+                "count": aging_60_90["count"],
+                "amount": _safe_round(aging_60_90["amount"]),
+            },
+            "over_90": {
+                "count": over_90["count"],
+                "amount": _safe_round(over_90["amount"]),
+            },
             "total_outstanding": total_outstanding,
             "byCustomer": top_customers,
         }
@@ -884,7 +961,9 @@ class PnLService:
                 "$group": {
                     "_id": {"$ifNull": ["$metadata.priceSource", "no_data"]},
                     "lineCount": {"$sum": 1},
-                    "revenue": {"$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}},
+                    "revenue": {
+                        "$sum": {"$ifNull": ["$excel_data.totalAmountAfterTax", 0]}
+                    },
                     "orderRefs": {"$addToSet": "$orderRef"},
                 }
             },
@@ -894,7 +973,11 @@ class PnLService:
         result: Dict[str, Dict[str, Any]] = {
             "excel_match": {"lineCount": 0, "revenue": 0.0, "orderCount": 0},
             "excel_alias_match": {"lineCount": 0, "revenue": 0.0, "orderCount": 0},
-            "imputed_customer_crop_avg": {"lineCount": 0, "revenue": 0.0, "orderCount": 0},
+            "imputed_customer_crop_avg": {
+                "lineCount": 0,
+                "revenue": 0.0,
+                "orderCount": 0,
+            },
             "no_data": {"lineCount": 0, "revenue": 0.0, "orderCount": 0},
         }
 

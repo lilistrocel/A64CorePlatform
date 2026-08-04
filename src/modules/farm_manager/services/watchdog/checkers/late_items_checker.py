@@ -21,14 +21,16 @@ class LateItemsChecker:
         """Query block_cycles for late harvests."""
         now = datetime.utcnow()
 
-        cursor = self.db["block_cycles"].find({
-            "status": "active",
-            "estimatedHarvestStartDate": {"$lt": now},
-            "$or": [
-                {"actualHarvestStartDate": None},
-                {"actualHarvestStartDate": {"$exists": False}},
-            ],
-        })
+        cursor = self.db["block_cycles"].find(
+            {
+                "status": "active",
+                "estimatedHarvestStartDate": {"$lt": now},
+                "$or": [
+                    {"actualHarvestStartDate": None},
+                    {"actualHarvestStartDate": {"$exists": False}},
+                ],
+            }
+        )
 
         cycles = await cursor.to_list(length=200)
         if not cycles:
@@ -47,7 +49,9 @@ class LateItemsChecker:
             async for block in blocks_cursor:
                 blocks_map[block["blockId"]] = block
 
-            farm_ids = list({b.get("farmId") for b in blocks_map.values() if b.get("farmId")})
+            farm_ids = list(
+                {b.get("farmId") for b in blocks_map.values() if b.get("farmId")}
+            )
             if farm_ids:
                 farms_cursor = self.db["farms"].find(
                     {"farmId": {"$in": farm_ids}},
@@ -82,15 +86,17 @@ class LateItemsChecker:
             stage = cycle.get("currentStage", "unknown")
             est_str = est.strftime("%b %d") if est else "N/A"
 
-            issues.append(WatchdogIssue(
-                checkType=CheckType.LATE_ITEMS,
-                severity=severity,
-                title=f"Late Harvest ({delay_days} days)",
-                description=f"Farm: {farm_name} > Block {block_name}\nExpected: {est_str} | Status: {stage.upper()}",
-                entityId=cycle.get("cycleId", block_id),
-                farmName=farm_name,
-                blockName=block_name,
-                extra={"delayDays": delay_days, "stage": stage},
-            ))
+            issues.append(
+                WatchdogIssue(
+                    checkType=CheckType.LATE_ITEMS,
+                    severity=severity,
+                    title=f"Late Harvest ({delay_days} days)",
+                    description=f"Farm: {farm_name} > Block {block_name}\nExpected: {est_str} | Status: {stage.upper()}",
+                    entityId=cycle.get("cycleId", block_id),
+                    farmName=farm_name,
+                    blockName=block_name,
+                    extra={"delayDays": delay_days, "stage": stage},
+                )
+            )
 
         return issues

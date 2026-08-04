@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class QueryExecutionError(Exception):
     """Raised when query execution fails"""
+
     pass
 
 
@@ -48,7 +49,7 @@ class QueryEngine:
         self,
         mongodb_client: AsyncIOMotorClient,
         db_name: str,
-        cache_ttl_minutes: int = 30
+        cache_ttl_minutes: int = 30,
     ):
         """
         Initialize query engine.
@@ -79,7 +80,7 @@ class QueryEngine:
         user_id: str,
         user_role: str = "user",
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        force_refresh: bool = False
+        force_refresh: bool = False,
     ) -> Dict[str, Any]:
         """
         Execute complete AI query pipeline.
@@ -124,7 +125,7 @@ class QueryEngine:
             query_generation = await self.gemini_service.generate_mongodb_query(
                 user_prompt=user_prompt,
                 schema=schema,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
             )
 
             collection = query_generation.get("collection")
@@ -136,9 +137,7 @@ class QueryEngine:
             logger.info(f"Validating query for collection: {collection}...")
             try:
                 self.query_validator.validate_query(
-                    collection=collection,
-                    query=query,
-                    user_role=user_role
+                    collection=collection, query=query, user_role=user_role
                 )
             except QueryValidationError as e:
                 logger.error(f"Query validation failed: {e}")
@@ -153,7 +152,7 @@ class QueryEngine:
             report = await self.gemini_service.generate_report(
                 query_results=results,
                 user_prompt=user_prompt,
-                query_explanation=explanation
+                query_explanation=explanation,
             )
             report_cost = report.get("estimated_cost", {})
 
@@ -165,15 +164,17 @@ class QueryEngine:
                 "query": {
                     "collection": collection,
                     "pipeline": query,
-                    "explanation": explanation
+                    "explanation": explanation,
                 },
                 "results": results,
                 "report": {
                     "summary": report.get("summary"),
                     "insights": report.get("insights", []),
                     "statistics": report.get("statistics", {}),
-                    "visualization_suggestions": report.get("visualization_suggestions", []),
-                    "markdown": report.get("markdown")
+                    "visualization_suggestions": report.get(
+                        "visualization_suggestions", []
+                    ),
+                    "markdown": report.get("markdown"),
                 },
                 "metadata": {
                     "execution_time_seconds": round(execution_time, 2),
@@ -184,13 +185,13 @@ class QueryEngine:
                         "query_generation": query_cost,
                         "report_generation": report_cost,
                         "total_cost_usd": round(
-                            query_cost.get("total_cost_usd", 0) +
-                            report_cost.get("total_cost_usd", 0),
-                            6
-                        )
+                            query_cost.get("total_cost_usd", 0)
+                            + report_cost.get("total_cost_usd", 0),
+                            6,
+                        ),
                     },
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             }
 
             # Cache the result
@@ -212,9 +213,7 @@ class QueryEngine:
             raise QueryExecutionError(f"Failed to execute query: {str(e)}")
 
     async def _execute_mongodb_query(
-        self,
-        collection_name: str,
-        pipeline: List[Dict[str, Any]]
+        self, collection_name: str, pipeline: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
         Execute MongoDB aggregation pipeline.
@@ -288,13 +287,11 @@ class QueryEngine:
             Cache key (hash)
         """
         # Include user_id to separate cache by user
-        cache_input = f"{user_id}:{user_prompt}".encode('utf-8')
+        cache_input = f"{user_id}:{user_prompt}".encode("utf-8")
         return hashlib.sha256(cache_input).hexdigest()
 
     def _get_cached_result(
-        self,
-        user_prompt: str,
-        user_id: str
+        self, user_prompt: str, user_id: str
     ) -> Optional[Dict[str, Any]]:
         """
         Get cached result if available and not expired.
@@ -325,10 +322,7 @@ class QueryEngine:
         return cached_entry.get("result")
 
     def _cache_result(
-        self,
-        user_prompt: str,
-        user_id: str,
-        result: Dict[str, Any]
+        self, user_prompt: str, user_id: str, result: Dict[str, Any]
     ) -> None:
         """
         Cache query result.
@@ -342,7 +336,7 @@ class QueryEngine:
 
         self._result_cache[cache_key] = {
             "result": result,
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.utcnow(),
         }
 
         logger.info(f"Result cached with key: {cache_key[:16]}...")
@@ -362,7 +356,8 @@ class QueryEngine:
         """
         now = datetime.utcnow()
         valid_entries = sum(
-            1 for entry in self._result_cache.values()
+            1
+            for entry in self._result_cache.values()
             if now - entry["timestamp"] <= self.cache_ttl
         )
 
@@ -370,7 +365,7 @@ class QueryEngine:
             "total_entries": len(self._result_cache),
             "valid_entries": valid_entries,
             "expired_entries": len(self._result_cache) - valid_entries,
-            "cache_ttl_minutes": self.cache_ttl.total_seconds() / 60
+            "cache_ttl_minutes": self.cache_ttl.total_seconds() / 60,
         }
 
 
@@ -379,9 +374,7 @@ _query_engine: Optional[QueryEngine] = None
 
 
 def get_query_engine(
-    mongodb_client: AsyncIOMotorClient,
-    db_name: str,
-    cache_ttl_minutes: int = 30
+    mongodb_client: AsyncIOMotorClient, db_name: str, cache_ttl_minutes: int = 30
 ) -> QueryEngine:
     """
     Get singleton instance of QueryEngine.

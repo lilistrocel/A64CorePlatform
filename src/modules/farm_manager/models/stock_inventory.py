@@ -12,10 +12,13 @@ from pydantic import BaseModel, Field
 
 class StockInventoryCreate(BaseModel):
     """Schema for creating stock inventory item"""
+
     farmId: UUID = Field(..., description="Farm ID")
     plantDataId: UUID = Field(..., description="Plant type")
     plantName: str = Field(..., description="Plant/product name")
-    productType: str = Field("fresh", description="Product type (fresh, processed, etc.)")
+    productType: str = Field(
+        "fresh", description="Product type (fresh, processed, etc.)"
+    )
     totalQuantity: float = Field(..., ge=0, description="Quantity to add")
     unit: str = Field(..., description="Unit of measurement")
     qualityGrade: str = Field(..., description="Quality grade")
@@ -28,14 +31,21 @@ class StockInventoryCreate(BaseModel):
 
 class StockInventoryItem(StockInventoryCreate):
     """Complete stock inventory item with all fields"""
-    inventoryId: UUID = Field(default_factory=uuid4, description="Unique inventory item identifier")
+
+    inventoryId: UUID = Field(
+        default_factory=uuid4, description="Unique inventory item identifier"
+    )
 
     # Quantity tracking
-    reservedQuantity: float = Field(0.0, ge=0, description="Quantity reserved for orders")
+    reservedQuantity: float = Field(
+        0.0, ge=0, description="Quantity reserved for orders"
+    )
     availableQuantity: float = Field(..., ge=0, description="Available for sale/use")
 
     # Integration with other modules
-    usedByModules: List[str] = Field(default_factory=list, description="Modules using this inventory")
+    usedByModules: List[str] = Field(
+        default_factory=list, description="Modules using this inventory"
+    )
 
     # Timestamps
     createdAt: datetime = Field(default_factory=datetime.utcnow)
@@ -63,6 +73,6 @@ class StockInventoryItem(StockInventoryCreate):
                 "usedByModules": ["sales", "logistics"],
                 "createdAt": "2025-04-15T08:30:00Z",
                 "updatedAt": "2025-04-16T10:00:00Z",
-                "lastMovementAt": "2025-04-16T10:00:00Z"
+                "lastMovementAt": "2025-04-16T10:00:00Z",
             }
         }

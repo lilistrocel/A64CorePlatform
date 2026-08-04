@@ -16,9 +16,12 @@ from .farm import GeoJSONPolygon
 
 class BlockStatus(str, Enum):
     """Block status lifecycle"""
+
     EMPTY = "empty"
     PLANNED = "planned"
-    GROWING = "growing"  # Combined PLANTED + GROWING - plants are in the ground and growing
+    GROWING = (
+        "growing"  # Combined PLANTED + GROWING - plants are in the ground and growing
+    )
     FRUITING = "fruiting"
     HARVESTING = "harvesting"
     CLEANING = "cleaning"
@@ -28,6 +31,7 @@ class BlockStatus(str, Enum):
 
 class BlockType(str, Enum):
     """Types of cultivation blocks"""
+
     HYDROPONIC = "hydroponic"
     OPENFIELD = "openfield"
     GREENHOUSE = "greenhouse"
@@ -40,12 +44,14 @@ class BlockType(str, Enum):
 
 class BlockLocation(BaseModel):
     """GPS coordinates within farm"""
+
     latitude: float = Field(..., ge=-90, le=90, description="Latitude")
     longitude: float = Field(..., ge=-180, le=180, description="Longitude")
 
 
 class SenseHubCredentials(BaseModel):
     """Credentials for authenticating with a SenseHub instance"""
+
     email: str = Field(..., description="Service account email on SenseHub")
     encryptedPassword: str = Field(..., description="Fernet-encrypted password")
     token: Optional[str] = Field(None, description="Cached JWT token")
@@ -54,16 +60,38 @@ class SenseHubCredentials(BaseModel):
 
 class IoTController(BaseModel):
     """IoT Controller configuration for block sensor and relay management"""
+
     address: str = Field(..., description="IP address or hostname of IoT controller")
-    port: int = Field(default=3000, gt=0, le=65535, description="Port number (default 3000 for SenseHub)")
+    port: int = Field(
+        default=3000,
+        gt=0,
+        le=65535,
+        description="Port number (default 3000 for SenseHub)",
+    )
     enabled: bool = Field(True, description="Whether to fetch from controller")
-    apiKey: Optional[str] = Field(None, description="API key for legacy controllers (unused by SenseHub)")
-    controllerType: str = Field(default="sensehub", description="Controller type: 'sensehub' or 'generic'")
-    senseHubCredentials: Optional[SenseHubCredentials] = Field(None, description="SenseHub authentication credentials")
-    relayLabels: Optional[Dict[str, str]] = Field(default_factory=dict, description="Custom labels for relays (relay_id -> custom_label)")
-    lastConnected: Optional[datetime] = Field(None, description="Last successful connection timestamp")
-    lastSyncedAt: Optional[datetime] = Field(None, description="Last successful data sync timestamp")
-    connectionStatus: str = Field(default="unknown", description="Connection status: connected|disconnected|error|unknown")
+    apiKey: Optional[str] = Field(
+        None, description="API key for legacy controllers (unused by SenseHub)"
+    )
+    controllerType: str = Field(
+        default="sensehub", description="Controller type: 'sensehub' or 'generic'"
+    )
+    senseHubCredentials: Optional[SenseHubCredentials] = Field(
+        None, description="SenseHub authentication credentials"
+    )
+    relayLabels: Optional[Dict[str, str]] = Field(
+        default_factory=dict,
+        description="Custom labels for relays (relay_id -> custom_label)",
+    )
+    lastConnected: Optional[datetime] = Field(
+        None, description="Last successful connection timestamp"
+    )
+    lastSyncedAt: Optional[datetime] = Field(
+        None, description="Last successful data sync timestamp"
+    )
+    connectionStatus: str = Field(
+        default="unknown",
+        description="Connection status: connected|disconnected|error|unknown",
+    )
     mcpPort: Optional[int] = Field(None, description="MCP server port (default 3001)")
     mcpApiKey: Optional[str] = Field(None, description="Static API key for MCP server")
 
@@ -76,38 +104,42 @@ class IoTController(BaseModel):
                 "controllerType": "sensehub",
                 "relayLabels": {"pump": "Main Irrigation", "fan1": "Exhaust Fan"},
                 "lastConnected": "2026-01-06T16:00:00Z",
-                "connectionStatus": "connected"
+                "connectionStatus": "connected",
             }
         }
 
 
 class BlockBoundary(BaseModel):
     """Block boundary with metadata for geo-fencing"""
+
     geometry: GeoJSONPolygon = Field(..., description="GeoJSON polygon geometry")
-    area: Optional[float] = Field(None, ge=0, description="Calculated area in square meters")
+    area: Optional[float] = Field(
+        None, ge=0, description="Calculated area in square meters"
+    )
     center: Optional[BlockLocation] = Field(None, description="Centroid of the polygon")
 
 
 class StatusChange(BaseModel):
     """Status change history record with offset tracking"""
+
     status: BlockStatus = Field(..., description="New status")
-    changedAt: datetime = Field(default_factory=datetime.utcnow, description="When status changed")
+    changedAt: datetime = Field(
+        default_factory=datetime.utcnow, description="When status changed"
+    )
     changedBy: UUID = Field(..., description="User ID who changed status")
     changedByEmail: str = Field(..., description="Email of user who changed status")
     notes: Optional[str] = Field(None, description="Optional notes about status change")
 
     # Offset tracking fields
     expectedDate: Optional[datetime] = Field(
-        None,
-        description="Expected date for this transition from planting timeline"
+        None, description="Expected date for this transition from planting timeline"
     )
     offsetDays: Optional[int] = Field(
         None,
-        description="Actual - Expected in days (negative = early, positive = late)"
+        description="Actual - Expected in days (negative = early, positive = late)",
     )
     offsetType: Optional[Literal["early", "on_time", "late"]] = Field(
-        None,
-        description="Categorization of offset"
+        None, description="Categorization of offset"
     )
 
     @property
@@ -125,19 +157,25 @@ class StatusChange(BaseModel):
 
 class PerformanceCategory(str, Enum):
     """Yield performance categorization"""
+
     EXCEPTIONAL = "exceptional"  # >= 200%
-    EXCEEDING = "exceeding"      # 100-199%
-    EXCELLENT = "excellent"      # 90-99%
-    GOOD = "good"                # 70-89%
-    ACCEPTABLE = "acceptable"    # 50-69%
-    POOR = "poor"                # < 50%
+    EXCEEDING = "exceeding"  # 100-199%
+    EXCELLENT = "excellent"  # 90-99%
+    GOOD = "good"  # 70-89%
+    ACCEPTABLE = "acceptable"  # 50-69%
+    POOR = "poor"  # < 50%
 
 
 class BlockKPI(BaseModel):
     """Block KPI metrics with performance categorization"""
-    predictedYieldKg: float = Field(0.0, ge=0, description="Expected total yield from plant data")
+
+    predictedYieldKg: float = Field(
+        0.0, ge=0, description="Expected total yield from plant data"
+    )
     actualYieldKg: float = Field(0.0, ge=0, description="Cumulative actual harvest")
-    yieldEfficiencyPercent: float = Field(0.0, ge=0, description="(actual/predicted) * 100")
+    yieldEfficiencyPercent: float = Field(
+        0.0, ge=0, description="(actual/predicted) * 100"
+    )
     totalHarvests: int = Field(0, ge=0, description="Number of harvest events")
 
     @property
@@ -165,7 +203,7 @@ class BlockKPI(BaseModel):
             PerformanceCategory.EXCELLENT: "⭐",
             PerformanceCategory.GOOD: "✅",
             PerformanceCategory.ACCEPTABLE: "🟡",
-            PerformanceCategory.POOR: "🔴"
+            PerformanceCategory.POOR: "🔴",
         }
         return icons[self.performance_category]
 
@@ -177,10 +215,19 @@ class BlockKPI(BaseModel):
 
 class HistoricalKPI(BaseModel):
     """Historical KPI metrics for physical blocks (aggregated from completed virtual block cycles)"""
-    totalYieldKg: float = Field(0.0, ge=0, description="Sum of all yield from completed cycles")
-    totalHarvests: int = Field(0, ge=0, description="Total harvest events across all completed cycles")
-    completedCycles: int = Field(0, ge=0, description="Number of completed growing cycles")
-    avgYieldPerCycle: float = Field(0.0, ge=0, description="Average yield per completed cycle")
+
+    totalYieldKg: float = Field(
+        0.0, ge=0, description="Sum of all yield from completed cycles"
+    )
+    totalHarvests: int = Field(
+        0, ge=0, description="Total harvest events across all completed cycles"
+    )
+    completedCycles: int = Field(
+        0, ge=0, description="Number of completed growing cycles"
+    )
+    avgYieldPerCycle: float = Field(
+        0.0, ge=0, description="Average yield per completed cycle"
+    )
 
 
 class PlantDataSnapshot(BaseModel):
@@ -200,13 +247,22 @@ class PlantDataSnapshot(BaseModel):
 
 class BlockBase(BaseModel):
     """Base block fields"""
+
     name: Optional[str] = Field(None, max_length=200, description="Optional block name")
-    blockType: Optional[BlockType] = Field(None, description="Type of cultivation block")
-    location: Optional[BlockLocation] = Field(None, description="GPS coordinates within farm")
+    blockType: Optional[BlockType] = Field(
+        None, description="Type of cultivation block"
+    )
+    location: Optional[BlockLocation] = Field(
+        None, description="GPS coordinates within farm"
+    )
     area: Optional[float] = Field(None, gt=0, description="Block area")
     areaUnit: str = Field("sqm", description="Area unit (sqm, hectares, acres)")
-    boundary: Optional[BlockBoundary] = Field(None, description="Geo-fence polygon boundary for map visualization")
-    iotController: Optional[IoTController] = Field(None, description="IoT controller configuration for sensors and relays")
+    boundary: Optional[BlockBoundary] = Field(
+        None, description="Geo-fence polygon boundary for map visualization"
+    )
+    iotController: Optional[IoTController] = Field(
+        None, description="IoT controller configuration for sensors and relays"
+    )
 
 
 class BlockCreate(BlockBase):
@@ -215,39 +271,67 @@ class BlockCreate(BlockBase):
 
     Note: farmId is provided via the URL path parameter, not in the request body
     """
-    allocatedArea: Optional[float] = Field(None, description="Area to allocate (for virtual block creation)")
-    parentBlockId: Optional[UUID] = Field(None, description="For virtual blocks: parent physical block ID")
+
+    allocatedArea: Optional[float] = Field(
+        None, description="Area to allocate (for virtual block creation)"
+    )
+    parentBlockId: Optional[UUID] = Field(
+        None, description="For virtual blocks: parent physical block ID"
+    )
 
 
 class BlockUpdate(BaseModel):
     """Schema for updating a block"""
+
     name: Optional[str] = Field(None, max_length=200)
     blockType: Optional[BlockType] = None
     location: Optional[BlockLocation] = None
     area: Optional[float] = Field(None, gt=0)
     areaUnit: Optional[str] = None
     actualPlantCount: Optional[int] = Field(None, ge=0)
-    boundary: Optional[BlockBoundary] = Field(None, description="Geo-fence polygon boundary")
-    iotController: Optional[IoTController] = Field(None, description="IoT controller configuration for sensors and relays")
+    boundary: Optional[BlockBoundary] = Field(
+        None, description="Geo-fence polygon boundary"
+    )
+    iotController: Optional[IoTController] = Field(
+        None, description="IoT controller configuration for sensors and relays"
+    )
 
 
 class IoTControllerUpdate(BaseModel):
     """Schema for updating IoT controller configuration"""
+
     address: str = Field(..., description="IP address or hostname of IoT controller")
-    port: int = Field(..., gt=0, le=65535, description="Port number (use 443 for HTTPS)")
+    port: int = Field(
+        ..., gt=0, le=65535, description="Port number (use 443 for HTTPS)"
+    )
     enabled: bool = Field(True, description="Whether to fetch from controller")
-    apiKey: Optional[str] = Field(None, description="API key for authenticated endpoints (relay control)")
-    relayLabels: Optional[Dict[str, str]] = Field(None, description="Custom labels for relays (relay_id -> custom_label)")
+    apiKey: Optional[str] = Field(
+        None, description="API key for authenticated endpoints (relay control)"
+    )
+    relayLabels: Optional[Dict[str, str]] = Field(
+        None, description="Custom labels for relays (relay_id -> custom_label)"
+    )
 
 
 class BlockStatusUpdate(BaseModel):
     """Schema for updating block status"""
+
     newStatus: BlockStatus = Field(..., description="New status to set")
     notes: Optional[str] = Field(None, description="Notes about status change")
-    targetCrop: Optional[UUID] = Field(None, description="Plant data ID (required when status=planted)")
-    actualPlantCount: Optional[int] = Field(None, ge=0, description="Number of plants (when planting)")
-    plannedPlantingDate: Optional[datetime] = Field(None, description="Planned planting date (for PLANNED state, used to calculate expectedStatusChanges)")
-    force: Optional[bool] = Field(False, description="Phase 3: Force status change bypassing pending task warnings")
+    targetCrop: Optional[UUID] = Field(
+        None, description="Plant data ID (required when status=planted)"
+    )
+    actualPlantCount: Optional[int] = Field(
+        None, ge=0, description="Number of plants (when planting)"
+    )
+    plannedPlantingDate: Optional[datetime] = Field(
+        None,
+        description="Planned planting date (for PLANNED state, used to calculate expectedStatusChanges)",
+    )
+    force: Optional[bool] = Field(
+        False,
+        description="Phase 3: Force status change bypassing pending task warnings",
+    )
 
     class Config:
         # Enable validation debugging
@@ -256,58 +340,102 @@ class BlockStatusUpdate(BaseModel):
 
 class Block(BlockBase):
     """Complete block model with all fields"""
+
     blockId: UUID = Field(default_factory=uuid4, description="Unique block identifier")
-    blockCode: Optional[str] = Field(None, description="Human-readable code (e.g., F001-005)")
-    legacyBlockCode: Optional[str] = Field(None, description="Original block code from legacy system (e.g., A-31, A-31-002)")
+    blockCode: Optional[str] = Field(
+        None, description="Human-readable code (e.g., F001-005)"
+    )
+    legacyBlockCode: Optional[str] = Field(
+        None,
+        description="Original block code from legacy system (e.g., A-31, A-31-002)",
+    )
     farmId: UUID = Field(..., description="Farm this block belongs to")
     farmCode: Optional[str] = Field(None, description="Farm numeric code (e.g., F001)")
-    sequenceNumber: Optional[int] = Field(None, ge=1, description="Block sequence number")
+    sequenceNumber: Optional[int] = Field(
+        None, ge=1, description="Block sequence number"
+    )
 
     # Multi-crop support fields
-    blockCategory: Literal['physical', 'virtual'] = Field('physical', description="Block category - physical (permanent) or virtual (temporary for multi-crop)")
-    parentBlockId: Optional[UUID] = Field(None, description="For virtual blocks: parent physical block ID")
+    blockCategory: Literal["physical", "virtual"] = Field(
+        "physical",
+        description="Block category - physical (permanent) or virtual (temporary for multi-crop)",
+    )
+    parentBlockId: Optional[UUID] = Field(
+        None, description="For virtual blocks: parent physical block ID"
+    )
 
     # Physical block only fields
-    availableArea: Optional[float] = Field(None, description="Physical blocks: remaining area budget for additional crops")
-    virtualBlockCounter: int = Field(0, description="Physical blocks: counter for generating virtual block codes (001, 002...)")
-    childBlockIds: List[str] = Field(default_factory=list, description="Physical blocks: list of active virtual block IDs")
+    availableArea: Optional[float] = Field(
+        None, description="Physical blocks: remaining area budget for additional crops"
+    )
+    virtualBlockCounter: int = Field(
+        0,
+        description="Physical blocks: counter for generating virtual block codes (001, 002...)",
+    )
+    childBlockIds: List[str] = Field(
+        default_factory=list,
+        description="Physical blocks: list of active virtual block IDs",
+    )
 
     # Virtual block only fields
-    allocatedArea: Optional[float] = Field(None, description="Virtual blocks: area allocated from parent's budget")
+    allocatedArea: Optional[float] = Field(
+        None, description="Virtual blocks: area allocated from parent's budget"
+    )
     # Reason: records the density used when this virtual block was created so allocatedArea
     # is always reproducible from plantCount alone.
-    plantsPer100m2: Optional[int] = Field(None, gt=0, description="Virtual blocks: density (plants per 100 m²) used to derive allocatedArea at creation time")
+    plantsPer100m2: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Virtual blocks: density (plants per 100 m²) used to derive allocatedArea at creation time",
+    )
 
     # Current Status
     state: BlockStatus = Field(BlockStatus.EMPTY, description="Current block status")
-    previousState: Optional[BlockStatus] = Field(None, description="Status before alert")
+    previousState: Optional[BlockStatus] = Field(
+        None, description="Status before alert"
+    )
     targetCrop: Optional[UUID] = Field(None, description="Current plant data ID")
-    targetCropName: Optional[str] = Field(None, description="Current plant name (denormalized)")
-    actualPlantCount: Optional[int] = Field(None, ge=0, description="Current number of plants")
+    targetCropName: Optional[str] = Field(
+        None, description="Current plant name (denormalized)"
+    )
+    actualPlantCount: Optional[int] = Field(
+        None, ge=0, description="Current number of plants"
+    )
 
     # KPI Tracking
     kpi: BlockKPI = Field(default_factory=BlockKPI, description="Block KPI metrics")
 
     # Historical KPI (physical blocks only - aggregated from completed virtual block cycles)
-    historicalKpi: Optional[HistoricalKPI] = Field(None, description="Physical blocks: aggregated KPIs from completed cycles")
+    historicalKpi: Optional[HistoricalKPI] = Field(
+        None, description="Physical blocks: aggregated KPIs from completed cycles"
+    )
 
     # Cycle Tracking
     plantedDate: Optional[datetime] = Field(None, description="When planting started")
-    farmingYearPlanted: Optional[int] = Field(None, description="Farming year when current cycle started (e.g., 2025 for Aug 2025 - Jul 2026)")
-    expectedHarvestDate: Optional[datetime] = Field(None, description="Expected harvest date")
-    expectedStatusChanges: Optional[dict] = Field(None, description="Expected dates for each status")
+    farmingYearPlanted: Optional[int] = Field(
+        None,
+        description="Farming year when current cycle started (e.g., 2025 for Aug 2025 - Jul 2026)",
+    )
+    expectedHarvestDate: Optional[datetime] = Field(
+        None, description="Expected harvest date"
+    )
+    expectedStatusChanges: Optional[dict] = Field(
+        None, description="Expected dates for each status"
+    )
 
     # Status History
-    statusChanges: List[StatusChange] = Field(default_factory=list, description="Status change history")
+    statusChanges: List[StatusChange] = Field(
+        default_factory=list, description="Status change history"
+    )
 
     # Plant-data version tracking (snapshot-based)
     plantDataVersion: Optional[int] = Field(
         None,
-        description="dataVersion of the plant library record captured at planting time"
+        description="dataVersion of the plant library record captured at planting time",
     )
     plantDataSnapshot: Optional[PlantDataSnapshot] = Field(
         None,
-        description="Key plant fields snapshotted at planting time for staleness detection"
+        description="Key plant fields snapshotted at planting time for staleness detection",
     )
 
     # Multi-industry scoping
@@ -329,25 +457,24 @@ class Block(BlockBase):
                 "sequenceNumber": 5,
                 "name": "North Greenhouse A",
                 "blockType": "greenhouse",
-                "location": {
-                    "latitude": 40.7128,
-                    "longitude": -74.0060
-                },
+                "location": {"latitude": 40.7128, "longitude": -74.0060},
                 "area": 500.0,
                 "areaUnit": "sqm",
                 "boundary": {
                     "geometry": {
                         "type": "Polygon",
-                        "coordinates": [[
-                            [-74.0062, 40.7126],
-                            [-74.0058, 40.7126],
-                            [-74.0058, 40.7130],
-                            [-74.0062, 40.7130],
-                            [-74.0062, 40.7126]
-                        ]]
+                        "coordinates": [
+                            [
+                                [-74.0062, 40.7126],
+                                [-74.0058, 40.7126],
+                                [-74.0058, 40.7130],
+                                [-74.0062, 40.7130],
+                                [-74.0062, 40.7126],
+                            ]
+                        ],
                     },
                     "area": 500,
-                    "center": {"latitude": 40.7128, "longitude": -74.006}
+                    "center": {"latitude": 40.7128, "longitude": -74.006},
                 },
                 "state": "growing",
                 "targetCrop": "plant-uuid-here",
@@ -357,41 +484,76 @@ class Block(BlockBase):
                     "predictedYieldKg": 475.0,
                     "actualYieldKg": 120.5,
                     "yieldEfficiencyPercent": 25.4,
-                    "totalHarvests": 3
+                    "totalHarvests": 3,
                 },
                 "plantedDate": "2025-11-01T00:00:00Z",
                 "expectedHarvestDate": "2025-12-30T00:00:00Z",
                 "createdAt": "2025-11-01T10:00:00Z",
                 "updatedAt": "2025-11-12T10:00:00Z",
-                "isActive": True
+                "isActive": True,
             }
         }
 
 
 class VirtualCropCreate(BaseModel):
     """Schema for creating a virtual block with a crop"""
+
     cropId: UUID = Field(..., description="Plant data ID for the crop")
-    allocatedArea: Optional[float] = Field(None, gt=0, description="Area to allocate from parent's budget (backward compat; ignored when plantsPer100m2 is provided)")
-    plantCount: int = Field(..., gt=0, description="Number of plants (always a whole integer)")
-    plantingDate: Optional[datetime] = Field(None, description="Planned planting date (defaults to now)")
-    plantsPer100m2: Optional[int] = Field(None, gt=0, description="Density (plants per 100 m²) used to derive allocatedArea server-side. When set, area = plantCount * 100 / plantsPer100m2.")
-    allowOverArea: bool = Field(False, description="When True, allows creating a virtual block even when the computed area exceeds the parent's availableArea budget.")
+    allocatedArea: Optional[float] = Field(
+        None,
+        gt=0,
+        description="Area to allocate from parent's budget (backward compat; ignored when plantsPer100m2 is provided)",
+    )
+    plantCount: int = Field(
+        ..., gt=0, description="Number of plants (always a whole integer)"
+    )
+    plantingDate: Optional[datetime] = Field(
+        None, description="Planned planting date (defaults to now)"
+    )
+    plantsPer100m2: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Density (plants per 100 m²) used to derive allocatedArea server-side. When set, area = plantCount * 100 / plantsPer100m2.",
+    )
+    allowOverArea: bool = Field(
+        False,
+        description="When True, allows creating a virtual block even when the computed area exceeds the parent's availableArea budget.",
+    )
 
 
 class MultiCropPlantRequest(BaseModel):
     """Schema for planting multiple crops at once"""
-    primaryCrop: BlockStatusUpdate = Field(..., description="Primary crop for the physical block")
-    additionalCrops: List[VirtualCropCreate] = Field(default_factory=list, description="Additional crops for virtual blocks")
+
+    primaryCrop: BlockStatusUpdate = Field(
+        ..., description="Primary crop for the physical block"
+    )
+    additionalCrops: List[VirtualCropCreate] = Field(
+        default_factory=list, description="Additional crops for virtual blocks"
+    )
 
 
 class AddVirtualCropRequest(BaseModel):
     """Schema for adding a virtual crop to an existing physical block"""
+
     cropId: UUID = Field(..., description="Plant data ID")
-    allocatedArea: Optional[float] = Field(None, gt=0, description="Area to allocate (backward compat; ignored when plantsPer100m2 is provided)")
-    plantCount: int = Field(..., gt=0, description="Number of plants (always a whole integer)")
+    allocatedArea: Optional[float] = Field(
+        None,
+        gt=0,
+        description="Area to allocate (backward compat; ignored when plantsPer100m2 is provided)",
+    )
+    plantCount: int = Field(
+        ..., gt=0, description="Number of plants (always a whole integer)"
+    )
     plantingDate: Optional[datetime] = Field(None, description="Planned planting date")
-    plantsPer100m2: Optional[int] = Field(None, gt=0, description="Density (plants per 100 m²) used to derive allocatedArea server-side. When set, area = plantCount * 100 / plantsPer100m2.")
-    allowOverArea: bool = Field(False, description="When True, allows creating a virtual block even when the computed area exceeds the parent's availableArea budget.")
+    plantsPer100m2: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Density (plants per 100 m²) used to derive allocatedArea server-side. When set, area = plantCount * 100 / plantsPer100m2.",
+    )
+    allowOverArea: bool = Field(
+        False,
+        description="When True, allows creating a virtual block even when the computed area exceeds the parent's availableArea budget.",
+    )
 
 
 class BlockWithStaleness(Block):
@@ -408,16 +570,16 @@ class BlockWithStaleness(Block):
 
     latestPlantDataVersion: Optional[int] = Field(
         None,
-        description="Live dataVersion of the plant_data_enhanced record (fetched on-demand)"
+        description="Live dataVersion of the plant_data_enhanced record (fetched on-demand)",
     )
     plantDataIsStale: bool = Field(
-        False,
-        description="True when latestPlantDataVersion > plantDataVersion"
+        False, description="True when latestPlantDataVersion > plantDataVersion"
     )
 
 
 class BlockListResponse(BaseModel):
     """Response for list of blocks"""
+
     data: List[Block]
     total: int
     page: int
@@ -427,6 +589,7 @@ class BlockListResponse(BaseModel):
 
 class BlockResponse(BaseModel):
     """Response for single block"""
+
     data: Block
     message: Optional[str] = None
 

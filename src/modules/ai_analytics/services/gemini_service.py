@@ -57,7 +57,7 @@ class GeminiService:
     def _create_generation_config(
         self,
         temperature: Optional[float] = None,
-        max_output_tokens: Optional[int] = None
+        max_output_tokens: Optional[int] = None,
     ) -> GenerationConfig:
         """
         Create generation configuration for API calls.
@@ -109,7 +109,7 @@ class GeminiService:
         self,
         user_prompt: str,
         schema: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
         """
         Generate MongoDB query from natural language prompt.
@@ -135,9 +135,7 @@ class GeminiService:
 
         # Build conversation context
         full_prompt = self._build_prompt_with_history(
-            system_prompt,
-            user_prompt,
-            conversation_history
+            system_prompt, user_prompt, conversation_history
         )
 
         # Generate response
@@ -145,8 +143,7 @@ class GeminiService:
             generation_config = self._create_generation_config()
 
             response = self.model.generate_content(
-                full_prompt,
-                generation_config=generation_config
+                full_prompt, generation_config=generation_config
             )
 
             # Parse response
@@ -171,7 +168,7 @@ class GeminiService:
         self,
         query_results: List[Dict[str, Any]],
         user_prompt: str,
-        query_explanation: str
+        query_explanation: str,
     ) -> Dict[str, Any]:
         """
         Generate human-readable report from query results.
@@ -190,9 +187,7 @@ class GeminiService:
         """
         # Build report prompt
         prompt = self._build_report_prompt(
-            query_results,
-            user_prompt,
-            query_explanation
+            query_results, user_prompt, query_explanation
         )
 
         max_retries = 3
@@ -203,16 +198,15 @@ class GeminiService:
                 # Use more tokens for reports (they can be longer than queries)
                 generation_config = self._create_generation_config(
                     temperature=0.3,  # Slightly higher for more creative reports
-                    max_output_tokens=8192  # Increased to prevent truncation
+                    max_output_tokens=8192,  # Increased to prevent truncation
                 )
 
                 response = self.model.generate_content(
-                    prompt,
-                    generation_config=generation_config
+                    prompt, generation_config=generation_config
                 )
 
                 # Check for empty response and retry if needed
-                if not hasattr(response, 'text') or not response.text:
+                if not hasattr(response, "text") or not response.text:
                     raise ValueError("Empty response from Gemini - no content parts")
 
                 # Parse report
@@ -227,17 +221,20 @@ class GeminiService:
                 last_error = e
                 error_str = str(e)
                 # Retry on empty responses or truncated JSON
-                if any(msg in error_str for msg in [
-                    "Content has no parts",
-                    "Empty response",
-                    "Unterminated string",
-                    "Invalid JSON response"
-                ]):
+                if any(
+                    msg in error_str
+                    for msg in [
+                        "Content has no parts",
+                        "Empty response",
+                        "Unterminated string",
+                        "Invalid JSON response",
+                    ]
+                ):
                     logger.warning(
                         f"Retryable error (attempt {attempt + 1}/{max_retries}): {error_str[:100]}..."
                     )
                     if attempt < max_retries - 1:
-                        time.sleep(2 ** attempt)  # Exponential backoff: 1s, 2s, 4s
+                        time.sleep(2**attempt)  # Exponential backoff: 1s, 2s, 4s
                         continue
                 raise
 
@@ -246,7 +243,9 @@ class GeminiService:
                 raise
 
         # All retries exhausted
-        logger.error(f"Failed to generate report after {max_retries} attempts: {last_error}")
+        logger.error(
+            f"Failed to generate report after {max_retries} attempts: {last_error}"
+        )
         raise last_error or ValueError("Failed to generate report after all retries")
 
     def _build_system_prompt(self, schema: str) -> str:
@@ -304,7 +303,7 @@ RULES:
         self,
         query_results: List[Dict[str, Any]],
         user_prompt: str,
-        query_explanation: str
+        query_explanation: str,
     ) -> str:
         """
         Build prompt for report generation.
@@ -318,7 +317,9 @@ RULES:
             Report prompt string
         """
         # Limit results in prompt to avoid token limits
-        results_summary = query_results[:10] if len(query_results) > 10 else query_results
+        results_summary = (
+            query_results[:10] if len(query_results) > 10 else query_results
+        )
 
         return f"""Generate a comprehensive report based on the following data analysis.
 
@@ -360,7 +361,7 @@ RULES:
         self,
         system_prompt: str,
         user_prompt: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> str:
         """
         Build full prompt with conversation history.
@@ -406,31 +407,37 @@ RULES:
 
         # Extract JSON from markdown code blocks if present
         # Strip markdown code fences if they exist
-        if response_text.strip().startswith('```'):
+        if response_text.strip().startswith("```"):
             # Remove opening ```json or ```
-            response_text = re.sub(r'^```(?:json)?\s*\n?', '', response_text.strip(), flags=re.MULTILINE)
+            response_text = re.sub(
+                r"^```(?:json)?\s*\n?", "", response_text.strip(), flags=re.MULTILINE
+            )
             # Remove closing ```
-            response_text = re.sub(r'\n?```\s*$', '', response_text.strip(), flags=re.MULTILINE)
+            response_text = re.sub(
+                r"\n?```\s*$", "", response_text.strip(), flags=re.MULTILINE
+            )
 
         # Try to parse JSON with multiple strategies
         try:
             # Strategy 1: Parse as-is
             return json.loads(response_text)
         except json.JSONDecodeError as e:
-            logger.warning(f"Initial JSON parse failed: {e}, trying repair strategies...")
+            logger.warning(
+                f"Initial JSON parse failed: {e}, trying repair strategies..."
+            )
 
             # Strategy 2: Try to fix truncated JSON by finding last complete brace
             try:
-                last_brace = response_text.rfind('}')
+                last_brace = response_text.rfind("}")
                 if last_brace > 0:
-                    truncated_text = response_text[:last_brace + 1]
+                    truncated_text = response_text[: last_brace + 1]
                     return json.loads(truncated_text)
             except json.JSONDecodeError:
                 pass
 
             # Strategy 3: Try to extract JSON using regex (find outermost braces)
             try:
-                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
                 if json_match:
                     return json.loads(json_match.group(0))
             except json.JSONDecodeError:
@@ -446,8 +453,8 @@ RULES:
         Attempt to repair truncated JSON by closing open brackets and braces.
         """
         # Count open brackets/braces
-        open_braces = text.count('{') - text.count('}')
-        open_brackets = text.count('[') - text.count(']')
+        open_braces = text.count("{") - text.count("}")
+        open_brackets = text.count("[") - text.count("]")
 
         # Remove any trailing incomplete string (ends with unclosed quote)
         if text.count('"') % 2 == 1:
@@ -456,13 +463,15 @@ RULES:
             text = text[:last_quote] + '..."'
 
         # Close open brackets/braces
-        text = text.rstrip(',\n\t ')  # Remove trailing commas/whitespace
-        text += ']' * open_brackets
-        text += '}' * open_braces
+        text = text.rstrip(",\n\t ")  # Remove trailing commas/whitespace
+        text += "]" * open_brackets
+        text += "}" * open_braces
 
         return text
 
-    def _create_fallback_report(self, response_text: str, error: Exception) -> Dict[str, Any]:
+    def _create_fallback_report(
+        self, response_text: str, error: Exception
+    ) -> Dict[str, Any]:
         """
         Create a fallback report when JSON parsing fails completely.
         Extracts what data we can from the truncated response.
@@ -471,17 +480,26 @@ RULES:
 
         # Try to extract summary
         summary_match = re.search(r'"summary"\s*:\s*"([^"]+)', response_text)
-        summary = summary_match.group(1) if summary_match else "Report generation was interrupted. Please try again."
+        summary = (
+            summary_match.group(1)
+            if summary_match
+            else "Report generation was interrupted. Please try again."
+        )
 
         # Try to extract insights
         insights = []
         insight_matches = re.findall(r'"([^"]{20,200})"', response_text)
         for match in insight_matches[:3]:
-            if any(word in match.lower() for word in ['farm', 'block', 'yield', 'harvest', 'crop', 'performance']):
+            if any(
+                word in match.lower()
+                for word in ["farm", "block", "yield", "harvest", "crop", "performance"]
+            ):
                 insights.append(match)
 
         if not insights:
-            insights = ["Analysis was partially completed. Please try rephrasing your question."]
+            insights = [
+                "Analysis was partially completed. Please try rephrasing your question."
+            ]
 
         logger.warning(f"Created fallback report due to JSON parse error: {error}")
 
@@ -491,7 +509,7 @@ RULES:
             "statistics": {},
             "visualization_suggestions": [],
             "markdown": f"## Analysis Results\n\n{summary}\n\n**Note:** The full report could not be generated. Please try again.",
-            "_fallback": True
+            "_fallback": True,
         }
 
     def _parse_report_response(self, response_text: str) -> Dict[str, Any]:
@@ -509,18 +527,24 @@ RULES:
 
         # Extract JSON from markdown code blocks if present
         # Strip markdown code fences if they exist
-        if response_text.strip().startswith('```'):
+        if response_text.strip().startswith("```"):
             # Remove opening ```json or ```
-            response_text = re.sub(r'^```(?:json)?\s*\n?', '', response_text.strip(), flags=re.MULTILINE)
+            response_text = re.sub(
+                r"^```(?:json)?\s*\n?", "", response_text.strip(), flags=re.MULTILINE
+            )
             # Remove closing ```
-            response_text = re.sub(r'\n?```\s*$', '', response_text.strip(), flags=re.MULTILINE)
+            response_text = re.sub(
+                r"\n?```\s*$", "", response_text.strip(), flags=re.MULTILINE
+            )
 
         # Try to parse JSON with multiple strategies
         try:
             # Strategy 1: Parse as-is
             return json.loads(response_text)
         except json.JSONDecodeError as e:
-            logger.warning(f"Initial JSON parse failed: {e}, trying repair strategies...")
+            logger.warning(
+                f"Initial JSON parse failed: {e}, trying repair strategies..."
+            )
 
             # Strategy 2: Try to repair truncated JSON
             try:
@@ -531,23 +555,25 @@ RULES:
 
             # Strategy 3: Try to find last complete brace
             try:
-                last_brace = response_text.rfind('}')
+                last_brace = response_text.rfind("}")
                 if last_brace > 0:
-                    truncated_text = response_text[:last_brace + 1]
+                    truncated_text = response_text[: last_brace + 1]
                     return json.loads(truncated_text)
             except json.JSONDecodeError:
                 pass
 
             # Strategy 4: Try to extract JSON using regex (find outermost braces)
             try:
-                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
                 if json_match:
                     return json.loads(json_match.group(0))
             except json.JSONDecodeError:
                 pass
 
             # Strategy 5: Return a fallback response with extracted data
-            logger.warning(f"All JSON parse strategies failed, creating fallback report")
+            logger.warning(
+                f"All JSON parse strategies failed, creating fallback report"
+            )
             return self._create_fallback_report(response_text, e)
 
     def _estimate_cost(self, response: Any) -> Dict[str, Any]:
@@ -565,7 +591,11 @@ RULES:
 
         try:
             # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
-            input_tokens = len(response.prompt_feedback.get("prompt_text", "")) // 4 if hasattr(response, 'prompt_feedback') else 0
+            input_tokens = (
+                len(response.prompt_feedback.get("prompt_text", "")) // 4
+                if hasattr(response, "prompt_feedback")
+                else 0
+            )
             output_tokens = len(response.text) // 4
 
             # Calculate cost
@@ -579,7 +609,7 @@ RULES:
                 "total_tokens": input_tokens + output_tokens,
                 "input_cost_usd": round(input_cost, 6),
                 "output_cost_usd": round(output_cost, 6),
-                "total_cost_usd": round(total_cost, 6)
+                "total_cost_usd": round(total_cost, 6),
             }
         except Exception as e:
             logger.warning(f"Failed to estimate cost: {e}")
@@ -589,7 +619,7 @@ RULES:
                 "total_tokens": 0,
                 "input_cost_usd": 0.0,
                 "output_cost_usd": 0.0,
-                "total_cost_usd": 0.0
+                "total_cost_usd": 0.0,
             }
 
 

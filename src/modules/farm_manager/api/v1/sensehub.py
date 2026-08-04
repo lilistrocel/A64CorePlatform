@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 def _is_connection_error(e: Exception) -> bool:
     """Check if an exception is a SenseHub connectivity issue (worth cache fallback)."""
-    return isinstance(e, (httpx.ConnectError, httpx.TimeoutException, ConnectionError, OSError))
+    return isinstance(
+        e, (httpx.ConnectError, httpx.TimeoutException, ConnectionError, OSError)
+    )
 
 
 router = APIRouter(
@@ -33,6 +35,7 @@ router = APIRouter(
 # Error handling helper
 # =============================================================================
 
+
 def _handle_sensehub_error(e: Exception, operation: str) -> None:
     """Convert SenseHub errors to appropriate HTTP responses."""
     if isinstance(e, HTTPException):
@@ -44,7 +47,9 @@ def _handle_sensehub_error(e: Exception, operation: str) -> None:
     if isinstance(e, httpx.HTTPStatusError):
         status = e.response.status_code
         if status == 401:
-            raise HTTPException(401, "SenseHub authentication failed. Reconnect with valid credentials.")
+            raise HTTPException(
+                401, "SenseHub authentication failed. Reconnect with valid credentials."
+            )
         raise HTTPException(502, f"SenseHub error ({status}): {e.response.text[:200]}")
     raise HTTPException(502, f"SenseHub {operation} failed: {str(e)}")
 
@@ -52,6 +57,7 @@ def _handle_sensehub_error(e: Exception, operation: str) -> None:
 # =============================================================================
 # Connection Management
 # =============================================================================
+
 
 @router.post("/connect", summary="Connect block to SenseHub instance")
 async def connect_sensehub(
@@ -111,6 +117,7 @@ async def get_sensehub_status(
 # Dashboard & Equipment
 # =============================================================================
 
+
 @router.get("/dashboard", summary="Get SenseHub dashboard overview")
 async def get_sensehub_dashboard(
     farm_id: UUID,
@@ -144,9 +151,21 @@ async def get_sensehub_dashboard(
 
         active_autos = [a for a in automations_list if a.get("enabled")]
 
-        critical = sum(1 for a in alerts_list if a.get("severity") == "critical" and not a.get("acknowledged"))
-        warning = sum(1 for a in alerts_list if a.get("severity") == "warning" and not a.get("acknowledged"))
-        info = sum(1 for a in alerts_list if a.get("severity") == "info" and not a.get("acknowledged"))
+        critical = sum(
+            1
+            for a in alerts_list
+            if a.get("severity") == "critical" and not a.get("acknowledged")
+        )
+        warning = sum(
+            1
+            for a in alerts_list
+            if a.get("severity") == "warning" and not a.get("acknowledged")
+        )
+        info = sum(
+            1
+            for a in alerts_list
+            if a.get("severity") == "info" and not a.get("acknowledged")
+        )
         unack = critical + warning + info
 
         return {
@@ -174,20 +193,48 @@ async def get_sensehub_dashboard(
         raise
     except Exception as e:
         if _is_connection_error(e):
-            logger.warning(f"SenseHub unreachable for dashboard, falling back to cache: {e}")
-            cached_eq = await SenseHubCacheQueryService.get_equipment_as_list(str(block_id))
-            cached_alerts = await SenseHubCacheQueryService.get_alerts_as_list(str(block_id))
+            logger.warning(
+                f"SenseHub unreachable for dashboard, falling back to cache: {e}"
+            )
+            cached_eq = await SenseHubCacheQueryService.get_equipment_as_list(
+                str(block_id)
+            )
+            cached_alerts = await SenseHubCacheQueryService.get_alerts_as_list(
+                str(block_id)
+            )
             if cached_eq or cached_alerts:
                 online = sum(1 for eq in cached_eq if eq.get("status") == "online")
                 offline = sum(1 for eq in cached_eq if eq.get("status") == "offline")
                 error_count = sum(1 for eq in cached_eq if eq.get("status") == "error")
-                critical = sum(1 for a in cached_alerts if a.get("severity") == "critical" and not a.get("acknowledged"))
-                warning = sum(1 for a in cached_alerts if a.get("severity") == "warning" and not a.get("acknowledged"))
-                info = sum(1 for a in cached_alerts if a.get("severity") == "info" and not a.get("acknowledged"))
+                critical = sum(
+                    1
+                    for a in cached_alerts
+                    if a.get("severity") == "critical" and not a.get("acknowledged")
+                )
+                warning = sum(
+                    1
+                    for a in cached_alerts
+                    if a.get("severity") == "warning" and not a.get("acknowledged")
+                )
+                info = sum(
+                    1
+                    for a in cached_alerts
+                    if a.get("severity") == "info" and not a.get("acknowledged")
+                )
                 return {
-                    "equipment": {"total": len(cached_eq), "online": online, "offline": offline, "error": error_count},
+                    "equipment": {
+                        "total": len(cached_eq),
+                        "online": online,
+                        "offline": offline,
+                        "error": error_count,
+                    },
                     "automations": {"total": 0, "active": 0},
-                    "alerts": {"unacknowledged": critical + warning + info, "critical": critical, "warning": warning, "info": info},
+                    "alerts": {
+                        "unacknowledged": critical + warning + info,
+                        "critical": critical,
+                        "warning": warning,
+                        "info": info,
+                    },
                     "recent_alerts": cached_alerts[:10],
                     "active_automations": [],
                     "equipment_list": cached_eq,
@@ -214,8 +261,12 @@ async def get_sensehub_equipment(
         raise
     except Exception as e:
         if _is_connection_error(e):
-            logger.warning(f"SenseHub unreachable for equipment, falling back to cache: {e}")
-            cached = await SenseHubCacheQueryService.get_equipment_as_list(str(block_id))
+            logger.warning(
+                f"SenseHub unreachable for equipment, falling back to cache: {e}"
+            )
+            cached = await SenseHubCacheQueryService.get_equipment_as_list(
+                str(block_id)
+            )
             if cached:
                 return cached
         _handle_sensehub_error(e, "equipment list")
@@ -251,6 +302,7 @@ async def get_sensehub_equipment_history(
 # =============================================================================
 # Relay Control
 # =============================================================================
+
 
 @router.post(
     "/equipment/{equipment_id}/relay/control",
@@ -318,6 +370,7 @@ async def control_sensehub_relay_all(
 # =============================================================================
 # Automations
 # =============================================================================
+
 
 @router.get("/automations", summary="List SenseHub automations")
 async def get_sensehub_automations(
@@ -449,6 +502,7 @@ async def trigger_sensehub_automation(
 # Alerts
 # =============================================================================
 
+
 @router.get("/alerts", summary="List SenseHub alerts")
 async def get_sensehub_alerts(
     farm_id: UUID,
@@ -467,8 +521,12 @@ async def get_sensehub_alerts(
         raise
     except Exception as e:
         if _is_connection_error(e):
-            logger.warning(f"SenseHub unreachable for alerts, falling back to cache: {e}")
-            cached = await SenseHubCacheQueryService.get_alerts_as_list(str(block_id), severity=severity)
+            logger.warning(
+                f"SenseHub unreachable for alerts, falling back to cache: {e}"
+            )
+            cached = await SenseHubCacheQueryService.get_alerts_as_list(
+                str(block_id), severity=severity
+            )
             if cached:
                 return cached
         _handle_sensehub_error(e, "alerts list")
@@ -477,6 +535,7 @@ async def get_sensehub_alerts(
 # =============================================================================
 # Lab Data (MCP-only — no REST API on SenseHub)
 # =============================================================================
+
 
 @router.get("/lab/nutrients", summary="List lab nutrient types")
 async def get_sensehub_lab_nutrients(
@@ -509,8 +568,12 @@ async def get_sensehub_lab_latest(
         raise
     except Exception as e:
         if _is_connection_error(e):
-            logger.warning(f"SenseHub MCP unreachable for lab latest, falling back to cache: {e}")
-            cached = await SenseHubCacheQueryService.get_lab_latest(str(block_id), zone_id=zone_id)
+            logger.warning(
+                f"SenseHub MCP unreachable for lab latest, falling back to cache: {e}"
+            )
+            cached = await SenseHubCacheQueryService.get_lab_latest(
+                str(block_id), zone_id=zone_id
+            )
             if cached:
                 return cached
         _handle_sensehub_error(e, "lab latest readings")
@@ -531,17 +594,26 @@ async def get_sensehub_lab_readings(
     try:
         client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
         return await client.get_lab_readings(
-            nutrient=nutrient, zone_id=zone_id,
-            from_date=from_dt, to_date=to_dt, limit=limit,
+            nutrient=nutrient,
+            zone_id=zone_id,
+            from_date=from_dt,
+            to_date=to_dt,
+            limit=limit,
         )
     except HTTPException:
         raise
     except Exception as e:
         if _is_connection_error(e):
-            logger.warning(f"SenseHub MCP unreachable for lab readings, falling back to cache: {e}")
+            logger.warning(
+                f"SenseHub MCP unreachable for lab readings, falling back to cache: {e}"
+            )
             cached = await SenseHubCacheQueryService.get_lab_readings(
-                str(block_id), nutrient=nutrient, zone_id=zone_id,
-                from_date=from_dt, to_date=to_dt, limit=limit or 50,
+                str(block_id),
+                nutrient=nutrient,
+                zone_id=zone_id,
+                from_date=from_dt,
+                to_date=to_dt,
+                limit=limit or 50,
             )
             if cached.get("readings"):
                 return cached
@@ -561,7 +633,9 @@ async def get_sensehub_lab_stats(
     try:
         client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
         return await client.get_lab_stats(
-            zone_id=zone_id, from_date=from_dt, to_date=to_dt,
+            zone_id=zone_id,
+            from_date=from_dt,
+            to_date=to_dt,
         )
     except HTTPException:
         raise

@@ -146,11 +146,7 @@ class ObservationService:
 
         total = await db[OBSERVATIONS].count_documents(query)
         cursor = (
-            db[OBSERVATIONS]
-            .find(query)
-            .sort("observedAt", -1)
-            .skip(skip)
-            .limit(limit)
+            db[OBSERVATIONS].find(query).sort("observedAt", -1).skip(skip).limit(limit)
         )
 
         observations: List[Observation] = []
@@ -178,7 +174,9 @@ class ObservationService:
 
         update_fields["updatedAt"] = datetime.utcnow()
         db = genetics_db.get_database()
-        await db[OBSERVATIONS].update_one({_ID_KEY: observation_id}, {"$set": update_fields})
+        await db[OBSERVATIONS].update_one(
+            {_ID_KEY: observation_id}, {"$set": update_fields}
+        )
         return await ObservationService.get_observation(observation_id)
 
     # -----------------------------------------------------------------------
@@ -228,7 +226,11 @@ class ObservationService:
                     type=ProvenanceType.IN_HOUSE,
                     sourceNote=(
                         f"Promoted from observation on {source.accessionCode}"
-                        + (f" — {observation.traitName}" if observation.traitName else "")
+                        + (
+                            f" — {observation.traitName}"
+                            if observation.traitName
+                            else ""
+                        )
                     ),
                     acquiredAt=observation.observedAt,
                 ),
@@ -253,9 +255,7 @@ class ObservationService:
                     location=source.location,
                     acquiredAt=observation.observedAt,
                     label=data.commonName,
-                    notes=(
-                        f"Founding material isolated from {source.accessionCode}"
-                    ),
+                    notes=(f"Founding material isolated from {source.accessionCode}"),
                     # The isolate is the same physical material, so generations
                     # restart: it is a new genetic identity from this point on.
                     cloneGeneration=0,

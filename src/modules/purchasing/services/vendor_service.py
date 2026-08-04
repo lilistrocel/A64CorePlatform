@@ -131,7 +131,9 @@ class VendorService:
 
         total = await self._col.count_documents(query)
         offset = (page - 1) * per_page
-        cursor = self._col.find(query).sort("vendorCode", 1).skip(offset).limit(per_page)
+        cursor = (
+            self._col.find(query).sort("vendorCode", 1).skip(offset).limit(per_page)
+        )
         docs = await cursor.to_list(length=per_page)
 
         return {
@@ -142,7 +144,9 @@ class VendorService:
             "totalPages": max(1, -(-total // per_page)),
         }
 
-    async def get_vendor(self, organization_id: str, vendor_id: str) -> Optional[VendorResponse]:
+    async def get_vendor(
+        self, organization_id: str, vendor_id: str
+    ) -> Optional[VendorResponse]:
         """
         Fetch a single vendor by vendorId.
 
@@ -154,7 +158,11 @@ class VendorService:
             VendorResponse or None if not found / deleted.
         """
         doc = await self._col.find_one(
-            {"organizationId": organization_id, "vendorId": vendor_id, "deletedAt": None}
+            {
+                "organizationId": organization_id,
+                "vendorId": vendor_id,
+                "deletedAt": None,
+            }
         )
         return _doc_to_response(doc) if doc else None
 
@@ -191,7 +199,9 @@ class VendorService:
             {"organizationId": org_id, "vendorCode": vendor_code}
         )
         if existing:
-            raise ValueError(f"Vendor code '{vendor_code}' already exists in this organisation")
+            raise ValueError(
+                f"Vendor code '{vendor_code}' already exists in this organisation"
+            )
 
         now = datetime.now(tz=timezone.utc)
         vendor_id = str(uuid.uuid4())
@@ -211,7 +221,9 @@ class VendorService:
             "contactPhone": data.contactPhone,
             "paymentTermsCode": data.paymentTermsCode,
             "currencyCode": data.currencyCode,
-            "creditLimit": float(data.creditLimit) if data.creditLimit is not None else None,
+            "creditLimit": (
+                float(data.creditLimit) if data.creditLimit is not None else None
+            ),
             "bankDetails": data.bankDetails.model_dump() if data.bankDetails else None,
             "notes": data.notes,
             "isActive": True,
@@ -262,7 +274,11 @@ class VendorService:
             Updated VendorResponse or None if not found.
         """
         doc = await self._col.find_one(
-            {"organizationId": organization_id, "vendorId": vendor_id, "deletedAt": None}
+            {
+                "organizationId": organization_id,
+                "vendorId": vendor_id,
+                "deletedAt": None,
+            }
         )
         if not doc:
             return None
@@ -274,7 +290,9 @@ class VendorService:
         update_dict = data.model_dump(exclude_none=True)
         for field, value in update_dict.items():
             if field == "bankDetails" and value is not None:
-                updates["bankDetails"] = value.model_dump() if hasattr(value, "model_dump") else value
+                updates["bankDetails"] = (
+                    value.model_dump() if hasattr(value, "model_dump") else value
+                )
             elif field == "creditLimit" and value is not None:
                 updates["creditLimit"] = float(value)
             else:
@@ -323,7 +341,11 @@ class VendorService:
             True if deleted, False if vendor not found.
         """
         doc = await self._col.find_one(
-            {"organizationId": organization_id, "vendorId": vendor_id, "deletedAt": None}
+            {
+                "organizationId": organization_id,
+                "vendorId": vendor_id,
+                "deletedAt": None,
+            }
         )
         if not doc:
             return False
@@ -331,7 +353,14 @@ class VendorService:
         now = datetime.now(tz=timezone.utc)
         await self._col.update_one(
             {"vendorId": vendor_id},
-            {"$set": {"deletedAt": now, "isActive": False, "updatedAt": now, "updatedBy": deleted_by}},
+            {
+                "$set": {
+                    "deletedAt": now,
+                    "isActive": False,
+                    "updatedAt": now,
+                    "updatedBy": deleted_by,
+                }
+            },
         )
 
         # Emit soft-delete outbox event (best-effort)
@@ -346,7 +375,9 @@ class VendorService:
             is_deleted=True,
         )
 
-        logger.info("Soft-deleted vendor vendorId=%s org=%s", vendor_id, organization_id)
+        logger.info(
+            "Soft-deleted vendor vendorId=%s org=%s", vendor_id, organization_id
+        )
         return True
 
     # ------------------------------------------------------------------
@@ -392,13 +423,24 @@ class VendorService:
                 "isActive": doc.get("isActive", True),
                 "paymentTermsCode": doc.get("paymentTermsCode"),
                 "currencyCode": doc.get("currencyCode", "AED"),
-                "creditLimit": str(doc["creditLimit"]) if doc.get("creditLimit") is not None else None,
+                "creditLimit": (
+                    str(doc["creditLimit"])
+                    if doc.get("creditLimit") is not None
+                    else None
+                ),
                 "bankDetails": doc.get("bankDetails"),
-                "contactInfo": {
-                    "contactName": doc.get("contactName"),
-                    "contactEmail": doc.get("contactEmail"),
-                    "contactPhone": doc.get("contactPhone"),
-                } if any(doc.get(k) for k in ["contactName", "contactEmail", "contactPhone"]) else None,
+                "contactInfo": (
+                    {
+                        "contactName": doc.get("contactName"),
+                        "contactEmail": doc.get("contactEmail"),
+                        "contactPhone": doc.get("contactPhone"),
+                    }
+                    if any(
+                        doc.get(k)
+                        for k in ["contactName", "contactEmail", "contactPhone"]
+                    )
+                    else None
+                ),
                 "isDeleted": is_deleted,
             }
 
@@ -415,5 +457,7 @@ class VendorService:
             # Reason: outbox failure must never block the business write
             logger.warning(
                 "Failed to emit %s event for vendor %s: %s",
-                event_type, vendor_id, exc,
+                event_type,
+                vendor_id,
+                exc,
             )

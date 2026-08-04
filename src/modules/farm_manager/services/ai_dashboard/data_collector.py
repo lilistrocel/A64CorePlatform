@@ -114,7 +114,9 @@ class DataCollector:
         raw_data_kwargs: Dict[str, Any] = {}
         for name, result in zip(task_names, results):
             if isinstance(result, Exception):
-                logger.error(f"[DataCollector] Task '{name}' failed: {result}", exc_info=False)
+                logger.error(
+                    f"[DataCollector] Task '{name}' failed: {result}", exc_info=False
+                )
                 raw_data_kwargs[name] = None
             else:
                 raw_data_kwargs[name] = result
@@ -135,10 +137,12 @@ class DataCollector:
         """
         try:
             db = farm_db.get_database()
-            cursor = db.blocks.find({
-                "isActive": True,
-                "iotController.enabled": True,
-            })
+            cursor = db.blocks.find(
+                {
+                    "isActive": True,
+                    "iotController.enabled": True,
+                }
+            )
             blocks = await cursor.to_list(length=1000)
             logger.info(f"[DataCollector] Found {len(blocks)} IoT-connected blocks")
             return blocks
@@ -176,9 +180,7 @@ class DataCollector:
         }
 
         # Utilisation = active blocks / total blocks
-        active_count = sum(
-            blocks_by_state.get(s, 0) for s in ACTIVE_STATES
-        )
+        active_count = sum(blocks_by_state.get(s, 0) for s in ACTIVE_STATES)
         utilization = (active_count / total_blocks) if total_blocks > 0 else 0.0
 
         logger.info(
@@ -229,18 +231,18 @@ class DataCollector:
                 efficiency = (
                     float(metrics.avgYieldEfficiency or 0.0)
                     if metrics.avgYieldEfficiency
-                    else (
-                        (actual / predicted * 100.0) if predicted > 0 else 0.0
-                    )
+                    else ((actual / predicted * 100.0) if predicted > 0 else 0.0)
                 )
 
-                entries.append(YieldFarmEntry(
-                    farmId=str(farm_id),
-                    farmName=farm_name,
-                    predictedYieldKg=round(predicted, 2),
-                    actualYieldKg=round(actual, 2),
-                    efficiency=round(efficiency, 2),
-                ))
+                entries.append(
+                    YieldFarmEntry(
+                        farmId=str(farm_id),
+                        farmName=farm_name,
+                        predictedYieldKg=round(predicted, 2),
+                        actualYieldKg=round(actual, 2),
+                        efficiency=round(efficiency, 2),
+                    )
+                )
                 global_predicted += predicted
                 global_actual += actual
 
@@ -250,18 +252,18 @@ class DataCollector:
                     f"'{farm_name}' ({farm_id}): {exc}"
                 )
                 # Include zero-entry so the farm is still visible in the report
-                entries.append(YieldFarmEntry(
-                    farmId=str(farm_id),
-                    farmName=farm_name,
-                    predictedYieldKg=0.0,
-                    actualYieldKg=0.0,
-                    efficiency=0.0,
-                ))
+                entries.append(
+                    YieldFarmEntry(
+                        farmId=str(farm_id),
+                        farmName=farm_name,
+                        predictedYieldKg=0.0,
+                        actualYieldKg=0.0,
+                        efficiency=0.0,
+                    )
+                )
 
         global_efficiency = (
-            (global_actual / global_predicted * 100.0)
-            if global_predicted > 0
-            else 0.0
+            (global_actual / global_predicted * 100.0) if global_predicted > 0 else 0.0
         )
 
         logger.info(
@@ -299,10 +301,12 @@ class DataCollector:
         db = farm_db.get_database()
 
         # Fetch blocks currently in growing or fruiting states
-        cursor = db.blocks.find({
-            "isActive": True,
-            "state": {"$in": list(GROWING_STATES)},
-        })
+        cursor = db.blocks.find(
+            {
+                "isActive": True,
+                "state": {"$in": list(GROWING_STATES)},
+            }
+        )
         blocks = await cursor.to_list(length=2000)
 
         ahead = 0
@@ -352,15 +356,17 @@ class DataCollector:
                 category = "on-time"
                 on_time += 1
 
-            details.append({
-                "blockId": block_id,
-                "blockName": block_name,
-                "farmId": farm_id,
-                "state": state,
-                "daysInState": days_in_state,
-                "expectedDays": expected_days,
-                "category": category,
-            })
+            details.append(
+                {
+                    "blockId": block_id,
+                    "blockName": block_name,
+                    "farmId": farm_id,
+                    "state": state,
+                    "daysInState": days_in_state,
+                    "expectedDays": expected_days,
+                    "category": category,
+                }
+            )
 
         logger.info(
             f"[DataCollector] Growth timeline: ahead={ahead}, "
@@ -419,18 +425,21 @@ class DataCollector:
                     alerts_raw = []
 
                 block_critical = sum(
-                    1 for a in alerts_raw
+                    1
+                    for a in alerts_raw
                     if isinstance(a, dict) and a.get("severity") == "critical"
                 )
                 total_alerts += len(alerts_raw)
                 critical_count += block_critical
 
-                entries.append(SenseHubAlertEntry(
-                    blockId=block_id_str,
-                    blockName=block_name,
-                    farmName=farm_name,
-                    alerts=alerts_raw,
-                ))
+                entries.append(
+                    SenseHubAlertEntry(
+                        blockId=block_id_str,
+                        blockName=block_name,
+                        farmName=farm_name,
+                        alerts=alerts_raw,
+                    )
+                )
 
             except HTTPException:
                 # Block has no IoT credentials — skip silently
@@ -445,20 +454,25 @@ class DataCollector:
                     f"block {block_id_str}: {exc}, trying cache"
                 )
                 try:
-                    cached_alerts = await SenseHubCacheQueryService.get_alerts_as_list(block_id_str)
+                    cached_alerts = await SenseHubCacheQueryService.get_alerts_as_list(
+                        block_id_str
+                    )
                     if cached_alerts:
                         block_critical = sum(
-                            1 for a in cached_alerts
+                            1
+                            for a in cached_alerts
                             if isinstance(a, dict) and a.get("severity") == "critical"
                         )
                         total_alerts += len(cached_alerts)
                         critical_count += block_critical
-                        entries.append(SenseHubAlertEntry(
-                            blockId=block_id_str,
-                            blockName=block_name,
-                            farmName=farm_name,
-                            alerts=cached_alerts,
-                        ))
+                        entries.append(
+                            SenseHubAlertEntry(
+                                blockId=block_id_str,
+                                blockName=block_name,
+                                farmName=farm_name,
+                                alerts=cached_alerts,
+                            )
+                        )
                 except Exception:
                     pass
 
@@ -521,24 +535,28 @@ class DataCollector:
                     equipment_raw = []
 
                 online = sum(
-                    1 for e in equipment_raw
+                    1
+                    for e in equipment_raw
                     if isinstance(e, dict) and e.get("status") == "online"
                 )
                 offline = sum(
-                    1 for e in equipment_raw
+                    1
+                    for e in equipment_raw
                     if isinstance(e, dict) and e.get("status") != "online"
                 )
                 total_online += online
                 total_offline += offline
 
-                entries.append(EquipmentBlockEntry(
-                    blockId=block_id_str,
-                    blockName=block_name,
-                    farmName=farm_name,
-                    onlineCount=online,
-                    offlineCount=offline,
-                    equipment=equipment_raw,
-                ))
+                entries.append(
+                    EquipmentBlockEntry(
+                        blockId=block_id_str,
+                        blockName=block_name,
+                        farmName=farm_name,
+                        onlineCount=online,
+                        offlineCount=offline,
+                        equipment=equipment_raw,
+                    )
+                )
 
             except HTTPException:
                 logger.debug(
@@ -552,26 +570,32 @@ class DataCollector:
                     f"block {block_id_str}: {exc}, trying cache"
                 )
                 try:
-                    cached_eq = await SenseHubCacheQueryService.get_equipment_as_list(block_id_str)
+                    cached_eq = await SenseHubCacheQueryService.get_equipment_as_list(
+                        block_id_str
+                    )
                     if cached_eq:
                         online = sum(
-                            1 for e in cached_eq
+                            1
+                            for e in cached_eq
                             if isinstance(e, dict) and e.get("status") == "online"
                         )
                         offline = sum(
-                            1 for e in cached_eq
+                            1
+                            for e in cached_eq
                             if isinstance(e, dict) and e.get("status") != "online"
                         )
                         total_online += online
                         total_offline += offline
-                        entries.append(EquipmentBlockEntry(
-                            blockId=block_id_str,
-                            blockName=block_name,
-                            farmName=farm_name,
-                            onlineCount=online,
-                            offlineCount=offline,
-                            equipment=cached_eq,
-                        ))
+                        entries.append(
+                            EquipmentBlockEntry(
+                                blockId=block_id_str,
+                                blockName=block_name,
+                                farmName=farm_name,
+                                onlineCount=online,
+                                offlineCount=offline,
+                                equipment=cached_eq,
+                            )
+                        )
                 except Exception:
                     pass
 
@@ -630,21 +654,24 @@ class DataCollector:
                     automations_raw = []
 
                 enabled = sum(
-                    1 for a in automations_raw
+                    1
+                    for a in automations_raw
                     if isinstance(a, dict) and a.get("enabled") is True
                 )
                 disabled = len(automations_raw) - enabled
                 total_enabled += enabled
                 total_disabled += disabled
 
-                entries.append(AutomationBlockEntry(
-                    blockId=block_id_str,
-                    blockName=block_name,
-                    farmName=farm_name,
-                    enabledCount=enabled,
-                    disabledCount=disabled,
-                    automations=automations_raw,
-                ))
+                entries.append(
+                    AutomationBlockEntry(
+                        blockId=block_id_str,
+                        blockName=block_name,
+                        farmName=farm_name,
+                        enabledCount=enabled,
+                        disabledCount=disabled,
+                        automations=automations_raw,
+                    )
+                )
 
             except HTTPException:
                 logger.debug(
@@ -716,11 +743,7 @@ class DataCollector:
             total_kg += float(doc.get("totalKg", 0.0))
 
         # Fetch up to 20 most recent harvests as detail rows
-        cursor = (
-            db.block_harvests.find(query)
-            .sort("harvestDate", -1)
-            .limit(20)
-        )
+        cursor = db.block_harvests.find(query).sort("harvestDate", -1).limit(20)
         recent_docs = await cursor.to_list(length=20)
         recent_harvests: List[Dict[str, Any]] = []
         for doc in recent_docs:
@@ -768,9 +791,7 @@ class DataCollector:
         ]
         severity_docs = await db.alerts.aggregate(pipeline).to_list(length=20)
         by_severity: Dict[str, int] = {
-            doc["_id"]: doc["count"]
-            for doc in severity_docs
-            if doc.get("_id")
+            doc["_id"]: doc["count"] for doc in severity_docs if doc.get("_id")
         }
 
         # Fetch top 10 most severe/recent active alerts
@@ -847,13 +868,19 @@ class DataCollector:
                 if isinstance(lab_raw, list):
                     for r in lab_raw:
                         if isinstance(r, dict):
-                            readings.append(LabNutrientReading(
-                                nutrient=r.get("nutrient", "unknown"),
-                                value=float(r.get("value", 0)),
-                                unit=r.get("unit", ""),
-                                zone=r.get("zone", "unknown"),
-                                timestamp=str(r.get("timestamp", "")) if r.get("timestamp") else None,
-                            ))
+                            readings.append(
+                                LabNutrientReading(
+                                    nutrient=r.get("nutrient", "unknown"),
+                                    value=float(r.get("value", 0)),
+                                    unit=r.get("unit", ""),
+                                    zone=r.get("zone", "unknown"),
+                                    timestamp=(
+                                        str(r.get("timestamp", ""))
+                                        if r.get("timestamp")
+                                        else None
+                                    ),
+                                )
+                            )
             except HTTPException:
                 logger.debug(
                     f"[DataCollector] Skipping lab analysis for "
@@ -867,16 +894,24 @@ class DataCollector:
                     f"block {block_id_str}: {exc}, trying cache"
                 )
                 try:
-                    cached_lab = await SenseHubCacheQueryService.get_lab_latest(block_id_str)
+                    cached_lab = await SenseHubCacheQueryService.get_lab_latest(
+                        block_id_str
+                    )
                     for r in cached_lab:
                         if isinstance(r, dict):
-                            readings.append(LabNutrientReading(
-                                nutrient=r.get("nutrient", "unknown"),
-                                value=float(r.get("value", 0)),
-                                unit=r.get("unit", ""),
-                                zone=r.get("zone", "unknown"),
-                                timestamp=str(r.get("timestamp", "")) if r.get("timestamp") else None,
-                            ))
+                            readings.append(
+                                LabNutrientReading(
+                                    nutrient=r.get("nutrient", "unknown"),
+                                    value=float(r.get("value", 0)),
+                                    unit=r.get("unit", ""),
+                                    zone=r.get("zone", "unknown"),
+                                    timestamp=(
+                                        str(r.get("timestamp", ""))
+                                        if r.get("timestamp")
+                                        else None
+                                    ),
+                                )
+                            )
                 except Exception:
                     pass
 
@@ -908,7 +943,9 @@ class DataCollector:
                             phMax=ph_req.get("maxPH"),
                             phOptimal=ph_req.get("optimalPH"),
                             ecRangeMs=soil_req.get("ecRangeMs"),
-                            nutrientsRecommendations=soil_req.get("nutrientsRecommendations"),
+                            nutrientsRecommendations=soil_req.get(
+                                "nutrientsRecommendations"
+                            ),
                             temperatureMin=temp_range.get("min"),
                             temperatureMax=temp_range.get("max"),
                             temperatureOptimal=temp_range.get("optimal"),
@@ -947,9 +984,13 @@ class DataCollector:
                             )
 
                             # Find active fertigation card for current stage
-                            fert_schedule = plant_doc_gc.get("fertigationSchedule") or {}
+                            fert_schedule = (
+                                plant_doc_gc.get("fertigationSchedule") or {}
+                            )
                             for card in fert_schedule.get("cards", []):
-                                if isinstance(card, dict) and card.get("isActive", True):
+                                if isinstance(card, dict) and card.get(
+                                    "isActive", True
+                                ):
                                     day_start = card.get("dayStart", 0)
                                     day_end = card.get("dayEnd", 0)
                                     if day_start <= days_since_planting <= day_end:
@@ -961,19 +1002,21 @@ class DataCollector:
                             f"block {block_id_str}: {exc}"
                         )
 
-            entries.append(LabAnalysisBlockEntry(
-                blockId=block_id_str,
-                blockName=block_name,
-                farmName=farm_name,
-                cropName=crop_name,
-                blockState=block.get("state"),
-                daysSincePlanting=days_since_planting,
-                currentGrowthStage=current_growth_stage,
-                totalCycleDays=total_cycle_days,
-                latestReadings=readings,
-                cropTargets=crop_targets,
-                activeFertigationCard=active_fert_card,
-            ))
+            entries.append(
+                LabAnalysisBlockEntry(
+                    blockId=block_id_str,
+                    blockName=block_name,
+                    farmName=farm_name,
+                    cropName=crop_name,
+                    blockState=block.get("state"),
+                    daysSincePlanting=days_since_planting,
+                    currentGrowthStage=current_growth_stage,
+                    totalCycleDays=total_cycle_days,
+                    latestReadings=readings,
+                    cropTargets=crop_targets,
+                    activeFertigationCard=active_fert_card,
+                )
+            )
 
         logger.info(
             f"[DataCollector] Lab analysis: scanned={len(entries)}, "
@@ -1040,9 +1083,7 @@ class DataCollector:
             return self._farm_name_cache[farm_id_str]
         try:
             db = farm_db.get_database()
-            farm_doc = await db.farms.find_one(
-                {"farmId": farm_id_str}, {"name": 1}
-            )
+            farm_doc = await db.farms.find_one({"farmId": farm_id_str}, {"name": 1})
             name = farm_doc.get("name", farm_id_str) if farm_doc else farm_id_str
             self._farm_name_cache[farm_id_str] = name
             return name

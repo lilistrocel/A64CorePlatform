@@ -40,7 +40,7 @@ app = FastAPI(
     version="1.17.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
 )
 
 # CORS Middleware - Restricted to specific methods and headers
@@ -50,13 +50,23 @@ app.add_middleware(
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-Division-Id", "X-Organization-Id"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "X-Division-Id",
+        "X-Organization-Id",
+    ],
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
 # Response Time Monitoring Middleware - Applied first (outermost)
 # Tracks request timing, adds X-Response-Time header, alerts for slow requests (>1s)
-app.add_middleware(TimingMiddlewareWithCollector, slow_threshold_ms=1000, skip_health_logging=True)
+app.add_middleware(
+    TimingMiddlewareWithCollector, slow_threshold_ms=1000, skip_health_logging=True
+)
 
 # Rate Limiting Middleware - Applied after CORS
 # Limits vary by role: Guest=10, User=100, Moderator=200, Admin=500, Super Admin=1000 req/min
@@ -65,6 +75,7 @@ app.add_middleware(RateLimitMiddleware)
 # Division Context Middleware - Reads X-Division-Id header and sets ContextVar
 # Applied after rate limiting so division scoping is available to all request handlers
 app.add_middleware(DivisionContextMiddleware)
+
 
 # Global exception handler
 @app.exception_handler(Exception)
@@ -84,19 +95,25 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         status_code=500,
         content={
             "error": "Internal server error",
-            "detail": str(exc) if settings.DEBUG else "An unexpected error occurred"
-        }
+            "detail": str(exc) if settings.DEBUG else "An unexpected error occurred",
+        },
     )
+
 
 # Mount static files for admin interface
 public_dir = Path(__file__).parent.parent / "public"
 if public_dir.exists():
-    app.mount("/admin", StaticFiles(directory=str(public_dir / "admin"), html=True), name="admin")
+    app.mount(
+        "/admin",
+        StaticFiles(directory=str(public_dir / "admin"), html=True),
+        name="admin",
+    )
     logger.info(f"Admin interface mounted at /admin")
 
 # Include routers
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(api_router, prefix="/api/v1")
+
 
 # Root endpoint
 @app.get("/", tags=["Root"])
@@ -112,8 +129,9 @@ async def root() -> Dict[str, Any]:
         "version": "1.0.0",
         "status": "online",
         "docs": "/api/docs",
-        "health": "/api/health"
+        "health": "/api/health",
     }
+
 
 async def seed_admin() -> None:
     """Create default super_admin, organization, and division if none exist."""
@@ -141,7 +159,12 @@ async def seed_admin() -> None:
         # Promote existing user to super_admin
         await db.users.update_one(
             {"email": admin_email},
-            {"$set": {"role": UserRole.SUPER_ADMIN.value, "updatedAt": datetime.utcnow()}}
+            {
+                "$set": {
+                    "role": UserRole.SUPER_ADMIN.value,
+                    "updatedAt": datetime.utcnow(),
+                }
+            },
         )
         logger.info(f"Promoted existing user to super_admin: {admin_email}")
         return
@@ -209,7 +232,7 @@ async def seed_admin() -> None:
             "createdAt": now,
             "updatedAt": now,
             "deletedAt": None,
-            "metadata": {}
+            "metadata": {},
         }
         await db.users.insert_one(user_doc)
         logger.info(f"Created default super_admin account: {admin_email}")
@@ -228,11 +251,19 @@ async def startup_event() -> None:
 
     # Security warnings for production readiness
     if settings.SECRET_KEY == "dev_secret_key_change_in_production":
-        logger.warning("SECURITY: Using default SECRET_KEY - set a strong key via environment variable for production!")
+        logger.warning(
+            "SECURITY: Using default SECRET_KEY - set a strong key via environment variable for production!"
+        )
     if settings.DEBUG and settings.ENVIRONMENT == "production":
-        logger.warning("SECURITY: DEBUG mode is enabled in production - this exposes sensitive error details!")
-    if settings.ENVIRONMENT == "production" and "localhost" in str(settings.ALLOWED_ORIGINS):
-        logger.warning("SECURITY: localhost origins allowed in production CORS settings")
+        logger.warning(
+            "SECURITY: DEBUG mode is enabled in production - this exposes sensitive error details!"
+        )
+    if settings.ENVIRONMENT == "production" and "localhost" in str(
+        settings.ALLOWED_ORIGINS
+    ):
+        logger.warning(
+            "SECURITY: localhost origins allowed in production CORS settings"
+        )
 
     # Connect to MongoDB
     try:
@@ -247,7 +278,9 @@ async def startup_event() -> None:
         if cache.is_available:
             logger.info("Redis cache connected successfully")
         else:
-            logger.warning("Redis cache unavailable - caching disabled, using direct DB queries")
+            logger.warning(
+                "Redis cache unavailable - caching disabled, using direct DB queries"
+            )
     except Exception as e:
         logger.warning(f"Redis cache connection failed: {e}. Caching disabled.")
 
@@ -273,9 +306,12 @@ async def startup_event() -> None:
         plugin_manager = get_plugin_manager()
         # Load all core modules (farm_manager, etc.)
         loaded_modules = await plugin_manager.load_all_modules(app)
-        logger.info(f"Loaded {len(loaded_modules)} plugin modules: {list(loaded_modules.keys())}")
+        logger.info(
+            f"Loaded {len(loaded_modules)} plugin modules: {list(loaded_modules.keys())}"
+        )
     except Exception as e:
         logger.error(f"Failed to load plugin modules: {e}")
+
 
 # Shutdown event
 @app.on_event("shutdown")
@@ -291,6 +327,7 @@ async def shutdown_event() -> None:
     await close_redis_cache()
     logger.info("Redis cache connection closed")
 
+
 # Run the application
 if __name__ == "__main__":
     uvicorn.run(
@@ -298,5 +335,5 @@ if __name__ == "__main__":
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.DEBUG,
-        log_level="info"
+        log_level="info",
     )

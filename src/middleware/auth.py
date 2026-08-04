@@ -18,7 +18,7 @@ security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> UserResponse:
     """
     Get current authenticated user from JWT token
@@ -61,8 +61,7 @@ async def get_current_user(
     # Verify user is active
     if not user_doc.get("isActive", False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
 
     # Convert to UserResponse model
@@ -94,7 +93,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> UserResponse:
     """
     Get current active user
@@ -112,15 +111,16 @@ async def get_current_active_user(
     """
     if not current_user.isActive:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
 
     return current_user
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+        HTTPBearer(auto_error=False)
+    ),
 ) -> Optional[UserResponse]:
     """
     Get current user if authenticated, None otherwise
@@ -143,7 +143,7 @@ async def get_optional_user(
 
 
 async def require_mfa_setup_complete(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ) -> UserResponse:
     """
     Require MFA setup to be complete before accessing protected resources.
@@ -167,14 +167,14 @@ async def require_mfa_setup_complete(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="MFA setup required. Please set up multi-factor authentication before accessing this resource.",
-            headers={"X-MFA-Setup-Required": "true"}
+            headers={"X-MFA-Setup-Required": "true"},
         )
 
     return current_user
 
 
 async def get_user_mfa_complete(
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ) -> UserResponse:
     """
     Get current active user with MFA setup enforced.
@@ -195,7 +195,7 @@ async def get_user_mfa_complete(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="MFA setup required. Please set up multi-factor authentication before accessing this resource.",
-            headers={"X-MFA-Setup-Required": "true"}
+            headers={"X-MFA-Setup-Required": "true"},
         )
 
     return current_user

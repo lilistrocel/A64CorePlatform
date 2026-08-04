@@ -10,7 +10,12 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
-from src.modules.hr.models.insurance import Insurance, InsuranceCreate, InsuranceUpdate, InsuranceType
+from src.modules.hr.models.insurance import (
+    Insurance,
+    InsuranceCreate,
+    InsuranceUpdate,
+    InsuranceType,
+)
 from src.modules.hr.services.database import hr_db
 
 logger = logging.getLogger(__name__)
@@ -40,9 +45,7 @@ class InsuranceRepository:
 
         insurance_dict = insurance_data.model_dump()
         insurance = Insurance(
-            **insurance_dict,
-            createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            **insurance_dict, createdAt=datetime.utcnow(), updatedAt=datetime.utcnow()
         )
 
         insurance_doc = insurance.model_dump(by_alias=True)
@@ -51,13 +54,19 @@ class InsuranceRepository:
 
         # Convert dates to datetime for MongoDB
         if "startDate" in insurance_doc:
-            insurance_doc["startDate"] = datetime.combine(insurance_doc["startDate"], datetime.min.time())
+            insurance_doc["startDate"] = datetime.combine(
+                insurance_doc["startDate"], datetime.min.time()
+            )
         if "endDate" in insurance_doc:
-            insurance_doc["endDate"] = datetime.combine(insurance_doc["endDate"], datetime.min.time())
+            insurance_doc["endDate"] = datetime.combine(
+                insurance_doc["endDate"], datetime.min.time()
+            )
 
         await collection.insert_one(insurance_doc)
 
-        logger.info(f"Created insurance: {insurance.insuranceId} for employee {insurance.employeeId}")
+        logger.info(
+            f"Created insurance: {insurance.insuranceId} for employee {insurance.employeeId}"
+        )
         return insurance
 
     async def get_by_id(self, insurance_id: UUID) -> Optional[Insurance]:
@@ -76,18 +85,19 @@ class InsuranceRepository:
         if insurance_doc:
             insurance_doc.pop("_id", None)
             # Convert datetime back to date
-            if "startDate" in insurance_doc and isinstance(insurance_doc["startDate"], datetime):
+            if "startDate" in insurance_doc and isinstance(
+                insurance_doc["startDate"], datetime
+            ):
                 insurance_doc["startDate"] = insurance_doc["startDate"].date()
-            if "endDate" in insurance_doc and isinstance(insurance_doc["endDate"], datetime):
+            if "endDate" in insurance_doc and isinstance(
+                insurance_doc["endDate"], datetime
+            ):
                 insurance_doc["endDate"] = insurance_doc["endDate"].date()
             return Insurance(**insurance_doc)
         return None
 
     async def get_by_employee_id(
-        self,
-        employee_id: UUID,
-        skip: int = 0,
-        limit: int = 20
+        self, employee_id: UUID, skip: int = 0, limit: int = 20
     ) -> tuple[List[Insurance], int]:
         """
         Get insurance policies for a specific employee
@@ -113,9 +123,13 @@ class InsuranceRepository:
         async for insurance_doc in cursor:
             insurance_doc.pop("_id", None)
             # Convert datetime back to date
-            if "startDate" in insurance_doc and isinstance(insurance_doc["startDate"], datetime):
+            if "startDate" in insurance_doc and isinstance(
+                insurance_doc["startDate"], datetime
+            ):
                 insurance_doc["startDate"] = insurance_doc["startDate"].date()
-            if "endDate" in insurance_doc and isinstance(insurance_doc["endDate"], datetime):
+            if "endDate" in insurance_doc and isinstance(
+                insurance_doc["endDate"], datetime
+            ):
                 insurance_doc["endDate"] = insurance_doc["endDate"].date()
             insurance_list.append(Insurance(**insurance_doc))
 
@@ -125,7 +139,7 @@ class InsuranceRepository:
         self,
         skip: int = 0,
         limit: int = 20,
-        insurance_type: Optional[InsuranceType] = None
+        insurance_type: Optional[InsuranceType] = None,
     ) -> tuple[List[Insurance], int]:
         """
         Get all insurance policies with pagination
@@ -154,15 +168,21 @@ class InsuranceRepository:
         async for insurance_doc in cursor:
             insurance_doc.pop("_id", None)
             # Convert datetime back to date
-            if "startDate" in insurance_doc and isinstance(insurance_doc["startDate"], datetime):
+            if "startDate" in insurance_doc and isinstance(
+                insurance_doc["startDate"], datetime
+            ):
                 insurance_doc["startDate"] = insurance_doc["startDate"].date()
-            if "endDate" in insurance_doc and isinstance(insurance_doc["endDate"], datetime):
+            if "endDate" in insurance_doc and isinstance(
+                insurance_doc["endDate"], datetime
+            ):
                 insurance_doc["endDate"] = insurance_doc["endDate"].date()
             insurance_list.append(Insurance(**insurance_doc))
 
         return insurance_list, total
 
-    async def update(self, insurance_id: UUID, update_data: InsuranceUpdate) -> Optional[Insurance]:
+    async def update(
+        self, insurance_id: UUID, update_data: InsuranceUpdate
+    ) -> Optional[Insurance]:
         """
         Update an insurance policy
 
@@ -183,13 +203,16 @@ class InsuranceRepository:
 
         # Convert dates to datetime for MongoDB
         if "startDate" in update_dict:
-            update_dict["startDate"] = datetime.combine(update_dict["startDate"], datetime.min.time())
+            update_dict["startDate"] = datetime.combine(
+                update_dict["startDate"], datetime.min.time()
+            )
         if "endDate" in update_dict:
-            update_dict["endDate"] = datetime.combine(update_dict["endDate"], datetime.min.time())
+            update_dict["endDate"] = datetime.combine(
+                update_dict["endDate"], datetime.min.time()
+            )
 
         result = await collection.update_one(
-            {"insuranceId": str(insurance_id)},
-            {"$set": update_dict}
+            {"insuranceId": str(insurance_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

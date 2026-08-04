@@ -16,7 +16,6 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Approval history entry (chain-readiness precaution, Phase F prep)
 # ---------------------------------------------------------------------------
@@ -386,7 +385,9 @@ class GRLineInput(BaseModel):
     """
 
     baseLineId: str = Field(..., description="lineId of the source PO line")
-    quantity: Decimal = Field(..., gt=0, description="Quantity received (≤ PO line openQuantity)")
+    quantity: Decimal = Field(
+        ..., gt=0, description="Quantity received (≤ PO line openQuantity)"
+    )
     description: Optional[str] = Field(None, max_length=500)
 
 
@@ -420,7 +421,9 @@ class GRCreate(BaseModel):
     """
 
     baseDocId: str = Field(..., description="docId of the source PO")
-    docDate: Optional[datetime] = Field(None, description="Receipt date; defaults to today")
+    docDate: Optional[datetime] = Field(
+        None, description="Receipt date; defaults to today"
+    )
     warehouseId: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = Field(None, max_length=2000)
     lines: List[GRLineInput] = Field(..., min_length=1)
@@ -493,6 +496,7 @@ class GRDetailResponse(GRResponse):
 APStatus = str
 """State machine for AP Invoice: Draft → Pending Approval → Approved | Rejected."""
 
+
 class APLineInput(BaseModel):
     """
     One line in an AP Invoice creation/update payload.
@@ -502,8 +506,12 @@ class APLineInput(BaseModel):
     quantity in v1 (no partial invoicing).
     """
 
-    grLineId: str = Field(..., description="lineId of the source GR line being invoiced")
-    invoiceUnitPrice: Decimal = Field(..., ge=0, description="Vendor's actual unit price")
+    grLineId: str = Field(
+        ..., description="lineId of the source GR line being invoiced"
+    )
+    invoiceUnitPrice: Decimal = Field(
+        ..., ge=0, description="Vendor's actual unit price"
+    )
     description: Optional[str] = Field(None, max_length=500)
 
 
@@ -527,7 +535,9 @@ class APFromGRCreate(BaseModel):
         max_length=50,
         description="Vendor's invoice number as printed on the document",
     )
-    invoiceDate: datetime = Field(..., description="Date printed on the vendor's invoice")
+    invoiceDate: datetime = Field(
+        ..., description="Date printed on the vendor's invoice"
+    )
     dueDate: Optional[datetime] = Field(
         None,
         description="Payment due date; defaults to invoiceDate + 30 days",
@@ -1323,7 +1333,9 @@ class BlanketAgreementCreate(BaseModel):
     agreement_date: Optional[datetime] = Field(
         None, description="Agreement signing date; defaults to today when omitted"
     )
-    valid_from: datetime = Field(..., description="Start of validity window (inclusive)")
+    valid_from: datetime = Field(
+        ..., description="Start of validity window (inclusive)"
+    )
     valid_to: datetime = Field(..., description="End of validity window (exclusive)")
     currency: str = Field(default="AED", max_length=10)
     exchange_rate: Decimal = Field(default=Decimal("1"), ge=0)

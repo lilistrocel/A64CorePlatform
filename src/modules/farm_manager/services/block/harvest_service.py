@@ -12,13 +12,24 @@ from fastapi import HTTPException
 import logging
 
 from ...models.block_harvest import (
-    BlockHarvest, BlockHarvestCreate, BlockHarvestUpdate,
-    BlockHarvestSummary, QualityGrade as HarvestQualityGrade
+    BlockHarvest,
+    BlockHarvestCreate,
+    BlockHarvestUpdate,
+    BlockHarvestSummary,
+    QualityGrade as HarvestQualityGrade,
 )
 from ...models.inventory import (
-    HarvestInventory, InventoryType, QualityGrade, MovementType, InventoryMovement, InventoryScope
+    HarvestInventory,
+    InventoryType,
+    QualityGrade,
+    MovementType,
+    InventoryMovement,
+    InventoryScope,
 )
-from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+from ...models.farming_year_config import (
+    get_farming_year,
+    DEFAULT_FARMING_YEAR_START_MONTH,
+)
 from .harvest_repository import HarvestRepository
 from .block_repository_new import BlockRepository
 from ..database import farm_db
@@ -41,9 +52,7 @@ class HarvestService:
 
     @staticmethod
     async def record_harvest(
-        harvest_data: BlockHarvestCreate,
-        user_id: UUID,
-        user_email: str
+        harvest_data: BlockHarvestCreate, user_id: UUID, user_email: str
     ) -> BlockHarvest:
         """
         Record a new harvest and update block KPI
@@ -66,7 +75,7 @@ class HarvestService:
         await BlockRepository.increment_kpi(
             harvest_data.blockId,
             yield_kg_delta=harvest_data.quantityKg,
-            harvest_count_delta=1
+            harvest_count_delta=1,
         )
 
         # Get user's organizationId for inventory
@@ -79,7 +88,7 @@ class HarvestService:
             harvest=harvest,
             block=block,
             user_id=user_id,
-            organization_id=organization_id
+            organization_id=organization_id,
         )
 
         logger.info(
@@ -92,10 +101,7 @@ class HarvestService:
 
     @staticmethod
     async def _add_to_inventory(
-        harvest: BlockHarvest,
-        block,
-        user_id: UUID,
-        organization_id: str = None
+        harvest: BlockHarvest, block, user_id: UUID, organization_id: str = None
     ) -> None:
         """
         Add a harvest record to the inventory system.
@@ -115,14 +121,14 @@ class HarvestService:
         inventory_grade = HarvestService._map_quality_grade(harvest.qualityGrade)
 
         # Get plant name from block (targetCropName)
-        plant_name = getattr(block, 'targetCropName', None) or "Unknown Crop"
-        plant_data_id = getattr(block, 'targetCrop', None)
+        plant_name = getattr(block, "targetCropName", None) or "Unknown Crop"
+        plant_data_id = getattr(block, "targetCrop", None)
         product_type = "fresh"  # Default to fresh
 
         # Use passed organization_id, or try to get from block/farm
         org_id = organization_id
         if not org_id:
-            org_id = getattr(block, 'organizationId', None)
+            org_id = getattr(block, "organizationId", None)
         if not org_id:
             # Fallback: try to get from farm
             farm_doc = await db.farms.find_one({"farmId": str(harvest.farmId)})
@@ -134,7 +140,9 @@ class HarvestService:
         harvest_date_dt = harvest.harvestDate
         if not isinstance(harvest_date_dt, datetime):
             harvest_date_dt = datetime.fromisoformat(str(harvest_date_dt))
-        farming_year = get_farming_year(harvest_date_dt, DEFAULT_FARMING_YEAR_START_MONTH)
+        farming_year = get_farming_year(
+            harvest_date_dt, DEFAULT_FARMING_YEAR_START_MONTH
+        )
 
         # TODO: Once plant_data exposes a `shelfLifeDays` field, set
         # `expiryDate = harvest_date_dt + timedelta(days=shelfLifeDays)` here.
@@ -144,7 +152,9 @@ class HarvestService:
             organizationId=org_id,
             inventoryScope=InventoryScope.FARM,  # Farm-specific inventory
             blockId=harvest.blockId,
-            plantDataId=plant_data_id if plant_data_id else harvest.blockId,  # Use blockId as fallback
+            plantDataId=(
+                plant_data_id if plant_data_id else harvest.blockId
+            ),  # Use blockId as fallback
             plantName=plant_name,
             productType=product_type,
             quantity=harvest.quantityKg,
@@ -153,12 +163,16 @@ class HarvestService:
             reservedQuantity=0,
             availableQuantity=harvest.quantityKg,
             qualityGrade=inventory_grade,
-            harvestDate=harvest.harvestDate.isoformat() if isinstance(harvest.harvestDate, datetime) else harvest.harvestDate,
+            harvestDate=(
+                harvest.harvestDate.isoformat()
+                if isinstance(harvest.harvestDate, datetime)
+                else harvest.harvestDate
+            ),
             farmingYear=farming_year,
             currency="AED",
             notes=f"Auto-added from block harvest {harvest.harvestId}. {harvest.notes or ''}".strip(),
             createdBy=user_id,
-            sourceHarvestId=harvest.harvestId  # Link back to original harvest
+            sourceHarvestId=harvest.harvestId,  # Link back to original harvest
         )
 
         # Insert into inventory
@@ -177,7 +191,7 @@ class HarvestService:
             reason=f"Harvest from block {block.blockCode}",
             referenceId=str(harvest.harvestId),
             performedBy=user_id,
-            performedAt=datetime.utcnow()
+            performedAt=datetime.utcnow(),
         )
         await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
 
@@ -203,7 +217,7 @@ class HarvestService:
         per_page: int = 20,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        farming_year: Optional[int] = None
+        farming_year: Optional[int] = None,
     ) -> Tuple[List[BlockHarvest], int, int]:
         """
         List harvests for a block with pagination and date filters.
@@ -222,13 +236,15 @@ class HarvestService:
             # Block not found, return empty
             return [], 0, 0
 
-        if block.blockCategory == 'physical':
+        if block.blockCategory == "physical":
             # Physical block: get all harvests from this block + all child virtual blocks
             block_ids = [str(block_id)]
             if block.childBlockIds:
                 block_ids.extend(block.childBlockIds)
 
-            logger.info(f"[Harvest Service] Physical block {block_id}: fetching harvests from {len(block_ids)} blocks (including children)")
+            logger.info(
+                f"[Harvest Service] Physical block {block_id}: fetching harvests from {len(block_ids)} blocks (including children)"
+            )
 
             harvests, total = await HarvestRepository.get_harvests_for_multiple_blocks(
                 block_ids, skip, per_page, start_date, end_date, farming_year
@@ -240,7 +256,9 @@ class HarvestService:
             # If block has a plantedDate and no explicit start_date, use plantedDate as start
             if block.plantedDate and not start_date:
                 effective_start_date = block.plantedDate
-                logger.info(f"[Harvest Service] Virtual block {block_id}: filtering harvests from plantedDate {block.plantedDate}")
+                logger.info(
+                    f"[Harvest Service] Virtual block {block_id}: filtering harvests from plantedDate {block.plantedDate}"
+                )
             elif block.plantedDate and start_date:
                 # Use the later of the two dates
                 effective_start_date = max(start_date, block.plantedDate)
@@ -260,7 +278,7 @@ class HarvestService:
         per_page: int = 20,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        farming_year: Optional[int] = None
+        farming_year: Optional[int] = None,
     ) -> Tuple[List[BlockHarvest], int, int]:
         """List all harvests for a farm with pagination, date filters, and farming year filter"""
         skip = (page - 1) * per_page
@@ -275,8 +293,7 @@ class HarvestService:
 
     @staticmethod
     async def update_harvest(
-        harvest_id: UUID,
-        update_data: BlockHarvestUpdate
+        harvest_id: UUID, update_data: BlockHarvestUpdate
     ) -> BlockHarvest:
         """
         Update a harvest record and recalculate block KPI if quantity changed
@@ -288,8 +305,8 @@ class HarvestService:
 
         # Check if quantity is changing
         quantity_changed = (
-            update_data.quantityKg is not None and
-            update_data.quantityKg != current_harvest.quantityKg
+            update_data.quantityKg is not None
+            and update_data.quantityKg != current_harvest.quantityKg
         )
 
         # Update harvest
@@ -306,8 +323,7 @@ class HarvestService:
             )
 
             await BlockRepository.update_kpi(
-                current_harvest.blockId,
-                actual_yield_kg=total_quantity
+                current_harvest.blockId, actual_yield_kg=total_quantity
             )
 
             logger.info(
@@ -337,12 +353,12 @@ class HarvestService:
 
         # Update block KPI atomically
         await BlockRepository.increment_kpi(
-            block_id,
-            yield_kg_delta=-quantity_to_subtract,
-            harvest_count_delta=-1
+            block_id, yield_kg_delta=-quantity_to_subtract, harvest_count_delta=-1
         )
 
-        logger.info(f"[Harvest Service] Deleted harvest {harvest_id} and updated block KPI")
+        logger.info(
+            f"[Harvest Service] Deleted harvest {harvest_id} and updated block KPI"
+        )
         return success
 
     @staticmethod
@@ -367,16 +383,18 @@ class HarvestService:
                 qualityCKg=0.0,
                 averageQualityGrade="N/A",
                 firstHarvestDate=None,
-                lastHarvestDate=None
+                lastHarvestDate=None,
             )
 
-        if block.blockCategory == 'physical':
+        if block.blockCategory == "physical":
             # Physical block: get summary from this block + all child virtual blocks
             block_ids = [str(block_id)]
             if block.childBlockIds:
                 block_ids.extend(block.childBlockIds)
 
-            logger.info(f"[Harvest Service] Physical block {block_id}: fetching summary from {len(block_ids)} blocks")
+            logger.info(
+                f"[Harvest Service] Physical block {block_id}: fetching summary from {len(block_ids)} blocks"
+            )
 
             summary = await HarvestRepository.get_summary_for_multiple_blocks(block_ids)
             # Set the correct blockId in the summary

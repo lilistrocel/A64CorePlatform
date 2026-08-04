@@ -107,6 +107,7 @@ class OrganizationModules(BaseModel):
     outbox writer so events stop queuing for tenants that don't pay
     for / run the finance service.
     """
+
     financeEnabled: bool = Field(
         True,
         description=(
@@ -122,13 +123,20 @@ class OrganizationModules(BaseModel):
 
 class OrganizationBase(BaseModel):
     """Base organization fields"""
-    name: str = Field(..., min_length=1, max_length=200, description="Organization name")
-    slug: str = Field(..., min_length=1, max_length=100, description="URL-friendly slug (unique)")
+
+    name: str = Field(
+        ..., min_length=1, max_length=200, description="Organization name"
+    )
+    slug: str = Field(
+        ..., min_length=1, max_length=100, description="URL-friendly slug (unique)"
+    )
     industries: List[str] = Field(
         default_factory=list,
-        description="Industry types this organization operates in (e.g., vegetable_fruits, mushroom)"
+        description="Industry types this organization operates in (e.g., vegetable_fruits, mushroom)",
     )
-    logoUrl: Optional[str] = Field(None, max_length=500, description="Organization logo URL")
+    logoUrl: Optional[str] = Field(
+        None, max_length=500, description="Organization logo URL"
+    )
     modules: OrganizationModules = Field(
         default_factory=OrganizationModules,
         description="Per-tenant module toggles (Wave 0 — finance opt-in)",
@@ -137,11 +145,13 @@ class OrganizationBase(BaseModel):
 
 class OrganizationCreate(OrganizationBase):
     """Schema for creating a new organization"""
+
     pass
 
 
 class OrganizationUpdate(BaseModel):
     """Schema for updating an organization"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     slug: Optional[str] = Field(None, min_length=1, max_length=100)
     industries: Optional[List[str]] = None
@@ -161,6 +171,7 @@ class OrganizationModulesUpdate(BaseModel):
     model's docstring for why a nested partial is required rather than
     accepting a full `PublicInfoPageConfig` here.
     """
+
     financeEnabled: Optional[bool] = Field(
         None,
         description="Enable / disable the finance module for this tenant",
@@ -177,7 +188,11 @@ class OrganizationModulesUpdate(BaseModel):
 
 class Organization(OrganizationBase):
     """Complete organization model with all fields"""
-    organizationId: str = Field(default_factory=lambda: str(uuid4()), description="Unique organization identifier")
+
+    organizationId: str = Field(
+        default_factory=lambda: str(uuid4()),
+        description="Unique organization identifier",
+    )
     isActive: bool = Field(True, description="Is organization active")
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)
@@ -192,13 +207,14 @@ class Organization(OrganizationBase):
                 "logoUrl": None,
                 "isActive": True,
                 "createdAt": "2026-01-01T00:00:00Z",
-                "updatedAt": "2026-01-01T00:00:00Z"
+                "updatedAt": "2026-01-01T00:00:00Z",
             }
         }
 
 
 class OrganizationResponse(OrganizationBase):
     """Organization response model (public-facing)"""
+
     organizationId: str
     isActive: bool
     createdAt: datetime

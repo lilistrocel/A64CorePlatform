@@ -25,7 +25,7 @@ from ...models.block_analytics import (
     AlertAnalytics,
     TimePeriod,
     TrendDirection,
-    StateProgressStep
+    StateProgressStep,
 )
 from .block_repository_new import BlockRepository
 from .harvest_repository import HarvestRepository
@@ -44,7 +44,7 @@ class BlockAnalyticsService:
         block_id: UUID,
         period: TimePeriod = TimePeriod.ALL,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
     ) -> BlockAnalyticsResponse:
         """
         Get comprehensive analytics for a block
@@ -58,7 +58,9 @@ class BlockAnalyticsService:
         Returns:
             Complete analytics response
         """
-        logger.info(f"[Analytics] Generating analytics for block {block_id}, period: {period}")
+        logger.info(
+            f"[Analytics] Generating analytics for block {block_id}, period: {period}"
+        )
 
         # Get block
         block = await BlockRepository.get_by_id(block_id)
@@ -66,8 +68,10 @@ class BlockAnalyticsService:
             raise ValueError(f"Block not found: {block_id}")
 
         # Calculate date range
-        actual_start_date, actual_end_date = BlockAnalyticsService._calculate_date_range(
-            period, start_date, end_date, block.plantedDate
+        actual_start_date, actual_end_date = (
+            BlockAnalyticsService._calculate_date_range(
+                period, start_date, end_date, block.plantedDate
+            )
         )
 
         # Generate all analytics sections
@@ -101,7 +105,7 @@ class BlockAnalyticsService:
             stateProgress=state_progress,
             period=period,
             startDate=actual_start_date,
-            endDate=actual_end_date
+            endDate=actual_end_date,
         )
 
     @staticmethod
@@ -109,7 +113,7 @@ class BlockAnalyticsService:
         period: TimePeriod,
         start_date: Optional[datetime],
         end_date: Optional[datetime],
-        planted_date: Optional[datetime]
+        planted_date: Optional[datetime],
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
         """Calculate actual start and end dates based on period"""
         now = datetime.utcnow()
@@ -150,7 +154,9 @@ class BlockAnalyticsService:
         plant_data_is_stale = False
         if block.targetCrop is not None and block.plantDataVersion is not None:
             try:
-                live_plant = await PlantDataEnhancedRepository.get_by_id(block.targetCrop)
+                live_plant = await PlantDataEnhancedRepository.get_by_id(
+                    block.targetCrop
+                )
                 if live_plant is not None:
                     latest_version = live_plant.dataVersion
                     plant_data_is_stale = latest_version > block.plantDataVersion
@@ -181,13 +187,13 @@ class BlockAnalyticsService:
     @staticmethod
     async def _get_yield_analytics(block: Block) -> YieldAnalytics:
         """Calculate yield analytics from harvest records (lifetime, not period-scoped)"""
-        logger.info(f"[Analytics] Calculating yield analytics for block {block.blockId}")
+        logger.info(
+            f"[Analytics] Calculating yield analytics for block {block.blockId}"
+        )
 
         # Get ALL harvest records for the block regardless of date range
         harvests, total_harvests = await HarvestRepository.get_by_block(
-            block.blockId,
-            skip=0,
-            limit=1000  # Get all harvests for analytics
+            block.blockId, skip=0, limit=1000  # Get all harvests for analytics
         )
 
         logger.info(f"[Analytics] Found {total_harvests} harvests")
@@ -217,14 +223,12 @@ class BlockAnalyticsService:
                     date=harvest.harvestDate,
                     quantityKg=harvest.quantityKg,
                     cumulativeKg=cumulative,
-                    qualityGrade=harvest.qualityGrade.value
+                    qualityGrade=harvest.qualityGrade.value,
                 )
             )
 
         # Calculate quality distribution percentages
-        quality_distribution = {
-            "A": 0.0, "B": 0.0, "C": 0.0
-        }
+        quality_distribution = {"A": 0.0, "B": 0.0, "C": 0.0}
         if total_yield > 0:
             quality_distribution = {
                 grade: (qty / total_yield) * 100
@@ -232,7 +236,9 @@ class BlockAnalyticsService:
             }
 
         # Calculate averages
-        avg_yield_per_harvest = total_yield / total_harvests if total_harvests > 0 else 0.0
+        avg_yield_per_harvest = (
+            total_yield / total_harvests if total_harvests > 0 else 0.0
+        )
 
         # Harvesting duration
         harvesting_duration = None
@@ -240,7 +246,9 @@ class BlockAnalyticsService:
             harvesting_duration = (last_harvest_date - first_harvest_date).days
 
         # Performance category from block KPI
-        performance_category = block.kpi.performance_category.value if block.kpi else "N/A"
+        performance_category = (
+            block.kpi.performance_category.value if block.kpi else "N/A"
+        )
 
         # Build individual harvest records sorted most-recent harvestDate first
         harvest_records = [
@@ -259,7 +267,9 @@ class BlockAnalyticsService:
         return YieldAnalytics(
             totalYieldKg=total_yield,
             predictedYieldKg=block.kpi.predictedYieldKg if block.kpi else 0.0,
-            yieldEfficiencyPercent=block.kpi.yieldEfficiencyPercent if block.kpi else 0.0,
+            yieldEfficiencyPercent=(
+                block.kpi.yieldEfficiencyPercent if block.kpi else 0.0
+            ),
             yieldByQuality=quality_breakdown,
             qualityDistribution=quality_distribution,
             totalHarvests=total_harvests,
@@ -269,17 +279,17 @@ class BlockAnalyticsService:
             harvestingDuration=harvesting_duration,
             yieldTrend=yield_trend,
             performanceCategory=performance_category,
-            harvestRecords=harvest_records
+            harvestRecords=harvest_records,
         )
 
     @staticmethod
     async def _get_timeline_analytics(
-        block: Block,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        block: Block, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> TimelineAnalytics:
         """Calculate timeline and state transition analytics"""
-        logger.info(f"[Analytics] Calculating timeline analytics for block {block.blockId}")
+        logger.info(
+            f"[Analytics] Calculating timeline analytics for block {block.blockId}"
+        )
 
         # Calculate days in each state
         days_in_each_state: Dict[str, int] = {}
@@ -315,7 +325,7 @@ class BlockAnalyticsService:
                 daysInPreviousState=days_in_prev,
                 expectedDate=change.expectedDate,
                 offsetDays=change.offsetDays,
-                onTime=change.offsetType == "on_time" if change.offsetType else None
+                onTime=change.offsetType == "on_time" if change.offsetType else None,
             )
 
             state_transitions.append(transition)
@@ -350,9 +360,13 @@ class BlockAnalyticsService:
         # Get expected cycle from plant data if available
         if block.targetCrop:
             db = farm_db.get_database()
-            plant_data = await db.plant_data_enhanced.find_one({"plantDataId": str(block.targetCrop)})
+            plant_data = await db.plant_data_enhanced.find_one(
+                {"plantDataId": str(block.targetCrop)}
+            )
             if plant_data and plant_data.get("growthCycle"):
-                expected_cycle_duration = plant_data["growthCycle"].get("totalCycleDays")
+                expected_cycle_duration = plant_data["growthCycle"].get(
+                    "totalCycleDays"
+                )
 
         # Average offset
         avg_offset = total_offset / offset_count if offset_count > 0 else None
@@ -368,14 +382,12 @@ class BlockAnalyticsService:
             onTimeTransitions=on_time_count,
             earlyTransitions=early_count,
             lateTransitions=late_count,
-            avgOffsetDays=avg_offset
+            avgOffsetDays=avg_offset,
         )
 
     @staticmethod
     async def _get_task_analytics(
-        block: Block,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        block: Block, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> TaskAnalytics:
         """Calculate task analytics"""
         logger.info(f"[Analytics] Calculating task analytics for block {block.blockId}")
@@ -403,16 +415,25 @@ class BlockAnalyticsService:
         completed_tasks = sum(1 for t in tasks if t.get("status") == "completed")
         pending_tasks = sum(1 for t in tasks if t.get("status") == "pending")
         overdue_tasks = sum(
-            1 for t in tasks
-            if t.get("status") == "pending" and t.get("scheduledDate") and t["scheduledDate"] < datetime.utcnow()
+            1
+            for t in tasks
+            if t.get("status") == "pending"
+            and t.get("scheduledDate")
+            and t["scheduledDate"] < datetime.utcnow()
         )
 
-        completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+        completion_rate = (
+            (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+        )
 
         # Calculate average completion delay
         delays = []
         for task in tasks:
-            if task.get("status") == "completed" and task.get("scheduledDate") and task.get("completedAt"):
+            if (
+                task.get("status") == "completed"
+                and task.get("scheduledDate")
+                and task.get("completedAt")
+            ):
                 delay = (task["completedAt"] - task["scheduledDate"]).days
                 delays.append(delay)
 
@@ -433,8 +454,11 @@ class BlockAnalyticsService:
             completed = sum(1 for t in type_tasks if t.get("status") == "completed")
             pending = sum(1 for t in type_tasks if t.get("status") == "pending")
             overdue = sum(
-                1 for t in type_tasks
-                if t.get("status") == "pending" and t.get("scheduledDate") and t["scheduledDate"] < datetime.utcnow()
+                1
+                for t in type_tasks
+                if t.get("status") == "pending"
+                and t.get("scheduledDate")
+                and t["scheduledDate"] < datetime.utcnow()
             )
 
             type_completion_rate = (completed / total * 100) if total > 0 else 0.0
@@ -442,11 +466,17 @@ class BlockAnalyticsService:
             # Type-specific delay
             type_delays = []
             for task in type_tasks:
-                if task.get("status") == "completed" and task.get("scheduledDate") and task.get("completedAt"):
+                if (
+                    task.get("status") == "completed"
+                    and task.get("scheduledDate")
+                    and task.get("completedAt")
+                ):
                     delay = (task["completedAt"] - task["scheduledDate"]).days
                     type_delays.append(delay)
 
-            type_avg_delay = sum(type_delays) / len(type_delays) if type_delays else None
+            type_avg_delay = (
+                sum(type_delays) / len(type_delays) if type_delays else None
+            )
 
             tasks_by_type[task_type] = TaskTypeStats(
                 total=total,
@@ -454,18 +484,24 @@ class BlockAnalyticsService:
                 pending=pending,
                 overdue=overdue,
                 completionRate=type_completion_rate,
-                avgCompletionDelay=type_avg_delay
+                avgCompletionDelay=type_avg_delay,
             )
 
         # Recent and upcoming tasks
         now = datetime.utcnow()
         recent_completed = sum(
-            1 for t in tasks
-            if t.get("status") == "completed" and t.get("completedAt") and (now - t["completedAt"]).days <= 7
+            1
+            for t in tasks
+            if t.get("status") == "completed"
+            and t.get("completedAt")
+            and (now - t["completedAt"]).days <= 7
         )
         upcoming_tasks = sum(
-            1 for t in tasks
-            if t.get("status") == "pending" and t.get("scheduledDate") and 0 <= (t["scheduledDate"] - now).days <= 7
+            1
+            for t in tasks
+            if t.get("status") == "pending"
+            and t.get("scheduledDate")
+            and 0 <= (t["scheduledDate"] - now).days <= 7
         )
 
         return TaskAnalytics(
@@ -477,31 +513,30 @@ class BlockAnalyticsService:
             avgCompletionDelay=avg_delay,
             tasksByType=tasks_by_type,
             recentCompletedTasks=recent_completed,
-            upcomingTasks=upcoming_tasks
+            upcomingTasks=upcoming_tasks,
         )
 
     @staticmethod
     async def _get_alert_analytics(
-        block: Block,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        block: Block, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> AlertAnalytics:
         """Calculate alert analytics"""
-        logger.info(f"[Analytics] Calculating alert analytics for block {block.blockId}")
+        logger.info(
+            f"[Analytics] Calculating alert analytics for block {block.blockId}"
+        )
 
         # Get all alerts for this block
         alerts, total_alerts = await AlertRepository.get_by_block(
-            block.blockId,
-            skip=0,
-            limit=1000
+            block.blockId, skip=0, limit=1000
         )
 
         # Filter by date if specified
         if start_date or end_date:
             alerts = [
-                a for a in alerts
-                if (not start_date or a.createdAt >= start_date) and
-                   (not end_date or a.createdAt <= end_date)
+                a
+                for a in alerts
+                if (not start_date or a.createdAt >= start_date)
+                and (not end_date or a.createdAt <= end_date)
             ]
 
         # Count by status
@@ -519,10 +554,14 @@ class BlockAnalyticsService:
         resolution_times = []
         for alert in alerts:
             if alert.status == "resolved" and alert.resolvedAt:
-                resolution_hours = (alert.resolvedAt - alert.createdAt).total_seconds() / 3600
+                resolution_hours = (
+                    alert.resolvedAt - alert.createdAt
+                ).total_seconds() / 3600
                 resolution_times.append(resolution_hours)
 
-        avg_resolution = sum(resolution_times) / len(resolution_times) if resolution_times else None
+        avg_resolution = (
+            sum(resolution_times) / len(resolution_times) if resolution_times else None
+        )
         fastest_resolution = min(resolution_times) if resolution_times else None
         slowest_resolution = max(resolution_times) if resolution_times else None
 
@@ -537,7 +576,7 @@ class BlockAnalyticsService:
             lowCount=low_count,
             avgResolutionTimeHours=avg_resolution,
             fastestResolutionHours=fastest_resolution,
-            slowestResolutionHours=slowest_resolution
+            slowestResolutionHours=slowest_resolution,
         )
 
     @staticmethod
@@ -583,7 +622,9 @@ class BlockAnalyticsService:
                     {"plantDataId": str(block.targetCrop)}
                 )
                 if plant_data and plant_data.get("growthCycle"):
-                    fruiting_applies = (plant_data["growthCycle"].get("fruitingDays") or 0) > 0
+                    fruiting_applies = (
+                        plant_data["growthCycle"].get("fruitingDays") or 0
+                    ) > 0
                 else:
                     fruiting_applies = "fruiting" in actual_dates
             except Exception:
@@ -599,12 +640,15 @@ class BlockAnalyticsService:
 
         result: List[StateProgressStep] = []
         for i, step in enumerate(steps):
-            result.append(StateProgressStep(
-                state=step,
-                transitionDate=actual_dates.get(step),
-                reached=(step in actual_dates) or (current_index >= 0 and i <= current_index),
-                isCurrent=(step == eff_current)
-            ))
+            result.append(
+                StateProgressStep(
+                    state=step,
+                    transitionDate=actual_dates.get(step),
+                    reached=(step in actual_dates)
+                    or (current_index >= 0 and i <= current_index),
+                    isCurrent=(step == eff_current),
+                )
+            )
 
         return result
 
@@ -613,7 +657,7 @@ class BlockAnalyticsService:
         block: Block,
         yield_analytics: YieldAnalytics,
         timeline_analytics: TimelineAnalytics,
-        task_analytics: TaskAnalytics
+        task_analytics: TaskAnalytics,
     ) -> PerformanceMetrics:
         """Calculate overall performance metrics and provide insights"""
 
@@ -627,21 +671,27 @@ class BlockAnalyticsService:
         # Timeline performance
         avg_delay = timeline_analytics.avgOffsetDays
         total_transitions = (
-            timeline_analytics.onTimeTransitions +
-            timeline_analytics.earlyTransitions +
-            timeline_analytics.lateTransitions
+            timeline_analytics.onTimeTransitions
+            + timeline_analytics.earlyTransitions
+            + timeline_analytics.lateTransitions
         )
         on_time_rate = (
             (timeline_analytics.onTimeTransitions / total_transitions * 100)
-            if total_transitions > 0 else 0.0
+            if total_transitions > 0
+            else 0.0
         )
 
         # Task performance
         task_completion_rate = task_analytics.completionRate
         task_on_time_rate = 0.0
-        if task_analytics.completedTasks > 0 and task_analytics.avgCompletionDelay is not None:
+        if (
+            task_analytics.completedTasks > 0
+            and task_analytics.avgCompletionDelay is not None
+        ):
             # Calculate tasks completed on time or early
-            task_on_time_rate = max(0.0, 100.0 - abs(task_analytics.avgCompletionDelay * 10))
+            task_on_time_rate = max(
+                0.0, 100.0 - abs(task_analytics.avgCompletionDelay * 10)
+            )
 
         # Calculate overall score (weighted average)
         scores = []
@@ -714,5 +764,5 @@ class BlockAnalyticsService:
             overallScore=overall_score,
             trend=trend,
             strengths=strengths,
-            improvements=improvements
+            improvements=improvements,
         )

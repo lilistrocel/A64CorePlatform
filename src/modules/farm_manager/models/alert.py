@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class AlertSeverity(str, Enum):
     """Alert severity levels"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -21,6 +22,7 @@ class AlertSeverity(str, Enum):
 
 class AlertStatus(str, Enum):
     """Alert status"""
+
     ACTIVE = "active"
     RESOLVED = "resolved"
     DISMISSED = "dismissed"
@@ -28,6 +30,7 @@ class AlertStatus(str, Enum):
 
 class AlertType(str, Enum):
     """Alert source type"""
+
     MANUAL = "manual"
     SENSOR = "sensor"
     SYSTEM = "system"
@@ -35,21 +38,26 @@ class AlertType(str, Enum):
 
 class AlertCreate(BaseModel):
     """Schema for creating a new alert"""
+
     blockId: UUID = Field(..., description="Block with issue")
     alertType: AlertType = Field(AlertType.MANUAL, description="Alert source type")
     title: str = Field(..., min_length=1, max_length=200, description="Alert title")
     description: str = Field(..., description="Detailed description of issue")
     severity: AlertSeverity = Field(..., description="Alert severity level")
-    source: Optional[str] = Field(None, description="Where alert came from (e.g., task_manager, sensor_id)")
+    source: Optional[str] = Field(
+        None, description="Where alert came from (e.g., task_manager, sensor_id)"
+    )
 
 
 class AlertResolve(BaseModel):
     """Schema for resolving an alert"""
+
     resolutionNotes: str = Field(..., description="Resolution notes")
 
 
 class Alert(BaseModel):
     """Complete alert model with all fields"""
+
     alertId: UUID = Field(default_factory=uuid4, description="Unique alert identifier")
     blockId: UUID = Field(..., description="Block with issue")
     farmId: UUID = Field(..., description="Farm ID")
@@ -60,7 +68,9 @@ class Alert(BaseModel):
     description: str = Field(..., description="Detailed description of issue")
     severity: AlertSeverity = Field(..., description="Alert severity level")
     status: AlertStatus = Field(AlertStatus.ACTIVE, description="Alert status")
-    source: Optional[str] = Field(None, description="Where alert came from (e.g., task_manager, sensor_id)")
+    source: Optional[str] = Field(
+        None, description="Where alert came from (e.g., task_manager, sensor_id)"
+    )
 
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
@@ -78,7 +88,9 @@ class Alert(BaseModel):
     resolutionNotes: Optional[str] = Field(None, description="Resolution notes")
 
     # Sensor Data (future)
-    sensorData: Optional[dict] = Field(None, description="Flexible sensor data for future integration")
+    sensorData: Optional[dict] = Field(
+        None, description="Flexible sensor data for future integration"
+    )
 
     class Config:
         json_schema_extra = {
@@ -99,13 +111,14 @@ class Alert(BaseModel):
                 "resolvedByEmail": None,
                 "resolvedAt": None,
                 "resolutionNotes": None,
-                "sensorData": None
+                "sensorData": None,
             }
         }
 
 
 class AlertListResponse(BaseModel):
     """Response for list of alerts"""
+
     data: List[Alert]
     total: int
     page: int
@@ -115,5 +128,6 @@ class AlertListResponse(BaseModel):
 
 class AlertResponse(BaseModel):
     """Response for single alert"""
+
     data: Alert
     message: Optional[str] = None

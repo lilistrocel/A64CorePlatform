@@ -10,9 +10,17 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
-from ...models.sales_order import SalesOrder, SalesOrderCreate, SalesOrderUpdate, SalesOrderStatus
+from ...models.sales_order import (
+    SalesOrder,
+    SalesOrderCreate,
+    SalesOrderUpdate,
+    SalesOrderStatus,
+)
 from ..database import sales_db
-from src.modules.farm_manager.models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+from src.modules.farm_manager.models.farming_year_config import (
+    get_farming_year,
+    DEFAULT_FARMING_YEAR_START_MONTH,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,12 +112,14 @@ class OrderRepository:
             {"_id": "sales_order_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
 
-    async def create(self, order_data: SalesOrderCreate, created_by: UUID) -> SalesOrder:
+    async def create(
+        self, order_data: SalesOrderCreate, created_by: UUID
+    ) -> SalesOrder:
         """
         Create a new sales order with auto-generated orderCode
 
@@ -138,11 +148,13 @@ class OrderRepository:
             orderCode=order_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         order_doc = order.model_dump(by_alias=True)
-        order_doc["orderId"] = str(order_doc["orderId"])  # Convert UUID to string for MongoDB
+        order_doc["orderId"] = str(
+            order_doc["orderId"]
+        )  # Convert UUID to string for MongoDB
         order_doc["customerId"] = str(order_doc["customerId"])
         order_doc["createdBy"] = str(order_doc["createdBy"])
         if order_doc.get("shipmentId"):
@@ -238,7 +250,9 @@ class OrderRepository:
 
         return orders, total
 
-    async def update(self, order_id: UUID, update_data: SalesOrderUpdate) -> Optional[SalesOrder]:
+    async def update(
+        self, order_id: UUID, update_data: SalesOrderUpdate
+    ) -> Optional[SalesOrder]:
         """
         Update a sales order
 
@@ -274,8 +288,7 @@ class OrderRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"orderId": str(order_id)},
-            {"$set": update_dict}
+            {"orderId": str(order_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:
@@ -284,7 +297,9 @@ class OrderRepository:
 
         return None
 
-    async def update_status(self, order_id: UUID, new_status: SalesOrderStatus) -> Optional[SalesOrder]:
+    async def update_status(
+        self, order_id: UUID, new_status: SalesOrderStatus
+    ) -> Optional[SalesOrder]:
         """
         Update order status
 
@@ -299,12 +314,7 @@ class OrderRepository:
 
         result = await collection.update_one(
             {"orderId": str(order_id)},
-            {
-                "$set": {
-                    "status": new_status.value,
-                    "updatedAt": datetime.utcnow()
-                }
-            }
+            {"$set": {"status": new_status.value, "updatedAt": datetime.utcnow()}},
         )
 
         if result.modified_count > 0:
@@ -370,28 +380,30 @@ class OrderRepository:
         if farming_year is not None:
             pipeline.append({"$match": {"farmingYear": farming_year}})
 
-        pipeline.append({
-            "$group": {
-                "_id": None,
-                "totalRevenue": {"$sum": {"$ifNull": ["$total", 0]}},
-                "pendingPayments": {
-                    "$sum": {
-                        "$cond": [
-                            {"$in": ["$paymentStatus", ["pending", "partial"]]},
-                            {"$ifNull": ["$total", 0]},
-                            0
-                        ]
-                    }
+        pipeline.append(
+            {
+                "$group": {
+                    "_id": None,
+                    "totalRevenue": {"$sum": {"$ifNull": ["$total", 0]}},
+                    "pendingPayments": {
+                        "$sum": {
+                            "$cond": [
+                                {"$in": ["$paymentStatus", ["pending", "partial"]]},
+                                {"$ifNull": ["$total", 0]},
+                                0,
+                            ]
+                        }
+                    },
                 }
             }
-        })
+        )
 
         results = await collection.aggregate(pipeline).to_list(length=1)
 
         if results:
             return {
                 "totalRevenue": round(results[0].get("totalRevenue", 0), 2),
-                "pendingPayments": round(results[0].get("pendingPayments", 0), 2)
+                "pendingPayments": round(results[0].get("pendingPayments", 0), 2),
             }
 
         return {"totalRevenue": 0, "pendingPayments": 0}

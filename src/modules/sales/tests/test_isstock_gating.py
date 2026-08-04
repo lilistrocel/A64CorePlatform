@@ -155,11 +155,15 @@ class _FakeCollection:
                 return dict(doc)
         return None
 
-    def find(self, query: Dict = None, projection: Any = None, *args: Any, **kwargs: Any) -> "_FakeCursor":
+    def find(
+        self, query: Dict = None, projection: Any = None, *args: Any, **kwargs: Any
+    ) -> "_FakeCursor":
         matched = [dict(d) for d in self._docs if _matches(d, query or {})]
         return _FakeCursor(matched)
 
-    async def find_one_and_update(self, query: Dict, update: Dict, **kwargs: Any) -> Any:
+    async def find_one_and_update(
+        self, query: Dict, update: Dict, **kwargs: Any
+    ) -> Any:
         upsert = kwargs.get("upsert", False)
         for doc in self._docs:
             if _matches(doc, query):
@@ -313,7 +317,12 @@ def _make_open_delivery() -> Dict[str, Any]:
         "deliveredByUserId": None,
         "notes": None,
         "totalCogs": 500.0,
-        "baseDocRef": {"docType": "SO", "docId": "so-001", "docNumber": "SO-2026-0001", "lineId": None},
+        "baseDocRef": {
+            "docType": "SO",
+            "docId": "so-001",
+            "docNumber": "SO-2026-0001",
+            "lineId": None,
+        },
         "targetDocRefs": [],
         "outboxEventId": None,
         "outboxEventEmittedAt": None,
@@ -350,6 +359,7 @@ def _make_open_delivery() -> Dict[str, Any]:
 # Patch context-manager helpers
 # ---------------------------------------------------------------------------
 
+
 def _patch_ari_ext(side_effect_fn=None, return_value: Optional[Dict] = None):
     """Patch _get_item_finance_ext in ar_invoice_service."""
     if side_effect_fn is not None:
@@ -369,7 +379,8 @@ def _patch_ari_cust_ext(return_value: Optional[Dict] = None):
     return patch(
         "src.modules.sales.services.ar_invoice_service._get_customer_finance_ext",
         new_callable=AsyncMock,
-        return_value=return_value or {
+        return_value=return_value
+        or {
             "customer_finance_ext_id": "cust-ext-001",
             "customerId": _CUSTOMER_ID,
             "arControlAccountId": "gl-ar-001",
@@ -418,6 +429,7 @@ def _patch_outbox():
 # ---------------------------------------------------------------------------
 # Payload builders
 # ---------------------------------------------------------------------------
+
 
 def _make_ari_payload(
     item_id: str = "item-svc-001",
@@ -569,7 +581,9 @@ def _make_rr_payload(
     lines = [_line(item_id, item_name)]
     if extra_lines:
         for el in extra_lines:
-            lines.append(_line(el["item_id"], el["item_name"], el.get("line_base_doc_id")))
+            lines.append(
+                _line(el["item_id"], el["item_name"], el.get("line_base_doc_id"))
+            )
 
     return ReturnRequestCreate(
         company_code=_COMPANY_CODE,
@@ -711,7 +725,9 @@ class TestARInvoiceIsStock:
         """
         db = _FakeDB()
 
-        with _patch_ari_ext(return_value=_make_stock_ext("item-stock-001")), _patch_ari_cust_ext():
+        with _patch_ari_ext(
+            return_value=_make_stock_ext("item-stock-001")
+        ), _patch_ari_cust_ext():
             with pytest.raises(ValueError, match="stock item") as exc_info:
                 await create_ar_invoice(
                     db,
@@ -742,7 +758,9 @@ class TestARInvoiceIsStock:
                     payload=_make_ari_payload(
                         item_id="item-stock-001",
                         item_name="Stock Gadget A",
-                        extra_lines=[{"item_id": "item-stock-002", "item_name": "Stock Gadget B"}],
+                        extra_lines=[
+                            {"item_id": "item-stock-002", "item_name": "Stock Gadget B"}
+                        ],
                     ),
                     org_id=_ORG,
                     user_id=_USER,
@@ -791,7 +809,9 @@ class TestARInvoiceIsStock:
         db = _FakeDB()
         _ITEM_ID = "item-svc-sanity-001"
 
-        with _patch_ari_ext(return_value=_make_service_ext(_ITEM_ID)), _patch_ari_cust_ext():
+        with _patch_ari_ext(
+            return_value=_make_service_ext(_ITEM_ID)
+        ), _patch_ari_cust_ext():
             ari = await create_ar_invoice(
                 db,
                 payload=_make_ari_payload(item_id=_ITEM_ID, item_name="Consulting Fee"),
@@ -872,13 +892,17 @@ class TestARInvoiceIsStock:
         with _patch_ari_ext(side_effect_fn=_service_ext), _patch_ari_cust_ext():
             ari = await create_ar_invoice(
                 db,
-                payload=_make_ari_payload(item_id="item-svc-upd-001", item_name="Service Fee"),
+                payload=_make_ari_payload(
+                    item_id="item-svc-upd-001", item_name="Service Fee"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
 
         # Update: replace lines (same service item, new qty)
-        with _patch_ari_ext(return_value=_make_service_ext("item-svc-upd-001")), _patch_ari_cust_ext():
+        with _patch_ari_ext(
+            return_value=_make_service_ext("item-svc-upd-001")
+        ), _patch_ari_cust_ext():
             updated = await update_ar_invoice(
                 db,
                 doc_entry=ari.doc_entry,
@@ -919,13 +943,17 @@ class TestARInvoiceIsStock:
         with _patch_ari_ext(side_effect_fn=_service_ext), _patch_ari_cust_ext():
             ari = await create_ar_invoice(
                 db,
-                payload=_make_ari_payload(item_id="item-svc-001", item_name="Service Fee"),
+                payload=_make_ari_payload(
+                    item_id="item-svc-001", item_name="Service Fee"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
 
         # Now try to update with a stock item
-        with _patch_ari_ext(return_value=_make_stock_ext(_STOCK_ITEM_ID)), _patch_ari_cust_ext():
+        with _patch_ari_ext(
+            return_value=_make_stock_ext(_STOCK_ITEM_ID)
+        ), _patch_ari_cust_ext():
             with pytest.raises(ValueError, match="stock item"):
                 await update_ar_invoice(
                     db,
@@ -1022,17 +1050,22 @@ class TestARInvoiceIsStock:
         with _patch_ari_ext(side_effect_fn=_service_ext), _patch_ari_cust_ext():
             ari = await create_ar_invoice(
                 db,
-                payload=_make_ari_payload(item_id="item-svc-trans-001", item_name="Consulting"),
+                payload=_make_ari_payload(
+                    item_id="item-svc-trans-001", item_name="Consulting"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
 
-        with _patch_ari_ext(return_value=_make_service_ext("item-svc-trans-001")), \
-                _patch_ari_cust_ext(), _patch_outbox():
+        with _patch_ari_ext(
+            return_value=_make_service_ext("item-svc-trans-001")
+        ), _patch_ari_cust_ext(), _patch_outbox():
             result = await ari_transition_status(
                 db,
                 doc_entry=ari.doc_entry,
-                request_body=ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ARInvoiceStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1040,7 +1073,9 @@ class TestARInvoiceIsStock:
         assert result.status == DocumentStatus.OPEN
 
     @pytest.mark.asyncio
-    async def test_transition_draft_to_open_item_reclassified_to_stock_rejected(self) -> None:
+    async def test_transition_draft_to_open_item_reclassified_to_stock_rejected(
+        self,
+    ) -> None:
         """
         Group C-11: admin flips item to stock while ARI sits in DRAFT → 422 on transition.
 
@@ -1057,25 +1092,32 @@ class TestARInvoiceIsStock:
         with _patch_ari_ext(side_effect_fn=_service_ext), _patch_ari_cust_ext():
             ari = await create_ar_invoice(
                 db,
-                payload=_make_ari_payload(item_id=_ITEM_ID, item_name="Reclassified Item"),
+                payload=_make_ari_payload(
+                    item_id=_ITEM_ID, item_name="Reclassified Item"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
 
         # Admin reclassifies item to stock in finance service
-        with _patch_ari_ext(return_value=_make_stock_ext(_ITEM_ID)), \
-                _patch_ari_cust_ext(), _patch_outbox():
+        with _patch_ari_ext(
+            return_value=_make_stock_ext(_ITEM_ID)
+        ), _patch_ari_cust_ext(), _patch_outbox():
             with pytest.raises(ValueError, match="stock item"):
                 await ari_transition_status(
                     db,
                     doc_entry=ari.doc_entry,
-                    request_body=ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                    request_body=ARInvoiceStatusTransitionRequest(
+                        new_status=DocumentStatus.OPEN
+                    ),
                     org_id=_ORG,
                     user_id=_USER,
                 )
 
     @pytest.mark.asyncio
-    async def test_transition_draft_to_open_finance_ext_fetch_fails_open_succeeds(self) -> None:
+    async def test_transition_draft_to_open_finance_ext_fetch_fails_open_succeeds(
+        self,
+    ) -> None:
         """
         Group C-12: finance ext fetch raises ValueError → transition succeeds (fail-open).
 
@@ -1108,8 +1150,9 @@ class TestARInvoiceIsStock:
         # skipped for that item.  This means the transition also skips revenueAccountId
         # validation (same fail-open policy).  The test verifies the overall
         # fail-open contract: finance unavailability must not block the transition.
-        with _patch_ari_ext(side_effect_fn=_finance_down), \
-                _patch_ari_cust_ext(), _patch_outbox():
+        with _patch_ari_ext(
+            side_effect_fn=_finance_down
+        ), _patch_ari_cust_ext(), _patch_outbox():
             # The revenueAccountId check also runs before isStock; it raises ValueError
             # for ext_record=None case.  This tests the fail-open on the isStock path
             # only when revenueAccountId was already validated (non-None ext).
@@ -1130,12 +1173,15 @@ class TestARInvoiceIsStock:
             # This tests that the transition succeeds normally.
             return _make_service_ext(item_id)
 
-        with _patch_ari_ext(side_effect_fn=_first_ok_then_fail), \
-                _patch_ari_cust_ext(), _patch_outbox():
+        with _patch_ari_ext(
+            side_effect_fn=_first_ok_then_fail
+        ), _patch_ari_cust_ext(), _patch_outbox():
             result = await ari_transition_status(
                 db,
                 doc_entry=ari.doc_entry,
-                request_body=ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ARInvoiceStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1190,12 +1236,15 @@ class TestARInvoiceIsStock:
             )
 
         # Transition to OPEN with stock ext — must succeed for from-Delivery ARI
-        with _patch_ari_ext(side_effect_fn=_stock_ext), \
-                _patch_ari_cust_ext(), _patch_outbox():
+        with _patch_ari_ext(
+            side_effect_fn=_stock_ext
+        ), _patch_ari_cust_ext(), _patch_outbox():
             result = await ari_transition_status(
                 db,
                 doc_entry=ari.doc_entry,
-                request_body=ARInvoiceStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ARInvoiceStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1229,7 +1278,9 @@ class TestARCreditNoteIsStock:
         with _patch_arc_ext(side_effect_fn=_service_ext):
             arc = await create_ar_credit_note(
                 db,
-                payload=_make_arc_payload(item_id="item-svc-001", item_name="Service Fee"),
+                payload=_make_arc_payload(
+                    item_id="item-svc-001", item_name="Service Fee"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1279,7 +1330,12 @@ class TestARCreditNoteIsStock:
                     payload=_make_arc_payload(
                         item_id="item-stock-arc-001",
                         item_name="Inventory Widget A",
-                        extra_lines=[{"item_id": "item-stock-arc-002", "item_name": "Inventory Widget B"}],
+                        extra_lines=[
+                            {
+                                "item_id": "item-stock-arc-002",
+                                "item_name": "Inventory Widget B",
+                            }
+                        ],
                     ),
                     org_id=_ORG,
                     user_id=_USER,
@@ -1327,7 +1383,9 @@ class TestARCreditNoteIsStock:
         with _patch_arc_ext(return_value=_make_service_ext(_ITEM_ID)):
             arc = await create_ar_credit_note(
                 db,
-                payload=_make_arc_payload(item_id=_ITEM_ID, item_name="Consulting Credit"),
+                payload=_make_arc_payload(
+                    item_id=_ITEM_ID, item_name="Consulting Credit"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1437,7 +1495,9 @@ class TestARCreditNoteIsStock:
         with _patch_arc_ext(return_value=_make_service_ext("item-svc-arc-001")):
             arc = await create_ar_credit_note(
                 db,
-                payload=_make_arc_payload(item_id="item-svc-arc-001", item_name="Service Fee"),
+                payload=_make_arc_payload(
+                    item_id="item-svc-arc-001", item_name="Service Fee"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1541,7 +1601,9 @@ class TestARCreditNoteIsStock:
             result = await arc_transition_status(
                 db,
                 doc_entry=arc.doc_entry,
-                request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ARCreditNoteStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1549,7 +1611,9 @@ class TestARCreditNoteIsStock:
         assert result.status == DocumentStatus.OPEN
 
     @pytest.mark.asyncio
-    async def test_transition_draft_to_open_item_reclassified_to_stock_rejected(self) -> None:
+    async def test_transition_draft_to_open_item_reclassified_to_stock_rejected(
+        self,
+    ) -> None:
         """
         Group C-11: admin flips standalone ARC item to stock while in DRAFT → rejected.
         """
@@ -1560,7 +1624,9 @@ class TestARCreditNoteIsStock:
         with _patch_arc_ext(return_value=_make_service_ext(_ITEM_ID)):
             arc = await create_ar_credit_note(
                 db,
-                payload=_make_arc_payload(item_id=_ITEM_ID, item_name="Reclassified Fee"),
+                payload=_make_arc_payload(
+                    item_id=_ITEM_ID, item_name="Reclassified Fee"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1571,13 +1637,17 @@ class TestARCreditNoteIsStock:
                 await arc_transition_status(
                     db,
                     doc_entry=arc.doc_entry,
-                    request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                    request_body=ARCreditNoteStatusTransitionRequest(
+                        new_status=DocumentStatus.OPEN
+                    ),
                     org_id=_ORG,
                     user_id=_USER,
                 )
 
     @pytest.mark.asyncio
-    async def test_transition_draft_to_open_finance_ext_fetch_fails_open_succeeds(self) -> None:
+    async def test_transition_draft_to_open_finance_ext_fetch_fails_open_succeeds(
+        self,
+    ) -> None:
         """
         Group C-12: finance ext fetch raises ValueError → transition succeeds (fail-open).
 
@@ -1605,7 +1675,9 @@ class TestARCreditNoteIsStock:
             result = await arc_transition_status(
                 db,
                 doc_entry=arc.doc_entry,
-                request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ARCreditNoteStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1653,7 +1725,9 @@ class TestARCreditNoteIsStock:
             result = await arc_transition_status(
                 db,
                 doc_entry=arc.doc_entry,
-                request_body=ARCreditNoteStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ARCreditNoteStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1731,7 +1805,9 @@ class TestReturnRequestIsStock:
         with _patch_rr_ext(side_effect_fn=_service_ext):
             rr = await create_return_request(
                 db,
-                payload=_make_rr_payload(item_id="item-svc-rr-001", item_name="Service Item"),
+                payload=_make_rr_payload(
+                    item_id="item-svc-rr-001", item_name="Service Item"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1754,7 +1830,9 @@ class TestReturnRequestIsStock:
         _ITEM_ID = "item-stock-rr-001"
         doc_entry = str(uuid.uuid4())
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id="item-svc-rr-001", item_name="Service Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id="item-svc-rr-001", item_name="Service Item"
+            )
         )
 
         with _patch_rr_ext(return_value=_make_stock_ext(_ITEM_ID)):
@@ -1797,7 +1875,9 @@ class TestReturnRequestIsStock:
         db = _FakeDB()
         doc_entry = str(uuid.uuid4())
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id="item-svc-001", item_name="Service Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id="item-svc-001", item_name="Service Item"
+            )
         )
 
         async def _all_stock(item_id, org_id, auth_token):
@@ -1851,7 +1931,9 @@ class TestReturnRequestIsStock:
                 )
 
     @pytest.mark.asyncio
-    async def test_direct_rr_update_mixed_stock_service_rejected_doc_not_modified(self) -> None:
+    async def test_direct_rr_update_mixed_stock_service_rejected_doc_not_modified(
+        self,
+    ) -> None:
         """
         Group A-4 (via update path): direct RR doc + mixed lines → rejected wholesale.
 
@@ -1860,7 +1942,9 @@ class TestReturnRequestIsStock:
         db = _FakeDB()
         doc_entry = str(uuid.uuid4())
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id="item-svc-001", item_name="Service Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id="item-svc-001", item_name="Service Item"
+            )
         )
         _STOCK_ID = "item-stock-rr-mix-001"
         _SVC_ID = "item-svc-rr-mix-001"
@@ -1933,7 +2017,9 @@ class TestReturnRequestIsStock:
         with _patch_rr_ext(return_value=_make_service_ext(_ITEM_ID)):
             rr = await create_return_request(
                 db,
-                payload=_make_rr_payload(item_id=_ITEM_ID, item_name="Consulting Return"),
+                payload=_make_rr_payload(
+                    item_id=_ITEM_ID, item_name="Consulting Return"
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -1988,7 +2074,9 @@ class TestReturnRequestIsStock:
         db = _FakeDB()
         doc_entry = str(uuid.uuid4())
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id="item-svc-rr-upd-001", item_name="Service Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id="item-svc-rr-upd-001", item_name="Service Item"
+            )
         )
         _ITEM_ID = "item-svc-rr-upd-001"
 
@@ -2033,7 +2121,9 @@ class TestReturnRequestIsStock:
         doc_entry = str(uuid.uuid4())
         _STOCK_ID = "item-stock-rr-upd-001"
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id="item-svc-rr-001", item_name="Service Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id="item-svc-rr-001", item_name="Service Item"
+            )
         )
 
         with _patch_rr_ext(return_value=_make_stock_ext(_STOCK_ID)):
@@ -2110,7 +2200,9 @@ class TestReturnRequestIsStock:
     # -----------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_transition_draft_to_open_service_item_direct_rr_succeeds(self) -> None:
+    async def test_transition_draft_to_open_service_item_direct_rr_succeeds(
+        self,
+    ) -> None:
         """
         Group C-10: service-item direct RR DRAFT → OPEN → success.
 
@@ -2120,14 +2212,18 @@ class TestReturnRequestIsStock:
         db = _FakeDB()
         doc_entry = str(uuid.uuid4())
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id="item-svc-rr-trans-001", item_name="Service Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id="item-svc-rr-trans-001", item_name="Service Item"
+            )
         )
 
         with _patch_rr_ext(return_value=_make_service_ext("item-svc-rr-trans-001")):
             result = await rr_transition_status(
                 db,
                 doc_entry=doc_entry,
-                request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ReturnRequestStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -2135,7 +2231,9 @@ class TestReturnRequestIsStock:
         assert result.status == DocumentStatus.OPEN
 
     @pytest.mark.asyncio
-    async def test_transition_draft_to_open_item_reclassified_to_stock_rejected(self) -> None:
+    async def test_transition_draft_to_open_item_reclassified_to_stock_rejected(
+        self,
+    ) -> None:
         """
         Group C-11: admin flips direct RR item to stock while in DRAFT → rejected.
 
@@ -2146,7 +2244,9 @@ class TestReturnRequestIsStock:
         doc_entry = str(uuid.uuid4())
         _ITEM_ID = "item-svc-rr-reclass-001"
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id=_ITEM_ID, item_name="Reclassified Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id=_ITEM_ID, item_name="Reclassified Item"
+            )
         )
 
         # Admin reclassifies item to stock
@@ -2155,13 +2255,17 @@ class TestReturnRequestIsStock:
                 await rr_transition_status(
                     db,
                     doc_entry=doc_entry,
-                    request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                    request_body=ReturnRequestStatusTransitionRequest(
+                        new_status=DocumentStatus.OPEN
+                    ),
                     org_id=_ORG,
                     user_id=_USER,
                 )
 
     @pytest.mark.asyncio
-    async def test_transition_draft_to_open_finance_ext_fetch_fails_open_succeeds(self) -> None:
+    async def test_transition_draft_to_open_finance_ext_fetch_fails_open_succeeds(
+        self,
+    ) -> None:
         """
         Group C-12: finance ext fetch raises ValueError → transition succeeds (fail-open).
 
@@ -2176,7 +2280,9 @@ class TestReturnRequestIsStock:
         db = _FakeDB()
         doc_entry = str(uuid.uuid4())
         db["return_requests_v2"]._add(
-            _make_rr_direct_doc(doc_entry, item_id="item-svc-rr-failopen-001", item_name="Service Item")
+            _make_rr_direct_doc(
+                doc_entry, item_id="item-svc-rr-failopen-001", item_name="Service Item"
+            )
         )
 
         async def _finance_down(item_id, org_id, auth_token):
@@ -2186,7 +2292,9 @@ class TestReturnRequestIsStock:
             result = await rr_transition_status(
                 db,
                 doc_entry=doc_entry,
-                request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ReturnRequestStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )
@@ -2227,7 +2335,9 @@ class TestReturnRequestIsStock:
             result = await rr_transition_status(
                 db,
                 doc_entry=rr.doc_entry,
-                request_body=ReturnRequestStatusTransitionRequest(new_status=DocumentStatus.OPEN),
+                request_body=ReturnRequestStatusTransitionRequest(
+                    new_status=DocumentStatus.OPEN
+                ),
                 org_id=_ORG,
                 user_id=_USER,
             )

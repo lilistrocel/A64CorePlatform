@@ -168,16 +168,16 @@ _DOC_TYPE_AP_INVOICE: str = "AP_INVOICE"
 # ---------------------------------------------------------------------------
 
 _LEGACY_STATUS_MAP: Dict[str, DocumentStatus] = {
-    "Draft":            DocumentStatus.DRAFT,
+    "Draft": DocumentStatus.DRAFT,
     "Pending Approval": DocumentStatus.PENDING_APPROVAL,
-    "Approved":         DocumentStatus.OPEN,       # semantic: Approved = active/open
-    "Open":             DocumentStatus.OPEN,
-    "Partly Closed":    DocumentStatus.PARTLY_CLOSED,
-    "Closed":           DocumentStatus.CLOSED,
-    "Cancelled":        DocumentStatus.CANCELLED,
+    "Approved": DocumentStatus.OPEN,  # semantic: Approved = active/open
+    "Open": DocumentStatus.OPEN,
+    "Partly Closed": DocumentStatus.PARTLY_CLOSED,
+    "Closed": DocumentStatus.CLOSED,
+    "Cancelled": DocumentStatus.CANCELLED,
     # Reason: GR uses "Posted" to mean the document is terminal/open in the
     # shared vocabulary.  LEGAL_TRANSITIONS["GR"] maps DRAFT → OPEN.
-    "Posted":           DocumentStatus.OPEN,
+    "Posted": DocumentStatus.OPEN,
 }
 
 # Reason: these legacy statuses have no equivalent in DocumentStatus.
@@ -185,7 +185,9 @@ _LEGACY_STATUS_MAP: Dict[str, DocumentStatus] = {
 # enum.  Transition validation for paths involving these states falls back to
 # the per-module check below.  T-200.22+ will decide whether to add them or
 # rename them.
-_LEGACY_NO_ENUM_STATES = frozenset({"Rejected", "Sent", "Partially Received", "Received"})
+_LEGACY_NO_ENUM_STATES = frozenset(
+    {"Rejected", "Sent", "Partially Received", "Received"}
+)
 
 
 # ---------------------------------------------------------------------------
@@ -509,22 +511,24 @@ def build_gr_event_payload(
 
     event_lines = []
     for ln in sorted(lines, key=lambda x: x.get("lineNumber", 0)):
-        event_lines.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln["itemId"],
-            "itemCode": ln.get("itemCode", ""),
-            "itemName": ln.get("itemName", ""),
-            "itemType": ln.get("itemType", "raw_material"),
-            "quantity": str(ln.get("quantity", 0)),
-            "uom": ln.get("uom", ""),
-            "unitPrice": str(ln.get("unitPrice", 0)),
-            "lineNet": str(ln.get("lineNet", 0)),
-            "lineTax": str(ln.get("lineTax", 0)),
-            "lineGross": str(ln.get("lineGross", 0)),
-            "taxCode": ln.get("taxCode"),
-            "costCenterId": ln.get("costCenterId"),
-            "baseLineId": ln.get("baseLineId"),
-        })
+        event_lines.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln["itemId"],
+                "itemCode": ln.get("itemCode", ""),
+                "itemName": ln.get("itemName", ""),
+                "itemType": ln.get("itemType", "raw_material"),
+                "quantity": str(ln.get("quantity", 0)),
+                "uom": ln.get("uom", ""),
+                "unitPrice": str(ln.get("unitPrice", 0)),
+                "lineNet": str(ln.get("lineNet", 0)),
+                "lineTax": str(ln.get("lineTax", 0)),
+                "lineGross": str(ln.get("lineGross", 0)),
+                "taxCode": ln.get("taxCode"),
+                "costCenterId": ln.get("costCenterId"),
+                "baseLineId": ln.get("baseLineId"),
+            }
+        )
 
     return {
         "grDocId": header["docId"],
@@ -596,29 +600,29 @@ def build_ap_invoice_event_payload(
 
     event_lines = []
     for ln in sorted(lines, key=lambda x: x.get("lineNumber", 0)):
-        event_lines.append({
-            "lineNumber": ln["lineNumber"],
-            "itemId": ln["itemId"],
-            "itemCode": ln.get("itemCode", ""),
-            "itemName": ln.get("itemName", ""),
-            "itemType": ln.get("itemType", "raw_material"),
-            "quantity": str(ln.get("quantity", 0)),
-            "uom": ln.get("uom", ""),
-            "poUnitPrice": str(ln.get("poUnitPrice", 0)),
-            "invoiceUnitPrice": str(ln.get("unitPrice", 0)),
-            "priceVarianceAmount": str(ln.get("priceVarianceAmount", 0)),
-            "lineNet": str(ln.get("lineNet", 0)),
-            "lineTax": str(ln.get("lineTax", 0)),
-            "lineGross": str(ln.get("lineGross", 0)),
-            "taxCode": ln.get("taxCode"),
-            "costCenterId": ln.get("costCenterId"),
-            "grLineId": ln.get("grLineId"),
-            "baseLineId": ln.get("baseLineId"),
-        })
+        event_lines.append(
+            {
+                "lineNumber": ln["lineNumber"],
+                "itemId": ln["itemId"],
+                "itemCode": ln.get("itemCode", ""),
+                "itemName": ln.get("itemName", ""),
+                "itemType": ln.get("itemType", "raw_material"),
+                "quantity": str(ln.get("quantity", 0)),
+                "uom": ln.get("uom", ""),
+                "poUnitPrice": str(ln.get("poUnitPrice", 0)),
+                "invoiceUnitPrice": str(ln.get("unitPrice", 0)),
+                "priceVarianceAmount": str(ln.get("priceVarianceAmount", 0)),
+                "lineNet": str(ln.get("lineNet", 0)),
+                "lineTax": str(ln.get("lineTax", 0)),
+                "lineGross": str(ln.get("lineGross", 0)),
+                "taxCode": ln.get("taxCode"),
+                "costCenterId": ln.get("costCenterId"),
+                "grLineId": ln.get("grLineId"),
+                "baseLineId": ln.get("baseLineId"),
+            }
+        )
 
-    total_variance = sum(
-        Decimal(str(ln.get("priceVarianceAmount", 0))) for ln in lines
-    )
+    total_variance = sum(Decimal(str(ln.get("priceVarianceAmount", 0))) for ln in lines)
 
     return {
         "apDocId": header["docId"],
@@ -732,7 +736,10 @@ def _header_to_po_response(doc: Dict[str, Any]) -> POResponse:
 
 def _header_to_gr_response(doc: Dict[str, Any]) -> "GRResponse":
     """Convert a raw GR header document to GRResponse."""
-    from ..models.document import GRResponse  # local import avoids circular at module level
+    from ..models.document import (
+        GRResponse,
+    )  # local import avoids circular at module level
+
     return GRResponse(
         docId=doc["docId"],
         organizationId=doc["organizationId"],
@@ -795,14 +802,26 @@ def _line_to_response(doc: Dict[str, Any]) -> DocumentLineResponse:
         notes=doc.get("notes"),
         # AP-specific fields (null for PR/PO/GR lines)
         grLineId=doc.get("grLineId"),
-        poUnitPrice=Decimal(str(doc["poUnitPrice"])) if doc.get("poUnitPrice") is not None else None,
+        poUnitPrice=(
+            Decimal(str(doc["poUnitPrice"]))
+            if doc.get("poUnitPrice") is not None
+            else None
+        ),
         # Reason: AP lines carry the invoiced price as `unitPrice` in storage.
         # Surface the same value as `invoiceUnitPrice` for AP lines so frontend
         # consumers reading the semantic field name see the stored value.
         # Only populate when this is an AP line (presence of poUnitPrice is
         # the existing AP-line marker on stored docs).
-        invoiceUnitPrice=Decimal(str(doc.get("unitPrice", 0))) if doc.get("poUnitPrice") is not None else None,
-        priceVarianceAmount=Decimal(str(doc["priceVarianceAmount"])) if doc.get("priceVarianceAmount") is not None else None,
+        invoiceUnitPrice=(
+            Decimal(str(doc.get("unitPrice", 0)))
+            if doc.get("poUnitPrice") is not None
+            else None
+        ),
+        priceVarianceAmount=(
+            Decimal(str(doc["priceVarianceAmount"]))
+            if doc.get("priceVarianceAmount") is not None
+            else None
+        ),
         createdAt=doc["createdAt"],
         updatedAt=doc["updatedAt"],
     )
@@ -810,7 +829,10 @@ def _line_to_response(doc: Dict[str, Any]) -> DocumentLineResponse:
 
 def _header_to_ap_response(doc: Dict[str, Any]) -> "APResponse":
     """Convert a raw AP header document to APResponse."""
-    from ..models.document import APResponse  # local import avoids circular at module level
+    from ..models.document import (
+        APResponse,
+    )  # local import avoids circular at module level
+
     return APResponse(
         docId=doc["docId"],
         organizationId=doc["organizationId"],
@@ -923,7 +945,9 @@ def _compute_line_totals(
     """
     qty = Decimal(str(line_in.quantity))
     price = Decimal(str(line_in.unitPrice))
-    disc_pct = Decimal(str(getattr(line_in, "discountPercent", Decimal("0")) or Decimal("0")))
+    disc_pct = Decimal(
+        str(getattr(line_in, "discountPercent", Decimal("0")) or Decimal("0"))
+    )
     # Reason: discount factor multiplies the gross line into the net after discount.
     # discountPercent is clamped 0..100 at the schema layer.
     discount_factor = (Decimal("100") - disc_pct) / Decimal("100")
@@ -1090,7 +1114,9 @@ class DocumentService:
         line_docs: List[Dict[str, Any]] = []
         for idx, line_in in enumerate(line_inputs, start=1):
             item_info = await self._resolve_item(line_in.itemId, org_id)
-            computed = _compute_line_totals(line_in, item_info["itemCode"], item_info["itemName"])
+            computed = _compute_line_totals(
+                line_in, item_info["itemCode"], item_info["itemName"]
+            )
             doc: Dict[str, Any] = {
                 **computed,
                 "docId": doc_id,
@@ -1243,7 +1269,9 @@ class DocumentService:
         line_docs_pre: List[Dict[str, Any]] = []
         for idx, line_in in enumerate(data.lines, start=1):
             item_info = await self._resolve_item(line_in.itemId, org_id)
-            computed = _compute_line_totals(line_in, item_info["itemCode"], item_info["itemName"])
+            computed = _compute_line_totals(
+                line_in, item_info["itemCode"], item_info["itemName"]
+            )
             doc: Dict[str, Any] = {
                 **computed,
                 "docId": doc_id,
@@ -1257,7 +1285,9 @@ class DocumentService:
         totals = _sum_lines(line_docs_pre)
 
         async with self._txn() as session:
-            doc_number = await _next_doc_number(self._db, company_code, "PR", session=session)
+            doc_number = await _next_doc_number(
+                self._db, company_code, "PR", session=session
+            )
 
             header: Dict[str, Any] = {
                 "docId": doc_id,
@@ -1302,9 +1332,13 @@ class DocumentService:
             await self._headers.insert_one(header, session=session)
             await self._emit_pr_event(header, None, company_code, session=session)
 
-        logger.info("[DocumentService] created PR docNumber=%s org=%s", doc_number, org_id)
+        logger.info(
+            "[DocumentService] created PR docNumber=%s org=%s", doc_number, org_id
+        )
         lines = [_line_to_response(l) for l in line_docs_pre]
-        return PRDetailResponse(**_header_to_pr_response(header).model_dump(), lines=lines)
+        return PRDetailResponse(
+            **_header_to_pr_response(header).model_dump(), lines=lines
+        )
 
     async def list_prs(
         self,
@@ -1344,7 +1378,9 @@ class DocumentService:
 
         total = await self._headers.count_documents(query)
         offset = (page - 1) * per_page
-        cursor = self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        cursor = (
+            self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        )
         docs = await cursor.to_list(length=per_page)
 
         return {
@@ -1367,12 +1403,19 @@ class DocumentService:
             PRDetailResponse or None if not found.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
         lines = await self._get_lines(doc_id)
-        return PRDetailResponse(**_header_to_pr_response(header).model_dump(), lines=lines)
+        return PRDetailResponse(
+            **_header_to_pr_response(header).model_dump(), lines=lines
+        )
 
     async def update_pr(
         self,
@@ -1397,7 +1440,12 @@ class DocumentService:
             ValueError: If PR is not in Draft status.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
@@ -1423,16 +1471,20 @@ class DocumentService:
             new_line_docs = []
             for idx, line_in in enumerate(data.lines, start=1):
                 item_info = await self._resolve_item(line_in.itemId, org_id)
-                computed = _compute_line_totals(line_in, item_info["itemCode"], item_info["itemName"])
-                new_line_docs.append({
-                    **computed,
-                    "docId": doc_id,
-                    "organizationId": org_id,
-                    "lineNumber": idx,
-                    "baseLineId": None,
-                    "createdAt": now,
-                    "updatedAt": now,
-                })
+                computed = _compute_line_totals(
+                    line_in, item_info["itemCode"], item_info["itemName"]
+                )
+                new_line_docs.append(
+                    {
+                        **computed,
+                        "docId": doc_id,
+                        "organizationId": org_id,
+                        "lineNumber": idx,
+                        "baseLineId": None,
+                        "createdAt": now,
+                        "updatedAt": now,
+                    }
+                )
             totals = _sum_lines(new_line_docs)
             updates.update(totals)
 
@@ -1443,12 +1495,16 @@ class DocumentService:
                 if new_line_docs:
                     await self._lines.insert_many(new_line_docs, session=session)
 
-            await self._headers.update_one({"docId": doc_id}, {"$set": updates}, session=session)
+            await self._headers.update_one(
+                {"docId": doc_id}, {"$set": updates}, session=session
+            )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
 
         lines = await self._get_lines(doc_id)
-        return PRDetailResponse(**_header_to_pr_response(updated).model_dump(), lines=lines)
+        return PRDetailResponse(
+            **_header_to_pr_response(updated).model_dump(), lines=lines
+        )
 
     async def soft_delete_pr(self, org_id: str, doc_id: str, deleted_by: str) -> bool:
         """
@@ -1466,7 +1522,12 @@ class DocumentService:
             ValueError: If PR is not in Draft status.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not header:
             return False
@@ -1510,7 +1571,12 @@ class DocumentService:
             ValueError: If PR not found or invalid transition.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
@@ -1518,7 +1584,9 @@ class DocumentService:
         current_status = _parse_status(header["status"])
         # Reason: submit always targets PENDING_APPROVAL first; the engine may
         # then auto-approve to OPEN.  Validate the first hop (DRAFT → PENDING_APPROVAL).
-        assert_legal_transition(_DOC_TYPE_PR, current_status, DocumentStatus.PENDING_APPROVAL)
+        assert_legal_transition(
+            _DOC_TYPE_PR, current_status, DocumentStatus.PENDING_APPROVAL
+        )
 
         # Reason: resolve approval decision before opening the transaction so
         # the network call cannot hold the Mongo transaction open.
@@ -1564,16 +1632,22 @@ class DocumentService:
                 {"$set": {"approvalHistory": []}},
                 session=session,
             )
-            await self._headers.update_one({"docId": doc_id}, {"$set": updates}, session=session)
+            await self._headers.update_one(
+                {"docId": doc_id}, {"$set": updates}, session=session
+            )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_pr_event(updated, previous_status, company_code, session=session)
+            await self._emit_pr_event(
+                updated, previous_status, company_code, session=session
+            )
 
         logger.info(
             "[DocumentService] submitted PR docId=%s newStatus=%s", doc_id, new_status
         )
         lines = await self._get_lines(doc_id)
-        return PRDetailResponse(**_header_to_pr_response(updated).model_dump(), lines=lines)
+        return PRDetailResponse(
+            **_header_to_pr_response(updated).model_dump(), lines=lines
+        )
 
     async def approve_pr(
         self,
@@ -1607,7 +1681,12 @@ class DocumentService:
             ValueError: On invalid state, wrong role, or self-approval.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
@@ -1620,7 +1699,11 @@ class DocumentService:
         # Reason: admin and super_admin always have approval authority over any
         # role; otherwise the approver must hold the exact required role.
         _APPROVAL_OVERRIDE_ROLES = {"admin", "super_admin"}
-        if required_role and approver_role != required_role and approver_role not in _APPROVAL_OVERRIDE_ROLES:
+        if (
+            required_role
+            and approver_role != required_role
+            and approver_role not in _APPROVAL_OVERRIDE_ROLES
+        ):
             raise ValueError(
                 f"Approval requires role '{required_role}'; your role is '{approver_role}'"
             )
@@ -1668,11 +1751,17 @@ class DocumentService:
             )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_pr_event(updated, previous_status, company_code, session=session)
+            await self._emit_pr_event(
+                updated, previous_status, company_code, session=session
+            )
 
-        logger.info("[DocumentService] approved PR docId=%s by user=%s", doc_id, approver_id)
+        logger.info(
+            "[DocumentService] approved PR docId=%s by user=%s", doc_id, approver_id
+        )
         lines = await self._get_lines(doc_id)
-        return PRDetailResponse(**_header_to_pr_response(updated).model_dump(), lines=lines)
+        return PRDetailResponse(
+            **_header_to_pr_response(updated).model_dump(), lines=lines
+        )
 
     async def reject_pr(
         self,
@@ -1701,7 +1790,12 @@ class DocumentService:
             ValueError: On invalid state or wrong role.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
@@ -1714,7 +1808,11 @@ class DocumentService:
         # Reason: admin and super_admin always have approval authority over any
         # role; otherwise the approver must hold the exact required role.
         _APPROVAL_OVERRIDE_ROLES = {"admin", "super_admin"}
-        if required_role and approver_role != required_role and approver_role not in _APPROVAL_OVERRIDE_ROLES:
+        if (
+            required_role
+            and approver_role != required_role
+            and approver_role not in _APPROVAL_OVERRIDE_ROLES
+        ):
             raise ValueError(
                 f"Approval requires role '{required_role}'; your role is '{approver_role}'"
             )
@@ -1753,11 +1851,17 @@ class DocumentService:
             )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_pr_event(updated, previous_status, company_code, session=session)
+            await self._emit_pr_event(
+                updated, previous_status, company_code, session=session
+            )
 
-        logger.info("[DocumentService] rejected PR docId=%s by user=%s", doc_id, approver_id)
+        logger.info(
+            "[DocumentService] rejected PR docId=%s by user=%s", doc_id, approver_id
+        )
         lines = await self._get_lines(doc_id)
-        return PRDetailResponse(**_header_to_pr_response(updated).model_dump(), lines=lines)
+        return PRDetailResponse(
+            **_header_to_pr_response(updated).model_dump(), lines=lines
+        )
 
     async def cancel_pr(
         self,
@@ -1782,7 +1886,12 @@ class DocumentService:
             ValueError: On invalid transition.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
@@ -1796,21 +1905,27 @@ class DocumentService:
         async with self._txn() as session:
             await self._headers.update_one(
                 {"docId": doc_id},
-                {"$set": {
-                    "status": DocumentStatus.CANCELLED.value,
-                    "approvalState": header.get("approvalState", "NotRequired"),
-                    "updatedAt": now,
-                    "updatedBy": cancelled_by,
-                }},
+                {
+                    "$set": {
+                        "status": DocumentStatus.CANCELLED.value,
+                        "approvalState": header.get("approvalState", "NotRequired"),
+                        "updatedAt": now,
+                        "updatedBy": cancelled_by,
+                    }
+                },
                 session=session,
             )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_pr_event(updated, previous_status, company_code, session=session)
+            await self._emit_pr_event(
+                updated, previous_status, company_code, session=session
+            )
 
         logger.info("[DocumentService] cancelled PR docId=%s", doc_id)
         lines = await self._get_lines(doc_id)
-        return PRDetailResponse(**_header_to_pr_response(updated).model_dump(), lines=lines)
+        return PRDetailResponse(
+            **_header_to_pr_response(updated).model_dump(), lines=lines
+        )
 
     # ==================================================================
     # Purchase Order CRUD
@@ -1874,20 +1989,26 @@ class DocumentService:
         line_docs_pre: List[Dict[str, Any]] = []
         for idx, line_in in enumerate(data.lines, start=1):
             item_info = await self._resolve_item(line_in.itemId, org_id)
-            computed = _compute_line_totals(line_in, item_info["itemCode"], item_info["itemName"])
-            line_docs_pre.append({
-                **computed,
-                "docId": doc_id,
-                "organizationId": org_id,
-                "lineNumber": idx,
-                "baseLineId": None,
-                "createdAt": now,
-                "updatedAt": now,
-            })
+            computed = _compute_line_totals(
+                line_in, item_info["itemCode"], item_info["itemName"]
+            )
+            line_docs_pre.append(
+                {
+                    **computed,
+                    "docId": doc_id,
+                    "organizationId": org_id,
+                    "lineNumber": idx,
+                    "baseLineId": None,
+                    "createdAt": now,
+                    "updatedAt": now,
+                }
+            )
         totals = _sum_lines(line_docs_pre)
 
         async with self._txn() as session:
-            doc_number = await _next_doc_number(self._db, company_code, "PO", session=session)
+            doc_number = await _next_doc_number(
+                self._db, company_code, "PO", session=session
+            )
 
             header: Dict[str, Any] = {
                 "docId": doc_id,
@@ -1932,9 +2053,13 @@ class DocumentService:
             await self._headers.insert_one(header, session=session)
             await self._emit_po_event(header, None, company_code, session=session)
 
-        logger.info("[DocumentService] created PO docNumber=%s org=%s", doc_number, org_id)
+        logger.info(
+            "[DocumentService] created PO docNumber=%s org=%s", doc_number, org_id
+        )
         lines = [_line_to_response(l) for l in line_docs_pre]
-        return PODetailResponse(**_header_to_po_response(header).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(header).model_dump(), lines=lines
+        )
 
     async def create_po_from_pr(
         self,
@@ -1975,7 +2100,12 @@ class DocumentService:
                 "The API layer must resolve it via resolve_company_code()."
             )
         pr_header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": pr_doc_id, "docType": "PR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": pr_doc_id,
+                "docType": "PR",
+                "deletedAt": None,
+            }
         )
         if not pr_header:
             raise ValueError(f"PR '{pr_doc_id}' not found")
@@ -2010,39 +2140,43 @@ class DocumentService:
             line_tax = (line_net * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
             line_gross = line_net + line_tax
 
-            po_line_docs.append({
-                "lineId": str(uuid.uuid4()),
-                "docId": doc_id,
-                "organizationId": org_id,
-                "lineNumber": idx,
-                "itemId": pr_line["itemId"],
-                "itemCode": pr_line.get("itemCode", ""),
-                "itemName": pr_line.get("itemName", ""),
-                "description": pr_line.get("description"),
-                "uom": pr_line["uom"],
-                "quantity": float(qty),
-                "openQuantity": float(qty),
-                "closedQuantity": 0.0,
-                "unitPrice": float(price),
-                "discountPercent": float(disc_pct),
-                "lineNet": float(line_net),
-                "taxCode": pr_line.get("taxCode"),
-                "taxRate": float(tax_rate),
-                "lineTax": float(line_tax),
-                "lineGross": float(line_gross),
-                "costCenterId": pr_line.get("costCenterId"),
-                "warehouseId": pr_line.get("warehouseId"),
-                "requestedVendorId": None,
-                "baseLineId": pr_line["lineId"],
-                "notes": pr_line.get("notes"),
-                "createdAt": now,
-                "updatedAt": now,
-            })
+            po_line_docs.append(
+                {
+                    "lineId": str(uuid.uuid4()),
+                    "docId": doc_id,
+                    "organizationId": org_id,
+                    "lineNumber": idx,
+                    "itemId": pr_line["itemId"],
+                    "itemCode": pr_line.get("itemCode", ""),
+                    "itemName": pr_line.get("itemName", ""),
+                    "description": pr_line.get("description"),
+                    "uom": pr_line["uom"],
+                    "quantity": float(qty),
+                    "openQuantity": float(qty),
+                    "closedQuantity": 0.0,
+                    "unitPrice": float(price),
+                    "discountPercent": float(disc_pct),
+                    "lineNet": float(line_net),
+                    "taxCode": pr_line.get("taxCode"),
+                    "taxRate": float(tax_rate),
+                    "lineTax": float(line_tax),
+                    "lineGross": float(line_gross),
+                    "costCenterId": pr_line.get("costCenterId"),
+                    "warehouseId": pr_line.get("warehouseId"),
+                    "requestedVendorId": None,
+                    "baseLineId": pr_line["lineId"],
+                    "notes": pr_line.get("notes"),
+                    "createdAt": now,
+                    "updatedAt": now,
+                }
+            )
 
         totals = _sum_lines(po_line_docs)
 
         async with self._txn() as session:
-            doc_number = await _next_doc_number(self._db, company_code, "PO", session=session)
+            doc_number = await _next_doc_number(
+                self._db, company_code, "PO", session=session
+            )
 
             header: Dict[str, Any] = {
                 "docId": doc_id,
@@ -2096,14 +2230,24 @@ class DocumentService:
             # makes it distinguishable in the audit trail.
             await self._headers.update_one(
                 {"docId": pr_doc_id},
-                {"$set": {"status": DocumentStatus.CLOSED.value, "updatedAt": now, "updatedBy": created_by}},
+                {
+                    "$set": {
+                        "status": DocumentStatus.CLOSED.value,
+                        "updatedAt": now,
+                        "updatedBy": created_by,
+                    }
+                },
                 session=session,
             )
-            pr_updated = await self._headers.find_one({"docId": pr_doc_id}, session=session)
+            pr_updated = await self._headers.find_one(
+                {"docId": pr_doc_id}, session=session
+            )
             assert pr_updated is not None
 
             # Emit both events inside the same transaction.
-            await self._emit_pr_event(pr_updated, DocumentStatus.OPEN.value, company_code, session=session)
+            await self._emit_pr_event(
+                pr_updated, DocumentStatus.OPEN.value, company_code, session=session
+            )
             await self._emit_po_event(header, None, company_code, session=session)
 
         # Reason: best-effort audit write OUTSIDE the transaction — audit failure
@@ -2122,10 +2266,14 @@ class DocumentService:
         )
 
         logger.info(
-            "[DocumentService] created PO %s from PR %s", doc_number, pr_header["docNumber"]
+            "[DocumentService] created PO %s from PR %s",
+            doc_number,
+            pr_header["docNumber"],
         )
         lines = [_line_to_response(l) for l in po_line_docs]
-        return PODetailResponse(**_header_to_po_response(header).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(header).model_dump(), lines=lines
+        )
 
     async def list_pos(
         self,
@@ -2165,7 +2313,9 @@ class DocumentService:
 
         total = await self._headers.count_documents(query)
         offset = (page - 1) * per_page
-        cursor = self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        cursor = (
+            self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        )
         docs = await cursor.to_list(length=per_page)
 
         return {
@@ -2188,12 +2338,19 @@ class DocumentService:
             PODetailResponse or None if not found.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
         lines = await self._get_lines(doc_id)
-        return PODetailResponse(**_header_to_po_response(header).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(header).model_dump(), lines=lines
+        )
 
     async def update_po(
         self,
@@ -2218,7 +2375,12 @@ class DocumentService:
             ValueError: If PO is not in Draft status.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
@@ -2246,16 +2408,20 @@ class DocumentService:
             new_po_line_docs = []
             for idx, line_in in enumerate(data.lines, start=1):
                 item_info = await self._resolve_item(line_in.itemId, org_id)
-                computed = _compute_line_totals(line_in, item_info["itemCode"], item_info["itemName"])
-                new_po_line_docs.append({
-                    **computed,
-                    "docId": doc_id,
-                    "organizationId": org_id,
-                    "lineNumber": idx,
-                    "baseLineId": None,
-                    "createdAt": now,
-                    "updatedAt": now,
-                })
+                computed = _compute_line_totals(
+                    line_in, item_info["itemCode"], item_info["itemName"]
+                )
+                new_po_line_docs.append(
+                    {
+                        **computed,
+                        "docId": doc_id,
+                        "organizationId": org_id,
+                        "lineNumber": idx,
+                        "baseLineId": None,
+                        "createdAt": now,
+                        "updatedAt": now,
+                    }
+                )
             totals = _sum_lines(new_po_line_docs)
             updates.update(totals)
 
@@ -2266,12 +2432,16 @@ class DocumentService:
                 if new_po_line_docs:
                     await self._lines.insert_many(new_po_line_docs, session=session)
 
-            await self._headers.update_one({"docId": doc_id}, {"$set": updates}, session=session)
+            await self._headers.update_one(
+                {"docId": doc_id}, {"$set": updates}, session=session
+            )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
 
         lines = await self._get_lines(doc_id)
-        return PODetailResponse(**_header_to_po_response(updated).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(updated).model_dump(), lines=lines
+        )
 
     async def soft_delete_po(self, org_id: str, doc_id: str, deleted_by: str) -> bool:
         """
@@ -2289,7 +2459,12 @@ class DocumentService:
             ValueError: If PO is not in Draft status.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             return False
@@ -2330,13 +2505,20 @@ class DocumentService:
             ValueError: If PO not found or invalid transition.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
 
         current_status = _parse_status(header["status"])
-        assert_legal_transition(_DOC_TYPE_PO, current_status, DocumentStatus.PENDING_APPROVAL)
+        assert_legal_transition(
+            _DOC_TYPE_PO, current_status, DocumentStatus.PENDING_APPROVAL
+        )
 
         # Reason: resolve approval decision before opening the transaction so
         # the network call cannot hold the Mongo transaction open.
@@ -2383,16 +2565,22 @@ class DocumentService:
                 {"$set": {"approvalHistory": []}},
                 session=session,
             )
-            await self._headers.update_one({"docId": doc_id}, {"$set": updates}, session=session)
+            await self._headers.update_one(
+                {"docId": doc_id}, {"$set": updates}, session=session
+            )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_po_event(updated, previous_status, company_code, session=session)
+            await self._emit_po_event(
+                updated, previous_status, company_code, session=session
+            )
 
         logger.info(
             "[DocumentService] submitted PO docId=%s newStatus=%s", doc_id, new_status
         )
         lines = await self._get_lines(doc_id)
-        return PODetailResponse(**_header_to_po_response(updated).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(updated).model_dump(), lines=lines
+        )
 
     async def approve_po(
         self,
@@ -2421,7 +2609,12 @@ class DocumentService:
             ValueError: On invalid state, wrong role, or self-approval.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
@@ -2433,7 +2626,11 @@ class DocumentService:
         # Reason: admin and super_admin always have approval authority over any
         # role; otherwise the approver must hold the exact required role.
         _APPROVAL_OVERRIDE_ROLES = {"admin", "super_admin"}
-        if required_role and approver_role != required_role and approver_role not in _APPROVAL_OVERRIDE_ROLES:
+        if (
+            required_role
+            and approver_role != required_role
+            and approver_role not in _APPROVAL_OVERRIDE_ROLES
+        ):
             raise ValueError(
                 f"Approval requires role '{required_role}'; your role is '{approver_role}'"
             )
@@ -2479,11 +2676,17 @@ class DocumentService:
             )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_po_event(updated, previous_status, company_code, session=session)
+            await self._emit_po_event(
+                updated, previous_status, company_code, session=session
+            )
 
-        logger.info("[DocumentService] approved PO docId=%s by user=%s", doc_id, approver_id)
+        logger.info(
+            "[DocumentService] approved PO docId=%s by user=%s", doc_id, approver_id
+        )
         lines = await self._get_lines(doc_id)
-        return PODetailResponse(**_header_to_po_response(updated).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(updated).model_dump(), lines=lines
+        )
 
     async def reject_po(
         self,
@@ -2512,7 +2715,12 @@ class DocumentService:
             ValueError: On invalid state or wrong role.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
@@ -2524,7 +2732,11 @@ class DocumentService:
         # Reason: admin and super_admin always have approval authority over any
         # role; otherwise the approver must hold the exact required role.
         _APPROVAL_OVERRIDE_ROLES = {"admin", "super_admin"}
-        if required_role and approver_role != required_role and approver_role not in _APPROVAL_OVERRIDE_ROLES:
+        if (
+            required_role
+            and approver_role != required_role
+            and approver_role not in _APPROVAL_OVERRIDE_ROLES
+        ):
             raise ValueError(
                 f"Approval requires role '{required_role}'; your role is '{approver_role}'"
             )
@@ -2562,11 +2774,17 @@ class DocumentService:
             )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_po_event(updated, previous_status, company_code, session=session)
+            await self._emit_po_event(
+                updated, previous_status, company_code, session=session
+            )
 
-        logger.info("[DocumentService] rejected PO docId=%s by user=%s", doc_id, approver_id)
+        logger.info(
+            "[DocumentService] rejected PO docId=%s by user=%s", doc_id, approver_id
+        )
         lines = await self._get_lines(doc_id)
-        return PODetailResponse(**_header_to_po_response(updated).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(updated).model_dump(), lines=lines
+        )
 
     async def cancel_po(
         self,
@@ -2594,7 +2812,12 @@ class DocumentService:
             ValueError: On invalid transition.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
@@ -2608,20 +2831,26 @@ class DocumentService:
         async with self._txn() as session:
             await self._headers.update_one(
                 {"docId": doc_id},
-                {"$set": {
-                    "status": DocumentStatus.CANCELLED.value,
-                    "updatedAt": now,
-                    "updatedBy": cancelled_by,
-                }},
+                {
+                    "$set": {
+                        "status": DocumentStatus.CANCELLED.value,
+                        "updatedAt": now,
+                        "updatedBy": cancelled_by,
+                    }
+                },
                 session=session,
             )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_po_event(updated, previous_status, company_code, session=session)
+            await self._emit_po_event(
+                updated, previous_status, company_code, session=session
+            )
 
         logger.info("[DocumentService] cancelled PO docId=%s", doc_id)
         lines = await self._get_lines(doc_id)
-        return PODetailResponse(**_header_to_po_response(updated).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(updated).model_dump(), lines=lines
+        )
 
     async def send_po(
         self,
@@ -2646,7 +2875,12 @@ class DocumentService:
             ValueError: On invalid transition.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
@@ -2661,23 +2895,31 @@ class DocumentService:
         async with self._txn() as session:
             await self._headers.update_one(
                 {"docId": doc_id},
-                {"$set": {
-                    # Reason: "Sent" stored as-is; no shared enum equivalent yet.
-                    "status": "Sent",
-                    "updatedAt": now,
-                    "updatedBy": sent_by,
-                }},
+                {
+                    "$set": {
+                        # Reason: "Sent" stored as-is; no shared enum equivalent yet.
+                        "status": "Sent",
+                        "updatedAt": now,
+                        "updatedBy": sent_by,
+                    }
+                },
                 session=session,
             )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
-            await self._emit_po_event(updated, previous_status, company_code, session=session)
+            await self._emit_po_event(
+                updated, previous_status, company_code, session=session
+            )
 
         logger.info("[DocumentService] sent PO docId=%s", doc_id)
         lines = await self._get_lines(doc_id)
-        return PODetailResponse(**_header_to_po_response(updated).model_dump(), lines=lines)
+        return PODetailResponse(
+            **_header_to_po_response(updated).model_dump(), lines=lines
+        )
 
-    async def get_po_open_lines(self, org_id: str, doc_id: str) -> List[DocumentLineResponse]:
+    async def get_po_open_lines(
+        self, org_id: str, doc_id: str
+    ) -> List[DocumentLineResponse]:
         """
         Return PO lines with openQuantity > 0 (for GR creation use).
 
@@ -2689,14 +2931,19 @@ class DocumentService:
             List of DocumentLineResponse with openQuantity > 0.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
 
-        cursor = self._lines.find(
-            {"docId": doc_id, "openQuantity": {"$gt": 0}}
-        ).sort("lineNumber", 1)
+        cursor = self._lines.find({"docId": doc_id, "openQuantity": {"$gt": 0}}).sort(
+            "lineNumber", 1
+        )
         docs = await cursor.to_list(length=None)
         return [_line_to_response(d) for d in docs]
 
@@ -2789,7 +3036,9 @@ class DocumentService:
             ld["updatedAt"] = now
 
         async with self._txn() as session:
-            doc_number = await _next_doc_number(self._db, company_code, "GR", session=session)
+            doc_number = await _next_doc_number(
+                self._db, company_code, "GR", session=session
+            )
 
             header: Dict[str, Any] = {
                 "docId": doc_id,
@@ -2888,7 +3137,9 @@ class DocumentService:
             item_doc = await self._db["purchase_items"].find_one(
                 {"itemId": po_line["itemId"], "organizationId": org_id}
             )
-            item_type = item_doc.get("itemType", "raw_material") if item_doc else "raw_material"
+            item_type = (
+                item_doc.get("itemType", "raw_material") if item_doc else "raw_material"
+            )
 
             price = Decimal(str(po_line.get("unitPrice", 0)))
             tax_rate = Decimal(str(po_line.get("taxRate", 0)))
@@ -2899,31 +3150,33 @@ class DocumentService:
             line_tax = (line_net * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
             line_gross = line_net + line_tax
 
-            gr_line_docs.append({
-                "lineId": str(uuid.uuid4()),
-                # docId / organizationId / lineNumber / createdAt / updatedAt set by caller
-                "itemId": po_line["itemId"],
-                "itemCode": po_line.get("itemCode", ""),
-                "itemName": po_line.get("itemName", ""),
-                "itemType": item_type,
-                "description": line_in.description or po_line.get("description"),
-                "uom": po_line["uom"],
-                "quantity": float(recv_qty),
-                "openQuantity": float(recv_qty),
-                "closedQuantity": 0.0,
-                "unitPrice": float(price),
-                "discountPercent": float(disc_pct),
-                "lineNet": float(line_net),
-                "taxCode": po_line.get("taxCode"),
-                "taxRate": float(tax_rate),
-                "lineTax": float(line_tax),
-                "lineGross": float(line_gross),
-                "costCenterId": po_line.get("costCenterId"),
-                "warehouseId": None,
-                "requestedVendorId": None,
-                "baseLineId": base_line_id,
-                "notes": None,
-            })
+            gr_line_docs.append(
+                {
+                    "lineId": str(uuid.uuid4()),
+                    # docId / organizationId / lineNumber / createdAt / updatedAt set by caller
+                    "itemId": po_line["itemId"],
+                    "itemCode": po_line.get("itemCode", ""),
+                    "itemName": po_line.get("itemName", ""),
+                    "itemType": item_type,
+                    "description": line_in.description or po_line.get("description"),
+                    "uom": po_line["uom"],
+                    "quantity": float(recv_qty),
+                    "openQuantity": float(recv_qty),
+                    "closedQuantity": 0.0,
+                    "unitPrice": float(price),
+                    "discountPercent": float(disc_pct),
+                    "lineNet": float(line_net),
+                    "taxCode": po_line.get("taxCode"),
+                    "taxRate": float(tax_rate),
+                    "lineTax": float(line_tax),
+                    "lineGross": float(line_gross),
+                    "costCenterId": po_line.get("costCenterId"),
+                    "warehouseId": None,
+                    "requestedVendorId": None,
+                    "baseLineId": base_line_id,
+                    "notes": None,
+                }
+            )
 
         return gr_line_docs
 
@@ -2964,7 +3217,12 @@ class DocumentService:
                 "The API layer must resolve it via resolve_company_code()."
             )
         po_header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": po_doc_id, "docType": "PO", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": po_doc_id,
+                "docType": "PO",
+                "deletedAt": None,
+            }
         )
         if not po_header:
             raise ValueError(f"PO '{po_doc_id}' not found")
@@ -2992,6 +3250,7 @@ class DocumentService:
             ).sort("lineNumber", 1)
             open_lines = await open_lines_cursor.to_list(length=None)
             from ..models.document import GRLineInput
+
             line_inputs = [
                 GRLineInput(
                     baseLineId=ln["lineId"],
@@ -3002,7 +3261,9 @@ class DocumentService:
             if not line_inputs:
                 raise ValueError("PO has no open lines to receive")
 
-        gr_line_docs = await self._build_gr_lines_from_po(po_doc_id, org_id, line_inputs, now)
+        gr_line_docs = await self._build_gr_lines_from_po(
+            po_doc_id, org_id, line_inputs, now
+        )
 
         return await self._create_gr_from_po_header(
             po_header=po_header,
@@ -3095,7 +3356,9 @@ class DocumentService:
 
         total = await self._headers.count_documents(query)
         offset = (page - 1) * per_page
-        cursor = self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        cursor = (
+            self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        )
         docs = await cursor.to_list(length=per_page)
 
         return {
@@ -3120,12 +3383,19 @@ class DocumentService:
         from ..models.document import GRDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "GR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "GR",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
         lines = await self._get_lines(doc_id)
-        return GRDetailResponse(**_header_to_gr_response(header).model_dump(), lines=lines)
+        return GRDetailResponse(
+            **_header_to_gr_response(header).model_dump(), lines=lines
+        )
 
     async def update_gr(
         self,
@@ -3167,7 +3437,12 @@ class DocumentService:
         from ..models.document import GRDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "GR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "GR",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
@@ -3203,12 +3478,16 @@ class DocumentService:
                 await self._lines.delete_many({"docId": doc_id}, session=session)
                 if new_line_docs:
                     await self._lines.insert_many(new_line_docs, session=session)
-            await self._headers.update_one({"docId": doc_id}, {"$set": updates}, session=session)
+            await self._headers.update_one(
+                {"docId": doc_id}, {"$set": updates}, session=session
+            )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
 
         lines = await self._get_lines(doc_id)
-        return GRDetailResponse(**_header_to_gr_response(updated).model_dump(), lines=lines)
+        return GRDetailResponse(
+            **_header_to_gr_response(updated).model_dump(), lines=lines
+        )
 
     async def post_gr(
         self,
@@ -3242,7 +3521,12 @@ class DocumentService:
         from ..models.document import GRDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "GR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "GR",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"GR '{doc_id}' not found")
@@ -3276,8 +3560,12 @@ class DocumentService:
 
         # Fetch all PO lines to check if they will be fully received after this post
         po_all_lines_cursor = self._lines.find({"docId": po_doc_id})
-        po_all_lines: List[Dict[str, Any]] = await po_all_lines_cursor.to_list(length=None)
-        po_line_map: Dict[str, Dict[str, Any]] = {ln["lineId"]: ln for ln in po_all_lines}
+        po_all_lines: List[Dict[str, Any]] = await po_all_lines_cursor.to_list(
+            length=None
+        )
+        po_line_map: Dict[str, Dict[str, Any]] = {
+            ln["lineId"]: ln for ln in po_all_lines
+        }
 
         # Compute projected openQuantity for each PO line after this GR posts
         def projected_open_qty(po_line: Dict[str, Any]) -> Decimal:
@@ -3287,8 +3575,7 @@ class DocumentService:
             return max(Decimal("0"), open_qty - received)
 
         all_fully_received = all(
-            projected_open_qty(pl) == Decimal("0")
-            for pl in po_all_lines
+            projected_open_qty(pl) == Decimal("0") for pl in po_all_lines
         )
 
         # Build po_line_deltas for chain-reconciler audit trail (T-200.22).
@@ -3315,11 +3602,13 @@ class DocumentService:
                 new_closed = Decimal(str(po_line.get("closedQuantity", 0))) + recv_qty
                 await self._lines.update_one(
                     {"lineId": po_line["lineId"]},
-                    {"$set": {
-                        "openQuantity": float(new_open),
-                        "closedQuantity": float(new_closed),
-                        "updatedAt": now,
-                    }},
+                    {
+                        "$set": {
+                            "openQuantity": float(new_open),
+                            "closedQuantity": float(new_closed),
+                            "updatedAt": now,
+                        }
+                    },
                     session=session,
                 )
 
@@ -3336,7 +3625,9 @@ class DocumentService:
             await self._headers.update_one(
                 {"docId": doc_id}, {"$set": gr_updates}, session=session
             )
-            updated_gr = await self._headers.find_one({"docId": doc_id}, session=session)
+            updated_gr = await self._headers.find_one(
+                {"docId": doc_id}, session=session
+            )
             assert updated_gr is not None
 
             # Step 3: if fully received, close the PO and emit po_state_changed
@@ -3345,14 +3636,18 @@ class DocumentService:
             if all_fully_received:
                 await self._headers.update_one(
                     {"docId": po_doc_id},
-                    {"$set": {
-                        "status": DocumentStatus.CLOSED.value,
-                        "updatedAt": now,
-                        "updatedBy": posted_by,
-                    }},
+                    {
+                        "$set": {
+                            "status": DocumentStatus.CLOSED.value,
+                            "updatedAt": now,
+                            "updatedBy": posted_by,
+                        }
+                    },
                     session=session,
                 )
-                po_updated = await self._headers.find_one({"docId": po_doc_id}, session=session)
+                po_updated = await self._headers.find_one(
+                    {"docId": po_doc_id}, session=session
+                )
                 assert po_updated is not None
                 await self._emit_po_event(
                     po_updated, previous_po_status, company_code, session=session
@@ -3391,7 +3686,9 @@ class DocumentService:
                 session=session,
             )
             # Refresh header with postedEventId
-            updated_gr = await self._headers.find_one({"docId": doc_id}, session=session)
+            updated_gr = await self._headers.find_one(
+                {"docId": doc_id}, session=session
+            )
             assert updated_gr is not None
 
         # Reason: best-effort audit write OUTSIDE the transaction — mirrors T-201.5
@@ -3423,7 +3720,9 @@ class DocumentService:
             all_fully_received,
         )
         lines_resp = await self._get_lines(doc_id)
-        return GRDetailResponse(**_header_to_gr_response(updated_gr).model_dump(), lines=lines_resp)
+        return GRDetailResponse(
+            **_header_to_gr_response(updated_gr).model_dump(), lines=lines_resp
+        )
 
     async def soft_delete_gr(self, org_id: str, doc_id: str, deleted_by: str) -> bool:
         """
@@ -3451,7 +3750,12 @@ class DocumentService:
             ValueError: If GR is not in Draft status.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "GR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "GR",
+                "deletedAt": None,
+            }
         )
         if not header:
             return False
@@ -3501,7 +3805,9 @@ class DocumentService:
             )
 
             # Reload PO with lines (post-release state) and auto-reopen if needed.
-            po_raw = await load_po_with_lines(self._db, org_id=org_id, po_doc_id=po_doc_id)
+            po_raw = await load_po_with_lines(
+                self._db, org_id=org_id, po_doc_id=po_doc_id
+            )
             if po_raw is not None:
                 await auto_reopen_po_if_not_fully_received(
                     self._db,
@@ -3588,7 +3894,9 @@ class DocumentService:
                     exc,
                 )
 
-        payload = build_ap_invoice_event_payload(header, lines, date_of_supply=date_of_supply)
+        payload = build_ap_invoice_event_payload(
+            header, lines, date_of_supply=date_of_supply
+        )
 
         event_id = await OutboxWriter.publish(
             db=self._db,
@@ -3675,39 +3983,43 @@ class DocumentService:
             disc_pct = Decimal(str(gr_line.get("discountPercent", 0) or 0))
             discount_factor = (Decimal("100") - disc_pct) / Decimal("100")
 
-            price_variance = ((invoice_price - po_price) * qty * discount_factor).quantize(Decimal("0.01"))
+            price_variance = (
+                (invoice_price - po_price) * qty * discount_factor
+            ).quantize(Decimal("0.01"))
             line_net = (qty * invoice_price * discount_factor).quantize(Decimal("0.01"))
             line_tax = (line_net * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
             line_gross = line_net + line_tax
 
-            ap_line_docs.append({
-                "lineId": str(uuid.uuid4()),
-                # docId / organizationId / lineNumber / createdAt / updatedAt set by caller
-                "itemId": gr_line["itemId"],
-                "itemCode": gr_line.get("itemCode", ""),
-                "itemName": gr_line.get("itemName", ""),
-                "itemType": gr_line.get("itemType", "raw_material"),
-                "description": line_in.description or gr_line.get("description"),
-                "uom": gr_line["uom"],
-                "quantity": float(qty),
-                "openQuantity": float(qty),
-                "closedQuantity": 0.0,
-                "unitPrice": float(invoice_price),   # = invoiceUnitPrice
-                "discountPercent": float(disc_pct),
-                "poUnitPrice": float(po_price),
-                "priceVarianceAmount": float(price_variance),
-                "lineNet": float(line_net),
-                "taxCode": tax_code,
-                "taxRate": float(tax_rate),
-                "lineTax": float(line_tax),
-                "lineGross": float(line_gross),
-                "costCenterId": gr_line.get("costCenterId"),
-                "grLineId": gr_line_id,
-                "baseLineId": gr_line.get("baseLineId"),  # PO line traceability
-                "warehouseId": None,
-                "requestedVendorId": None,
-                "notes": None,
-            })
+            ap_line_docs.append(
+                {
+                    "lineId": str(uuid.uuid4()),
+                    # docId / organizationId / lineNumber / createdAt / updatedAt set by caller
+                    "itemId": gr_line["itemId"],
+                    "itemCode": gr_line.get("itemCode", ""),
+                    "itemName": gr_line.get("itemName", ""),
+                    "itemType": gr_line.get("itemType", "raw_material"),
+                    "description": line_in.description or gr_line.get("description"),
+                    "uom": gr_line["uom"],
+                    "quantity": float(qty),
+                    "openQuantity": float(qty),
+                    "closedQuantity": 0.0,
+                    "unitPrice": float(invoice_price),  # = invoiceUnitPrice
+                    "discountPercent": float(disc_pct),
+                    "poUnitPrice": float(po_price),
+                    "priceVarianceAmount": float(price_variance),
+                    "lineNet": float(line_net),
+                    "taxCode": tax_code,
+                    "taxRate": float(tax_rate),
+                    "lineTax": float(line_tax),
+                    "lineGross": float(line_gross),
+                    "costCenterId": gr_line.get("costCenterId"),
+                    "grLineId": gr_line_id,
+                    "baseLineId": gr_line.get("baseLineId"),  # PO line traceability
+                    "warehouseId": None,
+                    "requestedVendorId": None,
+                    "notes": None,
+                }
+            )
 
         return ap_line_docs
 
@@ -3794,7 +4106,12 @@ class DocumentService:
 
         # Reason: read the GR header outside the transaction to keep txn window short
         gr_header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": gr_doc_id, "docType": "GR", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": gr_doc_id,
+                "docType": "GR",
+                "deletedAt": None,
+            }
         )
         if not gr_header:
             raise ValueError(f"GR '{gr_doc_id}' not found")
@@ -3807,13 +4124,15 @@ class DocumentService:
 
         # Reason: enforce one-AP-per-GR in v1 — reject if any non-Rejected AP exists.
         # "Rejected" stored as raw string (no enum equivalent); $ne on both forms.
-        existing_ap = await self._headers.find_one({
-            "organizationId": org_id,
-            "docType": "AP",
-            "baseDocId": gr_doc_id,
-            "status": {"$nin": ["Rejected", "rejected"]},
-            "deletedAt": None,
-        })
+        existing_ap = await self._headers.find_one(
+            {
+                "organizationId": org_id,
+                "docType": "AP",
+                "baseDocId": gr_doc_id,
+                "status": {"$nin": ["Rejected", "rejected"]},
+                "deletedAt": None,
+            }
+        )
         if existing_ap:
             raise ValueError(
                 f"A non-rejected AP Invoice already exists for GR '{gr_doc_id}' "
@@ -3823,9 +4142,7 @@ class DocumentService:
 
         # Reason: fetch the source PO header for the poDocId / poDocNumber fields
         po_doc_id = gr_header["baseDocId"]
-        po_header = await self._headers.find_one(
-            {"docId": po_doc_id, "docType": "PO"}
-        )
+        po_header = await self._headers.find_one({"docId": po_doc_id, "docType": "PO"})
         po_doc_number = po_header.get("docNumber", "") if po_header else ""
 
         now = datetime.now(tz=timezone.utc)
@@ -3840,6 +4157,7 @@ class DocumentService:
 
         # Reason: default dueDate to invoiceDate + 30 days if not provided
         from datetime import timedelta
+
         due_date = data.dueDate or (invoice_date + timedelta(days=30))
 
         # -----------------------------------------------------------------------
@@ -3865,7 +4183,7 @@ class DocumentService:
         validated_dpi_allocations: List[Dict[str, Any]] = []
         total_allocated = Decimal("0")
 
-        for alloc in (data.dpi_allocations or []):
+        for alloc in data.dpi_allocations or []:
             alloc_amount = Decimal(str(alloc.allocated_amount))
             dpi_raw = await self._db[_DPI_COL].find_one(
                 {"docId": alloc.dpi_doc_id, "organizationId": org_id}
@@ -3911,11 +4229,13 @@ class DocumentService:
                 )
 
             total_allocated += alloc_amount
-            validated_dpi_allocations.append({
-                "dpiDocId": alloc.dpi_doc_id,
-                "dpiDocNumber": dpi_raw.get("docNumber", ""),
-                "allocatedAmount": float(alloc_amount),
-            })
+            validated_dpi_allocations.append(
+                {
+                    "dpiDocId": alloc.dpi_doc_id,
+                    "dpiDocNumber": dpi_raw.get("docNumber", ""),
+                    "allocatedAmount": float(alloc_amount),
+                }
+            )
 
         if total_allocated > ap_total_gross + Decimal("0.005"):
             raise ValueError(
@@ -3942,7 +4262,9 @@ class DocumentService:
             ld["updatedAt"] = now
 
         async with self._txn() as session:
-            doc_number = await _next_doc_number(self._db, company_code, "AP", session=session)
+            doc_number = await _next_doc_number(
+                self._db, company_code, "AP", session=session
+            )
 
             header: Dict[str, Any] = {
                 "docId": doc_id,
@@ -4136,7 +4458,9 @@ class DocumentService:
 
         total = await self._headers.count_documents(query)
         offset = (page - 1) * per_page
-        cursor = self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        cursor = (
+            self._headers.find(query).sort("docDate", -1).skip(offset).limit(per_page)
+        )
         docs = await cursor.to_list(length=per_page)
 
         return {
@@ -4161,12 +4485,19 @@ class DocumentService:
         from ..models.document import APDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "AP", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "AP",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
         lines = await self._get_lines(doc_id)
-        return APDetailResponse(**_header_to_ap_response(header).model_dump(), lines=lines)
+        return APDetailResponse(
+            **_header_to_ap_response(header).model_dump(), lines=lines
+        )
 
     async def update_ap(
         self,
@@ -4208,7 +4539,12 @@ class DocumentService:
         from ..models.document import APDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "AP", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "AP",
+                "deletedAt": None,
+            }
         )
         if not header:
             return None
@@ -4249,12 +4585,16 @@ class DocumentService:
                 await self._lines.delete_many({"docId": doc_id}, session=session)
                 if new_line_docs:
                     await self._lines.insert_many(new_line_docs, session=session)
-            await self._headers.update_one({"docId": doc_id}, {"$set": updates}, session=session)
+            await self._headers.update_one(
+                {"docId": doc_id}, {"$set": updates}, session=session
+            )
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
 
         lines = await self._get_lines(doc_id)
-        return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines)
+        return APDetailResponse(
+            **_header_to_ap_response(updated).model_dump(), lines=lines
+        )
 
     async def submit_ap(
         self,
@@ -4288,13 +4628,20 @@ class DocumentService:
         from ..models.document import APDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "AP", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "AP",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
 
         current_status = _parse_status(header["status"])
-        assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.PENDING_APPROVAL)
+        assert_legal_transition(
+            _DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.PENDING_APPROVAL
+        )
 
         # Reason: resolve approval decision before opening the transaction
         total_gross = Decimal(str(header.get("totalGross", 0)))
@@ -4325,13 +4672,19 @@ class DocumentService:
                     {"$set": {"approvalHistory": []}},
                     session=session,
                 )
-                await self._headers.update_one({"docId": doc_id}, {"$set": updates}, session=session)
-                updated = await self._headers.find_one({"docId": doc_id}, session=session)
+                await self._headers.update_one(
+                    {"docId": doc_id}, {"$set": updates}, session=session
+                )
+                updated = await self._headers.find_one(
+                    {"docId": doc_id}, session=session
+                )
                 assert updated is not None
 
         else:
             # Reason: no approval gate → direct DRAFT → OPEN (the auto-approve path).
-            assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.OPEN)
+            assert_legal_transition(
+                _DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.OPEN
+            )
             new_status = DocumentStatus.OPEN.value
             history_entry = {
                 "stepNumber": 1,
@@ -4363,7 +4716,9 @@ class DocumentService:
                     },
                     session=session,
                 )
-                updated = await self._headers.find_one({"docId": doc_id}, session=session)
+                updated = await self._headers.find_one(
+                    {"docId": doc_id}, session=session
+                )
                 assert updated is not None
 
                 posted_event_id = await self._emit_ap_invoice_posted_event(
@@ -4374,7 +4729,9 @@ class DocumentService:
                     {"$set": {"postedEventId": posted_event_id}},
                     session=session,
                 )
-                updated = await self._headers.find_one({"docId": doc_id}, session=session)
+                updated = await self._headers.find_one(
+                    {"docId": doc_id}, session=session
+                )
                 assert updated is not None
 
         logger.info(
@@ -4428,7 +4785,9 @@ class DocumentService:
                     )
 
         lines_resp = await self._get_lines(doc_id)
-        return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
+        return APDetailResponse(
+            **_header_to_ap_response(updated).model_dump(), lines=lines_resp
+        )
 
     async def approve_ap(
         self,
@@ -4467,19 +4826,30 @@ class DocumentService:
         from ..models.document import APDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "AP", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "AP",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
 
         current_status = _parse_status(header["status"])
-        assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.OPEN)
+        assert_legal_transition(
+            _DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.OPEN
+        )
 
         # Reason: approver must hold the role specified in the approval request;
         # admin and super_admin have override authority.
         required_role = header.get("approvalRequestedFrom")
         _APPROVAL_OVERRIDE_ROLES = {"admin", "super_admin"}
-        if required_role and approver_role != required_role and approver_role not in _APPROVAL_OVERRIDE_ROLES:
+        if (
+            required_role
+            and approver_role != required_role
+            and approver_role not in _APPROVAL_OVERRIDE_ROLES
+        ):
             raise ValueError(
                 f"Approval requires role '{required_role}'; your role is '{approver_role}'"
             )
@@ -4603,7 +4973,9 @@ class DocumentService:
                 )
 
         lines_resp = await self._get_lines(doc_id)
-        return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
+        return APDetailResponse(
+            **_header_to_ap_response(updated).model_dump(), lines=lines_resp
+        )
 
     async def reject_ap(
         self,
@@ -4647,7 +5019,12 @@ class DocumentService:
         from ..models.document import APDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "AP", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "AP",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
@@ -4657,7 +5034,11 @@ class DocumentService:
 
         required_role = header.get("approvalRequestedFrom")
         _APPROVAL_OVERRIDE_ROLES = {"admin", "super_admin"}
-        if required_role and approver_role != required_role and approver_role not in _APPROVAL_OVERRIDE_ROLES:
+        if (
+            required_role
+            and approver_role != required_role
+            and approver_role not in _APPROVAL_OVERRIDE_ROLES
+        ):
             raise ValueError(
                 f"Approval requires role '{required_role}'; your role is '{approver_role}'"
             )
@@ -4708,7 +5089,9 @@ class DocumentService:
             updated = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated is not None
 
-        logger.info("[DocumentService] rejected AP docId=%s by user=%s", doc_id, approver_id)
+        logger.info(
+            "[DocumentService] rejected AP docId=%s by user=%s", doc_id, approver_id
+        )
 
         # Reason: release GR chain counters after rejection — best-effort, outside
         # the transaction.  Rejection is terminal; if the user wants to re-invoice
@@ -4725,7 +5108,9 @@ class DocumentService:
                 cap_check=False,
             )
 
-            gr_raw = await load_gr_with_lines(self._db, org_id=org_id, gr_doc_id=gr_doc_id)
+            gr_raw = await load_gr_with_lines(
+                self._db, org_id=org_id, gr_doc_id=gr_doc_id
+            )
             if gr_raw is not None:
                 await auto_reopen_gr_if_not_fully_invoiced(
                     self._db,
@@ -4766,7 +5151,9 @@ class DocumentService:
         # consumedAmount was incremented and no targetDocRef was pushed on rejection.)
 
         lines_resp = await self._get_lines(doc_id)
-        return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
+        return APDetailResponse(
+            **_header_to_ap_response(updated).model_dump(), lines=lines_resp
+        )
 
     async def withdraw_ap(
         self,
@@ -4794,13 +5181,20 @@ class DocumentService:
         from ..models.document import APDetailResponse
 
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "AP", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "AP",
+                "deletedAt": None,
+            }
         )
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
 
         current_status = _parse_status(header["status"])
-        assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.DRAFT)
+        assert_legal_transition(
+            _DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.DRAFT
+        )
 
         now = datetime.now(tz=timezone.utc)
 
@@ -4824,7 +5218,9 @@ class DocumentService:
 
         logger.info("[DocumentService] withdrew AP docId=%s back to Draft", doc_id)
         lines_resp = await self._get_lines(doc_id)
-        return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
+        return APDetailResponse(
+            **_header_to_ap_response(updated).model_dump(), lines=lines_resp
+        )
 
     async def soft_delete_ap(self, org_id: str, doc_id: str, deleted_by: str) -> bool:
         """
@@ -4853,7 +5249,12 @@ class DocumentService:
             ValueError: If AP is not in Draft status.
         """
         header = await self._headers.find_one(
-            {"organizationId": org_id, "docId": doc_id, "docType": "AP", "deletedAt": None}
+            {
+                "organizationId": org_id,
+                "docId": doc_id,
+                "docType": "AP",
+                "deletedAt": None,
+            }
         )
         if not header:
             return False
@@ -4900,7 +5301,9 @@ class DocumentService:
                 cap_check=False,
             )
 
-            gr_raw = await load_gr_with_lines(self._db, org_id=org_id, gr_doc_id=gr_doc_id)
+            gr_raw = await load_gr_with_lines(
+                self._db, org_id=org_id, gr_doc_id=gr_doc_id
+            )
             if gr_raw is not None:
                 await auto_reopen_gr_if_not_fully_invoiced(
                     self._db,
@@ -5013,7 +5416,12 @@ class DocumentService:
         }
         total = await self._headers.count_documents(query)
         offset = (page - 1) * per_page
-        cursor = self._headers.find(query).sort("approvalDecidedAt", -1).skip(offset).limit(per_page)
+        cursor = (
+            self._headers.find(query)
+            .sort("approvalDecidedAt", -1)
+            .skip(offset)
+            .limit(per_page)
+        )
         docs = await cursor.to_list(length=per_page)
 
         items = [

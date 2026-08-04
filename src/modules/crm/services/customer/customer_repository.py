@@ -42,7 +42,7 @@ class CustomerRepository:
             {"_id": "customer_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
@@ -70,16 +70,20 @@ class CustomerRepository:
             customerCode=customer_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         customer_doc = customer.model_dump(by_alias=True)
-        customer_doc["customerId"] = str(customer_doc["customerId"])  # Convert UUID to string for MongoDB
+        customer_doc["customerId"] = str(
+            customer_doc["customerId"]
+        )  # Convert UUID to string for MongoDB
         customer_doc["createdBy"] = str(customer_doc["createdBy"])
 
         await collection.insert_one(customer_doc)
 
-        logger.info(f"Created customer: {customer.customerId} with code {customer_code}")
+        logger.info(
+            f"Created customer: {customer.customerId} with code {customer_code}"
+        )
         return customer
 
     async def get_by_id(self, customer_id: UUID) -> Optional[Customer]:
@@ -105,7 +109,7 @@ class CustomerRepository:
         skip: int = 0,
         limit: int = 20,
         status: Optional[CustomerStatus] = None,
-        customer_type: Optional[str] = None
+        customer_type: Optional[str] = None,
     ) -> tuple[List[Customer], int]:
         """
         Get all customers with pagination and filters
@@ -141,10 +145,7 @@ class CustomerRepository:
         return customers, total
 
     async def search(
-        self,
-        search_term: str,
-        skip: int = 0,
-        limit: int = 20
+        self, search_term: str, skip: int = 0, limit: int = 20
     ) -> tuple[List[Customer], int]:
         """
         Search customers by name, email, or company using text search
@@ -159,6 +160,7 @@ class CustomerRepository:
             Tuple of (list of customers, total count)
         """
         import re
+
         collection = self._get_collection()
 
         # First try MongoDB text search (faster for word matching)
@@ -167,10 +169,12 @@ class CustomerRepository:
 
         if total > 0:
             # Get customers with text score sorting
-            cursor = collection.find(
-                text_query,
-                {"score": {"$meta": "textScore"}}
-            ).sort([("score", {"$meta": "textScore"})]).skip(skip).limit(limit)
+            cursor = (
+                collection.find(text_query, {"score": {"$meta": "textScore"}})
+                .sort([("score", {"$meta": "textScore"})])
+                .skip(skip)
+                .limit(limit)
+            )
 
             customers = []
             async for customer_doc in cursor:
@@ -187,7 +191,7 @@ class CustomerRepository:
             "$or": [
                 {"name": regex_pattern},
                 {"email": regex_pattern},
-                {"company": regex_pattern}
+                {"company": regex_pattern},
             ]
         }
 
@@ -201,7 +205,9 @@ class CustomerRepository:
 
         return customers, total
 
-    async def update(self, customer_id: UUID, update_data: CustomerUpdate) -> Optional[Customer]:
+    async def update(
+        self, customer_id: UUID, update_data: CustomerUpdate
+    ) -> Optional[Customer]:
         """
         Update a customer
 
@@ -221,8 +227,7 @@ class CustomerRepository:
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"customerId": str(customer_id)},
-            {"$set": update_dict}
+            {"customerId": str(customer_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

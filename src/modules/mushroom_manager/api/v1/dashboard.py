@@ -28,6 +28,7 @@ router = APIRouter()
 # GET /dashboard
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "",
     response_model=SuccessResponse[Dict[str, Any]],
@@ -70,12 +71,7 @@ async def get_dashboard(
 
     # Recent harvests (last 10)
     recent_harvests: List[Dict[str, Any]] = []
-    async for doc in (
-        db.mushroom_harvests
-        .find({})
-        .sort("harvestedAt", -1)
-        .limit(10)
-    ):
+    async for doc in db.mushroom_harvests.find({}).sort("harvestedAt", -1).limit(10):
         doc.pop("_id", None)
         # Serialise datetime objects for JSON response
         for key, value in doc.items():
@@ -89,8 +85,7 @@ async def get_dashboard(
     )
     active_contamination: List[Dict[str, Any]] = []
     async for doc in (
-        db.contamination_reports
-        .find({"isResolved": False})
+        db.contamination_reports.find({"isResolved": False})
         .sort("reportedAt", -1)
         .limit(20)
     ):
@@ -124,6 +119,7 @@ async def get_dashboard(
 # GET /facilities/{facility_id}/analytics
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/facilities/{facility_id}/analytics",
     response_model=SuccessResponse[Dict[str, Any]],
@@ -155,14 +151,14 @@ async def get_facility_analytics(
 
     # Validate facility exists
     facility_doc = await db.mushroom_facilities.find_one(
-        {"facilityId": facility_id},
-        {"name": 1, "status": 1}
+        {"facilityId": facility_id}, {"name": 1, "status": 1}
     )
     if not facility_doc:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Facility '{facility_id}' not found"
+            detail=f"Facility '{facility_id}' not found",
         )
 
     # Room counts by phase
@@ -215,11 +211,13 @@ async def get_facility_analytics(
     ]
     harvests_by_flush: List[Dict[str, Any]] = []
     async for doc in db.mushroom_harvests.aggregate(flush_pipeline):
-        harvests_by_flush.append({
-            "flushNumber": doc["_id"],
-            "totalYieldKg": round(doc["totalYieldKg"], 3),
-            "harvestCount": doc["count"],
-        })
+        harvests_by_flush.append(
+            {
+                "flushNumber": doc["_id"],
+                "totalYieldKg": round(doc["totalYieldKg"], 3),
+                "harvestCount": doc["count"],
+            }
+        )
 
     # Contamination stats
     total_contamination = await db.contamination_reports.count_documents(

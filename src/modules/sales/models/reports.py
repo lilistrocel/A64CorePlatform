@@ -34,7 +34,6 @@ from pydantic import BaseModel, Field
 # dedicated _response_config.py, update this import alone.
 from .ar_invoices import _RESPONSE_CONFIG
 
-
 # ---------------------------------------------------------------------------
 # Row-level model — one per (customer, currency) group
 # ---------------------------------------------------------------------------
@@ -63,11 +62,21 @@ class ARAgingCustomerRow(BaseModel):
     customer_name: str = Field(..., description="Denormalised customer name")
     currency: str = Field(..., description="ISO 4217 currency code")
     current: Decimal = Field(Decimal("0.00"), description="Open amount not yet due")
-    days_1_to_30: Decimal = Field(Decimal("0.00"), description="Open amount 1–30 days overdue")
-    days_31_to_60: Decimal = Field(Decimal("0.00"), description="Open amount 31–60 days overdue")
-    days_61_to_90: Decimal = Field(Decimal("0.00"), description="Open amount 61–90 days overdue")
-    over_90: Decimal = Field(Decimal("0.00"), description="Open amount > 90 days overdue")
-    total: Decimal = Field(Decimal("0.00"), description="Total open amount across all buckets")
+    days_1_to_30: Decimal = Field(
+        Decimal("0.00"), description="Open amount 1–30 days overdue"
+    )
+    days_31_to_60: Decimal = Field(
+        Decimal("0.00"), description="Open amount 31–60 days overdue"
+    )
+    days_61_to_90: Decimal = Field(
+        Decimal("0.00"), description="Open amount 61–90 days overdue"
+    )
+    over_90: Decimal = Field(
+        Decimal("0.00"), description="Open amount > 90 days overdue"
+    )
+    total: Decimal = Field(
+        Decimal("0.00"), description="Total open amount across all buckets"
+    )
     invoice_count: int = Field(0, description="Number of open invoices in this group")
 
 
@@ -128,7 +137,9 @@ class ARAgingReport(BaseModel):
 
     model_config = _RESPONSE_CONFIG
 
-    as_of_date: date = Field(..., description="Reference date used for daysOverdue computation")
+    as_of_date: date = Field(
+        ..., description="Reference date used for daysOverdue computation"
+    )
     customers: List[ARAgingCustomerRow] = Field(
         default_factory=list,
         description="One row per (customerId, currency) group with outstanding balance",

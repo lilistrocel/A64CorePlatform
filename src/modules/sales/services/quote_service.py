@@ -138,7 +138,7 @@ def _compute_line(line: QuoteLineCreate) -> Dict[str, Any]:
 
     return {
         "lineId": line_id,
-        "lineNumber": 0,       # caller patches line_number after building the list
+        "lineNumber": 0,  # caller patches line_number after building the list
         "itemId": line.item_id,
         "itemCode": line.item_code,
         "itemName": line.item_name,
@@ -353,7 +353,9 @@ async def _write_audit(
         await db[_AUDIT_COL].insert_one(entry)
     except Exception as exc:  # noqa: BLE001
         # Reason: audit failure must not roll back the originating operation.
-        logger.warning("Audit write failed for quote %s action=%s: %s", doc_entry, action, exc)
+        logger.warning(
+            "Audit write failed for quote %s action=%s: %s", doc_entry, action, exc
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -589,9 +591,15 @@ async def update_quote(
         "customerName": payload.customer_name,
         # Reason: Motor/PyMongo cannot encode datetime.date — convert before write.
         "docDate": _to_dt(payload.doc_date) if payload.doc_date is not None else None,
-        "validUntilDate": _to_dt(payload.valid_until_date) if payload.valid_until_date is not None else None,
+        "validUntilDate": (
+            _to_dt(payload.valid_until_date)
+            if payload.valid_until_date is not None
+            else None
+        ),
         "currency": payload.currency,
-        "exchangeRate": float(payload.exchange_rate) if payload.exchange_rate is not None else None,
+        "exchangeRate": (
+            float(payload.exchange_rate) if payload.exchange_rate is not None else None
+        ),
         "paymentTermsId": payload.payment_terms_id,
         "salesEmployeeId": payload.sales_employee_id,
         "bpRefNo": payload.bp_ref_no,
@@ -756,7 +764,5 @@ async def delete_quote(
         detail={"docNumber": raw.get("docNumber")},
     )
 
-    await db[_QUOTES_COL].delete_one(
-        {"docEntry": doc_entry, "organizationId": org_id}
-    )
+    await db[_QUOTES_COL].delete_one({"docEntry": doc_entry, "organizationId": org_id})
     return True

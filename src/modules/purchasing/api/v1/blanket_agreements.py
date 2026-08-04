@@ -77,14 +77,16 @@ router = APIRouter(tags=["Purchasing — Blanket Agreements"])
 # Role sets
 # ---------------------------------------------------------------------------
 
-_BLA_WRITE_ROLES = frozenset({
-    "procurement_officer",
-    "procurement_manager",
-    "admin",
-    "super_admin",
-    "accountant",
-    "finance_admin",
-})
+_BLA_WRITE_ROLES = frozenset(
+    {
+        "procurement_officer",
+        "procurement_manager",
+        "admin",
+        "super_admin",
+        "accountant",
+        "finance_admin",
+    }
+)
 
 _BLA_DELETE_ROLES = frozenset({"super_admin"})
 
@@ -151,7 +153,7 @@ def _extract_token(request: Request) -> Optional[str]:
     """Extract the raw Bearer token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        return auth_header[len("Bearer "):]
+        return auth_header[len("Bearer ") :]
     return None
 
 

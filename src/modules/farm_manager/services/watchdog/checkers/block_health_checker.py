@@ -26,21 +26,24 @@ class BlockHealthChecker:
         stale_cutoff = datetime.utcnow() - timedelta(hours=STALE_IOT_THRESHOLD_HOURS)
 
         # Find blocks in ALERT state OR with stale IoT sync
-        cursor = self.db["blocks"].find({
-            "$or": [
-                {"currentState": "ALERT"},
-                {
-                    "iotController.enabled": True,
-                    "iotController.lastSyncedAt": {"$lt": stale_cutoff},
-                },
-            ],
-        }, {
-            "blockId": 1,
-            "name": 1,
-            "farmId": 1,
-            "currentState": 1,
-            "iotController": 1,
-        })
+        cursor = self.db["blocks"].find(
+            {
+                "$or": [
+                    {"currentState": "ALERT"},
+                    {
+                        "iotController.enabled": True,
+                        "iotController.lastSyncedAt": {"$lt": stale_cutoff},
+                    },
+                ],
+            },
+            {
+                "blockId": 1,
+                "name": 1,
+                "farmId": 1,
+                "currentState": 1,
+                "iotController": 1,
+            },
+        )
 
         blocks = await cursor.to_list(length=500)
         if not blocks:
@@ -64,31 +67,37 @@ class BlockHealthChecker:
 
             # Block in ALERT state
             if block.get("currentState") == "ALERT":
-                issues.append(WatchdogIssue(
-                    checkType=CheckType.BLOCK_HEALTH,
-                    severity=Severity.HIGH,
-                    title="Block in ALERT State",
-                    description=f"Farm: {farm_name} > Block {block_name}\nState: ALERT",
-                    entityId=f"{block_id}:alert_state",
-                    farmName=farm_name,
-                    blockName=block_name,
-                ))
+                issues.append(
+                    WatchdogIssue(
+                        checkType=CheckType.BLOCK_HEALTH,
+                        severity=Severity.HIGH,
+                        title="Block in ALERT State",
+                        description=f"Farm: {farm_name} > Block {block_name}\nState: ALERT",
+                        entityId=f"{block_id}:alert_state",
+                        farmName=farm_name,
+                        blockName=block_name,
+                    )
+                )
 
             # Stale IoT sync
             iot = block.get("iotController", {})
             if iot.get("enabled") and iot.get("lastSyncedAt"):
                 last_sync = iot["lastSyncedAt"]
                 if isinstance(last_sync, datetime) and last_sync < stale_cutoff:
-                    hours_stale = int((datetime.utcnow() - last_sync).total_seconds() / 3600)
-                    issues.append(WatchdogIssue(
-                        checkType=CheckType.BLOCK_HEALTH,
-                        severity=Severity.MEDIUM,
-                        title="Stale IoT Sync",
-                        description=f"Farm: {farm_name} > Block {block_name}\nLast sync: {hours_stale}h ago (threshold: {STALE_IOT_THRESHOLD_HOURS}h)",
-                        entityId=f"{block_id}:stale_iot",
-                        farmName=farm_name,
-                        blockName=block_name,
-                        extra={"hoursStale": hours_stale},
-                    ))
+                    hours_stale = int(
+                        (datetime.utcnow() - last_sync).total_seconds() / 3600
+                    )
+                    issues.append(
+                        WatchdogIssue(
+                            checkType=CheckType.BLOCK_HEALTH,
+                            severity=Severity.MEDIUM,
+                            title="Stale IoT Sync",
+                            description=f"Farm: {farm_name} > Block {block_name}\nLast sync: {hours_stale}h ago (threshold: {STALE_IOT_THRESHOLD_HOURS}h)",
+                            entityId=f"{block_id}:stale_iot",
+                            farmName=farm_name,
+                            blockName=block_name,
+                            extra={"hoursStale": hours_stale},
+                        )
+                    )
 
         return issues

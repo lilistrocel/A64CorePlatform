@@ -13,7 +13,9 @@ assistant which has the appropriate confirmation flow.
 from vertexai.generative_models import FunctionDeclaration, Tool
 
 # Reason: Reuse the shared Google Search grounding tool helper.
-from ..farm_ai.tool_definitions import get_google_search_tool  # noqa: F401 (re-exported)
+from ..farm_ai.tool_definitions import (
+    get_google_search_tool,
+)  # noqa: F401 (re-exported)
 
 # All tools for the global monitoring assistant (read-only)
 GLOBAL_READ_TOOLS = [

@@ -7,7 +7,7 @@ from .responses import (
     ErrorResponse,
     PaginatedResponse,
     PaginationMeta,
-    PaginationLinks
+    PaginationLinks,
 )
 
 __all__ = [
@@ -15,5 +15,5 @@ __all__ = [
     "ErrorResponse",
     "PaginatedResponse",
     "PaginationMeta",
-    "PaginationLinks"
+    "PaginationLinks",
 ]

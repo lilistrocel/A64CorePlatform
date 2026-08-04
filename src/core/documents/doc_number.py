@@ -56,29 +56,29 @@ from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorDatabase
 # Every future document type that uses next_doc_number MUST add an entry here.
 DOC_TYPE_PREFIXES: dict[str, str] = {
     # Purchasing
-    "PR": "PR",        # Purchase Request
-    "PO": "PO",        # Purchase Order
-    "GR": "GR",        # Goods Receipt (Purchase)
-    "AP_INVOICE": "API",   # AP Invoice
-    "AP_CREDIT": "APC",    # AP Credit Note
-    "IPAY": "IPAY",    # Incoming Payment (vendor payment out)
-    "OPAY": "OPAY",    # Outgoing Payment (customer payment in)
-    "DPI": "DPI",      # Down Payment Invoice (AP)
+    "PR": "PR",  # Purchase Request
+    "PO": "PO",  # Purchase Order
+    "GR": "GR",  # Goods Receipt (Purchase)
+    "AP_INVOICE": "API",  # AP Invoice
+    "AP_CREDIT": "APC",  # AP Credit Note
+    "IPAY": "IPAY",  # Incoming Payment (vendor payment out)
+    "OPAY": "OPAY",  # Outgoing Payment (customer payment in)
+    "DPI": "DPI",  # Down Payment Invoice (AP)
     # Sales
-    "QUOTE": "SQ",     # Sales Quotation
-    "SO": "SO",        # Sales Order
+    "QUOTE": "SQ",  # Sales Quotation
+    "SO": "SO",  # Sales Order
     "DELIVERY": "DN",  # Delivery Note
-    "AR_INVOICE": "ARI",   # AR Invoice
-    "AR_CREDIT": "ARC",    # AR Credit Note
+    "AR_INVOICE": "ARI",  # AR Invoice
+    "AR_CREDIT": "ARC",  # AR Credit Note
     # Reservations / Transfers
-    "RES": "RES",      # Inventory Reservation
-    "BLA": "BLA",      # Blanket Agreement
-    "RR": "RR",        # Return Request (from customer)
-    "RTN": "RTN",      # Return Note (goods physically returned)
-    "ARC": "ARC",      # AR Credit Note (financial reversal of AR Invoice)
+    "RES": "RES",  # Inventory Reservation
+    "BLA": "BLA",  # Blanket Agreement
+    "RR": "RR",  # Return Request (from customer)
+    "RTN": "RTN",  # Return Note (goods physically returned)
+    "ARC": "ARC",  # AR Credit Note (financial reversal of AR Invoice)
     # Finance (handled by finance microservice; included for convention reference)
-    "JE": "JE",        # Journal Entry
-    "PAY": "PAY",      # AP Payment
+    "JE": "JE",  # Journal Entry
+    "PAY": "PAY",  # AP Payment
 }
 
 _COUNTERS_COLLECTION = "document_counters"
@@ -220,7 +220,7 @@ async def assert_no_gaps(
     seen: set[int] = set()
     for doc in docs:
         number_str: str = doc["docNumber"]
-        suffix = number_str[len(doc_number_prefix):]
+        suffix = number_str[len(doc_number_prefix) :]
         try:
             seen.add(int(suffix))
         except ValueError:

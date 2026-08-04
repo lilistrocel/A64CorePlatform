@@ -40,19 +40,29 @@ class ConfigService:
         """
         try:
             # Find existing configuration
-            config_doc = await self.collection.find_one({
-                "configType": self.SPACING_STANDARDS_TYPE
-            })
+            config_doc = await self.collection.find_one(
+                {"configType": self.SPACING_STANDARDS_TYPE}
+            )
 
             if config_doc:
                 # Convert MongoDB document to Pydantic model
                 return SpacingStandardsConfig(
-                    configId=UUID(config_doc["configId"]) if isinstance(config_doc.get("configId"), str) else config_doc.get("configId", uuid4()),
-                    configType=config_doc.get("configType", self.SPACING_STANDARDS_TYPE),
+                    configId=(
+                        UUID(config_doc["configId"])
+                        if isinstance(config_doc.get("configId"), str)
+                        else config_doc.get("configId", uuid4())
+                    ),
+                    configType=config_doc.get(
+                        "configType", self.SPACING_STANDARDS_TYPE
+                    ),
                     densities=config_doc.get("densities", {}),
                     updatedAt=config_doc.get("updatedAt", datetime.utcnow()),
-                    updatedBy=UUID(config_doc["updatedBy"]) if config_doc.get("updatedBy") else None,
-                    updatedByEmail=config_doc.get("updatedByEmail")
+                    updatedBy=(
+                        UUID(config_doc["updatedBy"])
+                        if config_doc.get("updatedBy")
+                        else None
+                    ),
+                    updatedByEmail=config_doc.get("updatedByEmail"),
                 )
 
             # No configuration exists - create default
@@ -65,8 +75,11 @@ class ConfigService:
             return SpacingStandardsConfig(
                 configId=uuid4(),
                 configType=self.SPACING_STANDARDS_TYPE,
-                densities={cat.value: density for cat, density in DEFAULT_SPACING_DENSITIES.items()},
-                updatedAt=datetime.utcnow()
+                densities={
+                    cat.value: density
+                    for cat, density in DEFAULT_SPACING_DENSITIES.items()
+                },
+                updatedAt=datetime.utcnow(),
             )
 
     async def _create_default_spacing_standards(self) -> SpacingStandardsConfig:
@@ -74,19 +87,23 @@ class ConfigService:
         config = SpacingStandardsConfig(
             configId=uuid4(),
             configType=self.SPACING_STANDARDS_TYPE,
-            densities={cat.value: density for cat, density in DEFAULT_SPACING_DENSITIES.items()},
-            updatedAt=datetime.utcnow()
+            densities={
+                cat.value: density for cat, density in DEFAULT_SPACING_DENSITIES.items()
+            },
+            updatedAt=datetime.utcnow(),
         )
 
         try:
-            await self.collection.insert_one({
-                "configId": str(config.configId),
-                "configType": config.configType,
-                "densities": config.densities,
-                "updatedAt": config.updatedAt,
-                "updatedBy": None,
-                "updatedByEmail": None
-            })
+            await self.collection.insert_one(
+                {
+                    "configId": str(config.configId),
+                    "configType": config.configType,
+                    "densities": config.densities,
+                    "updatedAt": config.updatedAt,
+                    "updatedBy": None,
+                    "updatedByEmail": None,
+                }
+            )
             logger.info("Created default spacing standards configuration")
         except Exception as e:
             logger.error(f"Error creating default spacing standards: {e}")
@@ -95,10 +112,7 @@ class ConfigService:
         return config
 
     async def update_spacing_standards(
-        self,
-        densities: Dict[str, int],
-        user_id: UUID,
-        user_email: str
+        self, densities: Dict[str, int], user_id: UUID, user_email: str
     ) -> SpacingStandardsConfig:
         """
         Update the spacing standards configuration.
@@ -122,14 +136,14 @@ class ConfigService:
                         "densities": densities,
                         "updatedAt": now,
                         "updatedBy": str(user_id),
-                        "updatedByEmail": user_email
+                        "updatedByEmail": user_email,
                     },
                     "$setOnInsert": {
                         "configId": str(uuid4()),
-                        "configType": self.SPACING_STANDARDS_TYPE
-                    }
+                        "configType": self.SPACING_STANDARDS_TYPE,
+                    },
                 },
-                upsert=True
+                upsert=True,
             )
 
             logger.info(f"Updated spacing standards configuration by {user_email}")
@@ -142,9 +156,7 @@ class ConfigService:
             raise
 
     async def reset_spacing_standards(
-        self,
-        user_id: UUID,
-        user_email: str
+        self, user_id: UUID, user_email: str
     ) -> SpacingStandardsConfig:
         """
         Reset spacing standards to default values.
@@ -161,15 +173,10 @@ class ConfigService:
         }
 
         return await self.update_spacing_standards(
-            densities=default_densities,
-            user_id=user_id,
-            user_email=user_email
+            densities=default_densities, user_id=user_id, user_email=user_email
         )
 
-    async def get_density_for_category(
-        self,
-        spacing_category: SpacingCategory
-    ) -> int:
+    async def get_density_for_category(self, spacing_category: SpacingCategory) -> int:
         """
         Get the density (plants per 100 m²) for a specific spacing category.
 
@@ -181,6 +188,5 @@ class ConfigService:
         """
         config = await self.get_spacing_standards()
         return config.densities.get(
-            spacing_category.value,
-            DEFAULT_SPACING_DENSITIES[spacing_category]
+            spacing_category.value, DEFAULT_SPACING_DENSITIES[spacing_category]
         )

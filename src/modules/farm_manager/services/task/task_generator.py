@@ -23,10 +23,7 @@ class TaskGeneratorService:
 
     @staticmethod
     async def generate_tasks_for_block(
-        block_id: UUID,
-        cycle_id: UUID,
-        user_id: UUID,
-        user_email: str
+        block_id: UUID, cycle_id: UUID, user_id: UUID, user_email: str
     ) -> List[FarmTask]:
         """
         Generate all tasks for a block when it transitions to 'planned' state
@@ -77,9 +74,9 @@ class TaskGeneratorService:
         if current_planting and current_planting.get("plants"):
             # Check if any plant has fruiting stage
             for plant in current_planting["plants"]:
-                plant_data = await db.plant_data_enhanced.find_one({
-                    "plantName": plant.get("plantName")
-                })
+                plant_data = await db.plant_data_enhanced.find_one(
+                    {"plantName": plant.get("plantName")}
+                )
                 if plant_data and plant_data.get("growthStages"):
                     stages = plant_data.get("growthStages", [])
                     if "fruiting" in [s.lower() for s in stages]:
@@ -91,15 +88,25 @@ class TaskGeneratorService:
         # 1. PLANTING TASK
         # Scheduled for planted status date
         if "planted" in expected_changes:
-            planting_date = datetime.fromisoformat(expected_changes["planted"].replace("Z", "+00:00"))
+            planting_date = datetime.fromisoformat(
+                expected_changes["planted"].replace("Z", "+00:00")
+            )
 
             # Get plant details for task title
             target_crop_name = block.get("targetCropName", "")
             plant_count = block.get("actualPlantCount", "")
-            block_name = block.get('name', block['blockCode'])
+            block_name = block.get("name", block["blockCode"])
 
-            task_title = f"Plant {target_crop_name}" if target_crop_name else f"Plant {block_name}"
-            task_desc = f"Plant {plant_count} {target_crop_name} plants in Block {block_name}" if plant_count and target_crop_name else f"Plant {block_name} as planned"
+            task_title = (
+                f"Plant {target_crop_name}"
+                if target_crop_name
+                else f"Plant {block_name}"
+            )
+            task_desc = (
+                f"Plant {plant_count} {target_crop_name} plants in Block {block_name}"
+                if plant_count and target_crop_name
+                else f"Plant {block_name} as planned"
+            )
 
             planting_task = FarmTaskCreate(
                 farmId=farm_id,
@@ -110,20 +117,22 @@ class TaskGeneratorService:
                 dueDate=planting_date + timedelta(days=1),  # 1 day window
                 assignedTo=None,  # Auto-task, visible to all farmers
                 description=task_desc,
-                triggerStateChange="growing"  # Phase 2: Completing planting task offers to transition to GROWING
+                triggerStateChange="growing",  # Phase 2: Completing planting task offers to transition to GROWING
             )
             task = await TaskRepository.create(
-                planting_task,
-                is_auto_generated=True,
-                generated_from_cycle_id=cycle_id
+                planting_task, is_auto_generated=True, generated_from_cycle_id=cycle_id
             )
             created_tasks.append(task)
-            logger.info(f"Created PLANTING task for block {block_id} on {planting_date.date()}")
+            logger.info(
+                f"Created PLANTING task for block {block_id} on {planting_date.date()}"
+            )
 
         # 2. FRUITING CHECK TASK (only if plant has fruiting stage)
         if has_fruiting_stage and "fruiting" in expected_changes:
-            fruiting_date = datetime.fromisoformat(expected_changes["fruiting"].replace("Z", "+00:00"))
-            block_name = block.get('name', block['blockCode'])
+            fruiting_date = datetime.fromisoformat(
+                expected_changes["fruiting"].replace("Z", "+00:00")
+            )
+            block_name = block.get("name", block["blockCode"])
             target_crop_name = block.get("targetCropName", "")
 
             fruiting_task = FarmTaskCreate(
@@ -135,19 +144,21 @@ class TaskGeneratorService:
                 dueDate=fruiting_date + timedelta(days=2),
                 assignedTo=None,
                 description=f"Check fruiting status of {block_name}",
-                triggerStateChange="fruiting"  # Phase 2: Completing this task offers to transition to FRUITING
+                triggerStateChange="fruiting",  # Phase 2: Completing this task offers to transition to FRUITING
             )
             task = await TaskRepository.create(
-                fruiting_task,
-                is_auto_generated=True,
-                generated_from_cycle_id=cycle_id
+                fruiting_task, is_auto_generated=True, generated_from_cycle_id=cycle_id
             )
             created_tasks.append(task)
-            logger.info(f"Created FRUITING_CHECK task for block {block_id} on {fruiting_date.date()}")
+            logger.info(
+                f"Created FRUITING_CHECK task for block {block_id} on {fruiting_date.date()}"
+            )
 
         # 3. HARVEST READINESS CHECK
         if "harvesting" in expected_changes:
-            harvest_start_date = datetime.fromisoformat(expected_changes["harvesting"].replace("Z", "+00:00"))
+            harvest_start_date = datetime.fromisoformat(
+                expected_changes["harvesting"].replace("Z", "+00:00")
+            )
             # Schedule 2 days before expected harvest
             readiness_date = harvest_start_date - timedelta(days=2)
 
@@ -160,25 +171,27 @@ class TaskGeneratorService:
                 dueDate=harvest_start_date,
                 assignedTo=None,
                 description=f"Check if {block.get('name', block['blockCode'])} is ready for harvest",
-                triggerStateChange="harvesting"  # Phase 2: Completing this task offers to transition to HARVESTING
+                triggerStateChange="harvesting",  # Phase 2: Completing this task offers to transition to HARVESTING
             )
             task = await TaskRepository.create(
-                readiness_task,
-                is_auto_generated=True,
-                generated_from_cycle_id=cycle_id
+                readiness_task, is_auto_generated=True, generated_from_cycle_id=cycle_id
             )
             created_tasks.append(task)
-            logger.info(f"Created HARVEST_READINESS task for block {block_id} on {readiness_date.date()}")
+            logger.info(
+                f"Created HARVEST_READINESS task for block {block_id} on {readiness_date.date()}"
+            )
 
             # 4. DAILY HARVEST TASKS
             # Create one task per day in harvest window
-            daily_harvest_tasks = await TaskGeneratorService._generate_daily_harvest_tasks(
-                farm_id=farm_id,
-                block_id=block_id,
-                block_name=block.get('name', block['blockCode']),
-                harvest_start_date=harvest_start_date,
-                expected_changes=expected_changes,
-                cycle_id=cycle_id
+            daily_harvest_tasks = (
+                await TaskGeneratorService._generate_daily_harvest_tasks(
+                    farm_id=farm_id,
+                    block_id=block_id,
+                    block_name=block.get("name", block["blockCode"]),
+                    harvest_start_date=harvest_start_date,
+                    expected_changes=expected_changes,
+                    cycle_id=cycle_id,
+                )
             )
             created_tasks.extend(daily_harvest_tasks)
 
@@ -196,20 +209,24 @@ class TaskGeneratorService:
                     scheduledDate=harvest_end_estimate,
                     dueDate=harvest_end_estimate + timedelta(days=7),
                     assignedTo=None,
-                    description=f"Verify harvest completion for {block.get('name', block['blockCode'])}"
+                    description=f"Verify harvest completion for {block.get('name', block['blockCode'])}",
                 )
                 task = await TaskRepository.create(
                     completion_task,
                     is_auto_generated=True,
-                    generated_from_cycle_id=cycle_id
+                    generated_from_cycle_id=cycle_id,
                 )
                 created_tasks.append(task)
-                logger.info(f"Created HARVEST_COMPLETION task for block {block_id} on {harvest_end_estimate.date()}")
+                logger.info(
+                    f"Created HARVEST_COMPLETION task for block {block_id} on {harvest_end_estimate.date()}"
+                )
 
         # 6. CLEANING TASK
         # Schedule after harvest completion
         if "harvesting" in expected_changes:
-            harvest_start_date = datetime.fromisoformat(expected_changes["harvesting"].replace("Z", "+00:00"))
+            harvest_start_date = datetime.fromisoformat(
+                expected_changes["harvesting"].replace("Z", "+00:00")
+            )
             # Schedule cleaning 35 days after harvest start (after 30-day harvest + 5 day buffer)
             cleaning_date = harvest_start_date + timedelta(days=35)
 
@@ -222,17 +239,19 @@ class TaskGeneratorService:
                 dueDate=cleaning_date + timedelta(days=3),
                 assignedTo=None,
                 description=f"Clean and prepare {block.get('name', block['blockCode'])} for next cycle",
-                triggerStateChange="empty"  # Phase 2: Completing this task offers to transition to EMPTY
+                triggerStateChange="empty",  # Phase 2: Completing this task offers to transition to EMPTY
             )
             task = await TaskRepository.create(
-                cleaning_task,
-                is_auto_generated=True,
-                generated_from_cycle_id=cycle_id
+                cleaning_task, is_auto_generated=True, generated_from_cycle_id=cycle_id
             )
             created_tasks.append(task)
-            logger.info(f"Created CLEANING task for block {block_id} on {cleaning_date.date()}")
+            logger.info(
+                f"Created CLEANING task for block {block_id} on {cleaning_date.date()}"
+            )
 
-        logger.info(f"Generated {len(created_tasks)} tasks for block {block_id} (cycle {cycle_id})")
+        logger.info(
+            f"Generated {len(created_tasks)} tasks for block {block_id} (cycle {cycle_id})"
+        )
         return created_tasks
 
     @staticmethod
@@ -242,7 +261,7 @@ class TaskGeneratorService:
         block_name: str,
         harvest_start_date: datetime,
         expected_changes: dict,
-        cycle_id: UUID
+        cycle_id: UUID,
     ) -> List[FarmTask]:
         """
         Generate daily harvest tasks for the harvest window
@@ -275,17 +294,19 @@ class TaskGeneratorService:
                 scheduledDate=task_date,
                 dueDate=task_date.replace(hour=23, minute=59, second=59),  # End of day
                 assignedTo=None,
-                description=f"Daily harvest for {block_name} - Day {day_offset + 1}"
+                description=f"Daily harvest for {block_name} - Day {day_offset + 1}",
             )
 
             task = await TaskRepository.create(
                 daily_harvest_task,
                 is_auto_generated=True,
-                generated_from_cycle_id=cycle_id
+                generated_from_cycle_id=cycle_id,
             )
             daily_tasks.append(task)
 
-        logger.info(f"Generated {len(daily_tasks)} daily harvest tasks for block {block_id}")
+        logger.info(
+            f"Generated {len(daily_tasks)} daily harvest tasks for block {block_id}"
+        )
         return daily_tasks
 
     @staticmethod
@@ -294,7 +315,7 @@ class TaskGeneratorService:
         cycle_id: UUID,
         new_expected_changes: dict,
         user_id: UUID,
-        user_email: str
+        user_email: str,
     ) -> int:
         """
         Reschedule auto-generated tasks when block timeline changes
@@ -316,80 +337,75 @@ class TaskGeneratorService:
 
         # Reschedule PLANTING task
         if "planted" in new_expected_changes:
-            new_date = datetime.fromisoformat(new_expected_changes["planted"].replace("Z", "+00:00"))
+            new_date = datetime.fromisoformat(
+                new_expected_changes["planted"].replace("Z", "+00:00")
+            )
             count = await TaskRepository.reschedule_tasks_for_cycle(
-                cycle_id,
-                TaskType.PLANTING,
-                [new_date]
+                cycle_id, TaskType.PLANTING, [new_date]
             )
             total_rescheduled += count
 
         # Reschedule FRUITING_CHECK task
         if "fruiting" in new_expected_changes:
-            new_date = datetime.fromisoformat(new_expected_changes["fruiting"].replace("Z", "+00:00"))
+            new_date = datetime.fromisoformat(
+                new_expected_changes["fruiting"].replace("Z", "+00:00")
+            )
             count = await TaskRepository.reschedule_tasks_for_cycle(
-                cycle_id,
-                TaskType.FRUITING_CHECK,
-                [new_date]
+                cycle_id, TaskType.FRUITING_CHECK, [new_date]
             )
             total_rescheduled += count
 
         # Reschedule HARVEST_READINESS task
         if "harvesting" in new_expected_changes:
-            harvest_date = datetime.fromisoformat(new_expected_changes["harvesting"].replace("Z", "+00:00"))
+            harvest_date = datetime.fromisoformat(
+                new_expected_changes["harvesting"].replace("Z", "+00:00")
+            )
             readiness_date = harvest_date - timedelta(days=2)
             count = await TaskRepository.reschedule_tasks_for_cycle(
-                cycle_id,
-                TaskType.HARVEST_READINESS,
-                [readiness_date]
+                cycle_id, TaskType.HARVEST_READINESS, [readiness_date]
             )
             total_rescheduled += count
 
             # Reschedule DAILY_HARVEST tasks
             # Get existing daily harvest tasks count
-            existing_tasks = await db.farm_tasks.count_documents({
-                "generatedFromCycleId": str(cycle_id),
-                "taskType": TaskType.DAILY_HARVEST.value
-            })
+            existing_tasks = await db.farm_tasks.count_documents(
+                {
+                    "generatedFromCycleId": str(cycle_id),
+                    "taskType": TaskType.DAILY_HARVEST.value,
+                }
+            )
 
             # Generate new dates for all daily harvest tasks
             new_harvest_dates = [
-                harvest_date + timedelta(days=i)
-                for i in range(existing_tasks)
+                harvest_date + timedelta(days=i) for i in range(existing_tasks)
             ]
             count = await TaskRepository.reschedule_tasks_for_cycle(
-                cycle_id,
-                TaskType.DAILY_HARVEST,
-                new_harvest_dates
+                cycle_id, TaskType.DAILY_HARVEST, new_harvest_dates
             )
             total_rescheduled += count
 
             # Reschedule HARVEST_COMPLETION task
             harvest_end_estimate = harvest_date + timedelta(days=30)
             count = await TaskRepository.reschedule_tasks_for_cycle(
-                cycle_id,
-                TaskType.HARVEST_COMPLETION,
-                [harvest_end_estimate]
+                cycle_id, TaskType.HARVEST_COMPLETION, [harvest_end_estimate]
             )
             total_rescheduled += count
 
             # Reschedule CLEANING task
             cleaning_date = harvest_date + timedelta(days=35)
             count = await TaskRepository.reschedule_tasks_for_cycle(
-                cycle_id,
-                TaskType.CLEANING,
-                [cleaning_date]
+                cycle_id, TaskType.CLEANING, [cleaning_date]
             )
             total_rescheduled += count
 
-        logger.info(f"Rescheduled {total_rescheduled} tasks for block {block_id} due to timeline change")
+        logger.info(
+            f"Rescheduled {total_rescheduled} tasks for block {block_id} due to timeline change"
+        )
         return total_rescheduled
 
     @staticmethod
     async def cancel_future_harvest_tasks(
-        cycle_id: UUID,
-        user_id: UUID,
-        user_email: str
+        cycle_id: UUID, user_id: UUID, user_email: str
     ) -> int:
         """
         Cancel future daily harvest tasks when harvest ends early
@@ -406,15 +422,16 @@ class TaskGeneratorService:
         task_types = [
             TaskType.DAILY_HARVEST,
             TaskType.HARVEST_COMPLETION,
-            TaskType.CLEANING
+            TaskType.CLEANING,
         ]
 
         cancelled_count = await TaskRepository.cancel_future_tasks_for_cycle(
-            cycle_id,
-            task_types
+            cycle_id, task_types
         )
 
-        logger.info(f"Cancelled {cancelled_count} future harvest tasks for cycle {cycle_id} by {user_email}")
+        logger.info(
+            f"Cancelled {cancelled_count} future harvest tasks for cycle {cycle_id} by {user_email}"
+        )
         return cancelled_count
 
     @staticmethod
@@ -427,7 +444,7 @@ class TaskGeneratorService:
         user_id: UUID,
         user_email: str,
         target_crop_name: Optional[str] = None,
-        plant_count: Optional[int] = None
+        plant_count: Optional[int] = None,
     ) -> List[FarmTask]:
         """
         Phase 1: Generate tasks based on state transition
@@ -470,12 +487,22 @@ class TaskGeneratorService:
                 # Handle both datetime objects and ISO strings
                 planted_value = expected_status_changes["planted"]
                 if isinstance(planted_value, str):
-                    planting_date = datetime.fromisoformat(planted_value.replace("Z", "+00:00"))
+                    planting_date = datetime.fromisoformat(
+                        planted_value.replace("Z", "+00:00")
+                    )
                 else:
                     planting_date = planted_value
 
-                task_title = f"Plant {target_crop_name}" if target_crop_name else f"Plant {block_name}"
-                task_desc = f"Plant {plant_count} {target_crop_name} plants in Block {block_name}" if plant_count and target_crop_name else f"Plant {block_name} as planned"
+                task_title = (
+                    f"Plant {target_crop_name}"
+                    if target_crop_name
+                    else f"Plant {block_name}"
+                )
+                task_desc = (
+                    f"Plant {plant_count} {target_crop_name} plants in Block {block_name}"
+                    if plant_count and target_crop_name
+                    else f"Plant {block_name} as planned"
+                )
 
                 planting_task = FarmTaskCreate(
                     farmId=farm_id,
@@ -486,16 +513,23 @@ class TaskGeneratorService:
                     dueDate=planting_date + timedelta(days=1),
                     assignedTo=None,
                     description=task_desc,
-                    triggerStateChange="growing"  # Phase 2: Completing planting task offers to transition to GROWING
+                    triggerStateChange="growing",  # Phase 2: Completing planting task offers to transition to GROWING
                 )
 
-                task = await TaskRepository.create(planting_task, is_auto_generated=True)
+                task = await TaskRepository.create(
+                    planting_task, is_auto_generated=True
+                )
                 created_tasks.append(task)
-                logger.info(f"[Task Generator] Created PLANTING task for block {block_id}")
+                logger.info(
+                    f"[Task Generator] Created PLANTING task for block {block_id}"
+                )
 
         # 2. EMPTY/PLANNED → GROWING: Direct transition to growing (planting happened)
         # Generate next task based on whether plant has fruiting stage
-        elif (from_state in [BlockStatus.EMPTY, BlockStatus.PLANNED] and to_state == BlockStatus.GROWING):
+        elif (
+            from_state in [BlockStatus.EMPTY, BlockStatus.PLANNED]
+            and to_state == BlockStatus.GROWING
+        ):
             if expected_status_changes:
                 # Check if plant has fruiting stage
                 has_fruiting = "fruiting" in expected_status_changes
@@ -505,7 +539,9 @@ class TaskGeneratorService:
                     # Handle both datetime objects and ISO strings
                     fruiting_value = expected_status_changes["fruiting"]
                     if isinstance(fruiting_value, str):
-                        fruiting_date = datetime.fromisoformat(fruiting_value.replace("Z", "+00:00"))
+                        fruiting_date = datetime.fromisoformat(
+                            fruiting_value.replace("Z", "+00:00")
+                        )
                     else:
                         fruiting_date = fruiting_value
 
@@ -518,18 +554,24 @@ class TaskGeneratorService:
                         dueDate=fruiting_date + timedelta(days=2),
                         assignedTo=None,
                         description=f"Check if {block_name} is fruiting",
-                        triggerStateChange="fruiting"  # Phase 2: Completing fruiting check offers to transition to FRUITING
+                        triggerStateChange="fruiting",  # Phase 2: Completing fruiting check offers to transition to FRUITING
                     )
-                    task = await TaskRepository.create(fruiting_task, is_auto_generated=True)
+                    task = await TaskRepository.create(
+                        fruiting_task, is_auto_generated=True
+                    )
                     created_tasks.append(task)
-                    logger.info(f"[Task Generator] Created FRUITING_CHECK task for block {block_id}")
+                    logger.info(
+                        f"[Task Generator] Created FRUITING_CHECK task for block {block_id}"
+                    )
                 else:
                     # Generate harvest readiness task (skip to harvest)
                     if "harvesting" in expected_status_changes:
                         # Handle both datetime objects and ISO strings
                         harvest_value = expected_status_changes["harvesting"]
                         if isinstance(harvest_value, str):
-                            harvest_date = datetime.fromisoformat(harvest_value.replace("Z", "+00:00"))
+                            harvest_date = datetime.fromisoformat(
+                                harvest_value.replace("Z", "+00:00")
+                            )
                         else:
                             harvest_date = harvest_value
 
@@ -544,16 +586,22 @@ class TaskGeneratorService:
                             dueDate=harvest_date,
                             assignedTo=None,
                             description=f"Start harvesting {block_name}",
-                            triggerStateChange="harvesting"  # Phase 2: Completing this task offers to transition to HARVESTING
+                            triggerStateChange="harvesting",  # Phase 2: Completing this task offers to transition to HARVESTING
                         )
-                        task = await TaskRepository.create(readiness_task, is_auto_generated=True)
+                        task = await TaskRepository.create(
+                            readiness_task, is_auto_generated=True
+                        )
                         created_tasks.append(task)
-                        logger.info(f"[Task Generator] Created HARVEST_READINESS task for block {block_id}")
+                        logger.info(
+                            f"[Task Generator] Created HARVEST_READINESS task for block {block_id}"
+                        )
 
         # 3. GROWING → FRUITING: Generate harvest readiness task
         elif from_state == BlockStatus.GROWING and to_state == BlockStatus.FRUITING:
             if expected_status_changes and "harvesting" in expected_status_changes:
-                harvest_date = datetime.fromisoformat(expected_status_changes["harvesting"].replace("Z", "+00:00"))
+                harvest_date = datetime.fromisoformat(
+                    expected_status_changes["harvesting"].replace("Z", "+00:00")
+                )
                 readiness_date = harvest_date - timedelta(days=2)
 
                 readiness_task = FarmTaskCreate(
@@ -563,11 +611,15 @@ class TaskGeneratorService:
                     scheduledDate=readiness_date,
                     dueDate=harvest_date,
                     assignedTo=None,
-                    description=f"Start harvesting {block_name}"
+                    description=f"Start harvesting {block_name}",
                 )
-                task = await TaskRepository.create(readiness_task, is_auto_generated=True)
+                task = await TaskRepository.create(
+                    readiness_task, is_auto_generated=True
+                )
                 created_tasks.append(task)
-                logger.info(f"[Task Generator] Created HARVEST_READINESS task for block {block_id}")
+                logger.info(
+                    f"[Task Generator] Created HARVEST_READINESS task for block {block_id}"
+                )
 
         # 4. GROWING/FRUITING → HARVESTING: Generate simplified daily harvest task
         elif to_state == BlockStatus.HARVESTING:
@@ -582,17 +634,23 @@ class TaskGeneratorService:
                 scheduledDate=today,
                 dueDate=today.replace(hour=23, minute=59, second=59),
                 assignedTo=None,
-                description=f"Daily harvest for {block_name}"
+                description=f"Daily harvest for {block_name}",
             )
-            task = await TaskRepository.create(daily_harvest_task, is_auto_generated=True)
+            task = await TaskRepository.create(
+                daily_harvest_task, is_auto_generated=True
+            )
             created_tasks.append(task)
-            logger.info(f"[Task Generator] Created DAILY_HARVEST task for block {block_id}")
+            logger.info(
+                f"[Task Generator] Created DAILY_HARVEST task for block {block_id}"
+            )
 
         # 5. HARVESTING → CLEANING: Generate cleaning task
         elif from_state == BlockStatus.HARVESTING and to_state == BlockStatus.CLEANING:
             # Schedule cleaning for tomorrow
             cleaning_date = datetime.utcnow() + timedelta(days=1)
-            cleaning_date = cleaning_date.replace(hour=9, minute=0, second=0, microsecond=0)
+            cleaning_date = cleaning_date.replace(
+                hour=9, minute=0, second=0, microsecond=0
+            )
 
             cleaning_task = FarmTaskCreate(
                 farmId=farm_id,
@@ -603,11 +661,13 @@ class TaskGeneratorService:
                 dueDate=cleaning_date + timedelta(days=3),
                 assignedTo=None,
                 description=f"Clean and sanitize Block {block_name}",
-                triggerStateChange="empty"  # Phase 2: Completing this task offers to transition to EMPTY
+                triggerStateChange="empty",  # Phase 2: Completing this task offers to transition to EMPTY
             )
             task = await TaskRepository.create(cleaning_task, is_auto_generated=True)
             created_tasks.append(task)
             logger.info(f"[Task Generator] Created CLEANING task for block {block_id}")
 
-        logger.info(f"[Task Generator] Generated {len(created_tasks)} tasks for {from_state.value} → {to_state.value} transition")
+        logger.info(
+            f"[Task Generator] Generated {len(created_tasks)} tasks for {from_state.value} → {to_state.value} transition"
+        )
         return created_tasks

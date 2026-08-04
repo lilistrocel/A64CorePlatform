@@ -21,11 +21,11 @@ router = APIRouter(prefix="/plantings", tags=["plantings"])
     response_model=SuccessResponse[dict],
     status_code=status.HTTP_201_CREATED,
     summary="Create planting plan",
-    description="Create a planting plan for a block. Validates capacity, calculates yield prediction, and transitions block to PLANNED state."
+    description="Create a planting plan for a block. Validates capacity, calculates yield prediction, and transitions block to PLANNED state.",
 )
 async def create_planting_plan(
     planting_data: PlantingCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
 ):
     """
     Create a planting plan for a block.
@@ -49,17 +49,12 @@ async def create_planting_plan(
     - Updated block information
     """
     planting, block = await PlantingService.create_planting_plan(
-        planting_data,
-        UUID(current_user.userId),
-        current_user.email
+        planting_data, UUID(current_user.userId), current_user.email
     )
 
     return SuccessResponse(
-        data={
-            "planting": planting.model_dump(mode="json"),
-            "block": block
-        },
-        message=f"Planting plan created successfully. Predicted yield: {planting.predictedYield} {planting.yieldUnit}"
+        data={"planting": planting.model_dump(mode="json"), "block": block},
+        message=f"Planting plan created successfully. Predicted yield: {planting.predictedYield} {planting.yieldUnit}",
     )
 
 
@@ -67,11 +62,11 @@ async def create_planting_plan(
     "/{planting_id}/mark-planted",
     response_model=SuccessResponse[dict],
     summary="Mark planting as planted",
-    description="Mark a planned planting as planted (farmer executes the plan). Transitions block to GROWING state."
+    description="Mark a planned planting as planted (farmer executes the plan). Transitions block to GROWING state.",
 )
 async def mark_as_planted(
     planting_id: UUID,
-    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+    current_user: CurrentUser = Depends(require_permission("farm.operate")),
 ):
     """
     Mark a planned planting as planted (farmer executes the plan).
@@ -93,17 +88,12 @@ async def mark_as_planted(
     - Updated block information
     """
     planting, block = await PlantingService.mark_as_planted(
-        planting_id,
-        UUID(current_user.userId),
-        current_user.email
+        planting_id, UUID(current_user.userId), current_user.email
     )
 
     return SuccessResponse(
-        data={
-            "planting": planting.model_dump(mode="json"),
-            "block": block
-        },
-        message=f"Planting marked as planted. Estimated harvest: {planting.estimatedHarvestStartDate.strftime('%Y-%m-%d') if planting.estimatedHarvestStartDate else 'N/A'}"
+        data={"planting": planting.model_dump(mode="json"), "block": block},
+        message=f"Planting marked as planted. Estimated harvest: {planting.estimatedHarvestStartDate.strftime('%Y-%m-%d') if planting.estimatedHarvestStartDate else 'N/A'}",
     )
 
 
@@ -111,11 +101,10 @@ async def mark_as_planted(
     "/{planting_id}",
     response_model=SuccessResponse[Planting],
     summary="Get planting by ID",
-    description="Get detailed information about a specific planting."
+    description="Get detailed information about a specific planting.",
 )
 async def get_planting(
-    planting_id: UUID,
-    current_user: CurrentUser = Depends(get_current_active_user)
+    planting_id: UUID, current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
     Get detailed information about a specific planting.
@@ -132,24 +121,23 @@ async def get_planting(
     """
     planting = await PlantingService.get_planting_by_id(planting_id)
 
-    return SuccessResponse(
-        data=planting,
-        message="Planting retrieved successfully"
-    )
+    return SuccessResponse(data=planting, message="Planting retrieved successfully")
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[Planting],
     summary="List plantings for a farm",
-    description="Get list of plantings for a farm with pagination and filtering."
+    description="Get list of plantings for a farm with pagination and filtering.",
 )
 async def list_plantings(
     farmId: UUID = Query(..., description="Farm ID to filter plantings"),
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    status: Optional[str] = Query(None, description="Filter by status (planned, planted, harvesting, completed)"),
-    current_user: CurrentUser = Depends(get_current_active_user)
+    status: Optional[str] = Query(
+        None, description="Filter by status (planned, planted, harvesting, completed)"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
     Get list of plantings for a farm with pagination.
@@ -171,10 +159,7 @@ async def list_plantings(
     - Total count and pagination metadata
     """
     plantings, total = await PlantingService.get_farm_plantings(
-        farmId,
-        page=page,
-        per_page=perPage,
-        status=status
+        farmId, page=page, per_page=perPage, status=status
     )
 
     return PaginatedResponse(
@@ -183,6 +168,6 @@ async def list_plantings(
             total=total,
             page=page,
             perPage=perPage,
-            totalPages=(total + perPage - 1) // perPage
-        )
+            totalPages=(total + perPage - 1) // perPage,
+        ),
     )

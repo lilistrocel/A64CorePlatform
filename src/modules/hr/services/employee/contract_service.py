@@ -10,7 +10,12 @@ from uuid import UUID
 from fastapi import HTTPException, status
 import logging
 
-from src.modules.hr.models.contract import Contract, ContractCreate, ContractUpdate, ContractStatus
+from src.modules.hr.models.contract import (
+    Contract,
+    ContractCreate,
+    ContractUpdate,
+    ContractStatus,
+)
 from src.modules.hr.services.employee.contract_repository import ContractRepository
 from src.modules.hr.services.employee.employee_repository import EmployeeRepository
 
@@ -24,10 +29,7 @@ class ContractService:
         self.repository = ContractRepository()
         self.employee_repository = EmployeeRepository()
 
-    async def create_contract(
-        self,
-        contract_data: ContractCreate
-    ) -> Contract:
+    async def create_contract(self, contract_data: ContractCreate) -> Contract:
         """
         Create a new contract
 
@@ -42,22 +44,29 @@ class ContractService:
         """
         try:
             # Verify employee exists
-            employee_exists = await self.employee_repository.exists(contract_data.employeeId)
+            employee_exists = await self.employee_repository.exists(
+                contract_data.employeeId
+            )
             if not employee_exists:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Employee {contract_data.employeeId} not found"
+                    detail=f"Employee {contract_data.employeeId} not found",
                 )
 
             # Validate dates
-            if contract_data.endDate and contract_data.endDate < contract_data.startDate:
+            if (
+                contract_data.endDate
+                and contract_data.endDate < contract_data.startDate
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="End date must be after start date"
+                    detail="End date must be after start date",
                 )
 
             contract = await self.repository.create(contract_data)
-            logger.info(f"Contract created: {contract.contractId} for employee {contract.employeeId}")
+            logger.info(
+                f"Contract created: {contract.contractId} for employee {contract.employeeId}"
+            )
             return contract
 
         except HTTPException:
@@ -66,7 +75,7 @@ class ContractService:
             logger.error(f"Error creating contract: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create contract"
+                detail="Failed to create contract",
             )
 
     async def get_contract(self, contract_id: UUID) -> Contract:
@@ -86,7 +95,7 @@ class ContractService:
         if not contract:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Contract {contract_id} not found"
+                detail=f"Contract {contract_id} not found",
             )
         return contract
 
@@ -95,7 +104,7 @@ class ContractService:
         employee_id: UUID,
         page: int = 1,
         per_page: int = 20,
-        status: Optional[ContractStatus] = None
+        status: Optional[ContractStatus] = None,
     ) -> tuple[List[Contract], int, int]:
         """
         Get contracts for a specific employee
@@ -114,7 +123,7 @@ class ContractService:
         if not employee_exists:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee {employee_id} not found"
+                detail=f"Employee {employee_id} not found",
             )
 
         if page < 1:
@@ -123,17 +132,16 @@ class ContractService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        contracts, total = await self.repository.get_by_employee_id(employee_id, skip, per_page, status)
+        contracts, total = await self.repository.get_by_employee_id(
+            employee_id, skip, per_page, status
+        )
 
         total_pages = (total + per_page - 1) // per_page
 
         return contracts, total, total_pages
 
     async def get_all_contracts(
-        self,
-        page: int = 1,
-        per_page: int = 20,
-        status: Optional[ContractStatus] = None
+        self, page: int = 1, per_page: int = 20, status: Optional[ContractStatus] = None
     ) -> tuple[List[Contract], int, int]:
         """
         Get all contracts with pagination
@@ -159,9 +167,7 @@ class ContractService:
         return contracts, total, total_pages
 
     async def update_contract(
-        self,
-        contract_id: UUID,
-        update_data: ContractUpdate
+        self, contract_id: UUID, update_data: ContractUpdate
     ) -> Contract:
         """
         Update a contract
@@ -184,14 +190,14 @@ class ContractService:
             if update_data.endDate < update_data.startDate:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="End date must be after start date"
+                    detail="End date must be after start date",
                 )
 
         updated_contract = await self.repository.update(contract_id, update_data)
         if not updated_contract:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Contract {contract_id} not found"
+                detail=f"Contract {contract_id} not found",
             )
 
         logger.info(f"Contract updated: {contract_id}")
@@ -217,7 +223,7 @@ class ContractService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Contract {contract_id} not found"
+                detail=f"Contract {contract_id} not found",
             )
 
         logger.info(f"Contract deleted: {contract_id}")

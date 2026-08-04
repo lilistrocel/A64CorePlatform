@@ -96,13 +96,7 @@ class CalculationListsRepository:
 
         total = await db[COLLECTION].count_documents(query)
         skip = max(0, (page - 1) * size)
-        cursor = (
-            db[COLLECTION]
-            .find(query)
-            .sort("createdAt", -1)
-            .skip(skip)
-            .limit(size)
-        )
+        cursor = db[COLLECTION].find(query).sort("createdAt", -1).skip(skip).limit(size)
         docs = await cursor.to_list(length=size)
         return [_from_doc(d) for d in docs], total
 
@@ -122,10 +116,12 @@ class CalculationListsRepository:
             CalculationList or None if not found.
         """
         db = farm_db.get_database()
-        doc = await db[COLLECTION].find_one({
-            "listId": str(list_id),
-            "organizationId": str(organization_id),
-        })
+        doc = await db[COLLECTION].find_one(
+            {
+                "listId": str(list_id),
+                "organizationId": str(organization_id),
+            }
+        )
         return _from_doc(doc) if doc else None
 
     @staticmethod
@@ -179,16 +175,19 @@ class CalculationListsRepository:
             True if deleted, False if not found.
         """
         db = farm_db.get_database()
-        result = await db[COLLECTION].delete_one({
-            "listId": str(list_id),
-            "organizationId": str(organization_id),
-        })
+        result = await db[COLLECTION].delete_one(
+            {
+                "listId": str(list_id),
+                "organizationId": str(organization_id),
+            }
+        )
         return result.deleted_count > 0
 
 
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _to_doc(calc_list: CalculationList) -> Dict[str, Any]:
     """Convert a CalculationList to a MongoDB document."""

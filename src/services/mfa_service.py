@@ -27,11 +27,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import HTTPException, status
 
-from ..models.user import (
-    MFASetupResponse,
-    MFAEnableResponse,
-    MFAStatusResponse
-)
+from ..models.user import MFASetupResponse, MFAEnableResponse, MFAStatusResponse
 from ..config.settings import settings
 from .database import mongodb
 
@@ -159,10 +155,7 @@ class MFAService:
             otpauth:// URI string
         """
         totp = pyotp.TOTP(secret)
-        return totp.provisioning_uri(
-            name=email,
-            issuer_name=MFAService.ISSUER_NAME
-        )
+        return totp.provisioning_uri(name=email, issuer_name=MFAService.ISSUER_NAME)
 
     @staticmethod
     def generate_qr_code_base64(provisioning_uri: str) -> str:
@@ -198,7 +191,7 @@ class MFAService:
             img.save(buffer, format="PNG")
             buffer.seek(0)
 
-            base64_img = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            base64_img = base64.b64encode(buffer.getvalue()).decode("utf-8")
             return f"data:image/png;base64,{base64_img}"
 
         except Exception as e:
@@ -229,20 +222,24 @@ class MFAService:
             is_valid = totp.verify(code, valid_window=1)
 
             if is_valid:
-                logger.info(f"TOTP verification successful for user: {user_id or 'unknown'}")
+                logger.info(
+                    f"TOTP verification successful for user: {user_id or 'unknown'}"
+                )
             else:
-                logger.warning(f"TOTP verification failed for user: {user_id or 'unknown'}")
+                logger.warning(
+                    f"TOTP verification failed for user: {user_id or 'unknown'}"
+                )
 
             return is_valid
         except Exception as e:
-            logger.error(f"Error verifying TOTP code for user {user_id or 'unknown'}: {e}")
+            logger.error(
+                f"Error verifying TOTP code for user {user_id or 'unknown'}: {e}"
+            )
             return False
 
     @staticmethod
     async def verify_totp_with_replay_protection(
-        user_id: str,
-        code: str,
-        secret: str
+        user_id: str, code: str, secret: str
     ) -> Tuple[bool, str]:
         """
         Verify TOTP code with replay attack prevention.
@@ -281,7 +278,10 @@ class MFAService:
                     logger.warning(
                         f"TOTP verification failed for user {user_id}: Expired code"
                     )
-                    return False, "Code expired. Please enter the current code from your app."
+                    return (
+                        False,
+                        "Code expired. Please enter the current code from your app.",
+                    )
 
                 logger.warning(
                     f"TOTP verification failed for user {user_id}: Invalid code"
@@ -290,8 +290,7 @@ class MFAService:
 
             # Get user's last used counter
             user = await db.users.find_one(
-                {"userId": user_id},
-                {"mfaLastUsedCounter": 1}
+                {"userId": user_id}, {"mfaLastUsedCounter": 1}
             )
             last_used_counter = user.get("mfaLastUsedCounter", 0) if user else 0
 
@@ -309,9 +308,9 @@ class MFAService:
                 {
                     "$set": {
                         "mfaLastUsedCounter": current_counter,
-                        "mfaLastUsedAt": datetime.utcnow()
+                        "mfaLastUsedAt": datetime.utcnow(),
                     }
-                }
+                },
             )
 
             logger.info(
@@ -367,7 +366,11 @@ class MFAService:
         normalized = code.replace("-", "").upper()
         if len(normalized) != 8:
             # Try with original formatting
-            formatted = f"{normalized[:4]}-{normalized[4:]}" if len(normalized) == 8 else code.upper()
+            formatted = (
+                f"{normalized[:4]}-{normalized[4:]}"
+                if len(normalized) == 8
+                else code.upper()
+            )
         else:
             formatted = f"{normalized[:4]}-{normalized[4:]}"
 
@@ -401,15 +404,14 @@ class MFAService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Check if MFA is already enabled
         if user_doc.get("mfaEnabled", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="MFA is already enabled for this account"
+                detail="MFA is already enabled for this account",
             )
 
         # Generate new TOTP secret
@@ -430,9 +432,9 @@ class MFAService:
                     "mfaPendingSecret": encrypted_secret,
                     "mfaPendingSecretEncrypted": True,  # Flag indicating encryption
                     "mfaPendingSetupAt": datetime.utcnow(),
-                    "updatedAt": datetime.utcnow()
+                    "updatedAt": datetime.utcnow(),
                 }
-            }
+            },
         )
 
         logger.info(f"MFA setup initiated for user: {user_id}")
@@ -441,7 +443,7 @@ class MFAService:
             secret=secret,
             qrCodeUri=qr_uri,
             qrCodeDataUrl=qr_code_data_url,
-            message="Scan the QR code with your authenticator app, then verify with a code"
+            message="Scan the QR code with your authenticator app, then verify with a code",
         )
 
     async def enable_mfa(self, user_id: str, totp_code: str) -> MFAEnableResponse:
@@ -465,15 +467,14 @@ class MFAService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Check if MFA is already enabled
         if user_doc.get("mfaEnabled", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="MFA is already enabled for this account"
+                detail="MFA is already enabled for this account",
             )
 
         # Check for pending secret (encrypted)
@@ -481,7 +482,7 @@ class MFAService:
         if not pending_secret_encrypted:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No MFA setup in progress. Please start setup first."
+                detail="No MFA setup in progress. Please start setup first.",
             )
 
         # Decrypt the pending secret for verification
@@ -492,19 +493,21 @@ class MFAService:
             else:
                 # Legacy plain text - encrypt on next store
                 pending_secret = pending_secret_encrypted
-                logger.warning(f"Found unencrypted MFA pending secret for user {user_id}")
+                logger.warning(
+                    f"Found unencrypted MFA pending secret for user {user_id}"
+                )
         except ValueError as e:
             logger.error(f"Failed to decrypt MFA secret for user {user_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to process MFA secret. Please restart setup."
+                detail="Failed to process MFA secret. Please restart setup.",
             )
 
         # Verify the TOTP code
         if not self.verify_totp_code(pending_secret, totp_code):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid TOTP code. Please try again."
+                detail="Invalid TOTP code. Please try again.",
             )
 
         # Generate backup codes
@@ -524,14 +527,14 @@ class MFAService:
                     "mfaSecretEncrypted": True,  # Flag indicating encryption
                     "mfaBackupCodes": hashed_codes,
                     "mfaEnabledAt": datetime.utcnow(),
-                    "updatedAt": datetime.utcnow()
+                    "updatedAt": datetime.utcnow(),
                 },
                 "$unset": {
                     "mfaPendingSecret": "",
                     "mfaPendingSecretEncrypted": "",
-                    "mfaPendingSetupAt": ""
-                }
-            }
+                    "mfaPendingSetupAt": "",
+                },
+            },
         )
 
         logger.info(f"MFA enabled successfully for user: {user_id}")
@@ -539,7 +542,7 @@ class MFAService:
         return MFAEnableResponse(
             enabled=True,
             backupCodes=plain_codes,
-            message="MFA has been enabled successfully. Save your backup codes in a secure location."
+            message="MFA has been enabled successfully. Save your backup codes in a secure location.",
         )
 
     async def disable_mfa(self, user_id: str, totp_code: str, password: str) -> dict:
@@ -568,22 +571,20 @@ class MFAService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Check if MFA is enabled
         if not user_doc.get("mfaEnabled", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="MFA is not enabled for this account"
+                detail="MFA is not enabled for this account",
             )
 
         # Verify password
         if not verify_password(password, user_doc["passwordHash"]):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid password"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password"
             )
 
         # Decrypt and verify TOTP code
@@ -598,7 +599,7 @@ class MFAService:
             logger.error(f"Failed to decrypt MFA secret for user {user_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to process MFA secret"
+                detail="Failed to process MFA secret",
             )
 
         if not self.verify_totp_code(mfa_secret, totp_code):
@@ -609,7 +610,7 @@ class MFAService:
             if not is_valid:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid TOTP or backup code"
+                    detail="Invalid TOTP or backup code",
                 )
 
         # Disable MFA and set mfaSetupRequired=true
@@ -623,7 +624,7 @@ class MFAService:
                     "mfaSetupRequired": True,  # Force re-setup on next login
                     "mfaDisabledAt": disable_time,
                     "mfaDisabledByUserId": user_id,  # Self-disabled
-                    "updatedAt": disable_time
+                    "updatedAt": disable_time,
                 },
                 "$unset": {
                     "mfaSecret": "",
@@ -632,16 +633,16 @@ class MFAService:
                     "mfaEnabledAt": "",
                     "mfaLastUsedCounter": "",
                     "mfaLastUsedAt": "",
-                    "mfaBackupCodesRegeneratedAt": ""
-                }
-            }
+                    "mfaBackupCodesRegeneratedAt": "",
+                },
+            },
         )
 
         logger.info(f"MFA disabled for user: {user_id} (setup required on next login)")
 
         return {
             "message": "MFA has been disabled successfully. You will be required to set up MFA again on your next login.",
-            "mfaSetupRequired": True
+            "mfaSetupRequired": True,
         }
 
     async def verify_mfa_code(self, user_id: str, code: str) -> Tuple[bool, bool, int]:
@@ -668,15 +669,14 @@ class MFAService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Feature #335: Check if MFA is enabled
         if not user_doc.get("mfaEnabled", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Please complete MFA setup first."
+                detail="Please complete MFA setup first.",
             )
 
         mfa_secret_encrypted = user_doc.get("mfaSecret")
@@ -703,7 +703,9 @@ class MFAService:
                 return True, False, -1  # TOTP used, backup codes not relevant
             elif error_msg and "already used" in error_msg.lower():
                 # Replay attack detected, don't fall through to backup codes
-                logger.warning(f"TOTP replay detected for user {user_id}, not checking backup codes")
+                logger.warning(
+                    f"TOTP replay detected for user {user_id}, not checking backup codes"
+                )
                 return False, False, -1
 
         # Try backup code
@@ -718,11 +720,13 @@ class MFAService:
                 {
                     "$set": {
                         "mfaBackupCodes": backup_codes,
-                        "updatedAt": datetime.utcnow()
+                        "updatedAt": datetime.utcnow(),
                     }
-                }
+                },
             )
-            logger.info(f"Backup code used for user: {user_id}. {remaining_codes} codes remaining.")
+            logger.info(
+                f"Backup code used for user: {user_id}. {remaining_codes} codes remaining."
+            )
             return True, True, remaining_codes
 
         return False, False, -1
@@ -751,8 +755,7 @@ class MFAService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         mfa_enabled = user_doc.get("mfaEnabled", False)
@@ -770,10 +773,12 @@ class MFAService:
             # Legacy fields for backward compatibility
             mfaEnabled=mfa_enabled,
             mfaSetupPending=mfa_pending,
-            hasBackupCodes=backup_codes_remaining > 0
+            hasBackupCodes=backup_codes_remaining > 0,
         )
 
-    async def regenerate_backup_codes(self, user_id: str, totp_code: str, password: str = None) -> MFAEnableResponse:
+    async def regenerate_backup_codes(
+        self, user_id: str, totp_code: str, password: str = None
+    ) -> MFAEnableResponse:
         """
         Regenerate backup codes (invalidates old ones)
 
@@ -800,22 +805,20 @@ class MFAService:
 
         if not user_doc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         if not user_doc.get("mfaEnabled", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="MFA is not enabled for this account"
+                detail="MFA is not enabled for this account",
             )
 
         # Verify password (required for full authentication)
         if password:
             if not verify_password(password, user_doc["passwordHash"]):
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid password"
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password"
                 )
 
         # Decrypt and verify TOTP code
@@ -829,13 +832,12 @@ class MFAService:
             logger.error(f"Failed to decrypt MFA secret for user {user_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to process MFA secret"
+                detail="Failed to process MFA secret",
             )
 
         if not self.verify_totp_code(mfa_secret, totp_code):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid TOTP code"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid TOTP code"
             )
 
         # Generate new backup codes
@@ -848,17 +850,19 @@ class MFAService:
                 "$set": {
                     "mfaBackupCodes": hashed_codes,
                     "mfaBackupCodesRegeneratedAt": datetime.utcnow(),
-                    "updatedAt": datetime.utcnow()
+                    "updatedAt": datetime.utcnow(),
                 }
-            }
+            },
         )
 
-        logger.info(f"Backup codes regenerated for user: {user_id} (all previous codes invalidated)")
+        logger.info(
+            f"Backup codes regenerated for user: {user_id} (all previous codes invalidated)"
+        )
 
         return MFAEnableResponse(
             enabled=True,
             backupCodes=plain_codes,
-            message="New backup codes generated. Previous codes are now invalid."
+            message="New backup codes generated. Previous codes are now invalid.",
         )
 
 

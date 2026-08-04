@@ -46,11 +46,15 @@ class ProtocolImage(BaseModel):
         None, description="Attachment id — a photo taken in this lab (preferred)"
     )
     externalUrl: Optional[str] = Field(
-        None, max_length=1000, description="Cited published figure, when no local photo exists"
+        None,
+        max_length=1000,
+        description="Cited published figure, when no local photo exists",
     )
     caption: str = Field(..., min_length=1, max_length=300)
     attribution: Optional[str] = Field(
-        None, max_length=300, description="Source and licence — required for externalUrl"
+        None,
+        max_length=300,
+        description="Source and licence — required for externalUrl",
     )
     showsWhat: Optional[str] = Field(
         None,
@@ -85,7 +89,9 @@ class Consumable(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=200)
     quantity: Optional[str] = Field(
-        None, max_length=100, description="Free text — '2 L', '1 per plate', 'as needed'"
+        None,
+        max_length=100,
+        description="Free text — '2 L', '1 per plate', 'as needed'",
     )
     notes: Optional[str] = Field(None, max_length=500)
 
@@ -103,7 +109,9 @@ class ProtocolBase(BaseModel):
     category: ProtocolCategory = Field(ProtocolCategory.LAB)
 
     purpose: Optional[str] = Field(
-        None, max_length=2000, description="What this procedure achieves and when to use it"
+        None,
+        max_length=2000,
+        description="What this procedure achieves and when to use it",
     )
     scope: Optional[str] = Field(
         None, max_length=2000, description="Where it applies, and where it does not"
@@ -144,6 +152,7 @@ class ProtocolBase(BaseModel):
 
 class ProtocolCreate(ProtocolBase):
     """Payload for creating a protocol."""
+
     pass
 
 
@@ -181,7 +190,9 @@ class Protocol(ProtocolBase):
     version: int = Field(1, ge=1, description="Bumped whenever the procedure changes")
     status: ProtocolStatus = Field(ProtocolStatus.DRAFT)
 
-    approvedBy: Optional[str] = Field(None, description="userId who approved this version")
+    approvedBy: Optional[str] = Field(
+        None, description="userId who approved this version"
+    )
     approvedByName: Optional[str] = Field(None, max_length=200)
     approvedAt: Optional[datetime] = None
 

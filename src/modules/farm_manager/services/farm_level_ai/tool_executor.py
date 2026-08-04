@@ -309,9 +309,7 @@ async def _get_all_blocks_alerts(
                 "error": None,
             }
         except Exception as e:
-            logger.warning(
-                f"Failed to fetch alerts for block '{block_code}': {e}"
-            )
+            logger.warning(f"Failed to fetch alerts for block '{block_code}': {e}")
             return {
                 "block_code": block_code,
                 "alerts": [],

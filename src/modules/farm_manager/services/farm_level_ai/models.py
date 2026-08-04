@@ -32,7 +32,9 @@ class FarmSummaryInfo(BaseModel):
     """Summary of farm state returned with each AI response."""
 
     farm_name: str = Field(..., description="Name of the farm")
-    block_count: int = Field(..., description="Total number of active blocks on the farm")
+    block_count: int = Field(
+        ..., description="Total number of active blocks on the farm"
+    )
     connected_blocks: int = Field(
         ..., description="Number of blocks with SenseHub connected"
     )

@@ -38,7 +38,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-_SEP = " · "   # " · "  (U+00B7 MIDDLE DOT)
+_SEP = " · "  # " · "  (U+00B7 MIDDLE DOT)
 _MAX_MEMO_LEN = 200
 
 
@@ -107,8 +107,7 @@ def format_journal_memo(
     # Reason: determine the bp_ref label prefix based on the document type keyword
     # to distinguish vendor invoices from customer PO numbers contextually.
     is_ap_side = any(
-        kw in doc_type.upper()
-        for kw in ("AP ", "GR", "PURCH", "PO", "PR", "VENDOR")
+        kw in doc_type.upper() for kw in ("AP ", "GR", "PURCH", "PO", "PR", "VENDOR")
     )
     bp_label = "Vendor Inv #" if is_ap_side else "Cust PO #"
 

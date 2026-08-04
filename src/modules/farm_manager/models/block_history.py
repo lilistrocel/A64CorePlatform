@@ -18,10 +18,17 @@ class BlockHistoryArchive(BaseModel):
     Complete snapshot of a block's lifecycle from planting to completion.
     Created when block transitions from CLEANING → EMPTY.
     """
+
     # History Record Metadata
-    historyId: UUID = Field(default_factory=uuid4, description="Unique history record ID")
-    archivedAt: datetime = Field(default_factory=datetime.utcnow, description="When this cycle was archived")
-    archivedBy: UUID = Field(..., description="User who completed the cycle (transitioned to empty)")
+    historyId: UUID = Field(
+        default_factory=uuid4, description="Unique history record ID"
+    )
+    archivedAt: datetime = Field(
+        default_factory=datetime.utcnow, description="When this cycle was archived"
+    )
+    archivedBy: UUID = Field(
+        ..., description="User who completed the cycle (transitioned to empty)"
+    )
     archivedByEmail: str = Field(..., description="Email of user who archived")
 
     # Original Block Information
@@ -33,9 +40,13 @@ class BlockHistoryArchive(BaseModel):
 
     # Block Physical Properties (snapshot at time of archival)
     name: Optional[str] = Field(None, description="Block name")
-    blockType: Optional[BlockType] = Field(None, description="Type of cultivation block")
+    blockType: Optional[BlockType] = Field(
+        None, description="Type of cultivation block"
+    )
     # Reason: maxPlants removed from Block in Phase 1; kept as Optional for backward compat with existing history records.
-    maxPlants: Optional[int] = Field(None, description="Legacy capacity field (unused in Phase 1+)")
+    maxPlants: Optional[int] = Field(
+        None, description="Legacy capacity field (unused in Phase 1+)"
+    )
     location: Optional[BlockLocation] = Field(None, description="GPS coordinates")
     area: Optional[float] = Field(None, description="Block area")
     areaUnit: str = Field("sqm", description="Area unit")
@@ -48,23 +59,39 @@ class BlockHistoryArchive(BaseModel):
     # Cycle Timeline (Expected vs Actual)
     plannedDate: datetime = Field(..., description="When planning started")
     plantedDate: datetime = Field(..., description="When planting occurred")
-    expectedStatusChanges: Optional[dict] = Field(None, description="Predicted dates for each status")
+    expectedStatusChanges: Optional[dict] = Field(
+        None, description="Predicted dates for each status"
+    )
 
     # Cycle Duration
-    cycleDurationDays: int = Field(..., description="Total days from planting to completion")
-    plantingToHarvestDays: Optional[int] = Field(None, description="Days from planting to first harvest")
-    harvestingDurationDays: Optional[int] = Field(None, description="Days spent in harvesting state")
+    cycleDurationDays: int = Field(
+        ..., description="Total days from planting to completion"
+    )
+    plantingToHarvestDays: Optional[int] = Field(
+        None, description="Days from planting to first harvest"
+    )
+    harvestingDurationDays: Optional[int] = Field(
+        None, description="Days spent in harvesting state"
+    )
 
     # Performance Metrics
-    kpi: BlockKPI = Field(..., description="Final KPI metrics (yield, efficiency, etc.)")
+    kpi: BlockKPI = Field(
+        ..., description="Final KPI metrics (yield, efficiency, etc.)"
+    )
 
     # Complete Status History
-    statusChanges: List[StatusChange] = Field(..., description="Complete timeline of status changes")
+    statusChanges: List[StatusChange] = Field(
+        ..., description="Complete timeline of status changes"
+    )
 
     # Performance Analysis
     performanceCategory: str = Field(..., description="Final performance category")
-    overallOffsetDays: Optional[int] = Field(None, description="Total offset from expected timeline")
-    wasEarlyCompletion: bool = Field(False, description="Completed earlier than expected")
+    overallOffsetDays: Optional[int] = Field(
+        None, description="Total offset from expected timeline"
+    )
+    wasEarlyCompletion: bool = Field(
+        False, description="Completed earlier than expected"
+    )
     wasLateCompletion: bool = Field(False, description="Completed later than expected")
 
     # Additional Data
@@ -74,7 +101,9 @@ class BlockHistoryArchive(BaseModel):
     totalAlertsRaised: int = Field(0, description="Number of alerts during cycle")
 
     # Notes and Comments
-    cycleNotes: Optional[str] = Field(None, description="Summary notes about this cycle")
+    cycleNotes: Optional[str] = Field(
+        None, description="Summary notes about this cycle"
+    )
 
     # Timestamps
     createdAt: datetime = Field(..., description="When block was originally created")
@@ -107,7 +136,7 @@ class BlockHistoryArchive(BaseModel):
                     "predictedYieldKg": 475.0,
                     "actualYieldKg": 520.5,
                     "yieldEfficiencyPercent": 109.6,
-                    "totalHarvests": 12
+                    "totalHarvests": 12,
                 },
                 "performanceCategory": "EXCEEDING",
                 "overallOffsetDays": 2,
@@ -118,13 +147,14 @@ class BlockHistoryArchive(BaseModel):
                 "totalHarvests": 12,
                 "totalAlertsRaised": 1,
                 "cycleNotes": "Excellent yield, slight delay due to weather",
-                "createdAt": "2025-10-15T10:00:00Z"
+                "createdAt": "2025-10-15T10:00:00Z",
             }
         }
 
 
 class BlockHistoryCreate(BaseModel):
     """Schema for creating block history (internal use)"""
+
     archivedBy: UUID
     archivedByEmail: str
     cycleNotes: Optional[str] = None
@@ -132,6 +162,7 @@ class BlockHistoryCreate(BaseModel):
 
 class BlockHistoryListResponse(BaseModel):
     """Response for list of block history records"""
+
     data: List[BlockHistoryArchive]
     total: int
     page: int
@@ -141,5 +172,6 @@ class BlockHistoryListResponse(BaseModel):
 
 class BlockHistoryResponse(BaseModel):
     """Response for single block history record"""
+
     data: BlockHistoryArchive
     message: Optional[str] = None

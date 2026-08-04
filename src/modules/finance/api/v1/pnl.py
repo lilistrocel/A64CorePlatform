@@ -41,6 +41,7 @@ def get_pnl_service() -> PnLService:
 # GET /summary
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/summary",
     response_model=PnLSummaryResponse,
@@ -52,32 +53,25 @@ def get_pnl_service() -> PnLService:
     ),
 )
 async def get_pnl_summary(
-    farmId: Optional[str] = Query(
-        None,
-        description="Filter to a single farm UUID"
-    ),
+    farmId: Optional[str] = Query(None, description="Filter to a single farm UUID"),
     farmingYear: Optional[int] = Query(
-        None,
-        ge=2000, le=2100,
-        description="Filter to a farming year (e.g. 2025)"
+        None, ge=2000, le=2100, description="Filter to a farming year (e.g. 2025)"
     ),
     startDate: Optional[date] = Query(
-        None,
-        description="Custom range start date (YYYY-MM-DD)"
+        None, description="Custom range start date (YYYY-MM-DD)"
     ),
     endDate: Optional[date] = Query(
-        None,
-        description="Custom range end date (YYYY-MM-DD)"
+        None, description="Custom range end date (YYYY-MM-DD)"
     ),
     includeImputed: bool = Query(
         True,
         description="Include imputed revenue lines (metadata.priceSource=imputed_customer_crop_avg). "
-                    "Set false to show only excel_match and excel_alias_match lines."
+        "Set false to show only excel_match and excel_alias_match lines.",
     ),
     priceSourceFilter: Optional[str] = Query(
         None,
         description="Restrict to a single priceSource value: "
-                    "excel_match | excel_alias_match | imputed_customer_crop_avg | no_data"
+        "excel_match | excel_alias_match | imputed_customer_crop_avg | no_data",
     ),
     current_user: CurrentUser = Depends(require_permission("finance.view")),
     service: PnLService = Depends(get_pnl_service),
@@ -97,13 +91,14 @@ async def get_pnl_summary(
         logger.exception("Error computing P&L summary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to compute P&L summary"
+            detail="Failed to compute P&L summary",
         ) from exc
 
 
 # ---------------------------------------------------------------------------
 # GET /by-month
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/by-month",
@@ -139,13 +134,14 @@ async def get_pnl_by_month(
         logger.exception("Error computing monthly P&L")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to compute monthly P&L"
+            detail="Failed to compute monthly P&L",
         ) from exc
 
 
 # ---------------------------------------------------------------------------
 # GET /by-farm
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/by-farm",
@@ -179,13 +175,14 @@ async def get_pnl_by_farm(
         logger.exception("Error computing farm P&L")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to compute farm P&L"
+            detail="Failed to compute farm P&L",
         ) from exc
 
 
 # ---------------------------------------------------------------------------
 # GET /by-crop
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/by-crop",
@@ -221,13 +218,14 @@ async def get_pnl_by_crop(
         logger.exception("Error computing crop P&L")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to compute crop P&L"
+            detail="Failed to compute crop P&L",
         ) from exc
 
 
 # ---------------------------------------------------------------------------
 # GET /ar-aging
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/ar-aging",
@@ -256,13 +254,14 @@ async def get_ar_aging(
         logger.exception("Error computing AR aging")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to compute AR aging"
+            detail="Failed to compute AR aging",
         ) from exc
 
 
 # ---------------------------------------------------------------------------
 # GET /revenue-sources
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/revenue-sources",
@@ -296,5 +295,5 @@ async def get_revenue_sources(
         logger.exception("Error computing revenue sources")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to compute revenue sources"
+            detail="Failed to compute revenue sources",
         ) from exc

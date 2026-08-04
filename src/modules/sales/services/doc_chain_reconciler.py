@@ -52,8 +52,9 @@ from ....core.documents.chain_reconciler import (
     pull_dangling_chain_refs,
     write_chain_audit,
 )
-from ....core.documents.chain_reconciler import reconcile_line_counters as _core_reconcile_line_counters
-
+from ....core.documents.chain_reconciler import (
+    reconcile_line_counters as _core_reconcile_line_counters,
+)
 
 # ---------------------------------------------------------------------------
 # Sales-specific wrappers for auto_close / auto_reopen.

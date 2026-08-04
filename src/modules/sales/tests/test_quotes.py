@@ -415,7 +415,9 @@ async def test_list_quotes_status_filter() -> None:
         org_id=ORG_ID,
         user_id=USER_ID,
     )
-    await create_quote(db, payload=_QUOTE_CREATE_PAYLOAD, user_id=USER_ID)  # another DRAFT
+    await create_quote(
+        db, payload=_QUOTE_CREATE_PAYLOAD, user_id=USER_ID
+    )  # another DRAFT
 
     draft_result = await list_quotes(db, org_id=ORG_ID, status="draft")
     open_result = await list_quotes(db, org_id=ORG_ID, status="open")

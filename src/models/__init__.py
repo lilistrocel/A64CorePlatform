@@ -1,4 +1,5 @@
 """Models package"""
+
 from .user import (
     UserRole,
     UserBase,
@@ -15,7 +16,7 @@ from .user import (
     VerifyEmailRequest,
     PasswordResetRequest,
     PasswordResetConfirm,
-    VerificationTokenInDB
+    VerificationTokenInDB,
 )
 
 from .dashboard import (

@@ -29,7 +29,6 @@ from pydantic.alias_generators import to_camel
 from src.core.documents.document_links import DocumentLinkRef
 from src.core.documents.document_status import DocumentStatus
 
-
 # ---------------------------------------------------------------------------
 # Response model config — emits camelCase via alias_generator.
 # Routes must pair this with response_model_by_alias=True.
@@ -209,7 +208,11 @@ class ARCreditNoteCreate(BaseModel):
         notes:                   Free-text notes.
     """
 
-    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
+    company_code: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
     customer_id: str = Field(..., description="FK to customer")
     customer_name: str = Field(..., max_length=200)
     bp_ref_no: Optional[str] = Field(None, max_length=100)

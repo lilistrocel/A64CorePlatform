@@ -182,9 +182,7 @@ class LineageService:
         # --- Ancestors: follow the parent refs upward, plus a split's own
         # splitFromAccessionId (the batch it was carved out of) -------------
         if include_ancestors:
-            frontier = [
-                p.accessionId for p in root.parents if p.accessionId
-            ]
+            frontier = [p.accessionId for p in root.parents if p.accessionId]
             if root.splitFromAccessionId:
                 frontier.append(root.splitFromAccessionId)
             # Ancestors get negative depths (normalised to 0 further down), so
@@ -304,7 +302,10 @@ class LineageService:
             # mistaking it for a generation change. Dropped, like the
             # propagation edges above, when the source fell outside the
             # collected set (depth/node cap truncation).
-            if accession.splitFromAccessionId and accession.splitFromAccessionId in present:
+            if (
+                accession.splitFromAccessionId
+                and accession.splitFromAccessionId in present
+            ):
                 edges.append(
                     LineageEdge(
                         fromAccessionId=accession.splitFromAccessionId,

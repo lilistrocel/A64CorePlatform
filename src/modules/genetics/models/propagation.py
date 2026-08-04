@@ -27,10 +27,13 @@ class PropagationTarget(BaseModel):
     the batch stays one row until something about one vessel diverges, at
     which point it is split out.
     """
+
     form: VesselForm = Field(..., description="Vessel form of the resulting material")
     quantity: int = Field(1, ge=1, description="Vessels/head produced")
     unit: str = Field("vessels", max_length=32)
-    mediumBatchId: Optional[str] = Field(None, description="Medium the children were put onto")
+    mediumBatchId: Optional[str] = Field(
+        None, description="Medium the children were put onto"
+    )
     location: Optional[StorageLocation] = None
     label: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = Field(None, max_length=2000)
@@ -69,9 +72,15 @@ class PropagationCreate(BaseModel):
     )
 
     performedAt: Optional[datetime] = Field(None, description="Defaults to now")
-    performedBy: Optional[str] = Field(None, description="userId; defaults to the caller")
-    operatorName: Optional[str] = Field(None, max_length=200, description="Free-text technician name")
-    mediumBatchId: Optional[str] = Field(None, description="Default medium batch for all targets")
+    performedBy: Optional[str] = Field(
+        None, description="userId; defaults to the caller"
+    )
+    operatorName: Optional[str] = Field(
+        None, max_length=200, description="Free-text technician name"
+    )
+    mediumBatchId: Optional[str] = Field(
+        None, description="Default medium batch for all targets"
+    )
     protocolId: Optional[str] = Field(
         None,
         description=(
@@ -122,7 +131,9 @@ class PropagationEvent(BaseModel):
     # Denormalised for lineage queries and display without extra lookups
     sourceLineIds: List[str] = Field(default_factory=list)
     resultLineIds: List[str] = Field(default_factory=list)
-    vesselCount: int = Field(0, ge=0, description="Total vessels produced across all targets")
+    vesselCount: int = Field(
+        0, ge=0, description="Total vessels produced across all targets"
+    )
 
     mediumBatchId: Optional[str] = None
     protocolRef: Optional[dict] = Field(
@@ -152,6 +163,7 @@ class PropagationEvent(BaseModel):
 
 class PropagationResult(BaseModel):
     """What the propagation endpoint hands back: the event plus its children."""
+
     event: PropagationEvent
     accessions: List[dict] = Field(
         default_factory=list,

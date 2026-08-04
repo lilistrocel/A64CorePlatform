@@ -27,15 +27,18 @@ class MCPChecker:
         blocks_col = self.db["blocks"]
 
         # Find blocks with IoT controllers enabled and MCP port set
-        cursor = blocks_col.find({
-            "iotController.enabled": True,
-            "iotController.mcpPort": {"$exists": True, "$ne": None},
-        }, {
-            "blockId": 1,
-            "name": 1,
-            "farmId": 1,
-            "iotController": 1,
-        })
+        cursor = blocks_col.find(
+            {
+                "iotController.enabled": True,
+                "iotController.mcpPort": {"$exists": True, "$ne": None},
+            },
+            {
+                "blockId": 1,
+                "name": 1,
+                "farmId": 1,
+                "iotController": 1,
+            },
+        )
 
         blocks = await cursor.to_list(length=500)
         if not blocks:
@@ -75,16 +78,18 @@ class MCPChecker:
 
             farm_name = farms_map.get(block.get("farmId"), "Unknown Farm")
             block_name = block.get("name", "Unknown Block")
-            issues.append(WatchdogIssue(
-                checkType=CheckType.MCP_REACHABILITY,
-                severity=Severity.HIGH,
-                title="MCP Server Unreachable",
-                description=f"Farm: {farm_name} > Block {block_name}\nServer: {address}:{port}",
-                entityId=block.get("blockId"),
-                farmName=farm_name,
-                blockName=block_name,
-                extra={"address": address, "port": port},
-            ))
+            issues.append(
+                WatchdogIssue(
+                    checkType=CheckType.MCP_REACHABILITY,
+                    severity=Severity.HIGH,
+                    title="MCP Server Unreachable",
+                    description=f"Farm: {farm_name} > Block {block_name}\nServer: {address}:{port}",
+                    entityId=block.get("blockId"),
+                    farmName=farm_name,
+                    blockName=block_name,
+                    extra={"address": address, "port": port},
+                )
+            )
 
         await asyncio.gather(*[probe_block(b) for b in blocks], return_exceptions=True)
         return issues

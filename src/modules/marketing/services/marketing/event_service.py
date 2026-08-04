@@ -37,14 +37,10 @@ class EventService:
         if not await self.campaign_repository.exists(campaign_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Campaign {campaign_id} not found"
+                detail=f"Campaign {campaign_id} not found",
             )
 
-    async def create_event(
-        self,
-        event_data: EventCreate,
-        created_by: UUID
-    ) -> Event:
+    async def create_event(self, event_data: EventCreate, created_by: UUID) -> Event:
         """
         Create a new event
 
@@ -67,7 +63,7 @@ class EventService:
             if event_data.actualCost > event_data.budget:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Actual cost cannot exceed event budget"
+                    detail="Actual cost cannot exceed event budget",
                 )
 
             event = await self.repository.create(event_data, created_by)
@@ -80,7 +76,7 @@ class EventService:
             logger.error(f"Error creating event: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create event"
+                detail="Failed to create event",
             )
 
     async def get_event(self, event_id: UUID) -> Event:
@@ -100,7 +96,7 @@ class EventService:
         if not event:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Event {event_id} not found"
+                detail=f"Event {event_id} not found",
             )
         return event
 
@@ -110,7 +106,7 @@ class EventService:
         per_page: int = 20,
         status: Optional[EventStatus] = None,
         event_type: Optional[EventType] = None,
-        campaign_id: Optional[UUID] = None
+        campaign_id: Optional[UUID] = None,
     ) -> tuple[List[Event], int, int]:
         """
         Get all events with pagination
@@ -131,17 +127,15 @@ class EventService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        events, total = await self.repository.get_all(skip, per_page, status, event_type, campaign_id)
+        events, total = await self.repository.get_all(
+            skip, per_page, status, event_type, campaign_id
+        )
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 
         return events, total, total_pages
 
-    async def update_event(
-        self,
-        event_id: UUID,
-        update_data: EventUpdate
-    ) -> Event:
+    async def update_event(self, event_id: UUID, update_data: EventUpdate) -> Event:
         """
         Update an event
 
@@ -164,20 +158,28 @@ class EventService:
 
         # Validate costs if updating
         if update_data.actualCost is not None or update_data.budget is not None:
-            budget = update_data.budget if update_data.budget is not None else current_event.budget
-            actual_cost = update_data.actualCost if update_data.actualCost is not None else current_event.actualCost
+            budget = (
+                update_data.budget
+                if update_data.budget is not None
+                else current_event.budget
+            )
+            actual_cost = (
+                update_data.actualCost
+                if update_data.actualCost is not None
+                else current_event.actualCost
+            )
 
             if actual_cost > budget:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Actual cost cannot exceed event budget"
+                    detail="Actual cost cannot exceed event budget",
                 )
 
         updated_event = await self.repository.update(event_id, update_data)
         if not updated_event:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Event {event_id} not found"
+                detail=f"Event {event_id} not found",
             )
 
         logger.info(f"Event updated: {event_id}")
@@ -203,7 +205,7 @@ class EventService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Event {event_id} not found"
+                detail=f"Event {event_id} not found",
             )
 
         logger.info(f"Event deleted: {event_id}")

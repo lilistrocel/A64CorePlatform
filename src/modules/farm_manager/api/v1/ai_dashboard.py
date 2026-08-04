@@ -133,9 +133,7 @@ async def list_reports(
             detail="Failed to retrieve AI dashboard reports",
         )
 
-    report_list: List[Dict[str, Any]] = [
-        r.model_dump(mode="json") for r in reports
-    ]
+    report_list: List[Dict[str, Any]] = [r.model_dump(mode="json") for r in reports]
 
     return {
         "data": report_list,

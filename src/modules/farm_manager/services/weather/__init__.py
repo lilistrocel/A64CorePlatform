@@ -13,5 +13,5 @@ __all__ = [
     "WeatherService",
     "WeatherAPIClient",
     "WeatherCacheService",
-    "get_weather_cache_service"
+    "get_weather_cache_service",
 ]

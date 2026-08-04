@@ -59,7 +59,7 @@ class CostTrackingService:
         cost_data: Dict[str, Any],
         execution_time_seconds: float,
         result_count: int,
-        cache_hit: bool
+        cache_hit: bool,
     ) -> None:
         """
         Log an AI query with its cost data to MongoDB.
@@ -95,12 +95,16 @@ class CostTrackingService:
                 "total_cost_usd": total_cost,
                 "input_tokens": query_input_tokens + report_input_tokens,
                 "output_tokens": query_output_tokens + report_output_tokens,
-                "total_tokens": (query_input_tokens + query_output_tokens +
-                                 report_input_tokens + report_output_tokens),
+                "total_tokens": (
+                    query_input_tokens
+                    + query_output_tokens
+                    + report_input_tokens
+                    + report_output_tokens
+                ),
                 "cache_hit": cache_hit,
                 "execution_time_seconds": execution_time_seconds,
                 "result_count": result_count,
-                "timestamp": datetime.utcnow()
+                "timestamp": datetime.utcnow(),
             }
 
             await self.collection.insert_one(doc)
@@ -111,9 +115,7 @@ class CostTrackingService:
             # Don't raise - cost logging should not break the query flow
 
     async def get_user_cost_summary(
-        self,
-        user_id: str,
-        period: str = "today"
+        self, user_id: str, period: str = "today"
     ) -> Dict[str, Any]:
         """
         Get aggregated cost summary for a user.
@@ -149,11 +151,9 @@ class CostTrackingService:
                         "total_queries": {"$sum": 1},
                         "total_cost_usd": {"$sum": "$total_cost_usd"},
                         "total_tokens": {"$sum": "$total_tokens"},
-                        "cache_hits": {
-                            "$sum": {"$cond": ["$cache_hit", 1, 0]}
-                        }
+                        "cache_hits": {"$sum": {"$cond": ["$cache_hit", 1, 0]}},
                     }
-                }
+                },
             ]
 
             results = await self.collection.aggregate(pipeline).to_list(length=1)
@@ -174,7 +174,7 @@ class CostTrackingService:
                     "total_tokens": total_tokens,
                     "cache_hit_rate": round(
                         cache_hits / total_queries if total_queries > 0 else 0.0, 4
-                    )
+                    ),
                 }
             else:
                 return {
@@ -182,7 +182,7 @@ class CostTrackingService:
                     "total_cost_usd": 0.0,
                     "average_cost_per_query": 0.0,
                     "total_tokens": 0,
-                    "cache_hit_rate": 0.0
+                    "cache_hit_rate": 0.0,
                 }
 
         except Exception as e:
@@ -192,13 +192,11 @@ class CostTrackingService:
                 "total_cost_usd": 0.0,
                 "average_cost_per_query": 0.0,
                 "total_tokens": 0,
-                "cache_hit_rate": 0.0
+                "cache_hit_rate": 0.0,
             }
 
     async def get_user_daily_breakdown(
-        self,
-        user_id: str,
-        days: int = 30
+        self, user_id: str, days: int = 30
     ) -> List[Dict[str, Any]]:
         """
         Get daily cost breakdown for a user.
@@ -214,29 +212,22 @@ class CostTrackingService:
             start_date = datetime.utcnow() - timedelta(days=days)
 
             pipeline = [
-                {
-                    "$match": {
-                        "user_id": user_id,
-                        "timestamp": {"$gte": start_date}
-                    }
-                },
+                {"$match": {"user_id": user_id, "timestamp": {"$gte": start_date}}},
                 {
                     "$group": {
                         "_id": {
                             "$dateToString": {
                                 "format": "%Y-%m-%d",
-                                "date": "$timestamp"
+                                "date": "$timestamp",
                             }
                         },
                         "queries": {"$sum": 1},
                         "cost_usd": {"$sum": "$total_cost_usd"},
                         "tokens": {"$sum": "$total_tokens"},
-                        "cache_hits": {
-                            "$sum": {"$cond": ["$cache_hit", 1, 0]}
-                        }
+                        "cache_hits": {"$sum": {"$cond": ["$cache_hit", 1, 0]}},
                     }
                 },
-                {"$sort": {"_id": 1}}
+                {"$sort": {"_id": 1}},
             ]
 
             results = await self.collection.aggregate(pipeline).to_list(length=None)
@@ -247,7 +238,7 @@ class CostTrackingService:
                     "queries": r["queries"],
                     "cost_usd": round(r["cost_usd"], 6),
                     "tokens": r["tokens"],
-                    "cache_hits": r["cache_hits"]
+                    "cache_hits": r["cache_hits"],
                 }
                 for r in results
             ]
@@ -271,11 +262,13 @@ class CostTrackingService:
             now = datetime.utcnow()
             start_of_day = datetime(now.year, now.month, now.day)
 
-            count = await self.collection.count_documents({
-                "user_id": user_id,
-                "timestamp": {"$gte": start_of_day},
-                "cache_hit": False  # Only count non-cached queries
-            })
+            count = await self.collection.count_documents(
+                {
+                    "user_id": user_id,
+                    "timestamp": {"$gte": start_of_day},
+                    "cache_hit": False,  # Only count non-cached queries
+                }
+            )
 
             return count
 
@@ -289,8 +282,7 @@ _cost_tracking_service: Optional[CostTrackingService] = None
 
 
 def get_cost_tracking_service(
-    mongodb_client: AsyncIOMotorClient,
-    db_name: str
+    mongodb_client: AsyncIOMotorClient, db_name: str
 ) -> CostTrackingService:
     """
     Get singleton instance of CostTrackingService.

@@ -42,7 +42,7 @@ class CampaignRepository:
             {"_id": "marketing_campaign_sequence"},
             {"$inc": {"value": 1}},
             upsert=True,
-            return_document=True
+            return_document=True,
         )
 
         return result["value"]
@@ -70,7 +70,7 @@ class CampaignRepository:
             campaignCode=campaign_code,
             createdBy=created_by,
             createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            updatedAt=datetime.utcnow(),
         )
 
         campaign_doc = campaign.model_dump(by_alias=True)
@@ -86,12 +86,18 @@ class CampaignRepository:
 
         # Convert date objects to datetime for MongoDB BSON encoding
         for date_field in ["startDate", "endDate"]:
-            if date_field in campaign_doc and isinstance(campaign_doc[date_field], date):
-                campaign_doc[date_field] = datetime.combine(campaign_doc[date_field], datetime.min.time())
+            if date_field in campaign_doc and isinstance(
+                campaign_doc[date_field], date
+            ):
+                campaign_doc[date_field] = datetime.combine(
+                    campaign_doc[date_field], datetime.min.time()
+                )
 
         await collection.insert_one(campaign_doc)
 
-        logger.info(f"Created campaign: {campaign.campaignId} with code {campaign_code}")
+        logger.info(
+            f"Created campaign: {campaign.campaignId} with code {campaign_code}"
+        )
         return campaign
 
     async def get_by_id(self, campaign_id: UUID) -> Optional[Campaign]:
@@ -118,7 +124,7 @@ class CampaignRepository:
         limit: int = 20,
         status: Optional[CampaignStatus] = None,
         budget_id: Optional[UUID] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
     ) -> tuple[List[Campaign], int]:
         """
         Get all campaigns with pagination and filters
@@ -157,7 +163,9 @@ class CampaignRepository:
 
         return campaigns, total
 
-    async def update(self, campaign_id: UUID, update_data: CampaignUpdate) -> Optional[Campaign]:
+    async def update(
+        self, campaign_id: UUID, update_data: CampaignUpdate
+    ) -> Optional[Campaign]:
         """
         Update a campaign
 
@@ -184,13 +192,14 @@ class CampaignRepository:
         # Convert date objects to datetime for MongoDB BSON encoding
         for date_field in ["startDate", "endDate"]:
             if date_field in update_dict and isinstance(update_dict[date_field], date):
-                update_dict[date_field] = datetime.combine(update_dict[date_field], datetime.min.time())
+                update_dict[date_field] = datetime.combine(
+                    update_dict[date_field], datetime.min.time()
+                )
 
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
-            {"campaignId": str(campaign_id)},
-            {"$set": update_dict}
+            {"campaignId": str(campaign_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

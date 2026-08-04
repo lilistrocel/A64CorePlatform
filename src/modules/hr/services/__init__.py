@@ -8,7 +8,7 @@ from .employee import (
     ContractService,
     VisaService,
     InsuranceService,
-    PerformanceService
+    PerformanceService,
 )
 
 __all__ = [
@@ -17,5 +17,5 @@ __all__ = [
     "ContractService",
     "VisaService",
     "InsuranceService",
-    "PerformanceService"
+    "PerformanceService",
 ]

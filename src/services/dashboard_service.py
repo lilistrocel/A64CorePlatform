@@ -118,7 +118,9 @@ class DashboardService:
             xKey="day",
             yKey="activeUsers",
             series=[
-                ChartSeries(name="Active Users", dataKey="activeUsers", color="#3b82f6"),
+                ChartSeries(
+                    name="Active Users", dataKey="activeUsers", color="#3b82f6"
+                ),
                 ChartSeries(name="New Users", dataKey="newUsers", color="#10b981"),
             ],
         )
@@ -327,7 +329,11 @@ class DashboardService:
 
     @classmethod
     async def get_external_api_data(
-        cls, api_name: str, endpoint: str, credentials: Optional[str] = None, params: Optional[Dict] = None
+        cls,
+        api_name: str,
+        endpoint: str,
+        credentials: Optional[str] = None,
+        params: Optional[Dict] = None,
     ) -> Dict[str, any]:
         """
         Get data from an external API.

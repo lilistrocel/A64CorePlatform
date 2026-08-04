@@ -11,29 +11,43 @@ from pydantic import BaseModel, Field
 
 from .block import Block, BlockStatus, PerformanceCategory, StatusChange
 
-
 # ============================================================================
 # CALCULATED METRICS
 # ============================================================================
+
 
 class BlockCalculated(BaseModel):
     """Calculated fields for dashboard display"""
 
     # Timeliness tracking
     daysInCurrentState: int = Field(..., description="Days spent in current state")
-    expectedStateChangeDate: Optional[datetime] = Field(None, description="Expected date for next transition")
-    daysUntilNextTransition: Optional[int] = Field(None, description="Days until expected next state change")
+    expectedStateChangeDate: Optional[datetime] = Field(
+        None, description="Expected date for next transition"
+    )
+    daysUntilNextTransition: Optional[int] = Field(
+        None, description="Days until expected next state change"
+    )
     isDelayed: bool = Field(False, description="Whether block is behind schedule")
-    delayDays: int = Field(0, description="Offset from schedule (negative = early, positive = late)")
+    delayDays: int = Field(
+        0, description="Offset from schedule (negative = early, positive = late)"
+    )
 
     # Capacity
-    capacityPercent: float = Field(0.0, description="Plant capacity utilization percentage")
+    capacityPercent: float = Field(
+        0.0, description="Plant capacity utilization percentage"
+    )
 
     # Yield performance (for harvesting state)
     yieldProgress: float = Field(0.0, description="Actual/predicted yield percentage")
-    yieldStatus: Literal["on_track", "ahead", "behind"] = Field("on_track", description="Yield status")
-    estimatedFinalYield: float = Field(0.0, description="Estimated final yield based on current rate")
-    performanceCategory: PerformanceCategory = Field(PerformanceCategory.GOOD, description="Performance categorization")
+    yieldStatus: Literal["on_track", "ahead", "behind"] = Field(
+        "on_track", description="Yield status"
+    )
+    estimatedFinalYield: float = Field(
+        0.0, description="Estimated final yield based on current rate"
+    )
+    performanceCategory: PerformanceCategory = Field(
+        PerformanceCategory.GOOD, description="Performance categorization"
+    )
 
     # Next action
     nextAction: str = Field("view_details", description="Recommended next action")
@@ -44,8 +58,10 @@ class BlockCalculated(BaseModel):
 # ALERT
 # ============================================================================
 
+
 class DashboardAlert(BaseModel):
     """Simplified alert for dashboard"""
+
     alertId: UUID
     severity: Literal["critical", "high", "medium", "low"]
     title: str
@@ -55,6 +71,7 @@ class DashboardAlert(BaseModel):
 # ============================================================================
 # DASHBOARD BLOCK
 # ============================================================================
+
 
 class DashboardBlock(BaseModel):
     """Enhanced block with calculated metrics for dashboard"""
@@ -80,17 +97,23 @@ class DashboardBlock(BaseModel):
     expectedStatusChanges: Optional[Dict[str, datetime]]
 
     # Status History (actual state change dates)
-    statusChanges: List[StatusChange] = Field(default_factory=list, description="Status change history with actual dates")
+    statusChanges: List[StatusChange] = Field(
+        default_factory=list, description="Status change history with actual dates"
+    )
 
     # KPI
-    kpi: Dict[str, float | int]  # predictedYieldKg, actualYieldKg, yieldEfficiencyPercent, totalHarvests
+    kpi: Dict[
+        str, float | int
+    ]  # predictedYieldKg, actualYieldKg, yieldEfficiencyPercent, totalHarvests
 
     # Calculated metrics
     calculated: BlockCalculated
 
     # Block hierarchy
     blockCategory: Optional[str] = Field(None, description="'physical' or 'virtual'")
-    parentBlockId: Optional[UUID] = Field(None, description="Parent physical block ID (for virtual blocks)")
+    parentBlockId: Optional[UUID] = Field(
+        None, description="Parent physical block ID (for virtual blocks)"
+    )
 
     # Active alerts
     activeAlerts: List[DashboardAlert] = Field(default_factory=list)
@@ -100,8 +123,10 @@ class DashboardBlock(BaseModel):
 # FARM SUMMARY
 # ============================================================================
 
+
 class FarmInfo(BaseModel):
     """Farm metadata"""
+
     farmId: UUID
     name: str
     code: str
@@ -113,35 +138,50 @@ class FarmInfo(BaseModel):
 
 class DashboardSummary(BaseModel):
     """Aggregated farm statistics"""
+
     totalBlocks: int = 0
     physicalBlocks: int = 0
     virtualBlocks: int = 0
-    blocksByState: Dict[str, int] = Field(default_factory=dict)  # {empty: 4, planned: 2, ...}
+    blocksByState: Dict[str, int] = Field(
+        default_factory=dict
+    )  # {empty: 4, planned: 2, ...}
     totalActivePlantings: int = 0
     totalPredictedYieldKg: float = 0.0
     totalActualYieldKg: float = 0.0
     avgYieldEfficiency: float = 0.0
-    activeAlerts: Dict[str, int] = Field(default_factory=dict)  # {critical: 1, high: 2, ...}
+    activeAlerts: Dict[str, int] = Field(
+        default_factory=dict
+    )  # {critical: 1, high: 2, ...}
 
 
 # ============================================================================
 # ACTIVITY & EVENTS
 # ============================================================================
 
+
 class DashboardActivity(BaseModel):
     """Recent activity item"""
+
     blockId: UUID
     blockCode: str
-    action: Literal["state_change", "harvest_recorded", "alert_created", "alert_resolved"]
+    action: Literal[
+        "state_change", "harvest_recorded", "alert_created", "alert_resolved"
+    ]
     details: str
     timestamp: datetime
 
 
 class UpcomingEvent(BaseModel):
     """Upcoming event"""
+
     blockId: UUID
     blockCode: str
-    eventType: Literal["expected_harvest", "expected_planting", "expected_transition", "overdue_transition"]
+    eventType: Literal[
+        "expected_harvest",
+        "expected_planting",
+        "expected_transition",
+        "overdue_transition",
+    ]
     eventDate: datetime
     daysUntil: int
 
@@ -150,8 +190,10 @@ class UpcomingEvent(BaseModel):
 # DASHBOARD RESPONSE
 # ============================================================================
 
+
 class DashboardResponse(BaseModel):
     """Complete dashboard data response"""
+
     farmInfo: FarmInfo
     summary: DashboardSummary
     blocks: List[DashboardBlock]
@@ -163,17 +205,26 @@ class DashboardResponse(BaseModel):
 # QUICK ACTION REQUESTS
 # ============================================================================
 
+
 class QuickTransitionRequest(BaseModel):
     """Quick state transition request"""
+
     newState: BlockStatus = Field(..., description="New state to transition to")
     notes: Optional[str] = Field(None, description="Optional notes about transition")
-    targetCrop: Optional[UUID] = Field(None, description="Plant data ID (required for planned/growing)")
-    actualPlantCount: Optional[int] = Field(None, ge=0, description="Number of plants (required for planned/growing)")
-    force: Optional[bool] = Field(False, description="Force transition bypassing pending task warnings")
+    targetCrop: Optional[UUID] = Field(
+        None, description="Plant data ID (required for planned/growing)"
+    )
+    actualPlantCount: Optional[int] = Field(
+        None, ge=0, description="Number of plants (required for planned/growing)"
+    )
+    force: Optional[bool] = Field(
+        False, description="Force transition bypassing pending task warnings"
+    )
 
 
 class QuickHarvestRequest(BaseModel):
     """Quick harvest recording request"""
+
     quantityKg: float = Field(..., gt=0, description="Harvested amount in kg")
     qualityGrade: Literal["A", "B", "C"] = Field("A", description="Quality grade")
     notes: Optional[str] = Field(None, description="Optional harvest notes")
@@ -183,8 +234,10 @@ class QuickHarvestRequest(BaseModel):
 # DASHBOARD SUMMARY AGGREGATION (Single API Call)
 # ============================================================================
 
+
 class FarmBlockSummary(BaseModel):
     """Block count summary for a single farm"""
+
     farmId: UUID
     farmName: str
     totalBlocks: int
@@ -200,6 +253,7 @@ class FarmBlockSummary(BaseModel):
 
 class FarmHarvestSummary(BaseModel):
     """Harvest summary for a single farm"""
+
     farmId: UUID
     farmName: str
     totalKg: float
@@ -208,6 +262,7 @@ class FarmHarvestSummary(BaseModel):
 
 class FarmYieldKpi(BaseModel):
     """Yield KPI for a single farm — actual vs predicted"""
+
     farmId: UUID
     farmName: str
     actualYieldKg: float = 0.0
@@ -217,6 +272,7 @@ class FarmYieldKpi(BaseModel):
 
 class CropYieldKpi(BaseModel):
     """Yield KPI for a single crop — actual vs predicted, optionally per farm"""
+
     cropName: str
     actualYieldKg: float = 0.0
     predictedYieldKg: float = 0.0
@@ -227,6 +283,7 @@ class CropYieldKpi(BaseModel):
 
 class DashboardOverview(BaseModel):
     """High-level dashboard overview metrics"""
+
     totalFarms: int = 0
     totalBlocks: int = 0
     activePlantings: int = 0
@@ -235,6 +292,7 @@ class DashboardOverview(BaseModel):
 
 class DashboardBlocksByState(BaseModel):
     """Block counts grouped by state (across all farms)"""
+
     empty: int = 0
     planned: int = 0
     growing: int = 0
@@ -247,12 +305,14 @@ class DashboardBlocksByState(BaseModel):
 
 class DashboardHarvestSummary(BaseModel):
     """Harvest data summary"""
+
     totalHarvestsKg: float = 0.0
     harvestsByFarm: List[FarmHarvestSummary] = Field(default_factory=list)
 
 
 class DashboardRecentActivity(BaseModel):
     """Recent activity counts"""
+
     recentHarvests: int = 0
     pendingTasks: int = 0
     activeAlerts: int = 0
@@ -260,12 +320,18 @@ class DashboardRecentActivity(BaseModel):
 
 class FarmingYearContext(BaseModel):
     """Farming year filter context for dashboard data"""
-    farmingYear: Optional[int] = Field(None, description="Farming year filter applied (null = all data)")
-    isFiltered: bool = Field(False, description="Whether data is filtered by farming year")
+
+    farmingYear: Optional[int] = Field(
+        None, description="Farming year filter applied (null = all data)"
+    )
+    isFiltered: bool = Field(
+        False, description="Whether data is filtered by farming year"
+    )
 
 
 class CropBreakdownItem(BaseModel):
     """Crop distribution item - block count for a single crop, per farm"""
+
     cropName: str
     blockCount: int
     farmId: Optional[str] = None
@@ -274,27 +340,30 @@ class CropBreakdownItem(BaseModel):
 
 class DashboardSummaryData(BaseModel):
     """Complete aggregated dashboard data (single API call response)"""
+
     overview: DashboardOverview
     blocksByState: DashboardBlocksByState
     blocksByFarm: List[FarmBlockSummary]
     harvestSummary: DashboardHarvestSummary
     recentActivity: DashboardRecentActivity
-    farmingYearContext: Optional[FarmingYearContext] = Field(None, description="Farming year filter context")
+    farmingYearContext: Optional[FarmingYearContext] = Field(
+        None, description="Farming year filter context"
+    )
     cropBreakdown: List[CropBreakdownItem] = Field(
         default_factory=list,
-        description="Block counts grouped by crop name (top 20, descending)"
+        description="Block counts grouped by crop name (top 20, descending)",
     )
     yieldByFarm: List[FarmYieldKpi] = Field(
-        default_factory=list,
-        description="Actual vs predicted yield KPI per farm"
+        default_factory=list, description="Actual vs predicted yield KPI per farm"
     )
-    yieldByCrop: List['CropYieldKpi'] = Field(
+    yieldByCrop: List["CropYieldKpi"] = Field(
         default_factory=list,
-        description="Actual vs predicted yield KPI per crop (per farm for filtering)"
+        description="Actual vs predicted yield KPI per crop (per farm for filtering)",
     )
 
 
 class DashboardSummaryResponse(BaseModel):
     """Response wrapper for dashboard summary endpoint"""
+
     success: bool = True
     data: DashboardSummaryData

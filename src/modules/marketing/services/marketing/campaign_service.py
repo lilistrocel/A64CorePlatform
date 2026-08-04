@@ -39,7 +39,7 @@ class CampaignService:
         if not await self.budget_repository.exists(budget_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Budget {budget_id} not found"
+                detail=f"Budget {budget_id} not found",
             )
 
     async def _validate_channels_exist(self, channel_ids: List[UUID]) -> None:
@@ -56,13 +56,11 @@ class CampaignService:
             if not await self.channel_repository.exists(channel_id):
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Channel {channel_id} not found"
+                    detail=f"Channel {channel_id} not found",
                 )
 
     async def create_campaign(
-        self,
-        campaign_data: CampaignCreate,
-        created_by: UUID
+        self, campaign_data: CampaignCreate, created_by: UUID
     ) -> Campaign:
         """
         Create a new campaign
@@ -90,13 +88,13 @@ class CampaignService:
             if campaign_data.endDate < campaign_data.startDate:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="End date must be after start date"
+                    detail="End date must be after start date",
                 )
 
             if campaign_data.spent > campaign_data.budget:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Spent amount cannot exceed campaign budget"
+                    detail="Spent amount cannot exceed campaign budget",
                 )
 
             campaign = await self.repository.create(campaign_data, created_by)
@@ -109,7 +107,7 @@ class CampaignService:
             logger.error(f"Error creating campaign: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create campaign"
+                detail="Failed to create campaign",
             )
 
     async def get_campaign(self, campaign_id: UUID) -> Campaign:
@@ -129,7 +127,7 @@ class CampaignService:
         if not campaign:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Campaign {campaign_id} not found"
+                detail=f"Campaign {campaign_id} not found",
             )
         return campaign
 
@@ -139,7 +137,7 @@ class CampaignService:
         per_page: int = 20,
         status: Optional[CampaignStatus] = None,
         budget_id: Optional[UUID] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
     ) -> tuple[List[Campaign], int, int]:
         """
         Get all campaigns with pagination
@@ -160,16 +158,16 @@ class CampaignService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        campaigns, total = await self.repository.get_all(skip, per_page, status, budget_id, search)
+        campaigns, total = await self.repository.get_all(
+            skip, per_page, status, budget_id, search
+        )
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 
         return campaigns, total, total_pages
 
     async def update_campaign(
-        self,
-        campaign_id: UUID,
-        update_data: CampaignUpdate
+        self, campaign_id: UUID, update_data: CampaignUpdate
     ) -> Campaign:
         """
         Update a campaign
@@ -197,31 +195,45 @@ class CampaignService:
 
         # Validate dates if updating
         if update_data.startDate or update_data.endDate:
-            start = update_data.startDate if update_data.startDate else current_campaign.startDate
-            end = update_data.endDate if update_data.endDate else current_campaign.endDate
+            start = (
+                update_data.startDate
+                if update_data.startDate
+                else current_campaign.startDate
+            )
+            end = (
+                update_data.endDate if update_data.endDate else current_campaign.endDate
+            )
 
             if end < start:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="End date must be after start date"
+                    detail="End date must be after start date",
                 )
 
         # Validate amounts if updating
         if update_data.spent is not None or update_data.budget is not None:
-            budget = update_data.budget if update_data.budget is not None else current_campaign.budget
-            spent = update_data.spent if update_data.spent is not None else current_campaign.spent
+            budget = (
+                update_data.budget
+                if update_data.budget is not None
+                else current_campaign.budget
+            )
+            spent = (
+                update_data.spent
+                if update_data.spent is not None
+                else current_campaign.spent
+            )
 
             if spent > budget:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Spent amount cannot exceed campaign budget"
+                    detail="Spent amount cannot exceed campaign budget",
                 )
 
         updated_campaign = await self.repository.update(campaign_id, update_data)
         if not updated_campaign:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Campaign {campaign_id} not found"
+                detail=f"Campaign {campaign_id} not found",
             )
 
         logger.info(f"Campaign updated: {campaign_id}")
@@ -247,7 +259,7 @@ class CampaignService:
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Campaign {campaign_id} not found"
+                detail=f"Campaign {campaign_id} not found",
             )
 
         logger.info(f"Campaign deleted: {campaign_id}")
@@ -269,11 +281,29 @@ class CampaignService:
         campaign = await self.get_campaign(campaign_id)
 
         # Calculate performance metrics
-        ctr = (campaign.metrics.clicks / campaign.metrics.impressions * 100) if campaign.metrics.impressions > 0 else 0
-        conversion_rate = (campaign.metrics.conversions / campaign.metrics.clicks * 100) if campaign.metrics.clicks > 0 else 0
-        cpc = (campaign.spent / campaign.metrics.clicks) if campaign.metrics.clicks > 0 else 0
-        cpa = (campaign.spent / campaign.metrics.conversions) if campaign.metrics.conversions > 0 else 0
-        budget_utilization = (campaign.spent / campaign.budget * 100) if campaign.budget > 0 else 0
+        ctr = (
+            (campaign.metrics.clicks / campaign.metrics.impressions * 100)
+            if campaign.metrics.impressions > 0
+            else 0
+        )
+        conversion_rate = (
+            (campaign.metrics.conversions / campaign.metrics.clicks * 100)
+            if campaign.metrics.clicks > 0
+            else 0
+        )
+        cpc = (
+            (campaign.spent / campaign.metrics.clicks)
+            if campaign.metrics.clicks > 0
+            else 0
+        )
+        cpa = (
+            (campaign.spent / campaign.metrics.conversions)
+            if campaign.metrics.conversions > 0
+            else 0
+        )
+        budget_utilization = (
+            (campaign.spent / campaign.budget * 100) if campaign.budget > 0 else 0
+        )
 
         return {
             "campaignId": str(campaign.campaignId),
@@ -292,6 +322,6 @@ class CampaignService:
                 "ctr": round(ctr, 2),
                 "conversionRate": round(conversion_rate, 2),
                 "costPerClick": round(cpc, 2),
-                "costPerAcquisition": round(cpa, 2)
-            }
+                "costPerAcquisition": round(cpa, 2),
+            },
         }

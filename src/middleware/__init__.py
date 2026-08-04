@@ -1,10 +1,11 @@
 """Middleware package"""
+
 from .auth import (
     get_current_user,
     get_current_active_user,
     get_optional_user,
     require_mfa_setup_complete,
-    get_user_mfa_complete
+    get_user_mfa_complete,
 )
 from .permissions import (
     RoleChecker,
@@ -12,20 +13,20 @@ from .permissions import (
     require_admin,
     require_moderator,
     can_manage_user,
-    can_change_role
+    can_change_role,
 )
 from .rate_limit import (
     rate_limiter,
     rate_limit_dependency,
     login_rate_limiter,
     mfa_rate_limiter,
-    RateLimitMiddleware
+    RateLimitMiddleware,
 )
 from .timing import (
     TimingMiddleware,
     TimingMiddlewareWithCollector,
     ResponseTimeCollector,
-    response_time_collector
+    response_time_collector,
 )
 
 __all__ = [
@@ -48,5 +49,5 @@ __all__ = [
     "TimingMiddleware",
     "TimingMiddlewareWithCollector",
     "ResponseTimeCollector",
-    "response_time_collector"
+    "response_time_collector",
 ]

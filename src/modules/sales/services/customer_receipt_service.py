@@ -157,7 +157,9 @@ def _doc_to_response(raw: Dict[str, Any]) -> CustomerReceiptResponse:
     """
     allocations = [
         _raw_allocation_to_response(a)
-        for a in sorted(raw.get("allocations", []), key=lambda x: x.get("allocationLineNumber", 0))
+        for a in sorted(
+            raw.get("allocations", []), key=lambda x: x.get("allocationLineNumber", 0)
+        )
     ]
 
     return CustomerReceiptResponse(
@@ -257,7 +259,9 @@ async def _write_audit(
         )
 
 
-def _compute_unallocated(amount_received: Decimal, allocations: List[Dict[str, Any]]) -> Decimal:
+def _compute_unallocated(
+    amount_received: Decimal, allocations: List[Dict[str, Any]]
+) -> Decimal:
     """
     Compute the unallocated balance on a Receipt.
 
@@ -272,7 +276,9 @@ def _compute_unallocated(amount_received: Decimal, allocations: List[Dict[str, A
         Unallocated balance as Decimal (should be 0 in v1).
     """
     total_applied = sum(Decimal(str(a["amountApplied"])) for a in allocations)
-    return (amount_received - total_applied).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
+    return (amount_received - total_applied).quantize(
+        _TWOPLACES, rounding=ROUND_HALF_UP
+    )
 
 
 def _build_outbox_payload(
@@ -416,14 +422,16 @@ def _build_allocation_docs(allocations: List[Any]) -> List[Dict[str, Any]]:
     """
     docs = []
     for i, alloc in enumerate(allocations, start=1):
-        docs.append({
-            "allocationLineNumber": i,
-            "arInvoiceDocEntry": alloc.ar_invoice_doc_entry,
-            "arInvoiceDocNumber": alloc.ar_invoice_doc_number,
-            "amountApplied": float(alloc.amount_applied),
-            "currencyApplied": alloc.currency_applied,
-            "notes": alloc.notes,
-        })
+        docs.append(
+            {
+                "allocationLineNumber": i,
+                "arInvoiceDocEntry": alloc.ar_invoice_doc_entry,
+                "arInvoiceDocNumber": alloc.ar_invoice_doc_number,
+                "amountApplied": float(alloc.amount_applied),
+                "currencyApplied": alloc.currency_applied,
+                "notes": alloc.notes,
+            }
+        )
     return docs
 
 
@@ -613,7 +621,9 @@ async def create_customer_receipt(
             "customerId": payload.customer_id,
             "amountReceived": float(amount_received),
             "allocationCount": len(allocation_docs),
-            "arInvoiceDocEntries": [a.ar_invoice_doc_entry for a in payload.allocations],
+            "arInvoiceDocEntries": [
+                a.ar_invoice_doc_entry for a in payload.allocations
+            ],
         },
     )
 
@@ -680,7 +690,10 @@ async def create_customer_receipt_from_invoice(
             f"open_amount ({open_amount:.2f}). Cannot overpay in v1."
         )
 
-    from ..models.customer_receipts import CustomerReceiptCreate, ReceiptAllocationCreate  # noqa: PLC0415
+    from ..models.customer_receipts import (
+        CustomerReceiptCreate,
+        ReceiptAllocationCreate,
+    )  # noqa: PLC0415
 
     receipt_payload = CustomerReceiptCreate(
         organization_id=org_id,
@@ -707,7 +720,9 @@ async def create_customer_receipt_from_invoice(
         notes=payload.notes,
     )
 
-    return await create_customer_receipt(db, receipt_payload, org_id=org_id, user_id=user_id)
+    return await create_customer_receipt(
+        db, receipt_payload, org_id=org_id, user_id=user_id
+    )
 
 
 async def get_customer_receipt(
@@ -784,11 +799,7 @@ async def list_customer_receipts(
     skip = (page - 1) * size
 
     cursor = (
-        db[_CR_COL]
-        .find(query, projection)
-        .sort("docDate", -1)
-        .skip(skip)
-        .limit(size)
+        db[_CR_COL].find(query, projection).sort("docDate", -1).skip(skip).limit(size)
     )
     raw_docs = await cursor.to_list(length=size)
 
@@ -849,7 +860,9 @@ async def update_customer_receipt(
         "bankAccountId": payload.bank_account_id,
         "currency": payload.currency,
         "exchangeRate": float(payload.exchange_rate) if payload.exchange_rate else None,
-        "amountReceived": float(payload.amount_received) if payload.amount_received else None,
+        "amountReceived": (
+            float(payload.amount_received) if payload.amount_received else None
+        ),
         "journalMemo": payload.journal_memo,
         "notes": payload.notes,
     }
@@ -873,7 +886,9 @@ async def update_customer_receipt(
         new_allocation_docs = _build_allocation_docs(payload.allocations)
 
         # Validate sum consistency.
-        total_applied = sum(Decimal(str(a["amountApplied"])) for a in new_allocation_docs)
+        total_applied = sum(
+            Decimal(str(a["amountApplied"])) for a in new_allocation_docs
+        )
         if abs(total_applied - effective_amount) > _TOLERANCE:
             raise ValueError(
                 f"Sum of allocation amounts ({total_applied}) does not equal "
@@ -909,7 +924,9 @@ async def update_customer_receipt(
         detail={"updatedFields": list(updates.keys())},
     )
 
-    updated_raw = await db[_CR_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
+    updated_raw = await db[_CR_COL].find_one(
+        {"docEntry": doc_entry, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)
@@ -1025,8 +1042,7 @@ async def transition_status(
 
     # Special case: OPEN → CANCELLED is a reversal; not in LEGAL_TRANSITIONS.
     is_open_to_cancelled = (
-        current_status == DocumentStatus.OPEN
-        and new_status == DocumentStatus.CANCELLED
+        current_status == DocumentStatus.OPEN and new_status == DocumentStatus.CANCELLED
     )
 
     if not is_open_to_cancelled:
@@ -1069,7 +1085,13 @@ async def transition_status(
             )
             await db[_ARI_COL].update_one(
                 {"docEntry": ari_doc_entry, "organizationId": org_id},
-                {"$set": {"status": new_ari_status.value, "updatedAt": now, "updatedBy": user_id}},
+                {
+                    "$set": {
+                        "status": new_ari_status.value,
+                        "updatedAt": now,
+                        "updatedBy": user_id,
+                    }
+                },
             )
 
             # Write Receipt back-pointer onto the AR Invoice target_doc_refs.
@@ -1092,11 +1114,15 @@ async def transition_status(
             )
 
         # Step 3: Emit customer_payment_received outbox event.
-        event_payload = _build_outbox_payload(raw, event_type="customer_payment_received")
+        event_payload = _build_outbox_payload(
+            raw, event_type="customer_payment_received"
+        )
         emitted_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             emitted_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1200,7 +1226,9 @@ async def transition_status(
         cancelled_event_id: Optional[str] = None
 
         try:
-            from src.modules.finance_bridge.outbox_writer import OutboxWriter  # noqa: PLC0415
+            from src.modules.finance_bridge.outbox_writer import (
+                OutboxWriter,
+            )  # noqa: PLC0415
 
             cancelled_event_id = await OutboxWriter.publish(
                 db=db,
@@ -1237,7 +1265,9 @@ async def transition_status(
                 "from": current_status.value,
                 "to": new_status.value,
                 "reason": request_body.reason,
-                "cancelledOutboxEventId": str(cancelled_event_id) if cancelled_event_id else None,
+                "cancelledOutboxEventId": (
+                    str(cancelled_event_id) if cancelled_event_id else None
+                ),
                 "originalOutboxEventId": original_event_id,
                 "affectedArInvoices": affected_ari_entries_cancel,
             },
@@ -1270,7 +1300,9 @@ async def transition_status(
         )
 
     # Reload and return the updated Receipt.
-    updated_raw = await db[_CR_COL].find_one({"docEntry": doc_entry, "organizationId": org_id})
+    updated_raw = await db[_CR_COL].find_one(
+        {"docEntry": doc_entry, "organizationId": org_id}
+    )
     if updated_raw is None:
         return None
     updated_raw.pop("_id", None)

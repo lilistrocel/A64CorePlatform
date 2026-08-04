@@ -42,7 +42,11 @@ async def health_check() -> Dict[str, Any]:
         redis_status = "disconnected"
 
     # Overall status: healthy only if both services are connected
-    overall_status = "healthy" if (db_status == "connected" and redis_status == "connected") else "degraded"
+    overall_status = (
+        "healthy"
+        if (db_status == "connected" and redis_status == "connected")
+        else "degraded"
+    )
 
     return {
         "status": overall_status,
@@ -50,7 +54,7 @@ async def health_check() -> Dict[str, Any]:
         "service": "A64 Core Platform API Hub",
         "version": "1.0.0",
         "database": db_status,
-        "redis": redis_status
+        "redis": redis_status,
     }
 
 
@@ -70,6 +74,7 @@ async def test_malformed_response() -> str:
     Returns plain text instead of expected JSON to test frontend handling.
     """
     from fastapi.responses import PlainTextResponse
+
     return PlainTextResponse(content="This is not JSON", media_type="text/plain")
 
 
@@ -97,10 +102,7 @@ async def readiness_check() -> Dict[str, Any]:
     return {
         "ready": is_ready,
         "timestamp": datetime.utcnow().isoformat(),
-        "checks": {
-            "mongodb": mongodb_status,
-            "redis": redis_status
-        }
+        "checks": {"mongodb": mongodb_status, "redis": redis_status},
     }
 
 
@@ -118,10 +120,7 @@ async def get_metrics() -> Dict[str, Any]:
     Feature #372: API response time monitoring
     """
     stats = response_time_collector.get_stats()
-    return {
-        "timestamp": datetime.utcnow().isoformat(),
-        "metrics": stats
-    }
+    return {"timestamp": datetime.utcnow().isoformat(), "metrics": stats}
 
 
 @router.get("/metrics/slow-requests", status_code=status.HTTP_200_OK)
@@ -139,7 +138,7 @@ async def get_slow_requests() -> Dict[str, Any]:
         "timestamp": datetime.utcnow().isoformat(),
         "count": len(slow_requests),
         "threshold_ms": 1000,
-        "slow_requests": slow_requests
+        "slow_requests": slow_requests,
     }
 
 
@@ -158,7 +157,4 @@ async def get_endpoint_metrics() -> Dict[str, Any]:
     Feature #372: API response time monitoring
     """
     endpoint_stats = response_time_collector.get_endpoint_stats()
-    return {
-        "timestamp": datetime.utcnow().isoformat(),
-        "endpoints": endpoint_stats
-    }
+    return {"timestamp": datetime.utcnow().isoformat(), "endpoints": endpoint_stats}

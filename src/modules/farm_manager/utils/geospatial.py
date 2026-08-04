@@ -8,7 +8,6 @@ for geo-fencing boundaries.
 import math
 from typing import List, Tuple, Optional
 
-
 # Earth's radius in meters (WGS84 mean radius)
 EARTH_RADIUS_METERS = 6371008.8
 
@@ -32,8 +31,10 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     delta_lon = math.radians(lon2 - lon1)
 
     # Haversine formula
-    a = math.sin(delta_lat / 2) ** 2 + \
-        math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
+    a = (
+        math.sin(delta_lat / 2) ** 2
+        + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
+    )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
     return EARTH_RADIUS_METERS * c
@@ -104,7 +105,7 @@ def _calculate_ring_area(ring: List[List[float]]) -> float:
         total += (lon2_rad - lon1_rad) * (2 + math.sin(lat1_rad) + math.sin(lat2_rad))
 
     # Calculate area
-    area = abs(total) * EARTH_RADIUS_METERS ** 2 / 2
+    area = abs(total) * EARTH_RADIUS_METERS**2 / 2
 
     return area
 
@@ -145,7 +146,9 @@ def calculate_centroid(coordinates: List[List[List[float]]]) -> Tuple[float, flo
     return (centroid_lat, centroid_lng)
 
 
-def validate_polygon(coordinates: List[List[List[float]]]) -> Tuple[bool, Optional[str]]:
+def validate_polygon(
+    coordinates: List[List[List[float]]],
+) -> Tuple[bool, Optional[str]]:
     """
     Validate a GeoJSON polygon structure and coordinates.
 
@@ -176,7 +179,10 @@ def validate_polygon(coordinates: List[List[List[float]]]) -> Tuple[bool, Option
     first_point = exterior_ring[0]
     last_point = exterior_ring[-1]
     if first_point[0] != last_point[0] or first_point[1] != last_point[1]:
-        return (False, "Polygon must be closed (first and last point must be identical)")
+        return (
+            False,
+            "Polygon must be closed (first and last point must be identical)",
+        )
 
     # Validate each coordinate
     for i, point in enumerate(exterior_ring):
@@ -206,9 +212,7 @@ def validate_polygon(coordinates: List[List[List[float]]]) -> Tuple[bool, Option
 
 
 def point_in_polygon(
-    point_lng: float,
-    point_lat: float,
-    coordinates: List[List[List[float]]]
+    point_lng: float, point_lat: float, coordinates: List[List[List[float]]]
 ) -> bool:
     """
     Check if a point is inside a polygon using the ray casting algorithm.
@@ -233,8 +237,9 @@ def point_in_polygon(
         xi, yi = exterior_ring[i][0], exterior_ring[i][1]
         xj, yj = exterior_ring[j][0], exterior_ring[j][1]
 
-        if ((yi > point_lat) != (yj > point_lat)) and \
-           (point_lng < (xj - xi) * (point_lat - yi) / (yj - yi) + xi):
+        if ((yi > point_lat) != (yj > point_lat)) and (
+            point_lng < (xj - xi) * (point_lat - yi) / (yj - yi) + xi
+        ):
             inside = not inside
 
         j = i
@@ -253,7 +258,7 @@ def hectares_to_meters(hectares: float) -> float:
 
 
 def get_bounding_box(
-    coordinates: List[List[List[float]]]
+    coordinates: List[List[List[float]]],
 ) -> Tuple[float, float, float, float]:
     """
     Get the bounding box of a polygon.

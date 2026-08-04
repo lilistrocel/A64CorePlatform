@@ -10,7 +10,12 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
-from src.modules.hr.models.contract import Contract, ContractCreate, ContractUpdate, ContractStatus
+from src.modules.hr.models.contract import (
+    Contract,
+    ContractCreate,
+    ContractUpdate,
+    ContractStatus,
+)
 from src.modules.hr.services.database import hr_db
 
 logger = logging.getLogger(__name__)
@@ -40,9 +45,7 @@ class ContractRepository:
 
         contract_dict = contract_data.model_dump()
         contract = Contract(
-            **contract_dict,
-            createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            **contract_dict, createdAt=datetime.utcnow(), updatedAt=datetime.utcnow()
         )
 
         contract_doc = contract.model_dump(by_alias=True)
@@ -51,13 +54,19 @@ class ContractRepository:
 
         # Convert dates to datetime for MongoDB
         if "startDate" in contract_doc:
-            contract_doc["startDate"] = datetime.combine(contract_doc["startDate"], datetime.min.time())
+            contract_doc["startDate"] = datetime.combine(
+                contract_doc["startDate"], datetime.min.time()
+            )
         if "endDate" in contract_doc and contract_doc["endDate"]:
-            contract_doc["endDate"] = datetime.combine(contract_doc["endDate"], datetime.min.time())
+            contract_doc["endDate"] = datetime.combine(
+                contract_doc["endDate"], datetime.min.time()
+            )
 
         await collection.insert_one(contract_doc)
 
-        logger.info(f"Created contract: {contract.contractId} for employee {contract.employeeId}")
+        logger.info(
+            f"Created contract: {contract.contractId} for employee {contract.employeeId}"
+        )
         return contract
 
     async def get_by_id(self, contract_id: UUID) -> Optional[Contract]:
@@ -76,9 +85,15 @@ class ContractRepository:
         if contract_doc:
             contract_doc.pop("_id", None)
             # Convert datetime back to date
-            if "startDate" in contract_doc and isinstance(contract_doc["startDate"], datetime):
+            if "startDate" in contract_doc and isinstance(
+                contract_doc["startDate"], datetime
+            ):
                 contract_doc["startDate"] = contract_doc["startDate"].date()
-            if "endDate" in contract_doc and contract_doc["endDate"] and isinstance(contract_doc["endDate"], datetime):
+            if (
+                "endDate" in contract_doc
+                and contract_doc["endDate"]
+                and isinstance(contract_doc["endDate"], datetime)
+            ):
                 contract_doc["endDate"] = contract_doc["endDate"].date()
             return Contract(**contract_doc)
         return None
@@ -88,7 +103,7 @@ class ContractRepository:
         employee_id: UUID,
         skip: int = 0,
         limit: int = 20,
-        status: Optional[ContractStatus] = None
+        status: Optional[ContractStatus] = None,
     ) -> tuple[List[Contract], int]:
         """
         Get contracts for a specific employee
@@ -118,19 +133,22 @@ class ContractRepository:
         async for contract_doc in cursor:
             contract_doc.pop("_id", None)
             # Convert datetime back to date
-            if "startDate" in contract_doc and isinstance(contract_doc["startDate"], datetime):
+            if "startDate" in contract_doc and isinstance(
+                contract_doc["startDate"], datetime
+            ):
                 contract_doc["startDate"] = contract_doc["startDate"].date()
-            if "endDate" in contract_doc and contract_doc["endDate"] and isinstance(contract_doc["endDate"], datetime):
+            if (
+                "endDate" in contract_doc
+                and contract_doc["endDate"]
+                and isinstance(contract_doc["endDate"], datetime)
+            ):
                 contract_doc["endDate"] = contract_doc["endDate"].date()
             contracts.append(Contract(**contract_doc))
 
         return contracts, total
 
     async def get_all(
-        self,
-        skip: int = 0,
-        limit: int = 20,
-        status: Optional[ContractStatus] = None
+        self, skip: int = 0, limit: int = 20, status: Optional[ContractStatus] = None
     ) -> tuple[List[Contract], int]:
         """
         Get all contracts with pagination
@@ -159,15 +177,23 @@ class ContractRepository:
         async for contract_doc in cursor:
             contract_doc.pop("_id", None)
             # Convert datetime back to date
-            if "startDate" in contract_doc and isinstance(contract_doc["startDate"], datetime):
+            if "startDate" in contract_doc and isinstance(
+                contract_doc["startDate"], datetime
+            ):
                 contract_doc["startDate"] = contract_doc["startDate"].date()
-            if "endDate" in contract_doc and contract_doc["endDate"] and isinstance(contract_doc["endDate"], datetime):
+            if (
+                "endDate" in contract_doc
+                and contract_doc["endDate"]
+                and isinstance(contract_doc["endDate"], datetime)
+            ):
                 contract_doc["endDate"] = contract_doc["endDate"].date()
             contracts.append(Contract(**contract_doc))
 
         return contracts, total
 
-    async def update(self, contract_id: UUID, update_data: ContractUpdate) -> Optional[Contract]:
+    async def update(
+        self, contract_id: UUID, update_data: ContractUpdate
+    ) -> Optional[Contract]:
         """
         Update a contract
 
@@ -188,13 +214,16 @@ class ContractRepository:
 
         # Convert dates to datetime for MongoDB
         if "startDate" in update_dict:
-            update_dict["startDate"] = datetime.combine(update_dict["startDate"], datetime.min.time())
+            update_dict["startDate"] = datetime.combine(
+                update_dict["startDate"], datetime.min.time()
+            )
         if "endDate" in update_dict and update_dict["endDate"]:
-            update_dict["endDate"] = datetime.combine(update_dict["endDate"], datetime.min.time())
+            update_dict["endDate"] = datetime.combine(
+                update_dict["endDate"], datetime.min.time()
+            )
 
         result = await collection.update_one(
-            {"contractId": str(contract_id)},
-            {"$set": update_dict}
+            {"contractId": str(contract_id)}, {"$set": update_dict}
         )
 
         if result.modified_count > 0:

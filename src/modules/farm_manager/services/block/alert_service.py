@@ -9,10 +9,7 @@ from uuid import UUID
 from fastapi import HTTPException
 import logging
 
-from ...models.alert import (
-    Alert, AlertCreate, AlertResolve,
-    AlertStatus, AlertSeverity
-)
+from ...models.alert import Alert, AlertCreate, AlertResolve, AlertStatus, AlertSeverity
 from ...models.block import BlockStatus
 from .alert_repository import AlertRepository
 from .block_repository_new import BlockRepository
@@ -28,7 +25,7 @@ class AlertService:
         alert_data: AlertCreate,
         user_id: UUID,
         user_email: str,
-        change_block_status: bool = True
+        change_block_status: bool = True,
     ) -> Alert:
         """
         Create a new alert and optionally change block status to ALERT
@@ -54,7 +51,7 @@ class AlertService:
                 BlockStatus.ALERT,
                 user_id,
                 user_email,
-                notes=f"Alert created: {alert_data.title}"
+                notes=f"Alert created: {alert_data.title}",
             )
 
             logger.info(
@@ -85,7 +82,7 @@ class AlertService:
         page: int = 1,
         per_page: int = 20,
         status: Optional[AlertStatus] = None,
-        severity: Optional[AlertSeverity] = None
+        severity: Optional[AlertSeverity] = None,
     ) -> Tuple[List[Alert], int, int]:
         """List alerts for a block with pagination and filters"""
         skip = (page - 1) * per_page
@@ -104,7 +101,7 @@ class AlertService:
         page: int = 1,
         per_page: int = 20,
         status: Optional[AlertStatus] = None,
-        severity: Optional[AlertSeverity] = None
+        severity: Optional[AlertSeverity] = None,
     ) -> Tuple[List[Alert], int, int]:
         """List all alerts for a farm with pagination and filters"""
         skip = (page - 1) * per_page
@@ -123,7 +120,7 @@ class AlertService:
         resolution_data: AlertResolve,
         user_id: UUID,
         user_email: str,
-        restore_block_status: bool = True
+        restore_block_status: bool = True,
     ) -> Alert:
         """
         Resolve an alert and optionally restore block status
@@ -141,14 +138,13 @@ class AlertService:
             raise HTTPException(404, f"Alert not found: {alert_id}")
 
         if alert.status != AlertStatus.ACTIVE:
-            raise HTTPException(400, f"Alert is not active (current status: {alert.status.value})")
+            raise HTTPException(
+                400, f"Alert is not active (current status: {alert.status.value})"
+            )
 
         # Resolve alert
         resolved_alert = await AlertRepository.resolve(
-            alert_id,
-            user_id,
-            user_email,
-            resolution_data.resolutionNotes
+            alert_id, user_id, user_email, resolution_data.resolutionNotes
         )
 
         # Check if there are other active alerts for the block
@@ -165,7 +161,7 @@ class AlertService:
                     BlockStatus[block.previousState.upper()],
                     user_id,
                     user_email,
-                    notes=f"Alert resolved: {alert.title}"
+                    notes=f"Alert resolved: {alert.title}",
                 )
 
                 logger.info(
@@ -173,26 +169,28 @@ class AlertService:
                     f"after resolving alert {alert_id}"
                 )
 
-        logger.info(f"[Alert Service] Resolved alert {alert_id} for block {alert.blockId}")
+        logger.info(
+            f"[Alert Service] Resolved alert {alert_id} for block {alert.blockId}"
+        )
         return resolved_alert
 
     @staticmethod
-    async def dismiss_alert(
-        alert_id: UUID,
-        user_id: UUID,
-        user_email: str
-    ) -> Alert:
+    async def dismiss_alert(alert_id: UUID, user_id: UUID, user_email: str) -> Alert:
         """Dismiss an alert without resolution notes"""
         alert = await AlertRepository.get_by_id(alert_id)
         if not alert:
             raise HTTPException(404, f"Alert not found: {alert_id}")
 
         if alert.status != AlertStatus.ACTIVE:
-            raise HTTPException(400, f"Alert is not active (current status: {alert.status.value})")
+            raise HTTPException(
+                400, f"Alert is not active (current status: {alert.status.value})"
+            )
 
         dismissed_alert = await AlertRepository.dismiss(alert_id, user_id, user_email)
 
-        logger.info(f"[Alert Service] Dismissed alert {alert_id} for block {alert.blockId}")
+        logger.info(
+            f"[Alert Service] Dismissed alert {alert_id} for block {alert.blockId}"
+        )
         return dismissed_alert
 
     @staticmethod
@@ -217,7 +215,4 @@ class AlertService:
         summary = await AlertRepository.get_alert_summary_for_block(block_id)
         counts_by_status = await AlertRepository.get_alerts_count_by_status(block_id)
 
-        return {
-            **summary,
-            "statusBreakdown": counts_by_status
-        }
+        return {**summary, "statusBreakdown": counts_by_status}

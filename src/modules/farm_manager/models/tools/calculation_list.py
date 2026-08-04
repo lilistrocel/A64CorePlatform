@@ -21,8 +21,12 @@ class CalculationListItem(BaseModel):
         points: Number of irrigation points (drip emitters) for this crop.
     """
 
-    plantDataId: UUID = Field(..., description="References plant_data_enhanced.plantDataId")
-    points: int = Field(..., ge=1, le=10_000_000, description="Irrigation points (1 – 10 000 000)")
+    plantDataId: UUID = Field(
+        ..., description="References plant_data_enhanced.plantDataId"
+    )
+    points: int = Field(
+        ..., ge=1, le=10_000_000, description="Irrigation points (1 – 10 000 000)"
+    )
 
 
 class CalculationList(BaseModel):
@@ -41,8 +45,7 @@ class CalculationList(BaseModel):
     listId: UUID = Field(default_factory=uuid4, description="Unique list identifier")
     name: str = Field(..., min_length=1, max_length=200, description="List name")
     items: List[CalculationListItem] = Field(
-        default_factory=list,
-        description="Crop entries (plantDataId + points)"
+        default_factory=list, description="Crop entries (plantDataId + points)"
     )
 
     # Scoping
