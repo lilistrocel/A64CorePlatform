@@ -1067,6 +1067,140 @@ class CreditNoteCancelledPayload(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# T-910 — AP Down Payment Invoice & AP Credit Note events (purchasing side)
+#
+# Stage 1 fix: these two event types were already being emitted by
+# ap_down_payment_service.py / ap_credit_note_service.py but were never
+# registered here, so OutboxWriter.publish raised ValueError and both
+# services silently swallowed it (caught by a broad except around the
+# publish call) — DPI and ACN postings sent NOTHING to finance. Field
+# typing below is derived from the producers' actual `_build_outbox_payload`
+# dict-building code, NOT copied from ApInvoicePostedPayload — several
+# fields here are deliberately looser (str dates, plain str vendorId that
+# can be "", Optional item ids) because that is what the producers actually
+# put in the dict today.
+# ---------------------------------------------------------------------------
+
+
+class ApDownPaymentPostedLine(BaseModel):
+    """
+    One line in the ap_down_payment_posted outbox event.
+
+    Mirrors the embedded DPI line dict built by
+    ap_down_payment_service._build_outbox_payload. itemId is Optional
+    because DPI lines may be amount-only (APDownPaymentLineCreate.item_id
+    is Optional[str] = None — see models/document.py).
+    """
+
+    lineNumber: int
+    itemId: Optional[UUID] = None
+    """None for amount-only DPI lines (no specific item)."""
+    itemCode: str = ""
+    quantity: Decimal
+    unitPrice: Decimal
+    lineNet: Decimal
+    taxCode: Optional[str] = None
+    taxRate: Decimal
+    lineTax: Decimal
+    lineGross: Decimal
+    costCenterId: Optional[str] = None
+
+
+class ApDownPaymentPostedPayload(BaseModel):
+    """
+    Raised when an AP Down Payment Invoice transitions PENDING_APPROVAL → OPEN
+    (the primary financial recording event for a vendor prepayment).
+
+    Finance action:
+        DR Vendor Advance   (totals.net — prepaid-asset sub-ledger)
+        DR Input VAT        (totals.tax — reclaimable from authority)
+        CR AP Control       (totals.gross — vendor's specific liability)
+
+    vendorId is a plain str (not UUID) because the producer reads it via
+    dpi_raw.get("vendorId", "") and can fall back to "". docDate is a plain
+    str (not date) — the producer pre-formats it to "YYYY-MM-DD" (or "")
+    via its own _date_str helper before this payload is built.
+    """
+
+    dpiDocId: UUID
+    dpiDocNumber: str
+    docDate: str
+    vendorId: str
+    vendorName: str = ""
+    bpRefNo: Optional[str] = None
+    currency: str = "AED"
+    exchangeRate: Decimal
+    totals: dict
+    """Keys: net, tax, gross."""
+    lines: List[ApDownPaymentPostedLine]
+
+
+class ApCreditNotePostedLine(BaseModel):
+    """
+    One line in the ap_credit_note_posted outbox event.
+
+    Mirrors the embedded ACN line dict built by
+    ap_credit_note_service._build_outbox_payload. itemId is required
+    (UUID) because APCreditNoteLineCreate.item_id is a required str —
+    ACN, unlike DPI, always credits a specific item.
+    """
+
+    lineNumber: int
+    itemId: UUID
+    itemCode: str = ""
+    quantity: Decimal
+    unitPrice: Decimal
+    lineNet: Decimal
+    taxCode: Optional[str] = None
+    taxRate: Decimal
+    lineTax: Decimal
+    lineGross: Decimal
+    costCenterId: Optional[str] = None
+    grLineId: Optional[UUID] = None
+
+
+class ApCreditNotePostedPayload(BaseModel):
+    """
+    Raised when an AP Credit Note transitions PENDING_APPROVAL → OPEN
+    (the primary financial reversal event for a vendor billing correction).
+
+    Finance action:
+        DR AP Control          (totals.gross — reduces the vendor liability)
+        CR GR/IR Clearing      (per line.lineNet, per line.costCenterId)
+        CR Input VAT           (totals.tax — VAT reduction)
+
+    vendorId is a plain str (not UUID) for the same reason as
+    ApDownPaymentPostedPayload.vendorId — the producer falls back to "".
+    baseApInvoiceDocId/baseApInvoiceDocNumber default to "" because the
+    producer reads them off an optional baseInvoiceDocRef sub-document that
+    is None on the direct-create (no source AP Invoice) path.
+    """
+
+    acnDocId: UUID
+    acnDocNumber: str
+    docDate: str
+    vendorId: str
+    vendorName: str = ""
+    bpRefNo: Optional[str] = None
+    currency: str = "AED"
+    exchangeRate: Decimal
+    baseApInvoiceDocId: str = ""
+    baseApInvoiceDocNumber: str = ""
+    totals: dict
+    """Keys: net, tax, gross."""
+    lines: List[ApCreditNotePostedLine]
+    originalEventId: Optional[str] = None
+    """
+    Forward-compat only. Reserved for a future ap_credit_note_cancelled
+    variant (mirroring credit_note_cancelled on the sales side) that is
+    NOT emitted by the current producer — ap_credit_note_service.py only
+    ever calls _build_outbox_payload with event_type="ap_credit_note_posted",
+    which never sets this key. Present here so the contract is ready when
+    that variant is added, without being a breaking change at that point.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Union + registry
 # ---------------------------------------------------------------------------
 
@@ -1096,6 +1230,8 @@ EventPayload = Union[
     ReturnCancelledPayload,
     CreditNotePostedPayload,
     CreditNoteCancelledPayload,
+    ApDownPaymentPostedPayload,
+    ApCreditNotePostedPayload,
 ]
 
 EVENT_TYPE_REGISTRY: Dict[str, Type[BaseModel]] = {
@@ -1132,6 +1268,9 @@ EVENT_TYPE_REGISTRY: Dict[str, Type[BaseModel]] = {
     # T-100.11 — AR Credit Note events
     "credit_note_posted": CreditNotePostedPayload,
     "credit_note_cancelled": CreditNoteCancelledPayload,
+    # T-910 — AP Down Payment Invoice & AP Credit Note events (purchasing side)
+    "ap_down_payment_posted": ApDownPaymentPostedPayload,
+    "ap_credit_note_posted": ApCreditNotePostedPayload,
 }
 """
 Maps eventType discriminator strings to their payload Pydantic class.

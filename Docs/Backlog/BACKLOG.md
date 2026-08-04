@@ -157,6 +157,94 @@
 
 ---
 
+### T-910 | Finance-outbox silent drop — ap_down_payment_posted / ap_credit_note_posted never registered as contracts (Stage 1 of 2)
+- **Category:** Backend · **Priority:** P0
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-04
+- **Depends on:** —
+- **Blocks:** Stage 2 (finance service side — services/finance/, out of scope here)
+- **Description:** `ap_down_payment_service.py` and `ap_credit_note_service.py`
+  have always correctly built and called `OutboxWriter.publish(event_type=
+  "ap_down_payment_posted" / "ap_credit_note_posted", ...)` on their
+  PENDING_APPROVAL → OPEN transitions, but neither event type was ever
+  registered in `contracts/finance_events.py`'s `EVENT_TYPE_REGISTRY`.
+  `OutboxWriter.publish` raises `ValueError` for an unregistered
+  `event_type`; both services catch that inside a broad
+  `except Exception as exc` around the publish call (logged, not raised) —
+  so the DPI/ACN status transition itself succeeds but finance receives
+  NOTHING. This is Stage 1 (contracts only) — Stage 2 (the finance
+  microservice's ingest/consumer side actually booking the JE for these two
+  event types) is separate future work, intentionally not started here.
+- **Fix:** Added 4 new Pydantic models to `contracts/finance_events.py`
+  (`ApDownPaymentPostedLine`, `ApDownPaymentPostedPayload`,
+  `ApCreditNotePostedLine`, `ApCreditNotePostedPayload`), registered both
+  payload classes in `EVENT_TYPE_REGISTRY` under
+  `"ap_down_payment_posted"` / `"ap_credit_note_posted"`, and added both to
+  the `EventPayload` Union. Typing was derived from reading the producers'
+  actual `_build_outbox_payload` dict-building code (not copied from the
+  sibling `ApInvoicePostedPayload`, which is stricter than what these two
+  producers actually emit) — notably `vendorId: str` (not UUID, producer
+  falls back to `""`), `docDate: str` (producer pre-formats to
+  `"YYYY-MM-DD"`), DPI line `itemId: Optional[UUID] = None` (amount-only
+  DPI lines have no item), ACN `baseApInvoiceDocId/Number: str = ""`
+  (empty on the direct-create path, no source AP Invoice). `totals` is
+  typed as a plain `dict` (not a new nested sub-model) to match this
+  file's own existing precedent for nested totals
+  (`SalesInvoicePostedPayload.totals`, `CreditNotePostedPayload.totals`
+  are both `dict` with a `"""Keys: net, tax, gross."""` docstring) rather
+  than inventing a new pattern. `ApCreditNotePostedPayload.originalEventId:
+  Optional[str] = None` is forward-compat only — reserved for a future
+  `ap_credit_note_cancelled` variant that is NOT emitted by the current
+  producer.
+  **Not touched (explicitly out of scope):** `services/finance/` (Stage 2),
+  the `OutboxWriter.publish`/try-except code in either purchasing service
+  (they already publish correctly — they only needed the contract
+  registered), any other event type already in the registry.
+- **Tests:** `tests/unit/test_purchasing/test_ap_dpi_acn_outbox_contracts.py`
+  (NEW, 7 cases) — imports the REAL `_build_outbox_payload` from both
+  services, builds representative raw DPI/ACN docs (each with one taxed
+  line + one exempt line; DPI additionally covers an amount-only line with
+  `itemId=None`), calls the real producer, and instantiates
+  `ApDownPaymentPostedPayload(**payload)` /
+  `ApCreditNotePostedPayload(**payload)` directly against the actual
+  output — the round-trip proof that producer and contract now agree.
+  Also pins `EVENT_TYPE_REGISTRY["ap_down_payment_posted"] is
+  ApDownPaymentPostedPayload` / same for the ACN side, plus two edge cases
+  per event type (missing `vendorId` key → `""`, and for ACN, a `None`
+  `baseInvoiceDocRef` on the direct-create path → `""` refs). Run
+  host-side (miniconda `python3 -m pytest`, no Docker needed — pydantic,
+  fastapi, motor, and the full `src`/`contracts` tree all import cleanly
+  on this host): **7 passed**. Full `tests/unit/test_purchasing/` suite
+  re-run for regressions: **105 passed** (98 pre-existing + 7 new), 0
+  failed.
+- **Deploy note:** `docker restart a64coreplatform-api-1` required — only
+  `contracts/finance_events.py` changed and the api container bind-mounts
+  `./contracts:/app/contracts`, but has no `--reload`.
+- **Finance-consumer mount gap (flagging for whoever picks up Stage 2):**
+  `docker-compose.finance.yml`'s `finance_consumer` and `finance` services
+  have **no `volumes:` section at all** — unlike the api container,
+  neither bind-mounts `./contracts`. Both Dockerfiles
+  (`services/finance_consumer/Dockerfile`, presumably
+  `services/finance/Dockerfile` too) do `COPY contracts/ /app/contracts/`
+  and `pip install -e /app/contracts` at **build time**. This means
+  today's contract change is invisible to both services until they are
+  **rebuilt** (`docker compose -f docker-compose.yml -f
+  docker-compose.finance.yml build finance finance_consumer`), not just
+  restarted. Not urgent for Stage 1 (neither service does anything with
+  these two event types yet — that's Stage 2), but Stage 2 will need this
+  rebuild step, not a restart, and it's easy to reach for the wrong one
+  given every other deploy note in this codebase says "restart."
+- **CodeMaps:** not regenerated — no new/removed endpoints, services, or
+  collections; this is 4 new Pydantic models + 2 registry entries inside
+  an existing contracts module.
+- **Files changed:** `contracts/finance_events.py`,
+  `tests/unit/test_purchasing/test_ap_dpi_acn_outbox_contracts.py` (new).
+- **Not moving to ARCHIVE** — Stage 2 (finance service actually consuming
+  these two event types) is separate future work per this ticket's scope;
+  leaving Active for the parent session to verify + commit + decide when
+  Stage 2 is picked up.
+
+---
+
 ### T-810 | Purchasing PO/PR create crash — Wave 4 status vocabulary vs finance event contracts
 - **Category:** Backend · **Priority:** P0
 - **Assigned:** backend-dev-expert · **Started:** 2026-08-03

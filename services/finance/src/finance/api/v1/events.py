@@ -21,6 +21,12 @@ Phase C.5: `_handle_ap_invoice_posted` is now live. It consumes
   DR  Purchase Price Variance (totalPriceVariance, only if > 0)
   CR  Purchase Price Variance (abs(totalPriceVariance), only if < 0)
   CR  AP Control              (totalGrossAmount — vendor's liability)
+
+T-910: `_handle_ap_down_payment_posted` and `_handle_ap_credit_note_posted`
+are now live. They consume `ap_down_payment_posted` / `ap_credit_note_posted`
+outbox events (previously dropped into the dispatch NO-OP stub below):
+  ap_down_payment_posted: DR Vendor Advance / DR Input VAT / CR AP Control
+  ap_credit_note_posted:  DR AP Control / CR GR/IR Clearing / CR Input VAT
 """
 
 import logging
@@ -1714,6 +1720,467 @@ async def _handle_ap_invoice_posted(
         total_variance,
         tax_point_date,
         dr_total,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-910 — AP Down Payment Invoice handler (ap_down_payment_posted)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_ap_down_payment_posted(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle ap_down_payment_posted outbox events (T-910).
+
+    Posts a Journal Entry recording a vendor prepayment when an AP Down
+    Payment Invoice transitions PENDING_APPROVAL -> OPEN:
+
+      DR  Vendor Advance   (totals.net  — prepaid-asset sub-ledger)
+      DR  Input VAT        (totals.tax  — reclaimable, only if > 0)
+      CR  AP Control       (totals.gross — vendor's specific liability)
+
+    Kept deliberately simpler than _handle_ap_invoice_posted: no
+    reverse-charge, no PPV, no cost-centre split. A down payment is a single
+    vendor-level prepaid-asset movement, not yet tied to specific PO
+    lines/cost centres — that attribution happens later when the DPI is
+    applied against an AP Invoice.
+
+    Balance proof:
+      DR = net + tax = gross = CR  ✓
+
+    Idempotency: handled by the outer ingest endpoint's outbox_events_processed
+    table before this handler is called — a redelivered eventId short-circuits
+    at the ingest layer and never reaches this function.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with ap_down_payment_posted payload.
+
+    Raises:
+        HTTPException 400: For all permanent validation failures (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from contracts.finance_events import ApDownPaymentPostedPayload
+
+    payload = ApDownPaymentPostedPayload(**event.payload)
+    org_id = str(event.organizationId)
+    # Reason: ApDownPaymentPostedPayload has no companyCode field of its own —
+    # the envelope carries it, same pattern as _handle_credit_note_posted.
+    company_code = event.companyCode
+
+    total_net = Decimal(str(payload.totals.get("net", "0")))
+    total_tax = Decimal(str(payload.totals.get("tax", "0")))
+    total_gross = Decimal(str(payload.totals.get("gross", "0")))
+    vendor_label = payload.vendorName or payload.vendorId
+
+    logger.info(
+        "[Finance/Posting] handling ap_down_payment_posted dpi=%s vendor=%s "
+        "net=%s tax=%s gross=%s",
+        payload.dpiDocNumber,
+        vendor_label,
+        total_net,
+        total_tax,
+        total_gross,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Resolve company posting setup
+    # ------------------------------------------------------------------
+    setup = await _resolve_posting_setup_or_raise(db, org_id, company_code)
+
+    has_vat = total_tax > Decimal("0")
+
+    # ------------------------------------------------------------------
+    # 2. Validate required GL accounts are configured
+    # ------------------------------------------------------------------
+    if not setup.apControlAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"AP Control account (apControlAccountId) not configured in posting setup "
+                f"for company {company_code}. Configure via the Posting Setup page."
+            ),
+        )
+
+    if not setup.vendorAdvanceAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Vendor Advance account (vendorAdvanceAccountId) not configured in "
+                f"posting setup for company {company_code}. Configure via the Posting "
+                "Setup page."
+            ),
+        )
+
+    # Reason: inputVatAccountId is only required when the DPI carries non-zero
+    # tax. A zero-rated / no-tax down payment does not post a VAT line and does
+    # not need the account configured.
+    if has_vat and not setup.inputVatAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Input VAT account (inputVatAccountId) not configured in posting setup "
+                f"for company {company_code}, but down payment {payload.dpiDocNumber} "
+                f"carries non-zero tax ({total_tax}). Configure the Input VAT account first."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 3. Resolve fiscal period from docDate
+    # ------------------------------------------------------------------
+    je_date = date.fromisoformat(payload.docDate)
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, je_date)
+
+    # ------------------------------------------------------------------
+    # 4. Generate JE number (concurrent-safe MAX+1)
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, company_code, je_date.year)
+
+    # ------------------------------------------------------------------
+    # 5. Balance verification
+    # ------------------------------------------------------------------
+    dr_total = total_net + total_tax
+    cr_total = total_gross
+    assert abs(dr_total - cr_total) <= Decimal("0.01"), (
+        f"JE imbalance! DR={dr_total} CR={cr_total} for dpi={payload.dpiDocNumber}"
+    )
+
+    # ------------------------------------------------------------------
+    # 6. Build and persist the JE atomically
+    # ------------------------------------------------------------------
+    je_id = str(uuid.uuid4())
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    description = f"AP Down Payment — {payload.dpiDocNumber} to {vendor_label}"
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=je_number,
+        jeDate=je_date,
+        periodId=period_id,
+        sourceEventType="ap_down_payment_posted",
+        sourceEventId=str(event.eventId),
+        sourceDocId=str(payload.dpiDocId),
+        sourceDocNumber=payload.dpiDocNumber,
+        description=description,
+        totalDebit=dr_total,
+        totalCredit=cr_total,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(je)
+
+    line_num = 1
+
+    # ------------------------------------------------------------------
+    # Line 1: DR Vendor Advance — the prepaid-asset leg.
+    # ------------------------------------------------------------------
+    db.add(JournalEntryLine(
+        jeLineId=str(uuid.uuid4()),
+        jeId=je_id,
+        lineNumber=line_num,
+        accountId=setup.vendorAdvanceAccountId,
+        debit=total_net,
+        credit=None,
+        description=f"Vendor advance — {vendor_label}",
+        # Reason: store vendorId in referenceLineId so the sub-ledger has the
+        # vendor link even before a dedicated AP sub-ledger table exists.
+        referenceLineId=str(payload.vendorId),
+    ))
+    line_num += 1
+
+    # ------------------------------------------------------------------
+    # Line 2 (conditional): DR Input VAT — reclaimable VAT (only if > 0).
+    # ------------------------------------------------------------------
+    if has_vat:
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=setup.inputVatAccountId,
+            debit=total_tax,
+            credit=None,
+            description=f"Input VAT — {payload.dpiDocNumber}",
+        ))
+        line_num += 1
+
+    # ------------------------------------------------------------------
+    # Last line: CR AP Control — vendor's specific liability for the advance.
+    # ------------------------------------------------------------------
+    db.add(JournalEntryLine(
+        jeLineId=str(uuid.uuid4()),
+        jeId=je_id,
+        lineNumber=line_num,
+        accountId=setup.apControlAccountId,
+        debit=None,
+        credit=total_gross,
+        description=f"AP — {vendor_label} (down payment)",
+        referenceLineId=str(payload.vendorId),
+    ))
+
+    # Reason: flush here so FK violations surface inside this handler
+    # rather than in the outer commit path where they are harder to attribute.
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted JE jeNumber=%s jeId=%s sourceDoc=%s "
+        "net=%s tax=%s gross=%s",
+        je_number,
+        je_id,
+        payload.dpiDocNumber,
+        total_net,
+        total_tax,
+        total_gross,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-910 — AP Credit Note handler (ap_credit_note_posted)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_ap_credit_note_posted(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle ap_credit_note_posted outbox events (T-910).
+
+    Posts a Journal Entry that reverses an AP Invoice bill:
+
+      DR  AP Control      (totals.gross — reduces the vendor liability)
+      CR  GR/IR Clearing  (per line.lineNet, bucketed by line.costCenterId —
+                           mirrors the cost-centre split _handle_ap_invoice_posted
+                           applies on the DEBIT side, but reversed here)
+      CR  Input VAT       (totals.tax — VAT reduction, only if > 0)
+
+    TODO(reverse-charge): _handle_ap_invoice_posted resolves each line's
+    taxCode via _lookup_tax_code_reverse_charge and routes reverse-charge
+    (SR) lines through a symmetric CR Input VAT / DR Output VAT pair instead
+    of a plain CR Input VAT leg, with AP credit reduced to lineNet only for
+    those lines. It is NOT yet confirmed whether AP Credit Notes can carry
+    reverse-charge tax codes in production (an ACN is typically raised
+    against an already-received local bill, not an imported-service /
+    designated-zone purchase). This handler therefore implements only the
+    standard (non-RC) path — deliberately, rather than guessing a
+    self-accounting entry that has never been verified against a real
+    reverse-charge ACN. If/when a reverse-charge ACN is confirmed, mirror
+    the ap_invoice_posted per-line RC branch here, reversed: for RC lines,
+    CR Input VAT + DR Output VAT (both totals.tax for that line) and CR AP
+    Control = lineNet only for those lines.
+
+    Balance proof:
+      DR = total_gross
+      CR = sum(line.lineNet for all lines) + total_tax
+         = total_net + total_tax = total_gross  ✓
+
+    Idempotency: handled by the outer ingest endpoint's outbox_events_processed
+    table before this handler is called — a redelivered eventId short-circuits
+    at the ingest layer and never reaches this function.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with ap_credit_note_posted payload.
+
+    Raises:
+        HTTPException 400: For all permanent validation failures (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from contracts.finance_events import ApCreditNotePostedPayload
+
+    payload = ApCreditNotePostedPayload(**event.payload)
+    org_id = str(event.organizationId)
+    # Reason: ApCreditNotePostedPayload has no companyCode field of its own —
+    # the envelope carries it, same pattern as _handle_credit_note_posted.
+    company_code = event.companyCode
+
+    total_net = Decimal(str(payload.totals.get("net", "0")))
+    total_tax = Decimal(str(payload.totals.get("tax", "0")))
+    total_gross = Decimal(str(payload.totals.get("gross", "0")))
+    vendor_label = payload.vendorName or payload.vendorId
+
+    logger.info(
+        "[Finance/Posting] handling ap_credit_note_posted acn=%s vendor=%s "
+        "net=%s tax=%s gross=%s lines=%d",
+        payload.acnDocNumber,
+        vendor_label,
+        total_net,
+        total_tax,
+        total_gross,
+        len(payload.lines),
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Resolve company posting setup
+    # ------------------------------------------------------------------
+    setup = await _resolve_posting_setup_or_raise(db, org_id, company_code)
+
+    has_vat = total_tax > Decimal("0")
+
+    # ------------------------------------------------------------------
+    # 2. Validate required GL accounts are configured
+    # ------------------------------------------------------------------
+    if not setup.apControlAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"AP Control account (apControlAccountId) not configured in posting setup "
+                f"for company {company_code}. Configure via the Posting Setup page."
+            ),
+        )
+
+    if not setup.grIrClearingAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"GR/IR Clearing account (grIrClearingAccountId) not configured in posting "
+                f"setup for company {company_code}."
+            ),
+        )
+
+    # Reason: inputVatAccountId is only required when the ACN carries non-zero tax.
+    if has_vat and not setup.inputVatAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Input VAT account (inputVatAccountId) not configured in posting setup "
+                f"for company {company_code}, but credit note {payload.acnDocNumber} "
+                f"carries non-zero tax ({total_tax}). Configure the Input VAT account first."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 3. Bucket lineNet per costCenterId (mirrors _handle_ap_invoice_posted's
+    #    DR GR/IR split, but on the CREDIT side here). Insertion-ordered dict
+    #    preserves first-seen order so JE lines emit in a stable,
+    #    line-order-driven sequence. Lines without a cost centre collapse
+    #    into a single (None-keyed) bucket.
+    # ------------------------------------------------------------------
+    cc_buckets: Dict[Optional[str], Decimal] = {}
+    for line in payload.lines:
+        line_net = Decimal(str(line.lineNet))
+        cc_id = line.costCenterId
+        cc_buckets[cc_id] = cc_buckets.get(cc_id, Decimal("0")) + line_net
+
+    # ------------------------------------------------------------------
+    # 4. Resolve fiscal period from docDate
+    # ------------------------------------------------------------------
+    je_date = date.fromisoformat(payload.docDate)
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, je_date)
+
+    # ------------------------------------------------------------------
+    # 5. Generate JE number (concurrent-safe MAX+1)
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, company_code, je_date.year)
+
+    # ------------------------------------------------------------------
+    # 6. Balance verification
+    # ------------------------------------------------------------------
+    total_gr_ir_credit = sum(cc_buckets.values(), Decimal("0"))
+    dr_total = total_gross
+    cr_total = total_gr_ir_credit + total_tax
+    assert abs(dr_total - cr_total) <= Decimal("0.01"), (
+        f"JE imbalance! DR={dr_total} CR={cr_total} for acn={payload.acnDocNumber}"
+    )
+
+    # ------------------------------------------------------------------
+    # 7. Build and persist the JE atomically
+    # ------------------------------------------------------------------
+    je_id = str(uuid.uuid4())
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    description = f"AP Credit Note — {payload.acnDocNumber} from {vendor_label}"
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=je_number,
+        jeDate=je_date,
+        periodId=period_id,
+        sourceEventType="ap_credit_note_posted",
+        sourceEventId=str(event.eventId),
+        sourceDocId=str(payload.acnDocId),
+        sourceDocNumber=payload.acnDocNumber,
+        description=description,
+        totalDebit=dr_total,
+        totalCredit=cr_total,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(je)
+
+    line_num = 1
+
+    # ------------------------------------------------------------------
+    # Line 1: DR AP Control — reduces the vendor's specific liability.
+    # ------------------------------------------------------------------
+    db.add(JournalEntryLine(
+        jeLineId=str(uuid.uuid4()),
+        jeId=je_id,
+        lineNumber=line_num,
+        accountId=setup.apControlAccountId,
+        debit=total_gross,
+        credit=None,
+        description=f"AP reduction — {vendor_label}",
+        referenceLineId=str(payload.vendorId),
+    ))
+    line_num += 1
+
+    # ------------------------------------------------------------------
+    # Line 2+: CR GR/IR Clearing — one JE line per distinct costCenterId.
+    # Sum of all CR GR/IR line credits == total_net (preserves balance).
+    # ------------------------------------------------------------------
+    for cc_id, bucket_net in cc_buckets.items():
+        if bucket_net == Decimal("0"):
+            continue  # skip empty buckets (no real-money posting)
+        cc_suffix = f" (CC {cc_id})" if cc_id else ""
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=setup.grIrClearingAccountId,
+            debit=None,
+            credit=bucket_net,
+            description=f"GR/IR reversal — {payload.acnDocNumber}{cc_suffix}",
+            costCenterId=cc_id,
+        ))
+        line_num += 1
+
+    # ------------------------------------------------------------------
+    # Last line (conditional): CR Input VAT — VAT reduction (only if > 0).
+    # ------------------------------------------------------------------
+    if has_vat:
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=setup.inputVatAccountId,
+            debit=None,
+            credit=total_tax,
+            description=f"Input VAT reversal — {payload.acnDocNumber}",
+        ))
+        line_num += 1
+
+    # Reason: flush here so FK violations surface inside this handler
+    # rather than in the outer commit path where they are harder to attribute.
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted JE jeNumber=%s jeId=%s sourceDoc=%s "
+        "ap_debit=%s gr_ir_credit=%s input_vat_credit=%s total=%s",
+        je_number,
+        je_id,
+        payload.acnDocNumber,
+        total_gross,
+        total_gr_ir_credit,
+        total_tax,
+        cr_total,
     )
 
 
@@ -3496,6 +3963,12 @@ async def ingest_event(
     elif event.eventType == "credit_note_cancelled":
         # T-100.11 — AR Credit Note cancellation: reverse the credit note JE
         await _handle_credit_note_cancelled(db, event)
+    elif event.eventType == "ap_down_payment_posted":
+        # T-910 — AP Down Payment Invoice: DR Vendor Advance / DR Input VAT / CR AP Control
+        await _handle_ap_down_payment_posted(db, event)
+    elif event.eventType == "ap_credit_note_posted":
+        # T-910 — AP Credit Note: DR AP Control / CR GR/IR Clearing / CR Input VAT
+        await _handle_ap_credit_note_posted(db, event)
     else:
         # All other event types: posting logic is a NO-OP stub pending future phases.
         logger.info(

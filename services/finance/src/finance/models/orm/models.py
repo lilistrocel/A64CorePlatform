@@ -869,7 +869,8 @@ class CompanyPostingSetup(Base):
 
     Optional in v1 (consumed by later phases):
       - arControlAccountId, cashAccountId, outputVatAccountId,
-        purchasePriceVarianceAccountId, roundingAccountId.
+        purchasePriceVarianceAccountId, roundingAccountId,
+        vendorAdvanceAccountId (T-910 — DR leg of ap_down_payment_posted).
 
     isComplete is computed and stored by the PUT handler based on required fields.
     """
@@ -895,6 +896,13 @@ class CompanyPostingSetup(Base):
         ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
         nullable=True,
     )
+    vendorAdvanceAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    """Vendor Advance / prepaid-asset account for the DR leg of
+    ap_down_payment_posted JEs (T-910). Added in migration 021."""
     bankAccountId = Column(
         String(36),
         ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
