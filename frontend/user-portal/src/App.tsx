@@ -51,6 +51,15 @@ const Register = lazy(() => import('./pages/auth/Register').then(m => ({ default
 const PendingActivation = lazy(() =>
   import('./pages/auth/PendingActivation').then(m => ({ default: m.PendingActivation }))
 );
+const ForgotPassword = lazy(() =>
+  import('./pages/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword }))
+);
+const ResetPassword = lazy(() =>
+  import('./pages/auth/ResetPassword').then(m => ({ default: m.ResetPassword }))
+);
+const VerifyEmail = lazy(() =>
+  import('./pages/auth/VerifyEmail').then(m => ({ default: m.VerifyEmail }))
+);
 const MFASetupPage = lazy(() => import('./pages/auth/MFASetupPage').then(m => ({ default: m.MFASetupPage })));
 const MFAVerifyPage = lazy(() => import('./pages/auth/MFAVerifyPage').then(m => ({ default: m.MFAVerifyPage })));
 
@@ -381,6 +390,13 @@ function App() {
                 visitor has no app JWT yet, so this cannot live behind
                 ProtectedRoute. */}
             <Route path="/pending-activation" element={<PendingActivation />} />
+            {/* Account recovery — linked from Login.tsx's "Forgot password?"
+                link and from the reset-password / verify-email emails built
+                by src/utils/email.py. Public for the same reason as the
+                routes above: the visitor has no app JWT at this point. */}
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
 
             {/* Genetics label public info page (T-804 §7.1) — scanned off a
                 printed vessel label's QR code. Registered both lower- and

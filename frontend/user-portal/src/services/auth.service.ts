@@ -398,6 +398,59 @@ class AuthService {
   }
 
   /**
+   * Request a password reset email.
+   *
+   * Public — no auth token exists at this point (the visitor is, by
+   * definition, locked out or has forgotten their credentials) — so this
+   * uses raw `axios`, not `apiClient`, mirroring login()/register() above.
+   * That also sidesteps apiClient's response interceptor, which treats any
+   * 401 as "our session expired" and redirects to /login — wrong reaction
+   * for an anonymous, token-less request that can never 401 for that reason.
+   *
+   * Deliberately always resolves 200 on the backend (anti email-enumeration,
+   * see src/api/v1/auth.py) — callers must show one neutral message
+   * regardless of whether the address was known, and must NOT branch UI
+   * copy on the response body.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    await axios.post(`${API_URL}/v1/auth/request-password-reset`, { email });
+  }
+
+  /**
+   * Complete a password reset using the single-use token mailed to the user.
+   *
+   * Public (raw axios, see requestPasswordReset() above for why). Backend
+   * failure modes the caller must distinguish:
+   *  - 400: token already used
+   *  - 401: token invalid or expired
+   *  - 422: password failed complexity validation
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await axios.post(`${API_URL}/v1/auth/reset-password`, { token, newPassword });
+  }
+
+  /**
+   * Confirm an email address using the single-use token mailed at
+   * registration. Public (raw axios, see requestPasswordReset() above).
+   * Backend failure modes the caller must distinguish:
+   *  - 400: token already used (i.e. address already verified)
+   *  - 401: token invalid or expired
+   */
+  async verifyEmail(token: string): Promise<User> {
+    const response = await axios.post<User>(`${API_URL}/v1/auth/verify-email`, { token });
+    return response.data;
+  }
+
+  /**
+   * Resend the verification email for the currently authenticated (but
+   * unverified) user. Requires a Bearer token, so this goes through
+   * apiClient rather than raw axios.
+   */
+  async sendVerificationEmail(): Promise<void> {
+    await apiClient.post('/v1/auth/send-verification-email');
+  }
+
+  /**
    * Regenerate MFA backup codes
    * Requires verification with current TOTP code and password
    * @param totpCode 6-digit TOTP code from authenticator app

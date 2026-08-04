@@ -31,6 +31,30 @@ services:
       # emails sent before .env is configured contain a dead link instead
       # of leaking another deployment's host.
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      # Cloudflare Access. These resolve env -> db -> unset
+      # (src/services/deployment_settings_service.py): a value set here is
+      # authoritative and renders read-only in Settings -> Deployment, which is
+      # how a hardened deployment pins auth config outside the database.
+      # They were absent from this block entirely, so that env layer could
+      # never engage and the "env acts as a lock" behaviour was unreachable —
+      # the same missing-wiring shape as FRONTEND_URL above, masked because
+      # the DB fallback still worked.
+      #
+      # NOTE THE SYNTAX: bare names, no `=`. Compose passes these through only
+      # when they are actually defined, and omits them entirely otherwise.
+      # `${VAR:-}` would be wrong twice over: it sets an EMPTY STRING, which
+      # (a) fails Pydantic bool parsing for the three flags below and crashes
+      # the API at boot, and (b) for a non-empty default like `false` would be
+      # treated as "env is set" by deployment_settings_service.get_resolved(),
+      # locking the key read-only and overriding whatever an admin configured
+      # in Settings -> Deployment. On a deployment running Cloudflare Access
+      # from the database that would silently disable its own sign-in.
+      - CF_ACCESS_ENABLED
+      - CF_ACCESS_TEAM_DOMAIN
+      - CF_ACCESS_AUD
+      - CF_ACCESS_EXCLUSIVE
+      - CF_ACCESS_JIT_PROVISION
+      - CF_ACCESS_DEFAULT_ROLE
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000

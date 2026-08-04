@@ -26,9 +26,18 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run tests
+        # The `|| true` that used to terminate this line meant the suite could
+        # never fail the build — the same dead-check pattern as the old
+        # `tsc --noEmit || true` below. Tests ran, output was printed, and the
+        # result was discarded, so CI has never actually gated on them.
+        # Now the exit status is real, but marked continue-on-error while two
+        # known failures in tests/unit/test_finance_bridge/test_outbox_reconciler.py
+        # (in-flight finance-outbox work) are outstanding. Drop
+        # `continue-on-error` once those are fixed so this starts blocking.
         run: |
           pip install pytest pytest-asyncio pytest-cov
-          python -m pytest tests/ -v --tb=short --cov=src --cov-report=term-missing || true
+          python -m pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
+        continue-on-error: true
         env:
           ENVIRONMENT: development
           MONGODB_URL: mongodb://localhost:27017

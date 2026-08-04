@@ -119,6 +119,7 @@ export function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get('expired') === 'true';
+  const passwordResetSuccess = searchParams.get('reset') === 'success';
   const redirectTo = searchParams.get('redirect');
   const {
     login,
@@ -378,6 +379,12 @@ export function Login() {
             <SessionExpiredBanner role="alert" aria-live="assertive">Your session has expired. Please sign in again.</SessionExpiredBanner>
           )}
 
+          {passwordResetSuccess && (
+            <PasswordResetSuccessBanner role="status" aria-live="polite">
+              Your password has been reset. Sign in with your new password.
+            </PasswordResetSuccessBanner>
+          )}
+
           {displayError && <ErrorBanner role="alert" aria-live="assertive">{displayError}</ErrorBanner>}
 
           {/* Feature #347: Session preserved indicator */}
@@ -576,6 +583,20 @@ const SessionExpiredBanner = styled.div`
   padding: 0.75rem;
   margin-bottom: 1rem;
   color: ${({ theme }) => theme.colors.warning};
+  font-size: 0.875rem;
+  text-align: center;
+`;
+
+// Shown after a successful /reset-password submission redirects here with
+// ?reset=success (see ResetPassword.tsx). Success-toned, distinct from the
+// warning-toned SessionExpiredBanner above.
+const PasswordResetSuccessBanner = styled.div`
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.success};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.colors.success};
   font-size: 0.875rem;
   text-align: center;
 `;
