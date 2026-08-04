@@ -4,10 +4,18 @@ Block Repository - Data Access Layer (UPDATED)
 Handles all database operations for blocks with new status system.
 """
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, TYPE_CHECKING
 from uuid import UUID
 from datetime import datetime
 import logging
+
+if TYPE_CHECKING:
+    # Reason: only needed to resolve the "PlantDataSnapshot" annotation on
+    # set_plant_data_version. The runtime import stays local to that method to
+    # avoid a circular import; declaring it here makes the forward reference
+    # resolvable to type checkers and linters without creating one at import
+    # time.
+    from ...models.block import PlantDataSnapshot
 
 from ...models.block import (
     Block,

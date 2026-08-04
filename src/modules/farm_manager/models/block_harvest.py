@@ -7,7 +7,6 @@ Represents individual harvest events for blocks (daily harvests).
 from datetime import datetime
 from typing import Optional, List, Union, Any
 from uuid import UUID, uuid4
-from datetime import datetime
 from pydantic import BaseModel, Field
 from enum import Enum
 

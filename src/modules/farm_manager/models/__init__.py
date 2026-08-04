@@ -35,7 +35,16 @@ from .plant_data_enhanced import (
 )
 from .planting import Planting, PlantingItem, PlantingCreate
 from .daily_harvest import DailyHarvest, DailyHarvestEntry, DailyHarvestCreate
-from .harvest import Harvest, HarvestEntry
+
+# NOTE: harvest.HarvestEntry is deliberately NOT re-exported. farm_task also
+# defines a HarvestEntry, imported below, and being later in this file it used
+# to silently win — so `from ...models import HarvestEntry` returned
+# farm_task's class while looking like it might return harvest's. They are
+# unrelated shapes (harvest: plantDataId/plantName/qualityGrade/
+# quantityHarvested; farm_task: entryId/grade/quantity/timestamp/userId).
+# Nothing imports harvest.HarvestEntry via this package; import it from
+# .harvest directly if you need it.
+from .harvest import Harvest
 from .block_cycle import BlockCycle, BlockCycleAlert, BlockCycleDailyHarvest
 from .stock_inventory import StockInventoryItem, StockInventoryCreate
 from .farm_assignment import FarmAssignment, FarmAssignmentCreate
@@ -136,7 +145,9 @@ __all__ = [
     "DailyHarvestCreate",
     # Harvest
     "Harvest",
-    "HarvestEntry",
+    # (HarvestEntry is exported under Farm Task below — it is farm_task's
+    # class, not harvest's. It was listed here too, which read as though
+    # harvest.HarvestEntry were the one being exported.)
     # Alert
     "Alert",
     "AlertSeverity",
