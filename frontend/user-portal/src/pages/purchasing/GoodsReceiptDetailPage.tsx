@@ -14,11 +14,13 @@
  *
  * Night Observatory (T-901 Phase 3): status badge colour is routed through
  * the single canonical purchasingStatusToPhase() map in ./statusPhase.ts.
- * This page's StatusBadge used to take a derived `$posted: boolean` prop
- * (`gr.status === 'Posted'`) — it now takes the GR's own `status` string
- * directly (`'Draft' | 'Posted'`) and maps it through purchasingStatusToPhase,
- * matching PR/PO/AP. The `isPosted`/`isDraft` booleans are unchanged and
- * still drive which actions render.
+ * This page's StatusBadge takes the GR's own `status` string and maps it
+ * through purchasingStatusToPhase, matching PR/PO/AP.
+ *
+ * T-811 (2026-08-04): the backend's Wave 4 status migration lowercased the
+ * stored value and collapsed 'Posted' into the shared 'open' state (isDraft/
+ * isPosted below now compare against 'draft'/'open'). Display still reads
+ * "Posted" for GR specifically via statusPhase.ts's statusDisplayLabel().
  */
 
 import { useState } from 'react';
@@ -33,7 +35,7 @@ import {
 } from '../../hooks/queries/useGoodsReceipts';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -210,9 +212,9 @@ const TdMono = styled(Td)`
   font-variant-numeric: tabular-nums;
 `;
 
-// Night Observatory (T-901 Phase 3): was `$posted: boolean` — now takes the
-// GR's actual `status` string ('Draft' | 'Posted') and routes it through the
-// canonical purchasingStatusToPhase() map, matching PR/PO/AP.
+// Night Observatory (T-901 Phase 3): takes the GR's actual `status` string
+// and routes it through the canonical purchasingStatusToPhase() map,
+// matching PR/PO/AP. T-811: status is now the stored lowercase_snake value.
 const StatusBadge = styled.span<{ $status: string }>`
   ${({ $status }) => phaseBadge(purchasingStatusToPhase($status))}
 `;
@@ -391,8 +393,10 @@ export function GoodsReceiptDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [justPosted, setJustPosted] = useState(false);
 
-  const isDraft = gr?.status === 'Draft';
-  const isPosted = gr?.status === 'Posted';
+  // T-811: gating now compares against the stored backend vocabulary — GR's
+  // 'Posted' collapsed into the shared 'open' value. See statusPhase.ts.
+  const isDraft = gr?.status === 'draft';
+  const isPosted = gr?.status === 'open';
 
   const handlePost = async () => {
     setActionError(null);
@@ -453,7 +457,7 @@ export function GoodsReceiptDetailPage() {
       </BackLink>
 
       {/* Cross-page link — visible immediately after posting */}
-      {(justPosted || isPosted) && gr.status === 'Posted' && (
+      {(justPosted || isPosted) && gr.status === 'open' && (
         <JELinkBanner>
           <JELinkText>
             GR posted. The finance team will see a new journal entry shortly.
@@ -514,7 +518,7 @@ export function GoodsReceiptDetailPage() {
           <InfoItem>
             <InfoLabel>Status</InfoLabel>
             <InfoValue>
-              <StatusBadge $status={gr.status}>{gr.status}</StatusBadge>
+              <StatusBadge $status={gr.status}>{statusDisplayLabel(gr.status, 'GR')}</StatusBadge>
             </InfoValue>
           </InfoItem>
           <InfoItem><InfoLabel>Vendor</InfoLabel><InfoValue>{gr.vendorName ?? gr.vendorCode ?? '—'}</InfoValue></InfoItem>
@@ -590,7 +594,7 @@ export function GoodsReceiptDetailPage() {
           docType="GR"
           docId={docId!}
           organizationId={orgId}
-          readOnly={gr.status !== 'Draft'}
+          readOnly={gr.status !== 'draft'}
         />
       </Card>
 

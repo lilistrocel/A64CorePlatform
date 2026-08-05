@@ -40,7 +40,7 @@ import {
 } from '../../hooks/queries/useAPInvoices';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -513,9 +513,12 @@ export function APInvoiceDetailPage() {
   const [rejectComment, setRejectComment] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const isDraft = ap?.status === 'Draft';
-  const isPending = ap?.status === 'Pending Approval';
-  const isApproved = ap?.status === 'Approved';
+  // T-811: gating now compares against the stored backend vocabulary — AP's
+  // 'Approved' collapsed into the shared 'open' value. 'Rejected' was never
+  // touched by the migration. See statusPhase.ts.
+  const isDraft = ap?.status === 'draft';
+  const isPending = ap?.status === 'pending_approval';
+  const isApproved = ap?.status === 'open';
   const isRejected = ap?.status === 'Rejected';
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -689,7 +692,7 @@ export function APInvoiceDetailPage() {
             </>
           )}
 
-          {(isApproved || isRejected) && <ReadOnlyTag>Read-only ({ap.status})</ReadOnlyTag>}
+          {(isApproved || isRejected) && <ReadOnlyTag>Read-only ({statusDisplayLabel(ap.status, 'AP')})</ReadOnlyTag>}
         </ActionBar>
       </HeaderActionsRow>
 
@@ -704,7 +707,7 @@ export function APInvoiceDetailPage() {
           <InfoItem>
             <InfoLabel>Status</InfoLabel>
             <InfoValue>
-              <StatusBadge $status={ap.status}>{ap.status}</StatusBadge>
+              <StatusBadge $status={ap.status}>{statusDisplayLabel(ap.status, 'AP')}</StatusBadge>
             </InfoValue>
           </InfoItem>
           <InfoItem>
@@ -906,7 +909,7 @@ export function APInvoiceDetailPage() {
           docType="AP"
           docId={docId!}
           organizationId={orgId}
-          readOnly={ap.status !== 'Draft'}
+          readOnly={ap.status !== 'draft'}
         />
       </Card>
 

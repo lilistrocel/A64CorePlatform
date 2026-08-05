@@ -19,7 +19,7 @@ import type { PhaseKey } from '@a64core/shared';
 import { usePurchaseOrders } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import type { POStatus } from '../../services/purchasingApi';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components (same pattern as PurchaseRequestsPage) ─────────────────
 
@@ -196,13 +196,16 @@ const PageIndicator = styled.span`
 
 // ─── Status filter options ────────────────────────────────────────────────────
 
+// T-811: filter values are sent to the backend as a `status` query param —
+// they must be the stored (lowercase_snake) vocabulary, not the display
+// TitleCase. 'Sent' is unchanged by the Wave 4 migration.
 const STATUS_FILTERS: { label: string; value: POStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
-  { label: 'Draft', value: 'Draft' },
-  { label: 'Pending Approval', value: 'Pending Approval' },
-  { label: 'Open', value: 'Open' },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Pending Approval', value: 'pending_approval' },
+  { label: 'Open', value: 'open' },
   { label: 'Sent', value: 'Sent' },
-  { label: 'Cancelled', value: 'Cancelled' },
+  { label: 'Cancelled', value: 'cancelled' },
 ];
 
 function formatAmount(amount: number, currency: string): string {
@@ -314,7 +317,7 @@ export function PurchaseOrdersPage() {
                     <Td>{po.vendorName ?? po.vendorCode ?? '—'}</Td>
                     <Td><Mono>{formatAmount(po.totalGross, po.currencyCode)}</Mono></Td>
                     <Td>
-                      <StatusBadge $status={po.status}>{po.status}</StatusBadge>
+                      <StatusBadge $status={po.status}>{statusDisplayLabel(po.status, 'PO')}</StatusBadge>
                     </Td>
                     <Td><Mono>{formatDate(po.docDate)}</Mono></Td>
                     <Td>

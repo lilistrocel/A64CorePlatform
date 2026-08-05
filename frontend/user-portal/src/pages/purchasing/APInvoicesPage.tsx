@@ -25,7 +25,7 @@ import type { PhaseKey } from '@a64core/shared';
 import { useAPInvoices } from '../../hooks/queries/useAPInvoices';
 import { useAuthStore } from '../../stores/auth.store';
 import type { APStatus } from '../../services/apInvoicesService';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -213,11 +213,14 @@ const PageIndicator = styled.span`
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// T-811: filter values are sent to the backend as a `status` query param —
+// they must be the stored (lowercase_snake) vocabulary. AP's 'Approved'
+// collapsed into the shared 'open' value; 'Rejected' is unchanged.
 const STATUS_FILTERS: { label: string; value: APStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
-  { label: 'Draft', value: 'Draft' },
-  { label: 'Pending Approval', value: 'Pending Approval' },
-  { label: 'Approved', value: 'Approved' },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Pending Approval', value: 'pending_approval' },
+  { label: 'Approved', value: 'open' },
   { label: 'Rejected', value: 'Rejected' },
 ];
 
@@ -364,7 +367,7 @@ export function APInvoicesPage() {
                         <VarianceCell $sign={varSign}>{varLabel}</VarianceCell>
                       </Td>
                       <Td>
-                        <StatusBadge $status={ap.status}>{ap.status}</StatusBadge>
+                        <StatusBadge $status={ap.status}>{statusDisplayLabel(ap.status, 'AP')}</StatusBadge>
                       </Td>
                       <Td>
                         <MutedMono>

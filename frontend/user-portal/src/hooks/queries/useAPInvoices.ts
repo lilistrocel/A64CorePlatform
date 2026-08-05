@@ -83,9 +83,13 @@ export function usePostedGRsForAP(params?: {
   return useQuery({
     queryKey: ['purchasing', 'gr', 'posted-for-ap', params],
     queryFn: () =>
+      // T-811: 'Posted' is a status query param sent to the backend — the
+      // Wave 4 migration lowercased GR's stored "Posted" into the shared
+      // 'open' value, so this filter was silently returning zero GRs (no
+      // GRs ever appeared in the AP Invoice source-GR picker) until fixed.
       grService.getGoodsReceipts({
         organizationId: params?.organizationId,
-        status: 'Posted',
+        status: 'open',
         page: params?.page ?? 1,
         perPage: params?.perPage ?? 50,
       }),

@@ -19,7 +19,12 @@ import { apiClient } from './api';
 // Types
 // ============================================================================
 
-export type GRStatus = 'Draft' | 'Posted';
+// T-811: wave4_purchasing_status_migration.py collapsed GR's stored "Posted"
+// into the shared 'open' value (same as PR/PO/AP's other non-draft states) —
+// it displays as "Posted" for GR specifically via statusPhase.ts's
+// statusDisplayLabel(). 'Draft'/'Posted' are kept as aliases only for
+// documents left over from before the migration ran.
+export type GRStatus = 'draft' | 'open' | 'Draft' | 'Posted';
 
 /** A single GR line as it comes back from the backend */
 export interface GRLine {

@@ -25,7 +25,7 @@ import {
 } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -345,11 +345,13 @@ export function PurchaseRequestDetailPage() {
 
   const isApproverRole = ['procurement_manager', 'admin', 'super_admin'].includes(userRole);
   const isRequester = pr?.requestedBy === userId;
-  const canApprove = isApproverRole && !isRequester && pr?.status === 'Pending Approval';
-  const canSubmit = pr?.status === 'Draft';
-  const canCancel = ['Draft', 'Pending Approval'].includes(pr?.status ?? '');
-  const canEdit = pr?.status === 'Draft';
-  const canCreatePO = pr?.status === 'Approved';
+  // T-811: gating now compares against the stored backend vocabulary
+  // ('draft' | 'pending_approval' | 'open' | ...) — see statusPhase.ts.
+  const canApprove = isApproverRole && !isRequester && pr?.status === 'pending_approval';
+  const canSubmit = pr?.status === 'draft';
+  const canCancel = ['draft', 'pending_approval'].includes(pr?.status ?? '');
+  const canEdit = pr?.status === 'draft';
+  const canCreatePO = pr?.status === 'open';
 
   const handleAction = async (fn: () => Promise<any>) => {
     setActionError(null);
@@ -452,7 +454,7 @@ export function PurchaseRequestDetailPage() {
         <InfoGrid>
           <InfoItem>
             <InfoLabel>Status</InfoLabel>
-            <InfoValue><StatusBadge $status={pr.status}>{pr.status}</StatusBadge></InfoValue>
+            <InfoValue><StatusBadge $status={pr.status}>{statusDisplayLabel(pr.status, 'PR')}</StatusBadge></InfoValue>
           </InfoItem>
           <InfoItem><InfoLabel>Department</InfoLabel><InfoValue>{pr.department ?? '—'}</InfoValue></InfoItem>
           <InfoItem><InfoLabel>Urgency</InfoLabel><InfoValue>{pr.urgency}</InfoValue></InfoItem>
@@ -532,7 +534,7 @@ export function PurchaseRequestDetailPage() {
           docType="PR"
           docId={docId!}
           organizationId={orgId}
-          readOnly={pr.status !== 'Draft'}
+          readOnly={pr.status !== 'draft'}
         />
       </Card>
 

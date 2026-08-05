@@ -303,21 +303,45 @@ export async function deletePaymentTerms(termsId: string): Promise<void> {
 // Phase 1B — Purchase Request and Purchase Order types
 // ============================================================================
 
+// T-811: backend statuses were lowercased by wave4_purchasing_status_migration.py
+// (stored value is now 'draft' | 'pending_approval' | 'open' | 'closed' |
+// 'cancelled'; PR's stored "open" displays as "Approved" — see
+// statusPhase.ts's statusDisplayLabel()). 'Rejected' was never touched by
+// that migration. The TitleCase variants are kept as aliases only for
+// documents left over from before the migration ran — do not compare new
+// code against them.
 export type PRStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'open'
+  | 'closed'
+  | 'cancelled'
+  | 'Rejected'
+  // Pre-migration aliases (migration-window safety only)
   | 'Draft'
   | 'Pending Approval'
   | 'Approved'
-  | 'Rejected'
   | 'Cancelled'
   | 'Closed';
 
+// T-811: same migration as PRStatus. PO's stored "open" displays as "Open"
+// (not "Approved") — see statusDisplayLabel(). 'Sent' / 'Partially Received'
+// / 'Received' / 'Rejected' were never touched by the migration.
 export type POStatus =
-  | 'Draft'
-  | 'Pending Approval'
-  | 'Open'
+  | 'draft'
+  | 'pending_approval'
+  | 'open'
+  | 'partly_closed'
+  | 'closed'
+  | 'cancelled'
   | 'Sent'
   | 'Partially Received'
   | 'Received'
+  | 'Rejected'
+  // Pre-migration aliases (migration-window safety only)
+  | 'Draft'
+  | 'Pending Approval'
+  | 'Open'
   | 'Closed'
   | 'Cancelled';
 

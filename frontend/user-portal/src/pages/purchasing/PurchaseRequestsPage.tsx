@@ -20,7 +20,7 @@ import type { PhaseKey } from '@a64core/shared';
 import { usePurchaseRequests } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import type { PRStatus, UrgencyLevel } from '../../services/purchasingApi';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ──────────────────────────────────────────────────────
 
@@ -211,13 +211,16 @@ const PageIndicator = styled.span`
 
 // ─── Status filter options ────────────────────────────────────────────────────
 
+// T-811: filter values are sent to the backend as a `status` query param —
+// they must be the stored (lowercase_snake) vocabulary, not the display
+// TitleCase. 'Rejected' is unchanged by the Wave 4 migration.
 const STATUS_FILTERS: { label: string; value: PRStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
-  { label: 'Draft', value: 'Draft' },
-  { label: 'Pending Approval', value: 'Pending Approval' },
-  { label: 'Approved', value: 'Approved' },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Pending Approval', value: 'pending_approval' },
+  { label: 'Approved', value: 'open' },
   { label: 'Rejected', value: 'Rejected' },
-  { label: 'Cancelled', value: 'Cancelled' },
+  { label: 'Cancelled', value: 'cancelled' },
 ];
 
 function formatAmount(amount: number, currency: string): string {
@@ -335,7 +338,7 @@ export function PurchaseRequestsPage() {
                     </Td>
                     <Td><Mono>{formatAmount(pr.totalGross, pr.currencyCode)}</Mono></Td>
                     <Td>
-                      <StatusBadge $status={pr.status}>{pr.status}</StatusBadge>
+                      <StatusBadge $status={pr.status}>{statusDisplayLabel(pr.status, 'PR')}</StatusBadge>
                     </Td>
                     <Td><Mono>{formatDate(pr.requestedDate)}</Mono></Td>
                   </Tr>
