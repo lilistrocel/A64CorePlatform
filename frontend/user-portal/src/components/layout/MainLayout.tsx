@@ -212,6 +212,42 @@ const ADMIN_NAV_ITEMS: NavItemDef[] = [
   { to: '/admin/tenant-setup', icon: Construction, label: 'Tenant Setup' },
 ];
 
+// Roles that can see the Purchasing sidebar group
+const PURCHASING_ROLES = new Set([
+  'procurement_officer',
+  'procurement_manager',
+  'admin',
+  'super_admin',
+  'finance_admin',
+]);
+
+// Roles that can see the Finance sidebar group
+const FINANCE_ROLES = new Set([
+  'accountant',
+  'finance_admin',
+  'auditor',
+  'admin',
+  'super_admin',
+]);
+
+// Recursively collect every group's collapsed/expanded default from the nav
+// tree itself — walking ALL depths (Purchasing/Sales are nested inside
+// Operations' children, but expandedGroups is keyed by label regardless of
+// depth) — rather than a hand-maintained list of group names. A hand-kept
+// list rots the moment a group is added/renamed/moved (this is exactly how
+// "Genetics Repo" ended up silently absent from the old list); deriving it
+// here means a newly added group is collapsed-by-default automatically.
+function collectGroupDefaults(items: NavItemDef[]): Record<string, boolean> {
+  const defaults: Record<string, boolean> = {};
+  for (const item of items) {
+    if (item.children) {
+      defaults[item.label] = item.defaultExpanded ?? false;
+      Object.assign(defaults, collectGroupDefaults(item.children));
+    }
+  }
+  return defaults;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function MainLayout() {
@@ -230,9 +266,72 @@ export function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingTaskCount, setPendingTaskCount] = useState(0);
 
+  // Determine which industry-specific nav items to show
+  const industryNavItems: NavItemDef[] =
+    currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
+
+  // Build the full ordered navigation list. Computed here (above the sidebar
+  // expanded-state block below) so getInitialExpanded can derive its
+  // collapsed-by-default map directly from this tree instead of a
+  // hand-maintained list of group names.
+  const navItems: NavItemDef[] = useMemo(
+    () => {
+      // Operations group children — Purchasing sub-group is role-gated
+      const operationsChildren: NavItemDef[] = [
+        { to: '/operations', icon: ClipboardList, label: 'Task Manager', showBadge: true },
+        { to: '/inventory', icon: Package, label: 'Inventory' },
+        ...(PURCHASING_ROLES.has(user?.role ?? '') ? [PURCHASING_NAV_GROUP] : []),
+        SALES_NAV_GROUP,
+        { to: '/logistics', icon: Truck, label: 'Logistics' },
+        { to: '/marketing', icon: Megaphone, label: 'Marketing' },
+      ];
+
+      const OPERATIONS_NAV_GROUP: NavItemDef = {
+        icon: Factory,
+        label: 'Operations',
+        defaultExpanded: false,
+        children: operationsChildren,
+      };
+
+      return [
+        ...SHARED_NAV_ITEMS,
+        ...industryNavItems,
+        // Genetics Repo — shared lab, visible to every industry type
+        GENETICS_NAV_GROUP,
+        // Protocols — the written procedures behind that work
+        PROTOCOLS_NAV_ITEM,
+        // Tools group — available to all users
+        TOOLS_NAV_GROUP,
+        // Operations group — available to all users (Purchasing sub-group is role-gated inside)
+        OPERATIONS_NAV_GROUP,
+        // Finance group — accountant, finance_admin, auditor, admin, super_admin
+        // AND the per-tenant finance module must be enabled (Wave 0)
+        ...(financeOn && FINANCE_ROLES.has(user?.role ?? '') ? [FINANCE_NAV_GROUP] : []),
+        // Bottom items — AI Hub is super_admin only
+        ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
+          if (item.to === '/ai') return user?.role === 'super_admin';
+          return true;
+        }),
+        ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
+      ];
+    },
+    [industryNavItems, user?.role, financeOn]
+  );
+
   // ── Sidebar group expanded state ────────────────────────────────────────────
-  // Persisted per-user in localStorage. Key: sidebar.expanded.{userId}
-  const storageKey = `sidebar.expanded.${user?.userId ?? 'anon'}`;
+  // Persisted per-user in localStorage. Key: sidebar.expanded.v2.{userId}
+  //
+  // Why "v2": every group's coded default is already collapsed
+  // (defaultExpanded: false everywhere), but expand state persists forever
+  // once a user toggles a group open — including toggles made while testing
+  // this exact sidebar during development, which is why Tools/Operations/
+  // Finance/Genetics Repo specifically were showing "expanded by default"
+  // for accounts that had been used to verify the feature. Namespacing the
+  // key resets that stale expand state as a deliberate, one-time part of
+  // this fix — it does NOT delete anything (the old v1 key is simply never
+  // read again) and does NOT touch any preference a user sets from here on:
+  // toggling a group still persists exactly as before, just under this key.
+  const storageKey = `sidebar.expanded.v2.${user?.userId ?? 'anon'}`;
 
   const getInitialExpanded = useCallback((): Record<string, boolean> => {
     try {
@@ -241,19 +340,43 @@ export function MainLayout() {
     } catch {
       // ignore parse errors
     }
-    // Default: honour defaultExpanded on each group
-    return {
-      Tools: TOOLS_NAV_GROUP.defaultExpanded ?? false,
-      Operations: false,
-      Purchasing: PURCHASING_NAV_GROUP.defaultExpanded ?? false,
-      Finance: FINANCE_NAV_GROUP.defaultExpanded ?? false,
-      Sales: SALES_NAV_GROUP.defaultExpanded ?? false,
-    };
-  }, [storageKey]);
+    // Nothing stored yet for this key — every group starts collapsed,
+    // derived from the live nav tree (see collectGroupDefaults) rather than
+    // a hand-maintained list, so a newly added group can't be silently
+    // missing (and therefore rendered via its own defaultExpanded/false
+    // fallback anyway — but this keeps the two paths in sync explicitly).
+    return collectGroupDefaults(navItems);
+  }, [storageKey, navItems]);
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     getInitialExpanded
   );
+
+  // Defensive re-sync: the useState initializer above runs EXACTLY ONCE, at
+  // mount. `storageKey` depends on `user?.userId`, and MainLayout can mount
+  // before the auth store's async user load resolves (ProtectedRoute allows
+  // it through once `isAuthenticated` is true even if `user` is still null —
+  // see ProtectedRoute's isBootstrapping check). If that happens, the very
+  // first read above hits the "anon" key and is never retried once the real
+  // userId arrives, permanently missing that user's actual saved
+  // preferences for the rest of the session. Re-reading under the corrected
+  // key whenever storageKey changes AFTER mount closes that gap — and only
+  // overwrites in-memory state when the new key actually has saved data, so
+  // it never clobbers toggles made during the brief anon window with an
+  // empty default.
+  const isFirstStorageKeyRender = useRef(true);
+  useEffect(() => {
+    if (isFirstStorageKeyRender.current) {
+      isFirstStorageKeyRender.current = false;
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) setExpandedGroups(JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      // ignore parse errors
+    }
+  }, [storageKey]);
 
   const toggleGroup = useCallback(
     (label: string) => {
@@ -347,73 +470,6 @@ export function MainLayout() {
     // container (SidebarFooter sits outside it and never scrolls).
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname, location.search]);
-
-  // Determine which industry-specific nav items to show
-  const industryNavItems: NavItemDef[] =
-    currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
-
-  // Roles that can see the Purchasing sidebar group
-  const _PURCHASING_ROLES = new Set([
-    'procurement_officer',
-    'procurement_manager',
-    'admin',
-    'super_admin',
-    'finance_admin',
-  ]);
-
-  // Roles that can see the Finance sidebar group
-  const _FINANCE_ROLES = new Set([
-    'accountant',
-    'finance_admin',
-    'auditor',
-    'admin',
-    'super_admin',
-  ]);
-
-  // Build the full ordered navigation list
-  const navItems: NavItemDef[] = useMemo(
-    () => {
-      // Operations group children — Purchasing sub-group is role-gated
-      const operationsChildren: NavItemDef[] = [
-        { to: '/operations', icon: ClipboardList, label: 'Task Manager', showBadge: true },
-        { to: '/inventory', icon: Package, label: 'Inventory' },
-        ...(_PURCHASING_ROLES.has(user?.role ?? '') ? [PURCHASING_NAV_GROUP] : []),
-        SALES_NAV_GROUP,
-        { to: '/logistics', icon: Truck, label: 'Logistics' },
-        { to: '/marketing', icon: Megaphone, label: 'Marketing' },
-      ];
-
-      const OPERATIONS_NAV_GROUP: NavItemDef = {
-        icon: Factory,
-        label: 'Operations',
-        defaultExpanded: false,
-        children: operationsChildren,
-      };
-
-      return [
-        ...SHARED_NAV_ITEMS,
-        ...industryNavItems,
-        // Genetics Repo — shared lab, visible to every industry type
-        GENETICS_NAV_GROUP,
-        // Protocols — the written procedures behind that work
-        PROTOCOLS_NAV_ITEM,
-        // Tools group — available to all users
-        TOOLS_NAV_GROUP,
-        // Operations group — available to all users (Purchasing sub-group is role-gated inside)
-        OPERATIONS_NAV_GROUP,
-        // Finance group — accountant, finance_admin, auditor, admin, super_admin
-        // AND the per-tenant finance module must be enabled (Wave 0)
-        ...(financeOn && _FINANCE_ROLES.has(user?.role ?? '') ? [FINANCE_NAV_GROUP] : []),
-        // Bottom items — AI Hub is super_admin only
-        ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
-          if (item.to === '/ai') return user?.role === 'super_admin';
-          return true;
-        }),
-        ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
-      ];
-    },
-    [industryNavItems, user?.role, financeOn]
-  );
 
   // ── Recursive nav item renderer ────────────────────────────────────────────
   // depth=0: top-level items/groups; depth=1: children of a top-level group;
@@ -1307,13 +1363,27 @@ const NavGroupHeader = styled.button<NavGroupHeaderProps>`
   border: 1px solid transparent;
   border-radius: 10px;
   background: ${({ $childActive }) => ($childActive ? 'rgba(180, 200, 220, 0.07)' : 'transparent')};
-  color: ${({ $childActive, theme }) =>
-    $childActive ? theme.colors.textPrimary : theme.colors.muted};
-  /* All depths use base font-size to match leaf NavItem siblings. Top-level
-     groups (depth 0) use semibold to stand out as parent containers; sub-
-     groups (depth 1+) use medium so they look identical to their leaf
-     siblings — the caret differentiates them as expandable. */
-  font-size: 0.9rem;
+  /* Hierarchy cue #1 (colour weight, not accent): a depth-0 group ("Tools",
+     "Operations", "Finance", "Genetics Repo") sits a shade brighter than a
+     leaf/subgroup at rest — celeste (textSecondary) vs. muted — so the
+     category row reads as more substantial chrome than its contents even
+     before anything is active or hovered. Still no gold spent; childActive
+     and :hover both escalate to textPrimary exactly as before, at every
+     depth. */
+  color: ${({ $childActive, $depth, theme }) => {
+    if ($childActive) return theme.colors.textPrimary;
+    return $depth === 0 ? theme.colors.celeste : theme.colors.muted;
+  }};
+  /* Hierarchy cue #2 (type, not colour): depth-0 headers are a size step
+     larger with a touch of letter-spacing — borrowing the same "this is a
+     category, not content" vocabulary as SectionLabel's monoLabel treatment,
+     without going full mono/uppercase (these are proper nouns like "Genetics
+     Repo", not metadata tags). Depth-1+ subgroups (Purchasing/Sales nested
+     inside Operations) stay at the leaf NavItem's own size/tracking so they
+     read as identical to their sibling leaves — the caret alone marks them
+     as expandable, per the original design intent below. */
+  font-size: ${({ $depth }) => ($depth === 0 ? '0.95rem' : '0.9rem')};
+  letter-spacing: ${({ $depth }) => ($depth === 0 ? '0.015em' : 'normal')};
   font-weight: ${({ $depth }) => ($depth >= 1 ? 500 : 700)};
   font-family: inherit;
   cursor: pointer;
@@ -1347,6 +1417,23 @@ const NavGroupChildren = styled.div<{ $depth: number }>`
   gap: 1px;
   /* Each depth level adds 14px of left indent on top of the base 16px */
   padding-left: ${({ $depth }) => 16 + $depth * 14}px;
+  position: relative;
+
+  /* Hierarchy cue #3: a hairline rail marking this indented block as
+     "belongs to the group above" — theme.colors.line only (the same
+     neutral hairline used for the sidebar's own border-right), no accent
+     colour spent. Sits a few px inside the indent, roughly under the
+     parent row's icon, so the block of children reads as one spine hanging
+     off its header rather than a same-level list. */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: ${({ $depth }) => 16 + $depth * 14 - 10}px;
+    width: 1px;
+    background: ${({ theme }) => theme.colors.line};
+  }
 `;
 
 // ── Back to top ────────────────────────────────────────────────────────────
