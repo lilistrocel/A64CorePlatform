@@ -100,15 +100,23 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     )
 
 
-# Mount static files for admin interface
+# Mount static files for the standalone (legacy) admin interface.
+#
+# Served at /legacy-admin, NOT /admin. The React SPA owns /admin/* — it has
+# /admin/users and /admin/tenant-setup — and nginx proxies whole path prefixes,
+# so while this was mounted at /admin every one of those SPA routes was handed
+# to FastAPI instead of the frontend. Client-side navigation worked, but a
+# refresh or a pasted link returned {"detail":"Not Found"} as a bare white
+# page. Prefix ownership has to be exclusive; the SPA is the primary UI, so
+# this moves aside.
 public_dir = Path(__file__).parent.parent / "public"
 if public_dir.exists():
     app.mount(
-        "/admin",
+        "/legacy-admin",
         StaticFiles(directory=str(public_dir / "admin"), html=True),
-        name="admin",
+        name="legacy-admin",
     )
-    logger.info(f"Admin interface mounted at /admin")
+    logger.info("Legacy standalone admin interface mounted at /legacy-admin")
 
 # Include routers
 app.include_router(health.router, prefix="/api", tags=["Health"])
