@@ -2072,7 +2072,13 @@ class DocumentService:
         """
         Create a PO from an Approved PR.
 
-        Copies all lines from the PR and links them via baseLineId.
+        Copies all lines from the PR and links them via baseLineId. The PO is
+        created directly in OPEN (live) status — not Draft — because the
+        source PR has already been through approval; that approval covers
+        the resulting PO, so no separate PO approval step is required. This
+        is a deliberate product decision, not a placeholder default: the PO
+        goes straight from PR-approved to Open/live, unconditionally, with
+        `approvalState` recorded as "NotRequired".
         Sets PR.status = Closed after creating the PO.
 
         ALL writes (PR header close, PO header insert, PO lines insert, PR
@@ -2198,9 +2204,14 @@ class DocumentService:
                 "department": pr_header.get("department"),
                 "urgency": pr_header.get("urgency", "normal"),
                 "issuedBy": created_by,
-                "issuedDate": None,
+                # Reason: this PO is live/Open from creation (PR approval already
+                # covers it — see method docstring), so it is issued now rather
+                # than left unissued as a draft would be.
+                "issuedDate": now,
                 "baseDocId": pr_doc_id,
-                "status": DocumentStatus.DRAFT.value,
+                # Reason: straight-to-Open, unconditionally — the PR approval IS
+                # the approval. Do NOT route this through the approval engine.
+                "status": DocumentStatus.OPEN.value,
                 **totals,
                 "notes": data.notes,
                 "approvalState": "NotRequired",

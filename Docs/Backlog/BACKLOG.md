@@ -157,6 +157,97 @@
 
 ---
 
+### T-911 | PO-from-PR conversion now creates a live (Open) PO, not Draft
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-04
+- **Depends on:** T-810 ✅ (event-payload state mapping this change relies on)
+- **Blocks:** —
+- **Description:** Deliberate product decision: converting an already-Approved
+  PR into a PO must produce a LIVE (Open) PO directly, not a Draft. The PR
+  approval already covers it, so a second PO approval step is redundant.
+  Previously `DocumentService.create_po_from_pr` (in
+  `src/modules/purchasing/services/document_service.py`) always built the
+  new PO header with `status: DocumentStatus.DRAFT.value` and
+  `issuedDate: None`, requiring a manual extra approve/issue step on every
+  PR→PO conversion despite the PR already being Approved.
+- **Fix:** In `create_po_from_pr` (~line 2064), the new PO header now sets:
+  - `status: DocumentStatus.OPEN.value` (was `DRAFT.value`)
+  - `issuedDate: now` (was `None`) — issued immediately since the PO is live
+    from creation; `dueDate` stays `None` unchanged (computed at Send time
+    elsewhere).
+  - `approvalState` stays `"NotRequired"` unchanged — the PR approval IS the
+    approval; the approval engine (`self._engine`) is deliberately NOT
+    invoked on this path.
+  - The existing `await self._emit_po_event(header, None, company_code,
+    session=session)` call is unchanged in code, but now naturally emits
+    `po_state_changed` with `payload.state == "Open"` (via the existing
+    `map_po_state_for_event`/`build_po_event_payload` from T-810) instead of
+    `"Draft"`. `previousState` stays `None` — correct for a document that
+    never existed as Draft. No second event added.
+  - Docstring updated to state the PO is created directly OPEN/live because
+    the source PR was already Approved.
+  - Everything else in the method (PR auto-close to CLOSED, line copy with
+    `baseLineId` preserved, PR event emission, best-effort audit write) is
+    untouched.
+- **Tests:** `tests/unit/test_purchasing/test_create_po_from_pr.py` (NEW, 4
+  cases) — no prior test file covered this method at all, so nothing needed
+  updating for a stale `'draft'` assertion. New cases: (1) returned PO
+  `status == 'open'`; (2) `po_state_changed` outbox event emitted with
+  `payload['state'] == 'Open'`, round-tripped against the REAL
+  `PurchaseOrderStateChangedPayload` contract model (proof this doesn't
+  reintroduce the T-810 crash class), `previousState is None`; (3) source PR
+  transitions to `status == 'closed'` via `document_headers.update_one` and
+  emits `pr_state_changed` with `state == 'Closed'`; (4) `approvalState ==
+  'NotRequired'` on the returned PO, with `service._engine.evaluate` spied to
+  raise if ever called — proves the approval engine is never invoked on this
+  path. Run locally (miniconda `python3 -m pytest`, no Docker needed — full
+  `src`/`contracts` tree imports cleanly on this host): **4 passed**. Full
+  `tests/unit/test_purchasing/` suite re-run for regressions: **109 passed**
+  (105 pre-existing + 4 new), 0 failed.
+- **Deploy note:** `docker restart a64coreplatform-api-1` required — the api
+  container has no `--reload`; only
+  `src/modules/purchasing/services/document_service.py` changed.
+- **CodeMaps:** not regenerated — no new/removed endpoints, services, or
+  collections; this is a status/field-value change inside one existing
+  service method.
+- **Files changed:**
+  `src/modules/purchasing/services/document_service.py`,
+  `tests/unit/test_purchasing/test_create_po_from_pr.py` (new).
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  restart the api container, verify, and commit.
+
+---
+
+### T-811 | Purchasing detail pages — Wave 4 status vocabulary never updated on frontend (no action buttons render)
+- **Category:** Frontend · **Priority:** P0
+- **Assigned:** frontend-dev-expert · **Started:** 2026-08-04
+- **Depends on:** T-810 ✅ (backend counterpart — same root migration)
+- **Blocks:** —
+- **Description:** Companion regression to T-810. `wave4_purchasing_status_migration.py`
+  rewrote stored `document_headers.status` from TitleCase to lowercase_snake
+  (`draft`, `pending_approval`, `open`, `partly_closed`, `closed`, `cancelled`
+  — plus unchanged `'Rejected'`/`'Sent'`/`'Partially Received'`/`'Received'`),
+  but the frontend was never updated: `statusPhase.ts`'s
+  `PURCHASING_STATUS_PHASE` map and all 4 purchasing detail pages' action
+  gating still compared against the old TitleCase strings, so a Draft PO
+  (status `"draft"`) showed zero action buttons (no Submit/Edit/Delete) and
+  badges rendered the raw lowercase string instead of a display label.
+- **Fix:** re-keyed `PURCHASING_STATUS_PHASE` on backend values (old
+  TitleCase kept as harmless aliases), added `statusDisplayLabel()`, fixed
+  gating in `PurchaseOrderDetailPage.tsx` / `PurchaseRequestDetailPage.tsx` /
+  `GoodsReceiptDetailPage.tsx` / `APInvoiceDetailPage.tsx` /
+  `PurchaseOrderFormPage.tsx`, added `useDeletePurchaseOrder` + a Delete
+  button for draft POs, updated `POStatus`/`PRStatus` types in
+  `purchasingApi.ts`, aligned list-page filters/badges. Verified with
+  `npx tsc -b --noEmit` only — no Playwright (user verifies in browser per
+  project rule). Not moving to ARCHIVE — leaving for the parent session to
+  verify + commit.
+- **Follow-up noted, not done:** PR/GR/AP have delete endpoints/client
+  methods but no delete UI — same pattern as the new PO delete button could
+  be added later if wanted.
+
+---
+
 ### T-910 | Finance-outbox silent drop — ap_down_payment_posted / ap_credit_note_posted never registered as contracts (Stage 1 of 2)
 - **Category:** Backend · **Priority:** P0
 - **Assigned:** backend-dev-expert · **Started:** 2026-08-04
