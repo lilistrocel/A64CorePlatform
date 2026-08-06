@@ -364,7 +364,9 @@ export function PurchaseOrderDetailPage() {
   // PO that already has a life (voids it into a persistent 'cancelled' record).
   const canCancel = ['pending_approval', 'open', 'Sent'].includes(po?.status ?? '');
   const canEdit = po?.status === 'draft';
-  const canDelete = po?.status === 'draft';
+  // Draft (never issued) or Cancelled (terminal void) can be removed from the
+  // list; the backend soft-deletes them and rejects any live status.
+  const canDelete = ['draft', 'cancelled'].includes(po?.status ?? '');
 
   const handleAction = async (fn: () => Promise<any>) => {
     setActionError(null);
@@ -374,7 +376,7 @@ export function PurchaseOrderDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Delete this draft Purchase Order? This cannot be undone.')) return;
+    if (!confirm('Delete this Purchase Order? It will be removed from the list.')) return;
     setActionError(null);
     try {
       await deleteMutation.mutateAsync({ docId: docId!, organizationId: orgId });

@@ -2456,7 +2456,7 @@ class DocumentService:
 
     async def soft_delete_po(self, org_id: str, doc_id: str, deleted_by: str) -> bool:
         """
-        Soft-delete a Draft PO.
+        Soft-delete a Draft or Cancelled PO.
 
         Args:
             org_id: Organisation scope.
@@ -2467,7 +2467,7 @@ class DocumentService:
             True if deleted, False if not found.
 
         Raises:
-            ValueError: If PO is not in Draft status.
+            ValueError: If PO is not in Draft or Cancelled status.
         """
         header = await self._headers.find_one(
             {
@@ -2479,8 +2479,14 @@ class DocumentService:
         )
         if not header:
             return False
-        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
-            raise ValueError("Only Draft POs can be deleted")
+        # Draft = never issued; Cancelled = terminal void with no downstream
+        # (the state machine forbids cancelling once a receipt exists), so both
+        # are safe to remove from the list. Any other status is a live document.
+        if _parse_status(header["status"]) not in (
+            DocumentStatus.DRAFT,
+            DocumentStatus.CANCELLED,
+        ):
+            raise ValueError("Only Draft or Cancelled POs can be deleted")
 
         now = datetime.now(tz=timezone.utc)
         await self._headers.update_one(
