@@ -26,6 +26,7 @@ import styled from 'styled-components';
 import { PageHeader, monoLabel, glassPanel, glassControl, type PageHeaderStat } from '@a64core/shared';
 import { apiClient } from '../../services/api';
 import { useFacilities } from '../../hooks/mushroom/useFacilityData';
+import { useRoomOccupancy } from '../../hooks/genetics/useGenetics';
 import { GrowingRoomCard } from '../../components/mushroom/GrowingRoomCard';
 import { RoomDetailsModal } from '../../components/mushroom/RoomDetailsModal';
 import type { GrowingRoom, Facility, RoomPhase } from '../../types/mushroom';
@@ -111,6 +112,12 @@ export function MushroomRoomMonitor() {
     useFacilities();
 
   const facilityRoomsResults = useAllFacilityRooms(facilities);
+
+  // What is physically held in every room, across every facility, in one
+  // request — this page (unlike MushroomFacilityManager, which is scoped to
+  // one facility at a time) groups rooms across all of them, so it calls the
+  // hook with no facility argument rather than once per facility in a loop.
+  const { data: roomOccupancy } = useRoomOccupancy();
 
   const isAnyLoading =
     facilitiesLoading ||
@@ -395,6 +402,7 @@ export function MushroomRoomMonitor() {
                       key={room.id}
                       room={room}
                       onClick={setSelectedRoom}
+                      occupancy={roomOccupancy?.[room.id]}
                     />
                   ))}
                 </Cards>

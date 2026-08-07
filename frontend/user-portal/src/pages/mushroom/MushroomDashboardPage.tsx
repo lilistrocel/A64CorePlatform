@@ -20,6 +20,7 @@ import { Factory, Home, Sprout, AlertTriangle, Scale, RefreshCw, X, CheckCircle2
 import { useMushroomDashboard } from '../../hooks/mushroom/useMushroomDashboard';
 import { useFacilities } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms } from '../../hooks/mushroom/useRoomData';
+import { useRoomOccupancy } from '../../hooks/genetics/useGenetics';
 import { GrowingRoomGrid } from '../../components/mushroom/GrowingRoomGrid';
 import { RoomDetailsModal } from '../../components/mushroom/RoomDetailsModal';
 import { QUALITY_GRADE_HUE } from '../../components/mushroom/phaseTheme';
@@ -62,6 +63,10 @@ export function MushroomDashboardPage() {
   const { data: rooms = [], isLoading: roomsLoading } = useFacilityRooms(
     selectedFacilityId || undefined
   );
+  // No facility argument on purpose — one request covers every room this page
+  // can show, and the facility selector changes which rooms render, not which
+  // occupancy is needed. Keyed by roomId, so a superset is harmless.
+  const { data: roomOccupancy } = useRoomOccupancy();
 
   // Pick the first facility automatically when list loads and none is selected
   const activeFacilityId = selectedFacilityId || facilities[0]?.id || '';
@@ -222,6 +227,13 @@ export function MushroomDashboardPage() {
             onRoomClick={setSelectedRoom}
             filterPhase={phaseFilter}
             compact
+            // Required, not optional garnish: GrowingRoomCard now distinguishes
+            // "no material" from "not loaded yet", and renders an ellipsis for
+            // the latter. A page that never supplies occupancy would sit on
+            // that ellipsis forever — worse than the wrong "empty" it replaced.
+            // Fetched with no facility argument so one request covers every
+            // room shown here, matching MushroomRoomMonitor.
+            occupancy={roomOccupancy}
           />
         )}
       </GridSection>

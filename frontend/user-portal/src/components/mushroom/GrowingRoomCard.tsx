@@ -29,6 +29,22 @@ import { VESSEL_LABELS } from '../../types/genetics';
 import { ROOM_PHASE_TO_PHASE_KEY } from '../../types/mushroom';
 import { ROOM_TYPE_ICON_COMPONENTS } from './phaseTheme';
 
+/**
+ * ISO datetime -> whole days elapsed since then, e.g. '12d'.
+ *
+ * `oldestColonizedAt` comes back from the API as a naive datetime with no
+ * trailing `Z` (the same convention as `preparedAt`/`recordedAt`/
+ * `inoculationDate` elsewhere in this codebase) even though Mongo stores it
+ * as UTC midnight. `new Date(iso)` therefore parses it as local time, which
+ * can be off from the real instant by the browser's UTC offset — up to a
+ * full day near a day boundary. Rounding to whole days (rather than hours)
+ * absorbs that skew instead of presenting false sub-day precision.
+ */
+function formatAgeDays(iso: string): string {
+  const days = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
+  return `${days}d`;
+}
+
 interface GrowingRoomCardProps {
   room: GrowingRoom;
   onClick?: (room: GrowingRoom) => void;
@@ -52,6 +68,12 @@ export function GrowingRoomCard({
   const phaseLabel = PHASE_LABELS[room.currentPhase] ?? room.currentPhase;
   const batchRoom = isBatchRoom(room.roomType);
   const TypeIcon = room.roomType ? ROOM_TYPE_ICON_COMPONENTS[room.roomType] : undefined;
+
+  // A container room (lab/spawn/incubation/storage) with `occupancy`
+  // undefined hasn't had its room-occupancy query resolve yet — that is NOT
+  // the same claim as "this room holds nothing", so it gets its own neutral
+  // label rather than falling into the empty branch below.
+  const occupancyLoading = !batchRoom && occupancy === undefined;
 
   // A room "in process" gets the glowing edge bar; empty/idle rooms drop to
   // reduced opacity (spec §4 room-card pattern). Container rooms have no
@@ -111,9 +133,11 @@ export function GrowingRoomCard({
         <PhaseBadgeChip $phaseKey={phaseKey}>{phaseLabel}</PhaseBadgeChip>
       ) : (
         <OccupancyBadge $empty={!occupancy?.vessels}>
-          {occupancy?.vessels
+          {occupancyLoading
+            ? '…' /* ellipsis — occupancy hasn't loaded, not asserting the room is empty */
+            : occupancy?.vessels
             ? `${occupancy.vessels} item${occupancy.vessels === 1 ? '' : 's'}`
-            : 'empty'}
+            : 'No material'}
         </OccupancyBadge>
       )}
 
@@ -151,6 +175,35 @@ export function GrowingRoomCard({
           )}
         </Tele>
       )}
+
+      {/* Colonisation rollup — optional fields on RoomOccupancy, present once
+          the backend's widened room-occupancy aggregation has shipped (and
+          the api process serving this request has been restarted). Renders
+          nothing until then, so this card is correct either way.
+
+          colonizedCount/records are ACCESSION RECORDS, not vessels — a
+          23-vessel record with one colonizedAt date still counts as 1. Shown
+          as a record-count fraction (`1/2`), never bare, so it never reads
+          as if it shared a unit with the vessel-count byForm row above. */}
+      {!compact &&
+        !batchRoom &&
+        occupancy &&
+        (occupancy.colonizedCount != null || occupancy.oldestColonizedAt) && (
+          <Tele>
+            {occupancy.colonizedCount != null && (
+              <TeleItem
+                title={`${occupancy.colonizedCount} of ${occupancy.records} record${occupancy.records === 1 ? '' : 's'} colonised (by record, not vessel count)`}
+              >
+                COLONISED <TeleValue>{occupancy.colonizedCount}/{occupancy.records}</TeleValue>
+              </TeleItem>
+            )}
+            {occupancy.oldestColonizedAt && (
+              <TeleItem title="Whole days — see oldest colonised record">
+                OLDEST <TeleValue>{formatAgeDays(occupancy.oldestColonizedAt)}</TeleValue>
+              </TeleItem>
+            )}
+          </Tele>
+        )}
     </CardWrapper>
   );
 }

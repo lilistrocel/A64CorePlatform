@@ -9,27 +9,39 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { Plus } from 'lucide-react';
+import { MapPin, Plus } from 'lucide-react';
 import { PageHeader as SharedPageHeader, glassPanel } from '@a64core/shared';
 import { HelpButton } from '../../components/tutorials/HelpButton';
+import { EditAccessionModal } from '../../components/genetics/EditAccessionModal';
 import { LineFormModal } from '../../components/genetics/LineFormModal';
 import { KIND_ICON_COMPONENTS } from '../../components/genetics/kindIcons';
 import {
   Banner,
   Button,
   Card,
+  CodeChip,
   EmptyState,
   Grid,
   Input,
   KindBadge,
   PageWrap,
+  SectionTitle,
   Select,
+  Table,
+  TableScroll,
   Tag,
+  Td,
+  Th,
   Toolbar,
+  Tr,
 } from '../../components/genetics/styled';
-import { useGeneticLines, useGeneticsDashboard } from '../../hooks/genetics/useGenetics';
-import type { GeneticLine, OrganismKind } from '../../types/genetics';
-import { KIND_LABELS, SENESCENCE_WATCH_GENERATION } from '../../types/genetics';
+import {
+  useAccessions,
+  useGeneticLines,
+  useGeneticsDashboard,
+} from '../../hooks/genetics/useGenetics';
+import type { Accession, GeneticLine, OrganismKind } from '../../types/genetics';
+import { KIND_LABELS, SENESCENCE_WATCH_GENERATION, VESSEL_LABELS } from '../../types/genetics';
 
 const HeaderRow = styled.div`
   display: flex;
@@ -229,12 +241,42 @@ const FilterSelect = styled(Select)`
   max-width: 180px;
 `;
 
+// ---- Unassigned material — read-only signposting, no bulk assignment -------
+// (see EditAccessionModal, which already owns the write path via LocationPicker)
+
+const UnassignedSection = styled.section`
+  margin-bottom: 24px;
+`;
+
+const UnassignedHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+`;
+
+const UnassignedIcon = styled.span`
+  display: inline-flex;
+  color: ${({ theme }) => theme.colors.bright.terra};
+`;
+
+const UnassignedHint = styled.span`
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const Muted = styled.span`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 12.5px;
+`;
+
 export function GeneticsRepoPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [editingAccession, setEditingAccession] = useState<Accession | null>(null);
 
   // Set when arriving from a Strain / Plant library card's reverse link, so the
   // repo opens already narrowed to the lineages under that growing profile.
@@ -259,6 +301,18 @@ export function GeneticsRepoPage() {
   });
 
   const lines = linePage?.data ?? [];
+  const lineById = new Map(lines.map((l) => [l.id, l]));
+
+  // Live material with no `location.roomId` — invisible in every room view
+  // (Room Monitor, Facility Manager) because those pages key off roomId to
+  // annotate rooms. There is no reliable signal for where this material
+  // physically sits, so this is read-only signposting to the existing
+  // room-assignment control (EditAccessionModal's LocationPicker), not a
+  // migration or a bulk-assignment tool.
+  const { data: accessionPage } = useAccessions({ activeOnly: true, perPage: 100 });
+  const unassignedAccessions = (accessionPage?.data ?? []).filter(
+    (a) => !a.location?.roomId
+  );
 
   const openLine = (line: GeneticLine) => navigate(`/genetics/lines/${line.id}`);
 
@@ -339,6 +393,67 @@ export function GeneticsRepoPage() {
             Show all lines
           </button>
         </Banner>
+      )}
+
+      {unassignedAccessions.length > 0 && (
+        <UnassignedSection>
+          <UnassignedHeader>
+            <UnassignedIcon>
+              <MapPin size={16} strokeWidth={2} />
+            </UnassignedIcon>
+            <SectionTitle style={{ margin: 0 }}>
+              Unassigned material <Muted>({unassignedAccessions.length})</Muted>
+            </SectionTitle>
+            <UnassignedHint>
+              — live accessions with no room on file. Assign a room to make them visible on
+              the Room Monitor and Facility Manager.
+            </UnassignedHint>
+          </UnassignedHeader>
+          <Card style={{ padding: 0 }}>
+            <TableScroll>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Code</Th>
+                    <Th>Line</Th>
+                    <Th>Form</Th>
+                    <Th>Qty</Th>
+                    <Th>Facility</Th>
+                    <Th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassignedAccessions.map((a) => {
+                    const line = lineById.get(a.lineId);
+                    return (
+                      <Tr key={a.id}>
+                        <Td>
+                          <CodeChip>{a.accessionCode}</CodeChip>
+                        </Td>
+                        <Td>{line ? `${line.commonName} (${line.code})` : <Muted>—</Muted>}</Td>
+                        <Td>{VESSEL_LABELS[a.form]}</Td>
+                        <Td>
+                          {a.quantity} {a.unit}
+                        </Td>
+                        <Td>{a.location.facility ?? <Muted>—</Muted>}</Td>
+                        <Td>
+                          <Button
+                            type="button"
+                            $variant="ghost"
+                            style={{ padding: '4px 10px', fontSize: 12 }}
+                            onClick={() => setEditingAccession(a)}
+                          >
+                            Assign room
+                          </Button>
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </TableScroll>
+          </Card>
+        </UnassignedSection>
       )}
 
       <Toolbar>
@@ -499,6 +614,13 @@ export function GeneticsRepoPage() {
         <LineFormModal
           onClose={() => setShowCreate(false)}
           onDone={(line) => navigate(`/genetics/lines/${line.id}`)}
+        />
+      )}
+
+      {editingAccession && (
+        <EditAccessionModal
+          accession={editingAccession}
+          onClose={() => setEditingAccession(null)}
         />
       )}
     </PageWrap>
