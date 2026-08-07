@@ -628,6 +628,12 @@ class PlantDataEnhancedUpdate(BaseModel):
     isActive: Optional[bool] = Field(
         None, description="Whether this plant data is active and available for use"
     )
+    motherPlantId: Optional[UUID] = Field(
+        None, description="Mother plant (product) this variety belongs to"
+    )
+    varietyName: Optional[str] = Field(
+        None, description="Display name for this cultivation recipe"
+    )
 
 
 class PlantDataEnhanced(PlantDataEnhancedBase):
@@ -647,6 +653,22 @@ class PlantDataEnhanced(PlantDataEnhancedBase):
     isActive: bool = Field(
         True,
         description="Whether this plant data is active and available for use in planting",
+    )
+
+    # ===== Mother/Variety hierarchy (Plant Library Phase 1) =====
+    # This entry IS a "variety" (cultivation recipe) — plantName/scientificName
+    # above are UNCHANGED in meaning and kept as-is (version snapshots and
+    # display code read them). motherPlantId links this variety up to its
+    # "mother" (product/SKU, plant_mothers collection) that harvest/inventory/
+    # sales roll up to. Optional so pre-migration documents still validate;
+    # the Phase 1 migration sets it on every active (non-deleted) entry.
+    motherPlantId: Optional[UUID] = Field(
+        None,
+        description="Mother plant (product) this variety belongs to (plant_mothers.plantMotherId)",
+    )
+    varietyName: Optional[str] = Field(
+        None,
+        description="Display name for this cultivation recipe within its mother's varieties (e.g. 'Standard'). Set by the Phase 1 migration; does not replace plantName.",
     )
 
     # Multi-industry scoping

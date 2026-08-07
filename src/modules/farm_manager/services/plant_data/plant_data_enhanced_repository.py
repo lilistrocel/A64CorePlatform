@@ -28,7 +28,11 @@ class PlantDataEnhancedRepository:
 
     @staticmethod
     async def create(
-        plant_data: PlantDataEnhancedCreate, created_by: UUID, created_by_email: str
+        plant_data: PlantDataEnhancedCreate,
+        created_by: UUID,
+        created_by_email: str,
+        mother_plant_id: Optional[UUID] = None,
+        variety_name: Optional[str] = None,
     ) -> PlantDataEnhanced:
         """
         Create new enhanced plant data.
@@ -37,6 +41,14 @@ class PlantDataEnhancedRepository:
             plant_data: Plant data creation data
             created_by: User ID creating the plant data
             created_by_email: Email of user creating the plant data
+            mother_plant_id: Plant Library Phase 2 — mother (product) this
+                new doc is a variety of. Only passed by
+                PlantMotherService.create_variety_for_mother; every other
+                caller (the standalone POST /plant-data-enhanced endpoint)
+                omits it, leaving the doc mother-less, matching pre-Phase-2
+                behavior exactly.
+            variety_name: Display name for the variety within its mother.
+                Only meaningful together with mother_plant_id.
 
         Returns:
             Created PlantDataEnhanced object
@@ -55,12 +67,16 @@ class PlantDataEnhancedRepository:
             createdAt=datetime.utcnow(),
             updatedAt=datetime.utcnow(),
             deletedAt=None,
+            motherPlantId=mother_plant_id,
+            varietyName=variety_name,
         )
 
         # Convert to dict and convert UUID fields to strings for MongoDB
         plant_dict = plant.model_dump()
         plant_dict["plantDataId"] = str(plant_dict["plantDataId"])
         plant_dict["createdBy"] = str(plant_dict["createdBy"])
+        if plant_dict.get("motherPlantId") is not None:
+            plant_dict["motherPlantId"] = str(plant_dict["motherPlantId"])
 
         # Reason: Parameterized insert prevents injection
         result = await db[PlantDataEnhancedRepository.COLLECTION].insert_one(plant_dict)
@@ -133,6 +149,68 @@ class PlantDataEnhancedRepository:
             return None
 
         return PlantDataEnhanced(**plant_doc)
+
+    @staticmethod
+    async def get_by_mother_and_variety_name(
+        mother_plant_id: UUID, variety_name: str, include_deleted: bool = False
+    ) -> Optional[PlantDataEnhanced]:
+        """
+        Get a variety by its mother + varietyName (Plant Library Phase 2).
+
+        Used by PlantMotherService.create_variety_for_mother to enforce that
+        varietyName is unique within a given mother (mirrors get_by_name's
+        role in the standalone create path, scoped to the mother instead of
+        globally).
+        """
+        db = farm_db.get_database()
+
+        query: Dict[str, Any] = {
+            "motherPlantId": str(mother_plant_id),
+            "varietyName": variety_name,
+        }
+        if not include_deleted:
+            query["deletedAt"] = None
+
+        plant_doc = await db[PlantDataEnhancedRepository.COLLECTION].find_one(query)
+
+        if not plant_doc:
+            return None
+
+        return PlantDataEnhanced(**plant_doc)
+
+    @staticmethod
+    async def get_by_mother(
+        mother_plant_id: UUID, active_only: bool = True
+    ) -> List[PlantDataEnhanced]:
+        """
+        Get all varieties belonging to a mother (Plant Library Phase 2).
+
+        Used for: the "list varieties by mother" endpoint, the mother-detail
+        endpoint's embedded variety list, and the delete-mother guard (409
+        while active varieties still exist).
+
+        Args:
+            mother_plant_id: PlantMother.plantMotherId
+            active_only: When True (default), only isActive=True varieties
+                are returned. Always excludes soft-deleted varieties
+                regardless of this flag.
+        """
+        db = farm_db.get_database()
+
+        query: Dict[str, Any] = {
+            "motherPlantId": str(mother_plant_id),
+            "deletedAt": None,
+        }
+        if active_only:
+            query["isActive"] = True
+
+        cursor = (
+            db[PlantDataEnhancedRepository.COLLECTION]
+            .find(query)
+            .sort("varietyName", 1)
+        )
+        docs = await cursor.to_list(length=1000)
+        return [PlantDataEnhanced(**doc) for doc in docs]
 
     @staticmethod
     async def search(

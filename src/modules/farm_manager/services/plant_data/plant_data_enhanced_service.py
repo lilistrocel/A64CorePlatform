@@ -26,31 +26,22 @@ class PlantDataEnhancedService:
     """Service for enhanced PlantData business logic"""
 
     @staticmethod
-    async def create_plant_data(
-        plant_data: PlantDataEnhancedCreate, user_id: UUID, user_email: str
-    ) -> PlantDataEnhanced:
+    def _validate_detail_fields(plant_data: PlantDataEnhancedCreate) -> None:
         """
-        Create new enhanced plant data with validation.
+        Shared validation for the "detail" fields of enhanced plant data:
+        growth-cycle stage totals, temperature/humidity ranges, pH range.
 
-        Args:
-            plant_data: Plant data creation data
-            user_id: User creating the plant data
-            user_email: Email of user creating the plant data
-
-        Returns:
-            Created PlantDataEnhanced object
+        Extracted so both the standalone create endpoint (create_plant_data
+        below) and the Plant Library Phase 2 mother-scoped variety creation
+        path (PlantMotherService.create_variety_for_mother, which builds a
+        full PlantDataEnhancedCreate with plantName/scientificName copied
+        from the mother) enforce identical rules — "reuse the existing
+        plant_data_enhanced create path/validation for the detailed
+        fields," per that endpoint's design.
 
         Raises:
-            HTTPException: If validation fails
+            HTTPException: 422 on any validation failure.
         """
-        # Validate plant name uniqueness
-        existing = await PlantDataEnhancedRepository.get_by_name(plant_data.plantName)
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Plant data for '{plant_data.plantName}' already exists",
-            )
-
         # Validate growth cycle totals match (skip if individual stages are all 0)
         calculated_total = (
             plant_data.growthCycle.germinationDays
@@ -119,6 +110,34 @@ class PlantDataEnhancedService:
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="Optimal pH must be within min-max range",
                 )
+
+    @staticmethod
+    async def create_plant_data(
+        plant_data: PlantDataEnhancedCreate, user_id: UUID, user_email: str
+    ) -> PlantDataEnhanced:
+        """
+        Create new enhanced plant data with validation.
+
+        Args:
+            plant_data: Plant data creation data
+            user_id: User creating the plant data
+            user_email: Email of user creating the plant data
+
+        Returns:
+            Created PlantDataEnhanced object
+
+        Raises:
+            HTTPException: If validation fails
+        """
+        # Validate plant name uniqueness
+        existing = await PlantDataEnhancedRepository.get_by_name(plant_data.plantName)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Plant data for '{plant_data.plantName}' already exists",
+            )
+
+        PlantDataEnhancedService._validate_detail_fields(plant_data)
 
         # Create plant data
         plant = await PlantDataEnhancedRepository.create(
@@ -255,6 +274,29 @@ class PlantDataEnhancedService:
         if not plant:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Plant data not found"
+            )
+
+        # Plant Library Phase 2: plantName/scientificName are now inherited
+        # from this variety's mother product (plant_mothers) — renaming a
+        # product happens at PATCH /plant-mothers/{motherPlantId}, which
+        # cascades the new name to every one of its varieties. Letting the
+        # client change them independently here would silently desync a
+        # variety from its mother's product identity, so they are rejected
+        # (fail closed) rather than silently ignored. motherPlantId
+        # re-parenting is also rejected — moving a variety to a different
+        # mother is not a supported operation in this phase (no cascade
+        # side effects are computed for it).
+        if update_data.plantName is not None or update_data.scientificName is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="plantName/scientificName are inherited from this variety's "
+                "mother product and cannot be changed here. Update the mother "
+                "product instead (PATCH /plant-mothers/{motherPlantId}).",
+            )
+        if update_data.motherPlantId is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="motherPlantId cannot be changed via this endpoint.",
             )
 
         # Validate temperature range if updating
@@ -403,15 +445,24 @@ class PlantDataEnhancedService:
     @staticmethod
     def generate_csv_template() -> str:
         """
-        Generate CSV template with headers for enhanced schema.
+        Generate CSV template with headers for the Plant Library mother/
+        variety import format.
+
+        Each ROW is a VARIETY (a plant_data_enhanced cultivation recipe).
+        Rows sharing the same plantName collapse onto one find-or-created
+        MOTHER (plant_mothers product) — see import_from_csv for the
+        find-or-create semantics. The two example rows below both use
+        plantName "Tomato" with different varietyName values ("Roma" /
+        "Cherry") to demonstrate this collapsing behavior.
 
         Returns:
             CSV template as string
 
         Notes:
-            - This is a simplified template for basic fields only
-            - Complex nested structures (fertilizer schedules, pest management, etc.)
-              require JSON format or manual entry via API
+            - This is a simplified template for basic + detail fields only
+            - Complex nested structures (fertilizer schedules, pest management,
+              grading standards, etc.) require JSON format or manual entry via
+              the API (POST /plant-mothers/{id}/varieties)
         """
         output = io.StringIO()
         writer = csv.writer(output)
@@ -420,6 +471,8 @@ class PlantDataEnhancedService:
         headers = [
             "plantName",
             "scientificName",
+            "plantType",
+            "varietyName",
             "farmTypeCompatibility",
             "growthCycleDays",
             "minTemperatureCelsius",
@@ -431,15 +484,20 @@ class PlantDataEnhancedService:
             "wateringFrequencyDays",
             "yieldPerPlant",
             "yieldUnit",
+            "expectedWastePercentage",
+            "spacingCategory",
             "tags",
             "notes",
         ]
         writer.writerow(headers)
 
-        # Write example row
-        example = [
+        # Write example rows — same plantName ("Tomato"), different
+        # varietyName, to demonstrate multi-row-collapses-to-one-mother.
+        example_roma = [
             "Tomato",
             "Solanum lycopersicum",
+            "vegetable",
+            "Roma",
             "open_field,greenhouse,hydroponic",
             "100",
             "15.0",
@@ -451,10 +509,35 @@ class PlantDataEnhancedService:
             "2",
             "5.0",
             "kg",
+            "10",
+            "l",
             "vegetable,fruit,summer",
-            "Requires staking for support. Prune suckers for better yield.",
+            "Roma tomatoes — great for sauces and paste. Requires staking.",
         ]
-        writer.writerow(example)
+        writer.writerow(example_roma)
+
+        example_cherry = [
+            "Tomato",
+            "Solanum lycopersicum",
+            "vegetable",
+            "Cherry",
+            "open_field,greenhouse,hydroponic",
+            "85",
+            "16.0",
+            "29.0",
+            "23.0",
+            "6.0",
+            "6.8",
+            "6.5",
+            "2",
+            "2.0",
+            "kg",
+            "8",
+            "s",
+            "vegetable,fruit,summer",
+            "Cherry tomatoes — sweet, high-yield, great for snacking.",
+        ]
+        writer.writerow(example_cherry)
 
         return output.getvalue()
 
@@ -604,29 +687,59 @@ class PlantDataEnhancedService:
         return output.getvalue()
 
     @staticmethod
-    async def import_from_csv(csv_content: str, user_id: UUID, user_email: str) -> dict:
+    async def import_from_csv(
+        csv_content: str,
+        user_id: UUID,
+        user_email: str,
+        organization_id: Optional[str] = None,
+        division_id: Optional[str] = None,
+    ) -> dict:
         """
-        Import plant data from CSV content.
+        Import Plant Library data from CSV — mother/variety model.
 
-        For existing plants (matched by plantName), updates the CSV-exported fields:
-        temperature, pH, watering, yield, tags, scientificName, farmTypeCompatibility.
-        For new plants not already in the database, creates them with sensible defaults
-        for required nested fields that are not included in the CSV.
+        Each ROW is a VARIETY (a plant_data_enhanced cultivation recipe).
+        Rows sharing the same plantName collapse onto one find-or-created
+        MOTHER (plant_mothers product): mothers are looked up by plantName
+        and reused when they already exist (locally cached within this
+        call so N rows for the same plantName only touch the repository
+        once), or created when they don't. Variety creation is delegated
+        entirely to PlantMotherService.create_variety_for_mother (Plant
+        Library Phase 2) — this method does NOT duplicate its 404/409
+        validation, basic-info inheritance, or detail-field validation.
+
+        A bad row (missing plantName/plantType/varietyName, an invalid
+        plantType, a duplicate varietyName under its mother, or any other
+        per-row error) is recorded and the loop continues — one bad row
+        never aborts the batch.
 
         Args:
             csv_content: CSV file content as string
             user_id: User ID performing the import
             user_email: Email of user performing the import
+            organization_id: Org scope stamped onto mothers created by this
+                import (mirrors PlantMotherService.create_mother's treatment
+                — from the acting user, never client-supplied)
+            division_id: Division scope, same treatment as organization_id
 
         Returns:
-            Dictionary with created and updated counts
+            Dictionary: {
+                "totalRows": int,
+                "mothersCreated": int,
+                "mothersReused": int,
+                "varietiesCreated": int,
+                "rowsSkipped": [{"row": int, "reason": str}, ...],
+                "rowsFailed": [{"row": int, "error": str}, ...],
+            }
 
         Raises:
-            HTTPException: If CSV parsing or validation fails
+            HTTPException: 422 if every row failed and nothing was created
+                or reused (a completely unusable CSV) — never raised for a
+                partially-bad CSV where at least one row succeeded.
         """
+        from pydantic import ValidationError
+        from fastapi import HTTPException as _HTTPException
+
         from ...models.plant_data_enhanced import (
-            PlantDataEnhancedCreate,
-            PlantDataEnhancedUpdate,
             GrowthCycleDuration,
             TemperatureRange,
             EnvironmentalRequirements,
@@ -637,49 +750,133 @@ class PlantDataEnhancedService:
             LightRequirements,
             EconomicsAndLabor,
             AdditionalInformation,
-            SpacingRequirements,
             LightTypeEnum,
             GrowthHabitEnum,
             SoilTypeEnum,
             WaterTypeEnum,
             ToleranceLevelEnum,
         )
+        from ...models.spacing_standards import SpacingCategory
+        from ...models.plant_mother import PlantMotherCreate, VarietyCreateForMother
+        # Reason: deferred imports to avoid a circular import — this module
+        # is imported by plant_mother_service.py at module load time
+        # (services/plant_data/__init__.py imports plant_data_enhanced_service
+        # before plant_mother_service), so importing them back at this
+        # module's top level would create a load-order cycle.
+        from .plant_mother_repository import PlantMotherRepository
+        from .plant_mother_service import PlantMotherService
 
         # Parse CSV
         csv_file = io.StringIO(csv_content)
         reader = csv.DictReader(csv_file)
 
-        created_count = 0
-        updated_count = 0
-        errors = []
+        total_rows = 0
+        mothers_created = 0
+        mothers_reused = 0
+        varieties_created = 0
+        rows_skipped: List[dict] = []
+        rows_failed: List[dict] = []
 
-        for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
+        # PlantMother, keyed by plantName — avoids a repository round-trip
+        # for every row when multiple rows share the same plantName.
+        mother_cache: dict = {}
+
+        for row_num, row in enumerate(reader, start=2):  # header is row 1
+            total_rows += 1
             try:
-                # Validate required fields
-                if not row.get("plantName"):
-                    errors.append(f"Row {row_num}: plantName is required")
+                plant_name = (row.get("plantName") or "").strip()
+                plant_type = (row.get("plantType") or "").strip()
+                variety_name = (row.get("varietyName") or "").strip()
+
+                if not plant_name:
+                    rows_failed.append(
+                        {"row": row_num, "error": "plantName is required"}
+                    )
+                    continue
+                if not variety_name:
+                    rows_failed.append(
+                        {"row": row_num, "error": "varietyName is required"}
+                    )
+                    continue
+                if not plant_type:
+                    rows_failed.append(
+                        {"row": row_num, "error": "plantType is required"}
+                    )
                     continue
 
-                # Parse farm types
+                # Validate plantType against the mother's allowed vocabulary
+                # by attempting the real model — single source of truth for
+                # the allow-list, no separate list to keep in sync.
+                try:
+                    PlantMotherCreate(plantName=plant_name, plantType=plant_type)
+                except ValidationError as exc:
+                    rows_failed.append(
+                        {
+                            "row": row_num,
+                            "error": f"Invalid plantType '{plant_type}': {exc.errors()[0].get('msg', str(exc))}",
+                        }
+                    )
+                    continue
+
+                # ---- Mother find-or-create (cached within this run) ----
+                if plant_name in mother_cache:
+                    mother = mother_cache[plant_name]
+                    mothers_reused += 1
+                else:
+                    mother = await PlantMotherRepository.get_by_name(plant_name)
+                    if mother:
+                        mothers_reused += 1
+                    else:
+                        mother = await PlantMotherRepository.create(
+                            PlantMotherCreate(
+                                plantName=plant_name,
+                                scientificName=row.get("scientificName") or None,
+                                plantType=plant_type,
+                            ),
+                            created_by=user_id,
+                            created_by_email=user_email,
+                            organization_id=organization_id,
+                            division_id=division_id,
+                        )
+                        mothers_created += 1
+                    mother_cache[plant_name] = mother
+
+                # ---- Parse farm types ----
                 farm_types_str = row.get("farmTypeCompatibility", "")
                 farm_types = []
                 if farm_types_str:
                     for ft in farm_types_str.split(","):
                         ft_clean = ft.strip()
+                        if not ft_clean:
+                            continue
                         try:
                             farm_types.append(FarmTypeEnum(ft_clean))
                         except ValueError:
-                            errors.append(
-                                f"Row {row_num}: Invalid farm type '{ft_clean}'"
+                            logger.warning(
+                                f"[PlantData Enhanced Service] CSV import row "
+                                f"{row_num}: invalid farm type '{ft_clean}', ignoring"
                             )
 
-                # Parse tags
+                # ---- Parse tags ----
                 tags_str = row.get("tags", "")
                 tags = [
                     tag.strip() for tag in tags_str.split(",") if tag.strip()
                 ] or None
 
-                # Parse numeric fields with defaults
+                # ---- Parse spacingCategory (density) ----
+                spacing_category_str = (row.get("spacingCategory") or "").strip()
+                spacing_category = None
+                if spacing_category_str:
+                    try:
+                        spacing_category = SpacingCategory(spacing_category_str)
+                    except ValueError:
+                        logger.warning(
+                            f"[PlantData Enhanced Service] CSV import row "
+                            f"{row_num}: invalid spacingCategory "
+                            f"'{spacing_category_str}', ignoring"
+                        )
+
+                # ---- Parse numeric fields with defaults ----
                 growth_cycle_days = int(row.get("growthCycleDays", 0) or 0)
                 min_temp = float(row.get("minTemperatureCelsius", 15.0) or 15.0)
                 max_temp = float(row.get("maxTemperatureCelsius", 30.0) or 30.0)
@@ -690,27 +887,49 @@ class PlantDataEnhancedService:
                 watering_freq = int(row.get("wateringFrequencyDays", 2) or 2)
                 yield_per_plant = float(row.get("yieldPerPlant", 1.0) or 1.0)
                 yield_unit = row.get("yieldUnit", "kg") or "kg"
+                expected_waste = float(
+                    row.get("expectedWastePercentage", 0) or 0
+                )
 
-                # Build nested structures from CSV flat fields
+                # ---- Build nested structures from CSV flat fields ----
+                if growth_cycle_days > 0:
+                    germination_days = max(int(growth_cycle_days * 0.1), 1)
+                    vegetative_days = max(int(growth_cycle_days * 0.5), 1)
+                    flowering_days = int(growth_cycle_days * 0.2)
+                    fruiting_days = int(growth_cycle_days * 0.15)
+                else:
+                    germination_days = 1
+                    vegetative_days = 1
+                    flowering_days = 0
+                    fruiting_days = 0
+                # Reason: harvestDurationDays absorbs whatever integer-
+                # truncation remainder is left so the five stages always sum
+                # to EXACTLY totalCycleDays. Building each stage as an
+                # independent percentage (like the pre-mother-model flat CSV
+                # import did) rounds short by 1-2 days for most non-round
+                # growthCycleDays values (e.g. 85 -> stages summed to 83).
+                # That mismatch was invisible before this rewrite because the
+                # old import path wrote straight to the repository, bypassing
+                # PlantDataEnhancedService._validate_detail_fields entirely —
+                # variety creation now goes through
+                # PlantMotherService.create_variety_for_mother, which calls
+                # that same validation, so an inexact sum would 422 on nearly
+                # every real-world CSV row.
+                stage_subtotal = (
+                    germination_days + vegetative_days + flowering_days + fruiting_days
+                )
+                harvest_duration_days = max(
+                    max(growth_cycle_days, 1) - stage_subtotal, 0
+                )
+                total_cycle_days = stage_subtotal + harvest_duration_days
+
                 growth_cycle = GrowthCycleDuration(
-                    germinationDays=(
-                        max(int(growth_cycle_days * 0.1), 1)
-                        if growth_cycle_days > 0
-                        else 1
-                    ),
-                    vegetativeDays=(
-                        max(int(growth_cycle_days * 0.5), 1)
-                        if growth_cycle_days > 0
-                        else 1
-                    ),
-                    floweringDays=int(growth_cycle_days * 0.2),
-                    fruitingDays=int(growth_cycle_days * 0.15),
-                    harvestDurationDays=(
-                        max(int(growth_cycle_days * 0.05), 1)
-                        if growth_cycle_days > 0
-                        else 1
-                    ),
-                    totalCycleDays=max(growth_cycle_days, 1),
+                    germinationDays=germination_days,
+                    vegetativeDays=vegetative_days,
+                    floweringDays=flowering_days,
+                    fruitingDays=fruiting_days,
+                    harvestDurationDays=harvest_duration_days,
+                    totalCycleDays=total_cycle_days,
                 )
 
                 environmental_reqs = EnvironmentalRequirements(
@@ -741,92 +960,87 @@ class PlantDataEnhancedService:
                 yield_info = YieldInfo(
                     yieldPerPlant=yield_per_plant,
                     yieldUnit=yield_unit,
-                    expectedWastePercentage=0.0,
+                    expectedWastePercentage=expected_waste,
                 )
 
-                # Check if plant already exists
-                existing = await PlantDataEnhancedRepository.get_by_name(
-                    row["plantName"]
+                variety_create = VarietyCreateForMother(
+                    varietyName=variety_name,
+                    farmTypeCompatibility=(
+                        farm_types if farm_types else [FarmTypeEnum.OPEN_FIELD]
+                    ),
+                    growthCycle=growth_cycle,
+                    yieldInfo=yield_info,
+                    environmentalRequirements=environmental_reqs,
+                    wateringRequirements=watering_reqs,
+                    soilRequirements=soil_reqs,
+                    diseasesAndPests=[],
+                    lightRequirements=LightRequirements(
+                        lightType=LightTypeEnum.FULL_SUN,
+                        minHoursDaily=6.0,
+                        maxHoursDaily=12.0,
+                        optimalHoursDaily=8.0,
+                    ),
+                    gradingStandards=[],
+                    economicsAndLabor=EconomicsAndLabor(
+                        totalManHoursPerPlant=1.0,
+                    ),
+                    additionalInfo=AdditionalInformation(
+                        growthHabit=GrowthHabitEnum.BUSH,
+                        notes=row.get("notes") or None,
+                    ),
+                    spacingCategory=spacing_category,
+                    tags=tags,
                 )
 
-                if existing:
-                    # Update existing plant with CSV fields only
-                    update_data = PlantDataEnhancedUpdate(
-                        scientificName=row.get("scientificName") or None,
-                        farmTypeCompatibility=farm_types if farm_types else None,
-                        growthCycle=growth_cycle,
-                        environmentalRequirements=environmental_reqs,
-                        soilRequirements=soil_reqs,
-                        wateringRequirements=watering_reqs,
-                        yieldInfo=yield_info,
-                        tags=tags,
+                try:
+                    await PlantMotherService.create_variety_for_mother(
+                        mother.plantMotherId, variety_create, user_id, user_email
                     )
-
-                    await PlantDataEnhancedRepository.update(
-                        existing.plantDataId, update_data, increment_version=True
-                    )
-                    updated_count += 1
-                else:
-                    # Create new plant with required defaults for non-CSV fields
-                    plant_data = PlantDataEnhancedCreate(
-                        plantName=row["plantName"],
-                        scientificName=row.get("scientificName") or None,
-                        farmTypeCompatibility=(
-                            farm_types if farm_types else [FarmTypeEnum.OPEN_FIELD]
-                        ),
-                        growthCycle=growth_cycle,
-                        yieldInfo=yield_info,
-                        environmentalRequirements=environmental_reqs,
-                        wateringRequirements=watering_reqs,
-                        soilRequirements=soil_reqs,
-                        diseasesAndPests=[],
-                        lightRequirements=LightRequirements(
-                            lightType=LightTypeEnum.FULL_SUN,
-                            minHoursDaily=6.0,
-                            maxHoursDaily=12.0,
-                            optimalHoursDaily=8.0,
-                        ),
-                        gradingStandards=[],
-                        economicsAndLabor=EconomicsAndLabor(
-                            totalManHoursPerPlant=1.0,
-                        ),
-                        additionalInfo=AdditionalInformation(
-                            growthHabit=GrowthHabitEnum.BUSH,
-                            spacing=SpacingRequirements(
-                                betweenPlantsCm=30.0,
-                                betweenRowsCm=60.0,
-                            ),
-                        ),
-                        tags=tags,
-                    )
-
-                    await PlantDataEnhancedRepository.create(
-                        plant_data, user_id, user_email
-                    )
-                    created_count += 1
+                    varieties_created += 1
+                except _HTTPException as exc:
+                    if exc.status_code == status.HTTP_409_CONFLICT:
+                        rows_skipped.append(
+                            {"row": row_num, "reason": str(exc.detail)}
+                        )
+                    else:
+                        rows_failed.append(
+                            {"row": row_num, "error": str(exc.detail)}
+                        )
 
             except ValueError as e:
-                errors.append(f"Row {row_num}: Invalid numeric value - {str(e)}")
+                rows_failed.append(
+                    {"row": row_num, "error": f"Invalid numeric value - {str(e)}"}
+                )
+            except _HTTPException as e:
+                rows_failed.append({"row": row_num, "error": str(e.detail)})
             except Exception as e:
-                errors.append(f"Row {row_num}: {str(e)}")
+                rows_failed.append({"row": row_num, "error": str(e)})
 
-        # If all rows failed, raise error
-        if created_count == 0 and updated_count == 0 and errors:
+        # Raise only when the CSV was completely unusable — nothing created,
+        # nothing reused-and-skipped, only failures. A partially-bad CSV
+        # (at least one variety created) never raises.
+        if total_rows > 0 and varieties_created == 0 and not rows_skipped and rows_failed:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail={
-                    "message": "CSV import failed",
-                    "errors": errors[:10],  # Limit to first 10 errors
+                    "message": "CSV import failed — no varieties created",
+                    "rowsFailed": rows_failed[:10],  # Limit to first 10 errors
                 },
             )
 
         logger.info(
             f"[PlantData Enhanced Service] CSV import completed: "
-            f"{created_count} created, {updated_count} updated"
+            f"{mothers_created} mother(s) created, {mothers_reused} reused, "
+            f"{varieties_created} variet{'y' if varieties_created == 1 else 'ies'} "
+            f"created, {len(rows_skipped)} skipped, {len(rows_failed)} failed "
+            f"(of {total_rows} rows)"
         )
 
         return {
-            "created": created_count,
-            "updated": updated_count,
-            "errors": errors if errors else None,
+            "totalRows": total_rows,
+            "mothersCreated": mothers_created,
+            "mothersReused": mothers_reused,
+            "varietiesCreated": varieties_created,
+            "rowsSkipped": rows_skipped,
+            "rowsFailed": rows_failed,
         }

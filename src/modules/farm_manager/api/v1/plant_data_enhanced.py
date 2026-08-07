@@ -330,23 +330,30 @@ async def download_csv_template(
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
     """
-    Download CSV template for enhanced plant data import (basic fields only).
+    Download CSV template for the Plant Library mother/variety import.
 
-    Returns a CSV file with:
-    - All basic column headers (plantName, scientificName, farmType, etc.)
-    - One example row with sample data
+    Each ROW in the CSV is a VARIETY. Rows sharing the same `plantName`
+    collapse onto one find-or-created MOTHER (product) — see the two
+    example rows below, both `plantName` "Tomato" with different
+    `varietyName` values ("Roma" / "Cherry").
 
-    **Note**: The CSV template only supports basic fields. For comprehensive data
-    including fertilizer schedules, pest management, and grading standards,
-    use the JSON API endpoints directly.
+    **Note**: The CSV template only supports basic + detail fields. For
+    comprehensive data including fertilizer schedules, pest management, and
+    grading standards, use the JSON API endpoints directly
+    (`POST /plant-mothers/{id}/varieties`).
 
-    **Basic Fields in CSV**:
-    - plantName, scientificName, farmTypeCompatibility
-    - growthCycleDays
+    **Fields in CSV**:
+    - plantName, scientificName, plantType — identify/create the MOTHER
+      (product). plantType must be one of: crop, tree, herb, fruit,
+      vegetable, ornamental, medicinal.
+    - varietyName — required; unique within its mother.
+    - farmTypeCompatibility, growthCycleDays
     - minTemperatureCelsius, maxTemperatureCelsius, optimalTemperatureCelsius
     - minPH, maxPH, optimalPH
     - wateringFrequencyDays
-    - yieldPerPlant, yieldUnit
+    - yieldPerPlant, yieldUnit, expectedWastePercentage
+    - spacingCategory (xs, s, m, l, xl, bush, large_bush, small_tree,
+      medium_tree, large_tree) — planting density
     - tags, notes
     """
     template = PlantDataEnhancedService.generate_csv_template()
@@ -414,19 +421,34 @@ async def import_plant_data_csv(
     current_user: CurrentUser = Depends(require_permission("agronomist")),
 ):
     """
-    Import plant data from CSV file.
+    Import Plant Library data from CSV — mother/variety model.
 
     Requires **agronomist** permission.
 
     **CSV Format**:
     - Use the template from `/template/csv` endpoint
-    - Required columns: plantName, growthCycleDays
-    - Optional columns: scientificName, farmTypeCompatibility, temperature ranges, pH ranges, etc.
+    - Each ROW is a VARIETY. Rows sharing the same `plantName` collapse
+      onto one find-or-created MOTHER (product) — a mother is looked up by
+      `plantName` and reused if it already exists, or created otherwise.
+      `plantType`/`scientificName` are only used when the mother doesn't
+      exist yet; if the mother is reused, the row's `plantType`/
+      `scientificName` are ignored (the existing mother already defines
+      them — rename the mother via `PATCH /plant-mothers/{id}` instead).
+    - Required columns: plantName, plantType, varietyName
+    - `plantType` must be one of: crop, tree, herb, fruit, vegetable,
+      ornamental, medicinal
+    - Optional columns: scientificName, farmTypeCompatibility, temperature
+      ranges, pH ranges, wateringFrequencyDays, yieldPerPlant, yieldUnit,
+      expectedWastePercentage, spacingCategory, tags, notes
 
     **Behavior**:
-    - If a plant with the same name already exists, it will be **updated**
-    - If a plant doesn't exist, it will be **created**
-    - Invalid rows are skipped and reported in the response
+    - A row missing `plantName`/`plantType`/`varietyName`, with an invalid
+      `plantType`, or whose `varietyName` already exists under its mother
+      (duplicate) is recorded and skipped — it never aborts the batch; a
+      later valid row in the same file still imports.
+    - Variety creation reuses the same validation as
+      `POST /plant-mothers/{id}/varieties` (growth-cycle stage totals,
+      temperature/humidity/pH range checks).
 
     **Farm Type Compatibility**:
     - Comma-separated values: `open_field,greenhouse,hydroponic`
@@ -436,26 +458,42 @@ async def import_plant_data_csv(
     - Comma-separated values: `vegetable,summer,high-value`
 
     **Returns**:
-    - `created`: Number of new plants created
-    - `updated`: Number of existing plants updated
-    - `errors`: List of error messages (if any rows failed)
+    - `totalRows`: Number of data rows read from the CSV
+    - `mothersCreated`: Number of new mother (product) records created
+    - `mothersReused`: Number of rows whose mother already existed (or was
+      created earlier in this same import) and was reused
+    - `varietiesCreated`: Number of new varieties created
+    - `rowsSkipped`: Rows skipped as duplicates — `[{"row": int, "reason": str}]`
+    - `rowsFailed`: Rows that failed validation/creation — `[{"row": int, "error": str}]`
 
-    **Note**: CSV import only supports basic fields. For comprehensive data
-    including fertilizer schedules, pest management, and grading standards,
-    use the JSON API endpoints directly.
+    **Note**: CSV import only supports basic + detail fields. For
+    comprehensive data including fertilizer schedules, pest management, and
+    grading standards, use the JSON API endpoints directly.
     """
     # Read CSV file content
     csv_content = await file.read()
     csv_string = csv_content.decode("utf-8")
 
-    # Import CSV
+    # Import CSV — org/division scope stamped from the acting user, mirroring
+    # PlantMotherService.create_mother's treatment of these fields (never
+    # client-supplied). CurrentUser carries no divisionId attribute today
+    # (getattr default None), kept future-proof for when it does.
     result = await PlantDataEnhancedService.import_from_csv(
-        csv_string, UUID(current_user.userId), current_user.email
+        csv_string,
+        UUID(current_user.userId),
+        current_user.email,
+        organization_id=current_user.organizationId,
+        division_id=getattr(current_user, "divisionId", None),
     )
 
     return SuccessResponse(
         data=result,
-        message=f"CSV import completed: {result['created']} created, {result['updated']} updated",
+        message=(
+            f"CSV import completed: {result['mothersCreated']} mother(s) created, "
+            f"{result['mothersReused']} reused, {result['varietiesCreated']} "
+            f"variet{'y' if result['varietiesCreated'] == 1 else 'ies'} created "
+            f"({len(result['rowsSkipped'])} skipped, {len(result['rowsFailed'])} failed)"
+        ),
     )
 
 

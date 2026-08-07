@@ -7,6 +7,7 @@ from .farms import router as farms_router
 from .blocks import router as blocks_router
 from .plant_data import router as plant_data_router
 from .plant_data_enhanced import router as plant_data_enhanced_router
+from .plant_mothers import router as plant_mothers_router
 from .plantings import router as plantings_router
 from .managers import router as managers_router
 from .block_harvests import (
@@ -65,6 +66,9 @@ api_router.include_router(plant_data_router, tags=["plant-data"])  # Plant data 
 api_router.include_router(
     plant_data_enhanced_router, tags=["plant-data-enhanced"]
 )  # Plant data (enhanced schema)
+api_router.include_router(
+    plant_mothers_router, tags=["plant-mothers"]
+)  # Plant Library Phase 2: mother plants (products) + variety-under-mother creation
 api_router.include_router(plantings_router, tags=["plantings"])  # Planting management
 api_router.include_router(
     managers_router, tags=["managers"]
