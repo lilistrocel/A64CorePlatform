@@ -157,6 +157,206 @@
 
 ---
 
+### T-917 | Plant Library CSV template/import — required-fields-first, minimal-CSV import, variety-modal parity
+- **Category:** Backend · **Priority:** P2
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-07
+- **Depends on:** T-915 🔵 (the mother/variety CSV rework this refines —
+  same two methods, no shape changes to its result dict)
+- **Blocks:** —
+- **Description:** T-915's CSV template/import worked but didn't make clear
+  which columns are actually required, buried them mid-list, and hard-failed
+  a row for a blank `plantType` even though the model defaults it to
+  `'crop'`. Reworked in two passes within this same ticket (second pass was
+  a coordinator-relayed set of final user decisions superseding the first
+  pass's `growthCycleDays` design):
+  1. First pass: 4 required columns (plantName/scientificName/varietyName/
+     yieldPerPlant), single optional `growthCycleDays` column with a
+     percentage-split-into-stages placeholder. Hit a real conflict:
+     `GrowthCycleDuration.totalCycleDays` is `Field(..., gt=0)`, so a
+     literal "blank -> 0" default (as first specified) would 422 every
+     minimal-CSV row — worked around with a `totalCycleDays=1` placeholder,
+     flagged for sign-off.
+  2. **Final pass (supersedes the placeholder above):** the single
+     `growthCycleDays` column was replaced with the 5 individual
+     growth-cycle PHASE columns, all hard-required, with `totalCycleDays`
+     computed as their sum (mirrors the variety modal, where the total is
+     read-only/derived) — this removes the `totalCycleDays=1` hack
+     entirely; a real phase breakdown always sums to a valid total. The
+     optional-column set was also expanded to full parity with the variety
+     modal (humidity, light hours, water amount, economics).
+  Final result: `generate_csv_template()` and `import_from_csv()` (both in
+  `PlantDataEnhancedService`, same single file throughout both passes) — 9
+  columns are truly required and marked `*` first in the template; every
+  other column is optional with a documented safe default or is left
+  entirely unset; a CSV containing ONLY the 9 required columns imports
+  successfully as a "skeleton" variety. Import must NOT break for any
+  existing CSV — verified via the full pre-existing test suite (still
+  green) plus new coverage below.
+- **Fix (`src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`
+  — the only file changed across both passes):**
+  - **9 hard-required columns, first in the template, marked with `*`, in
+    this order:** `plantName*`, `scientificName*`, `varietyName*`,
+    `yieldPerPlant*` (>0), `germinationDays*`, `vegetativeDays*`,
+    `floweringDays*`, `fruitingDays*`, `harvestDurationDays*`. Each phase
+    cell must be PRESENT (blank → row fails, e.g. "floweringDays is
+    required") but `0` is a legal value for any individual phase (leafy
+    greens: flowering=0, fruiting=0). The 5 phases are summed into
+    `totalCycleDays`; if that sum is `0`, the row fails with "growth cycle
+    total must be greater than 0" (satisfies the model's `gt=0` — no
+    placeholder needed since a real breakdown is now mandatory).
+    `scientificName` is enforced at import even though the underlying
+    model (`PlantMotherBase.scientificName`) allows null — a deliberate
+    import-time tightening, not a model change.
+  - **Full final column order** (9 required, then optional):
+    `plantName*, scientificName*, varietyName*, yieldPerPlant*,
+    germinationDays*, vegetativeDays*, floweringDays*, fruitingDays*,
+    harvestDurationDays*, plantType, farmTypeCompatibility, yieldUnit,
+    expectedWastePercentage, seedsPerPlantingPoint, spacingCategory,
+    minTemperatureCelsius, maxTemperatureCelsius, optimalTemperatureCelsius,
+    humidityMin, humidityMax, humidityOptimal, minPH, maxPH, optimalPH,
+    wateringFrequencyDays, waterAmountPerPlantLiters, dailyLightHoursMin,
+    dailyLightHoursMax, dailyLightHoursOptimal, averageMarketValuePerKg,
+    currency, tags, notes`. (`growthCycleDays` from the first pass no
+    longer exists as a column — superseded by the 5 phase columns above; a
+    stray legacy `growthCycleDays` header on an old CSV is now simply
+    ignored, not read.) The grouping/order for the newly added optional
+    columns (seedsPerPlantingPoint, humidity*, waterAmountPerPlantLiters,
+    dailyLightHours*, averageMarketValuePerKg, currency) was my own
+    judgment call — the coordinator specified the set but not their exact
+    position among the pre-existing optional columns; I grouped each new
+    field next to its related existing field (e.g. `seedsPerPlantingPoint`
+    beside the other yieldInfo fields, `humidityMin/Max/Optimal` beside
+    the temperature fields).
+  - **Third pass — `waterAmountUnit` data-integrity fix (coordinator
+    catch, not a user-facing bug yet since not deployed):** the water
+    group originally shipped as two columns, `waterAmountPerPlant` +
+    `waterAmountUnit`, but `WateringRequirements.amountPerPlantLiters` is
+    fixed to liters with no unit field on the model — `waterAmountUnit`
+    was parsed and silently discarded, so a CSV entering `amount=500
+    unit="ml"` would have stored `500` LITERS, a 500,000x error with no
+    warning. Fixed by removing `waterAmountUnit` entirely (column, header
+    map, import parsing, example rows) and renaming the amount column
+    itself to `waterAmountPerPlantLiters` so the unit is unambiguous in
+    the header. `_CSV_HEADER_CANONICAL_MAP` maps BOTH
+    `"wateramountperplantliters"` (current) and `"wateramountperplant"`
+    (the old pre-fix spelling) to the same canonical
+    `"waterAmountPerPlantLiters"`, so an existing CSV built against the
+    column order shipped earlier in this same ticket still imports
+    without modification — verified by a dedicated test using the old
+    header spelling alone.
+  - **`plantType` optional** — blank defaults to `'crop'` (only used when
+    CREATING a new mother; ignored when the mother already exists). A
+    non-blank value is still validated against the mother's Literal
+    vocabulary via the existing `PlantMotherCreate` attempt/catch.
+  - **Nested-Optional-group build rule** (`environmentalRequirements` incl.
+    nested `humidity`, `soilRequirements`, `wateringRequirements`,
+    `lightRequirements`, `economicsAndLabor`): each group is built ONLY
+    when at least one of its own CSV cells is filled; when built, any of
+    that group's own required sub-fields left blank get a sensible
+    default so the Pydantic model's constraints are satisfied — never
+    fabricated when the whole group is untouched.
+    - `environmentalRequirements`: `TemperatureRange` is required inside
+      it, so this group is gated on the 3 temperature columns, NOT on
+      humidity alone — humidity-only cells with no temperature cells are
+      silently not enough to build the group (matches the coordinator's
+      explicit rule). When built, `humidity` (`HumidityRange`) is nested
+      inside it only if at least one `humidityMin/Max/Optimal` cell is
+      filled (defaults 40/80/60 for any missing member).
+    - `lightRequirements`: `lightType` is required but there is no
+      `lightType` CSV column — defaulted to `LightTypeEnum.FULL_SUN`
+      whenever any `dailyLightHours*` cell is provided (defaults 6/12/8
+      for any missing hour). Otherwise stays `None` (previously always
+      built with hardcoded defaults — this is a deliberate behavior
+      change per the coordinator's explicit rule).
+    - `wateringRequirements`: built if `wateringFrequencyDays` OR
+      `waterAmountPerPlantLiters` is provided; `frequencyDays` (required,
+      `gt=0`) defaults to `2` if only the water-amount cell was given. See
+      the third-pass note above — the column is now unambiguously in
+      liters (no separate unit field exists on the model, so the header
+      name carries the unit instead of a discarded column).
+    - `economicsAndLabor`: built if `averageMarketValuePerKg` OR
+      `currency` is provided; required `totalManHoursPerPlant` defaults to
+      `1.0` (unchanged from T-915/first pass).
+    - `seedsPerPlantingPoint` (plain int on `yieldInfo`, not a nested
+      group) defaults to `1` when blank, per the model's own default.
+    - Unaffected/unchanged from the first pass: `farmTypeCompatibility` →
+      `['open_field']`, `yieldUnit` → `'kg'`, `expectedWastePercentage` →
+      `0`, `spacingCategory` → left unset when blank.
+  - **Header normalization (`_normalize_csv_header`,
+    `_CSV_HEADER_CANONICAL_MAP`, unchanged mechanism from the first pass,
+    map extended with all new header names):** every header from
+    `csv.DictReader` is stripped of surrounding whitespace and a trailing
+    `*`, lowercased, and matched against a canonical-name lookup before
+    any `row.get(...)` call runs. Built once from `reader.fieldnames`,
+    applied per-row via a dict remap. This makes import STRICTLY more
+    tolerant, never less — both the marked template (`plantName*`) and a
+    plain CSV (`plantName`, any case) import identically.
+  - **`generate_csv_template()`** — new column order above; both example
+    rows (`plantName` "Tomato", `plantType` "vegetable", `varietyName`
+    "Roma"/"Cherry") kept fully filled across every column (including all
+    the new optional ones) so the template still documents the full
+    format.
+  - **Result dict shape, mother find-or-create, variety-under-mother
+    delegation to `PlantMotherService.create_variety_for_mother`,
+    duplicate-skip semantics, and the "only raise 422 when the whole batch
+    is unusable" rule are all unchanged from T-915.**
+- **Tests:** `tests/unit/test_farm_manager/test_plant_library_csv_import.py`
+  — extended in place across all three passes (same fake-Motor-collection
+  style, no live DB), **15 passed** in this file: the 5 original T-915
+  cases (still pass, header assertions updated for the final column
+  order/markers); minimal CSV with only the 9 marked required columns
+  imports (mother+variety created, `totalCycleDays` == sum of the 5 phase
+  values supplied, `farmTypeCompatibility=['open_field']`,
+  `yieldUnit='kg'`, `plantType='crop'`, `seedsPerPlantingPoint=1`
+  default, all nested-optional groups `None`); the same minimal CSV with
+  plain unmarked headers imports identically; blank `scientificName`/
+  blank `yieldPerPlant`/`yieldPerPlant<=0`/non-numeric `yieldPerPlant`
+  each fail their row with a field-named message, valid rows still
+  import; blank `plantType` → mother created as `'crop'`; invalid
+  non-blank `plantType` still fails; a blank individual phase column
+  fails with a field-named message; all-5-phases-zero fails with "greater
+  than 0"; `0` accepted as one individual phase's value when the total is
+  still positive; a fully-filled CSV (every optional column) builds
+  `humidity` nested in `environmentalRequirements`, `lightRequirements`
+  (defaulted `lightType`), `wateringRequirements.amountPerPlantLiters`,
+  `economicsAndLabor`, and a non-default `seedsPerPlantingPoint`; a CSV
+  using the OLD `waterAmountPerPlant` header spelling (pre-third-pass)
+  alone still imports and still lands in `amountPerPlantLiters`, proving
+  the tolerant dual-mapping. Run locally (miniconda `python3 -m pytest`,
+  no Docker needed): **15 passed** in this file. Full
+  `tests/unit/test_farm_manager/` suite re-run for regressions: **62
+  passed** (47 pre-T-915 + 15 in this file), 0 failed.
+- **Deploy note:** `docker restart <prefix>-api-1` required before this is
+  live anywhere — the api container has no `--reload`, and only
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`
+  changed. Not restarted/verified live by this ticket (no deployment
+  target confirmed in this session).
+- **CodeMaps:** not regenerated — no new/removed endpoints, services, or
+  collections; changed logic inside two already-mapped functions
+  (`generate_csv_template`, `import_from_csv`) plus two new private
+  helpers (`_normalize_csv_header`, `_CSV_HEADER_CANONICAL_MAP`) on the
+  same already-mapped service class.
+- **Frontend NOT touched** (out of scope, single-file instruction) —
+  flagging for the parent session: a short "* = required" help note next
+  to the CSV import control in `PlantDataLibrary.tsx` would make the new
+  template markers self-explanatory in the UI; T-915's flagged frontend
+  gap (`CSVImportResult` interface / import-result display still assuming
+  the old `{created, updated, errors}` shape) is still outstanding and
+  unrelated to this ticket.
+- **Files changed:**
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`,
+  `tests/unit/test_farm_manager/test_plant_library_csv_import.py`.
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  restart the api container, verify live (download the template, import a
+  minimal CSV and a fully-filled CSV, mongosh-check the resulting
+  `plant_mothers`/`plant_data_enhanced` docs), consider the frontend
+  "* = required" note, and commit. No git command was run in this ticket.
+  (The `waterAmountUnit` data-integrity gap flagged after the second pass
+  is now resolved — see the third-pass note above — nothing outstanding
+  on that point.)
+
+---
+
 ### T-916 | Plant Library — "Duplicate variety" action (clone into a new variety under the same mother)
 - **Category:** Frontend · **Priority:** P2
 - **Assigned:** frontend-dev-expert · **Started:** 2026-08-07

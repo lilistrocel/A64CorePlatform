@@ -670,7 +670,11 @@ export function PlantDataLibrary() {
           <Subtitle>Comprehensive agronomic knowledge base — organized by product</Subtitle>
         </HeaderLeft>
         <HeaderActions>
-          <Button $variant="secondary" onClick={handleDownloadTemplate}>
+          <Button
+            $variant="secondary"
+            onClick={handleDownloadTemplate}
+            title="Each row is one variety under a plant (mother). Columns marked * are required; the rest are optional and get sensible defaults."
+          >
             <Download size={15} strokeWidth={1.8} /> Download CSV Template
           </Button>
           {hasAgronomistPermission && (

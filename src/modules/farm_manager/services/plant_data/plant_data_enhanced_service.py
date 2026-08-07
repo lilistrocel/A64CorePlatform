@@ -25,6 +25,79 @@ logger = logging.getLogger(__name__)
 class PlantDataEnhancedService:
     """Service for enhanced PlantData business logic"""
 
+    # CSV header -> canonical field name, keyed by the header's normalized
+    # form (trailing "*" required-marker and surrounding whitespace
+    # stripped, lowercased). Lets import_from_csv accept BOTH the marked
+    # template generate_csv_template() emits ("plantName*") AND a plain
+    # unmarked CSV ("plantName") — the "*" is a display-only convention,
+    # never enforced by exact string match. See _normalize_csv_header.
+    _CSV_HEADER_CANONICAL_MAP = {
+        "plantname": "plantName",
+        "scientificname": "scientificName",
+        "varietyname": "varietyName",
+        "yieldperplant": "yieldPerPlant",
+        "germinationdays": "germinationDays",
+        "vegetativedays": "vegetativeDays",
+        "floweringdays": "floweringDays",
+        "fruitingdays": "fruitingDays",
+        "harvestdurationdays": "harvestDurationDays",
+        "planttype": "plantType",
+        "farmtypecompatibility": "farmTypeCompatibility",
+        "yieldunit": "yieldUnit",
+        "expectedwastepercentage": "expectedWastePercentage",
+        "seedsperplantingpoint": "seedsPerPlantingPoint",
+        "spacingcategory": "spacingCategory",
+        "mintemperaturecelsius": "minTemperatureCelsius",
+        "maxtemperaturecelsius": "maxTemperatureCelsius",
+        "optimaltemperaturecelsius": "optimalTemperatureCelsius",
+        "humiditymin": "humidityMin",
+        "humiditymax": "humidityMax",
+        "humidityoptimal": "humidityOptimal",
+        "minph": "minPH",
+        "maxph": "maxPH",
+        "optimalph": "optimalPH",
+        "wateringfrequencydays": "wateringFrequencyDays",
+        # Tolerate both the current header ("waterAmountPerPlantLiters")
+        # and the pre-cleanup one ("waterAmountPerPlant") — the unit is
+        # now explicit in the header name itself (always liters; there is
+        # no separate unit field on WateringRequirements), but an older
+        # CSV using the old header must still import.
+        "wateramountperplantliters": "waterAmountPerPlantLiters",
+        "wateramountperplant": "waterAmountPerPlantLiters",
+        "dailylighthoursmin": "dailyLightHoursMin",
+        "dailylighthoursmax": "dailyLightHoursMax",
+        "dailylighthoursoptimal": "dailyLightHoursOptimal",
+        "averagemarketvalueperkg": "averageMarketValuePerKg",
+        "currency": "currency",
+        "tags": "tags",
+        "notes": "notes",
+    }
+
+    @staticmethod
+    def _normalize_csv_header(header: str) -> str:
+        """
+        Normalize a raw CSV header cell to its canonical field name.
+
+        Strips surrounding whitespace and a trailing "*" (the
+        display-only "required" marker generate_csv_template() puts on
+        plantName/scientificName/varietyName/yieldPerPlant), then matches
+        case-insensitively against _CSV_HEADER_CANONICAL_MAP. An unknown
+        header passes through unchanged (minus marker/whitespace) rather
+        than being dropped, so extra/future columns are never silently
+        lost — this makes import strictly MORE tolerant, never less.
+
+        Args:
+            header: Raw header cell as parsed by csv.DictReader.
+
+        Returns:
+            Canonical field name (e.g. "plantName") matching what the
+            rest of import_from_csv looks up via row.get(...).
+        """
+        cleaned = header.strip().rstrip("*").strip()
+        return PlantDataEnhancedService._CSV_HEADER_CANONICAL_MAP.get(
+            cleaned.lower(), cleaned
+        )
+
     @staticmethod
     def _validate_detail_fields(plant_data: PlantDataEnhancedCreate) -> None:
         """
@@ -455,6 +528,18 @@ class PlantDataEnhancedService:
         plantName "Tomato" with different varietyName values ("Roma" /
         "Cherry") to demonstrate this collapsing behavior.
 
+        Column order: 9 hard-required columns come FIRST — plantName,
+        scientificName, varietyName, yieldPerPlant, and the 5 growth-cycle
+        phase columns (germinationDays, vegetativeDays, floweringDays,
+        fruitingDays, harvestDurationDays) — each header suffixed with "*"
+        as a display-only "required" marker; import_from_csv strips it, so
+        it is never matched literally. totalCycleDays is NOT a column — it
+        is computed as the sum of the 5 phase columns on import (mirrors
+        the variety modal, where the total is read-only/derived). Every
+        column after that is optional. A CSV containing ONLY the 9
+        required columns still imports — see import_from_csv's per-field
+        defaults.
+
         Returns:
             CSV template as string
 
@@ -467,25 +552,39 @@ class PlantDataEnhancedService:
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Write headers
+        # Write headers — 9 required (marked "*") first, then optional.
         headers = [
-            "plantName",
-            "scientificName",
+            "plantName*",
+            "scientificName*",
+            "varietyName*",
+            "yieldPerPlant*",
+            "germinationDays*",
+            "vegetativeDays*",
+            "floweringDays*",
+            "fruitingDays*",
+            "harvestDurationDays*",
             "plantType",
-            "varietyName",
             "farmTypeCompatibility",
-            "growthCycleDays",
+            "yieldUnit",
+            "expectedWastePercentage",
+            "seedsPerPlantingPoint",
+            "spacingCategory",
             "minTemperatureCelsius",
             "maxTemperatureCelsius",
             "optimalTemperatureCelsius",
+            "humidityMin",
+            "humidityMax",
+            "humidityOptimal",
             "minPH",
             "maxPH",
             "optimalPH",
             "wateringFrequencyDays",
-            "yieldPerPlant",
-            "yieldUnit",
-            "expectedWastePercentage",
-            "spacingCategory",
+            "waterAmountPerPlantLiters",
+            "dailyLightHoursMin",
+            "dailyLightHoursMax",
+            "dailyLightHoursOptimal",
+            "averageMarketValuePerKg",
+            "currency",
             "tags",
             "notes",
         ]
@@ -493,24 +592,40 @@ class PlantDataEnhancedService:
 
         # Write example rows — same plantName ("Tomato"), different
         # varietyName, to demonstrate multi-row-collapses-to-one-mother.
+        # Fully filled out (even the optional columns) so the example also
+        # documents the format, per column order above.
         example_roma = [
             "Tomato",
             "Solanum lycopersicum",
-            "vegetable",
             "Roma",
+            "5.0",
+            "10",  # germinationDays
+            "50",  # vegetativeDays
+            "20",  # floweringDays
+            "15",  # fruitingDays
+            "5",  # harvestDurationDays -> totalCycleDays = 100
+            "vegetable",
             "open_field,greenhouse,hydroponic",
-            "100",
+            "kg",
+            "10",
+            "1",
+            "l",
             "15.0",
             "30.0",
             "24.0",
+            "50",
+            "80",
+            "65",
             "6.0",
             "6.8",
             "6.5",
             "2",
-            "5.0",
-            "kg",
-            "10",
-            "l",
+            "0.5",
+            "6",
+            "12",
+            "8",
+            "3.5",
+            "USD",
             "vegetable,fruit,summer",
             "Roma tomatoes — great for sauces and paste. Requires staking.",
         ]
@@ -519,21 +634,35 @@ class PlantDataEnhancedService:
         example_cherry = [
             "Tomato",
             "Solanum lycopersicum",
-            "vegetable",
             "Cherry",
+            "2.0",
+            "8",  # germinationDays
+            "45",  # vegetativeDays
+            "18",  # floweringDays
+            "10",  # fruitingDays
+            "4",  # harvestDurationDays -> totalCycleDays = 85
+            "vegetable",
             "open_field,greenhouse,hydroponic",
-            "85",
+            "kg",
+            "8",
+            "1",
+            "s",
             "16.0",
             "29.0",
             "23.0",
+            "55",
+            "85",
+            "70",
             "6.0",
             "6.8",
             "6.5",
             "2",
-            "2.0",
-            "kg",
+            "0.3",
+            "6",
+            "12",
             "8",
-            "s",
+            "4.0",
+            "USD",
             "vegetable,fruit,summer",
             "Cherry tomatoes — sweet, high-yield, great for snacking.",
         ]
@@ -707,10 +836,30 @@ class PlantDataEnhancedService:
         Library Phase 2) — this method does NOT duplicate its 404/409
         validation, basic-info inheritance, or detail-field validation.
 
-        A bad row (missing plantName/plantType/varietyName, an invalid
-        plantType, a duplicate varietyName under its mother, or any other
-        per-row error) is recorded and the loop continues — one bad row
-        never aborts the batch.
+        9 columns are hard-required per row: plantName, scientificName,
+        varietyName, yieldPerPlant (> 0), and the 5 growth-cycle phase
+        columns (germinationDays, vegetativeDays, floweringDays,
+        fruitingDays, harvestDurationDays — each cell must be present, 0 is
+        a legal value for any individual phase, but the 5 must sum to > 0).
+        totalCycleDays is never read from a column — it is always computed
+        as the sum of the 5 phases, mirroring the variety modal (where the
+        total is read-only/derived). A blank/invalid required value, an
+        invalid (non-blank) plantType, a duplicate varietyName under its
+        mother, or any other per-row error is recorded and the loop
+        continues — one bad row never aborts the batch. Every other column
+        is optional and gets a safe default when blank (plantType ->
+        'crop', farmTypeCompatibility -> ['open_field'], yieldUnit -> 'kg',
+        expectedWastePercentage -> 0, seedsPerPlantingPoint -> 1); the
+        nested Optional groups (environmentalRequirements/humidity within
+        it/soilRequirements/wateringRequirements/lightRequirements/
+        economicsAndLabor) are left unset entirely unless at least one of
+        their own cells is provided, in which case any of that group's own
+        required sub-fields without a column get a sensible default. A CSV
+        with only the 9 required columns still imports successfully as a
+        skeleton the user completes later via the UI. CSV headers are
+        matched case-insensitively with a trailing "*" stripped (see
+        _normalize_csv_header), so both the marked template ("plantName*")
+        and a plain CSV ("plantName") import identically.
 
         Args:
             csv_content: CSV file content as string
@@ -742,6 +891,7 @@ class PlantDataEnhancedService:
         from ...models.plant_data_enhanced import (
             GrowthCycleDuration,
             TemperatureRange,
+            HumidityRange,
             EnvironmentalRequirements,
             PHRequirements,
             SoilRequirements,
@@ -770,6 +920,15 @@ class PlantDataEnhancedService:
         csv_file = io.StringIO(csv_content)
         reader = csv.DictReader(csv_file)
 
+        # Normalize headers so a marked template ("plantName*") and a
+        # plain unmarked CSV ("plantName") both import identically — see
+        # _normalize_csv_header. Built once from the header row; applied
+        # to every row dict below.
+        header_map = {
+            raw: PlantDataEnhancedService._normalize_csv_header(raw)
+            for raw in (reader.fieldnames or [])
+        }
+
         total_rows = 0
         mothers_created = 0
         mothers_reused = 0
@@ -781,16 +940,28 @@ class PlantDataEnhancedService:
         # for every row when multiple rows share the same plantName.
         mother_cache: dict = {}
 
-        for row_num, row in enumerate(reader, start=2):  # header is row 1
+        for row_num, raw_row in enumerate(reader, start=2):  # header is row 1
             total_rows += 1
+            # Remap this row's keys through the header normalizer so the
+            # rest of this method's row.get("plantName") etc. calls work
+            # unchanged regardless of whether the CSV used the marked
+            # template headers or plain ones.
+            row = {header_map.get(k, k): v for k, v in raw_row.items()}
             try:
+                # ---- 9 hard-required fields (blank -> row fails, batch continues) ----
                 plant_name = (row.get("plantName") or "").strip()
-                plant_type = (row.get("plantType") or "").strip()
+                scientific_name = (row.get("scientificName") or "").strip()
                 variety_name = (row.get("varietyName") or "").strip()
+                yield_per_plant_raw = (row.get("yieldPerPlant") or "").strip()
 
                 if not plant_name:
                     rows_failed.append(
                         {"row": row_num, "error": "plantName is required"}
+                    )
+                    continue
+                if not scientific_name:
+                    rows_failed.append(
+                        {"row": row_num, "error": "scientificName is required"}
                     )
                     continue
                 if not variety_name:
@@ -798,25 +969,101 @@ class PlantDataEnhancedService:
                         {"row": row_num, "error": "varietyName is required"}
                     )
                     continue
-                if not plant_type:
+                if not yield_per_plant_raw:
                     rows_failed.append(
-                        {"row": row_num, "error": "plantType is required"}
+                        {"row": row_num, "error": "yieldPerPlant is required"}
                     )
                     continue
-
-                # Validate plantType against the mother's allowed vocabulary
-                # by attempting the real model — single source of truth for
-                # the allow-list, no separate list to keep in sync.
                 try:
-                    PlantMotherCreate(plantName=plant_name, plantType=plant_type)
-                except ValidationError as exc:
+                    yield_per_plant = float(yield_per_plant_raw)
+                except ValueError:
                     rows_failed.append(
                         {
                             "row": row_num,
-                            "error": f"Invalid plantType '{plant_type}': {exc.errors()[0].get('msg', str(exc))}",
+                            "error": f"yieldPerPlant must be a number, got '{yield_per_plant_raw}'",
                         }
                     )
                     continue
+                if yield_per_plant <= 0:
+                    rows_failed.append(
+                        {"row": row_num, "error": "yieldPerPlant must be greater than 0"}
+                    )
+                    continue
+
+                # ---- Growth cycle: 5 phase columns, ALL required ----
+                # (germinationDays, vegetativeDays, floweringDays,
+                # fruitingDays, harvestDurationDays). Each cell must be
+                # PRESENT (blank -> row fails) but 0 is a legal value for
+                # any individual phase (e.g. leafy greens: flowering=0,
+                # fruiting=0). totalCycleDays is never a column — it is
+                # always the computed sum of these 5, mirroring the
+                # variety modal where the total is read-only/derived.
+                phase_columns = (
+                    "germinationDays",
+                    "vegetativeDays",
+                    "floweringDays",
+                    "fruitingDays",
+                    "harvestDurationDays",
+                )
+                phase_values: dict = {}
+                phase_error: Optional[str] = None
+                for phase_col in phase_columns:
+                    phase_raw = (row.get(phase_col) or "").strip()
+                    if phase_raw == "":
+                        phase_error = f"{phase_col} is required"
+                        break
+                    try:
+                        phase_values[phase_col] = int(phase_raw)
+                    except ValueError:
+                        phase_error = (
+                            f"{phase_col} must be a whole number, got '{phase_raw}'"
+                        )
+                        break
+                if phase_error:
+                    rows_failed.append({"row": row_num, "error": phase_error})
+                    continue
+
+                germination_days = phase_values["germinationDays"]
+                vegetative_days = phase_values["vegetativeDays"]
+                flowering_days = phase_values["floweringDays"]
+                fruiting_days = phase_values["fruitingDays"]
+                harvest_duration_days = phase_values["harvestDurationDays"]
+                total_cycle_days = (
+                    germination_days
+                    + vegetative_days
+                    + flowering_days
+                    + fruiting_days
+                    + harvest_duration_days
+                )
+                if total_cycle_days <= 0:
+                    rows_failed.append(
+                        {
+                            "row": row_num,
+                            "error": "growth cycle total must be greater than 0",
+                        }
+                    )
+                    continue
+
+                # ---- plantType: optional, blank -> defaults to 'crop' ----
+                # (only used when CREATING a new mother; ignored when the
+                # mother already exists). A non-blank value is still
+                # validated against the mother's allowed vocabulary by
+                # attempting the real model — single source of truth for
+                # the allow-list, no separate list to keep in sync.
+                plant_type = (row.get("plantType") or "").strip()
+                if not plant_type:
+                    plant_type = "crop"
+                else:
+                    try:
+                        PlantMotherCreate(plantName=plant_name, plantType=plant_type)
+                    except ValidationError as exc:
+                        rows_failed.append(
+                            {
+                                "row": row_num,
+                                "error": f"Invalid plantType '{plant_type}': {exc.errors()[0].get('msg', str(exc))}",
+                            }
+                        )
+                        continue
 
                 # ---- Mother find-or-create (cached within this run) ----
                 if plant_name in mother_cache:
@@ -830,7 +1077,7 @@ class PlantDataEnhancedService:
                         mother = await PlantMotherRepository.create(
                             PlantMotherCreate(
                                 plantName=plant_name,
-                                scientificName=row.get("scientificName") or None,
+                                scientificName=scientific_name,
                                 plantType=plant_type,
                             ),
                             created_by=user_id,
@@ -876,53 +1123,64 @@ class PlantDataEnhancedService:
                             f"'{spacing_category_str}', ignoring"
                         )
 
-                # ---- Parse numeric fields with defaults ----
-                growth_cycle_days = int(row.get("growthCycleDays", 0) or 0)
-                min_temp = float(row.get("minTemperatureCelsius", 15.0) or 15.0)
-                max_temp = float(row.get("maxTemperatureCelsius", 30.0) or 30.0)
-                optimal_temp = float(row.get("optimalTemperatureCelsius", 24.0) or 24.0)
-                min_ph = float(row.get("minPH", 6.0) or 6.0)
-                max_ph = float(row.get("maxPH", 7.0) or 7.0)
-                optimal_ph = float(row.get("optimalPH", 6.5) or 6.5)
-                watering_freq = int(row.get("wateringFrequencyDays", 2) or 2)
-                yield_per_plant = float(row.get("yieldPerPlant", 1.0) or 1.0)
+                # ---- Parse optional numeric fields ----
+                # environmentalRequirements/soilRequirements/
+                # wateringRequirements/lightRequirements/economicsAndLabor
+                # are all Optional on the model — only build each one when
+                # at least one of its underlying cell(s) is actually
+                # provided, so a minimal CSV (just the 9 required columns)
+                # leaves them unset rather than silently writing made-up
+                # numbers. When a group IS built, any of its own required
+                # sub-fields that weren't given a column get a sensible
+                # default so the model's own constraints are satisfied.
+                min_temp_raw = (row.get("minTemperatureCelsius") or "").strip()
+                max_temp_raw = (row.get("maxTemperatureCelsius") or "").strip()
+                optimal_temp_raw = (row.get("optimalTemperatureCelsius") or "").strip()
+                min_temp = float(min_temp_raw) if min_temp_raw else None
+                max_temp = float(max_temp_raw) if max_temp_raw else None
+                optimal_temp = float(optimal_temp_raw) if optimal_temp_raw else None
+
+                humidity_min_raw = (row.get("humidityMin") or "").strip()
+                humidity_max_raw = (row.get("humidityMax") or "").strip()
+                humidity_optimal_raw = (row.get("humidityOptimal") or "").strip()
+                humidity_min = float(humidity_min_raw) if humidity_min_raw else None
+                humidity_max = float(humidity_max_raw) if humidity_max_raw else None
+                humidity_optimal = (
+                    float(humidity_optimal_raw) if humidity_optimal_raw else None
+                )
+
+                min_ph_raw = (row.get("minPH") or "").strip()
+                max_ph_raw = (row.get("maxPH") or "").strip()
+                optimal_ph_raw = (row.get("optimalPH") or "").strip()
+                min_ph = float(min_ph_raw) if min_ph_raw else None
+                max_ph = float(max_ph_raw) if max_ph_raw else None
+                optimal_ph = float(optimal_ph_raw) if optimal_ph_raw else None
+
+                watering_freq_raw = (row.get("wateringFrequencyDays") or "").strip()
+                water_amount_raw = (row.get("waterAmountPerPlantLiters") or "").strip()
+                watering_freq = int(watering_freq_raw) if watering_freq_raw else None
+                water_amount = float(water_amount_raw) if water_amount_raw else None
+
+                light_min_raw = (row.get("dailyLightHoursMin") or "").strip()
+                light_max_raw = (row.get("dailyLightHoursMax") or "").strip()
+                light_optimal_raw = (row.get("dailyLightHoursOptimal") or "").strip()
+                light_min = float(light_min_raw) if light_min_raw else None
+                light_max = float(light_max_raw) if light_max_raw else None
+                light_optimal = float(light_optimal_raw) if light_optimal_raw else None
+
+                market_value_raw = (row.get("averageMarketValuePerKg") or "").strip()
+                currency_raw = (row.get("currency") or "").strip()
+                market_value = float(market_value_raw) if market_value_raw else None
+
+                seeds_raw = (row.get("seedsPerPlantingPoint") or "").strip()
+                seeds_per_planting_point = int(seeds_raw) if seeds_raw else 1
+
                 yield_unit = row.get("yieldUnit", "kg") or "kg"
                 expected_waste = float(
                     row.get("expectedWastePercentage", 0) or 0
                 )
 
                 # ---- Build nested structures from CSV flat fields ----
-                if growth_cycle_days > 0:
-                    germination_days = max(int(growth_cycle_days * 0.1), 1)
-                    vegetative_days = max(int(growth_cycle_days * 0.5), 1)
-                    flowering_days = int(growth_cycle_days * 0.2)
-                    fruiting_days = int(growth_cycle_days * 0.15)
-                else:
-                    germination_days = 1
-                    vegetative_days = 1
-                    flowering_days = 0
-                    fruiting_days = 0
-                # Reason: harvestDurationDays absorbs whatever integer-
-                # truncation remainder is left so the five stages always sum
-                # to EXACTLY totalCycleDays. Building each stage as an
-                # independent percentage (like the pre-mother-model flat CSV
-                # import did) rounds short by 1-2 days for most non-round
-                # growthCycleDays values (e.g. 85 -> stages summed to 83).
-                # That mismatch was invisible before this rewrite because the
-                # old import path wrote straight to the repository, bypassing
-                # PlantDataEnhancedService._validate_detail_fields entirely —
-                # variety creation now goes through
-                # PlantMotherService.create_variety_for_mother, which calls
-                # that same validation, so an inexact sum would 422 on nearly
-                # every real-world CSV row.
-                stage_subtotal = (
-                    germination_days + vegetative_days + flowering_days + fruiting_days
-                )
-                harvest_duration_days = max(
-                    max(growth_cycle_days, 1) - stage_subtotal, 0
-                )
-                total_cycle_days = stage_subtotal + harvest_duration_days
-
                 growth_cycle = GrowthCycleDuration(
                     germinationDays=germination_days,
                     vegetativeDays=vegetative_days,
@@ -932,34 +1190,91 @@ class PlantDataEnhancedService:
                     totalCycleDays=total_cycle_days,
                 )
 
-                environmental_reqs = EnvironmentalRequirements(
-                    temperature=TemperatureRange(
-                        minCelsius=min_temp,
-                        maxCelsius=max_temp,
-                        optimalCelsius=optimal_temp,
-                    ),
-                    humidity=None,
-                    co2RequirementPpm=None,
-                    airCirculation=None,
-                )
+                # environmentalRequirements: TemperatureRange is a REQUIRED
+                # sub-field, so this group is only built when at least one
+                # temperature cell is provided — humidity alone (with no
+                # temperature) is not enough to build it, per design.
+                environmental_reqs = None
+                if min_temp is not None or max_temp is not None or optimal_temp is not None:
+                    humidity_range = None
+                    if (
+                        humidity_min is not None
+                        or humidity_max is not None
+                        or humidity_optimal is not None
+                    ):
+                        humidity_range = HumidityRange(
+                            minPercentage=(
+                                humidity_min if humidity_min is not None else 40.0
+                            ),
+                            maxPercentage=(
+                                humidity_max if humidity_max is not None else 80.0
+                            ),
+                            optimalPercentage=(
+                                humidity_optimal
+                                if humidity_optimal is not None
+                                else 60.0
+                            ),
+                        )
+                    environmental_reqs = EnvironmentalRequirements(
+                        temperature=TemperatureRange(
+                            minCelsius=min_temp if min_temp is not None else 15.0,
+                            maxCelsius=max_temp if max_temp is not None else 30.0,
+                            optimalCelsius=(
+                                optimal_temp if optimal_temp is not None else 24.0
+                            ),
+                        ),
+                        humidity=humidity_range,
+                        co2RequirementPpm=None,
+                        airCirculation=None,
+                    )
 
-                soil_reqs = SoilRequirements(
-                    phRequirements=PHRequirements(
-                        minPH=min_ph, maxPH=max_ph, optimalPH=optimal_ph
-                    ),
-                    soilTypes=[SoilTypeEnum.LOAMY],
-                )
+                soil_reqs = None
+                if min_ph is not None or max_ph is not None or optimal_ph is not None:
+                    soil_reqs = SoilRequirements(
+                        phRequirements=PHRequirements(
+                            minPH=min_ph if min_ph is not None else 6.0,
+                            maxPH=max_ph if max_ph is not None else 7.0,
+                            optimalPH=optimal_ph if optimal_ph is not None else 6.5,
+                        ),
+                        soilTypes=[SoilTypeEnum.LOAMY],
+                    )
 
-                watering_reqs = WateringRequirements(
-                    frequencyDays=watering_freq,
-                    waterType=WaterTypeEnum.TAP,
-                    amountPerPlantLiters=None,
-                    droughtTolerance=ToleranceLevelEnum.MEDIUM,
-                )
+                watering_reqs = None
+                if watering_freq is not None or water_amount is not None:
+                    watering_reqs = WateringRequirements(
+                        frequencyDays=watering_freq if watering_freq is not None else 2,
+                        waterType=WaterTypeEnum.TAP,
+                        amountPerPlantLiters=water_amount,
+                        droughtTolerance=ToleranceLevelEnum.MEDIUM,
+                    )
+
+                # lightRequirements: lightType is REQUIRED but there's no
+                # lightType column on this CSV — default to FULL_SUN (a
+                # natural, sensible baseline) whenever the daily-light-hours
+                # cells are provided. Otherwise this stays None.
+                light_reqs = None
+                if light_min is not None or light_max is not None or light_optimal is not None:
+                    light_reqs = LightRequirements(
+                        lightType=LightTypeEnum.FULL_SUN,
+                        minHoursDaily=light_min if light_min is not None else 6.0,
+                        maxHoursDaily=light_max if light_max is not None else 12.0,
+                        optimalHoursDaily=(
+                            light_optimal if light_optimal is not None else 8.0
+                        ),
+                    )
+
+                economics_and_labor = None
+                if market_value is not None or currency_raw:
+                    economics_and_labor = EconomicsAndLabor(
+                        averageMarketValuePerKg=market_value,
+                        currency=currency_raw or "USD",
+                        totalManHoursPerPlant=1.0,
+                    )
 
                 yield_info = YieldInfo(
                     yieldPerPlant=yield_per_plant,
                     yieldUnit=yield_unit,
+                    seedsPerPlantingPoint=seeds_per_planting_point,
                     expectedWastePercentage=expected_waste,
                 )
 
@@ -974,16 +1289,9 @@ class PlantDataEnhancedService:
                     wateringRequirements=watering_reqs,
                     soilRequirements=soil_reqs,
                     diseasesAndPests=[],
-                    lightRequirements=LightRequirements(
-                        lightType=LightTypeEnum.FULL_SUN,
-                        minHoursDaily=6.0,
-                        maxHoursDaily=12.0,
-                        optimalHoursDaily=8.0,
-                    ),
+                    lightRequirements=light_reqs,
                     gradingStandards=[],
-                    economicsAndLabor=EconomicsAndLabor(
-                        totalManHoursPerPlant=1.0,
-                    ),
+                    economicsAndLabor=economics_and_labor,
                     additionalInfo=AdditionalInformation(
                         growthHabit=GrowthHabitEnum.BUSH,
                         notes=row.get("notes") or None,

@@ -434,18 +434,24 @@ async def import_plant_data_csv(
       exist yet; if the mother is reused, the row's `plantType`/
       `scientificName` are ignored (the existing mother already defines
       them — rename the mother via `PATCH /plant-mothers/{id}` instead).
-    - Required columns: plantName, plantType, varietyName
-    - `plantType` must be one of: crop, tree, herb, fruit, vegetable,
-      ornamental, medicinal
-    - Optional columns: scientificName, farmTypeCompatibility, temperature
-      ranges, pH ranges, wateringFrequencyDays, yieldPerPlant, yieldUnit,
-      expectedWastePercentage, spacingCategory, tags, notes
+    - Required columns (marked `*` in the template): plantName,
+      scientificName, varietyName, yieldPerPlant, and the five growth-cycle
+      phases germinationDays, vegetativeDays, floweringDays, fruitingDays,
+      harvestDurationDays (each cell required; 0 is valid, but the five must
+      sum to > 0 — totalCycleDays is computed from them, never a column).
+    - Optional columns (blank → sensible default): plantType (default 'crop';
+      when provided must be one of crop, tree, herb, fruit, vegetable,
+      ornamental, medicinal), farmTypeCompatibility (default open_field),
+      yieldUnit (default kg), expectedWastePercentage, seedsPerPlantingPoint,
+      spacingCategory, temperature ranges, humidity ranges, pH ranges,
+      wateringFrequencyDays, waterAmountPerPlantLiters, daily-light-hours
+      ranges, averageMarketValuePerKg, currency, tags, notes
 
     **Behavior**:
-    - A row missing `plantName`/`plantType`/`varietyName`, with an invalid
-      `plantType`, or whose `varietyName` already exists under its mother
-      (duplicate) is recorded and skipped — it never aborts the batch; a
-      later valid row in the same file still imports.
+    - A row missing a required column, with an invalid `plantType`, with a
+      growth-cycle summing to 0, or whose `varietyName` already exists under
+      its mother (duplicate) is recorded and skipped — it never aborts the
+      batch; a later valid row in the same file still imports.
     - Variety creation reuses the same validation as
       `POST /plant-mothers/{id}/varieties` (growth-cycle stage totals,
       temperature/humidity/pH range checks).
