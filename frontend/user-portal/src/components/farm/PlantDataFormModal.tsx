@@ -13,6 +13,7 @@ import styled from 'styled-components';
 import { X, ChevronDown } from 'lucide-react';
 import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { plantDataEnhancedApi } from '../../services/plantDataEnhancedApi';
+import { createVarietyForMother } from '../../services/plantMotherApi';
 import { getSpacingCategories } from '../../services/farmApi';
 import { positiveIntegerInputProps } from '../../utils';
 import type {
@@ -23,6 +24,7 @@ import type {
   FarmTypeCompatibility,
   SpacingCategory,
   SpacingCategoryInfo,
+  VarietyCreateForMother,
 } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS } from '../../types/farm';
 
@@ -34,6 +36,9 @@ const createSchema = z.object({
   plantName: z.string().min(1, 'Plant name is required').max(100, 'Name too long'),
   scientificName: z.string().optional(),
   plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']),
+  // Variety mode only (see varietyCreateSchema below) — undeclared here means
+  // "not applicable" for a standalone plant, but the field must still parse.
+  varietyName: z.string().optional(),
   farmTypeCompatibility: z.array(z.string()).min(1, 'Select at least one farm type'),
   tags: z.string().optional(),
   spacingCategory: z.preprocess(
@@ -81,10 +86,22 @@ const createSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+// Variety-creation mode (POST /plant-mothers/{id}/varieties): basic info is
+// inherited from the mother and hidden from the form, so it's optional here
+// (the fields aren't sent); varietyName becomes the required identifier instead.
+const varietyCreateSchema = createSchema.extend({
+  plantName: z.string().optional(),
+  scientificName: z.string().optional(),
+  plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']).optional(),
+  varietyName: z.string().min(1, 'Variety name is required').max(200, 'Name too long'),
+});
+
 const updateSchema = z.object({
   plantName: z.string().min(1, 'Plant name is required').max(100, 'Name too long').optional(),
   scientificName: z.string().optional(),
   plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']).optional(),
+  // Variety's own display name — editable on a variety, ignored otherwise.
+  varietyName: z.string().optional(),
   farmTypeCompatibility: z.array(z.string()).min(1, 'Select at least one farm type').optional(),
   tags: z.string().optional(),
   spacingCategory: z.preprocess(
@@ -138,11 +155,36 @@ type PlantDataFormData = z.infer<typeof updateSchema>;
 // COMPONENT PROPS
 // ============================================================================
 
+/** Mother context passed when creating a new variety under a mother (Plant Library Phase 3). */
+export interface PlantDataFormModalMotherContext {
+  plantMotherId: string;
+  plantName: string;
+  scientificName?: string;
+  plantType: PlantTypeEnum;
+}
+
 export interface PlantDataFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   plantData?: PlantDataEnhanced | null;
+  /**
+   * Variety-creation mode: pass the mother this new variety belongs to.
+   * Basic info (plantName/scientificName/plantType) is hidden and inherited
+   * from the mother; a required varietyName field is shown instead. Ignored
+   * when `plantData` is also passed (edit mode takes precedence).
+   */
+  motherContext?: PlantDataFormModalMotherContext | null;
+  /**
+   * Duplicate-variety mode: pass the source variety to clone. Only applied
+   * when in variety-CREATE mode (motherContext set, plantData not). Seeds
+   * every detailed cultivation field from the source (same fields edit mode
+   * loads), except identity fields (plantDataId/motherPlantId — this creates
+   * a NEW variety) and varietyName, which defaults to "Copy of {source}"
+   * instead of being copied verbatim. Submit still goes through the CREATE
+   * path (createVarietyForMother) — the source record is never touched.
+   */
+  duplicateFromVariety?: PlantDataEnhanced | null;
 }
 
 // ============================================================================
@@ -404,6 +446,35 @@ const ErrorText = styled.span`
 const HelpText = styled.span`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.muted};
+`;
+
+// Read-only "inherited from mother" context banner shown in place of the
+// plantName/scientificName/plantType inputs when this form is creating or
+// editing a VARIETY (Plant Library Phase 3) rather than a standalone plant.
+const MotherContextBanner = styled.div`
+  ${glassControl}
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+`;
+
+const MotherContextLabel = styled.span`
+  ${monoLabel}
+  font-size: 0.62rem;
+  color: ${({ theme }) => theme.colors.muted};
+`;
+
+const MotherContextName = styled.span`
+  font-size: 16px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const MotherContextMeta = styled.span`
+  font-size: 13px;
+  font-style: italic;
+  color: ${({ theme }) => theme.colors.celeste};
 `;
 
 const GridRow = styled.div<{ $columns?: number }>`
@@ -677,8 +748,102 @@ const DensityUnitButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: PlantDataFormModalProps) {
+// ============================================================================
+// SHARED PREFILL HELPERS (edit mode + duplicate-variety mode both load a
+// source PlantDataEnhanced's detailed cultivation fields into the form —
+// kept as one mapping so the two modes can never drift apart)
+// ============================================================================
+
+/**
+ * Every detailed cultivation field the form manages, read off a source
+ * record. Deliberately excludes identity/basic-info fields (plantName,
+ * scientificName, plantType, varietyName, isActive) — callers decide those
+ * per mode (edit copies them verbatim; duplicate derives a new varietyName
+ * and never touches identity).
+ */
+function detailFieldsFromSource(
+  source: PlantDataEnhanced,
+): Omit<PlantDataFormData, 'plantName' | 'scientificName' | 'plantType' | 'varietyName' | 'isActive'> {
+  return {
+    farmTypeCompatibility: source.farmTypeCompatibility || [],
+    tags: source.tags?.join(', ') || '',
+    spacingCategory: source.spacingCategory || undefined,
+
+    germinationDays: source.growthCycle?.germinationDays ?? undefined,
+    vegetativeDays: source.growthCycle?.vegetativeDays ?? undefined,
+    floweringDays: source.growthCycle?.floweringDays ?? undefined,
+    fruitingDays: source.growthCycle?.fruitingDays ?? undefined,
+    harvestDurationDays: source.growthCycle?.harvestDurationDays ?? undefined,
+    totalCycleDays: source.growthCycle?.totalCycleDays ?? undefined,
+
+    yieldPerPlant: source.yieldInfo?.yieldPerPlant ?? undefined,
+    yieldUnit: source.yieldInfo?.yieldUnit || '',
+    expectedWastePercent: source.yieldInfo?.expectedWastePercentage ?? undefined,
+    seedsPerPlantingPoint: source.yieldInfo?.seedsPerPlantingPoint ?? undefined,
+
+    temperatureMin: source.environmentalRequirements?.temperatureMin ?? undefined,
+    temperatureOptimal: source.environmentalRequirements?.temperatureOptimal ?? undefined,
+    temperatureMax: source.environmentalRequirements?.temperatureMax ?? undefined,
+    humidityMin: source.environmentalRequirements?.humidityMin ?? undefined,
+    humidityOptimal: source.environmentalRequirements?.humidityOptimal ?? undefined,
+    humidityMax: source.environmentalRequirements?.humidityMax ?? undefined,
+
+    wateringFrequencyDays: source.wateringRequirements?.wateringFrequencyDays ?? undefined,
+    waterAmountPerPlant: source.wateringRequirements?.waterAmountPerPlant ?? undefined,
+    waterAmountUnit: source.wateringRequirements?.waterAmountUnit || '',
+
+    phMin: source.soilRequirements?.phMin ?? undefined,
+    phOptimal: source.soilRequirements?.phOptimal ?? undefined,
+    phMax: source.soilRequirements?.phMax ?? undefined,
+
+    dailyLightHoursMin: source.lightRequirements?.dailyLightHoursMin ?? undefined,
+    dailyLightHoursOptimal: source.lightRequirements?.dailyLightHoursOptimal ?? undefined,
+    dailyLightHoursMax: source.lightRequirements?.dailyLightHoursMax ?? undefined,
+
+    averageMarketValuePerKg: source.economicsAndLabor?.averageMarketValuePerKg ?? undefined,
+    currency: source.economicsAndLabor?.currency || '',
+
+    customPlantsPer100m2: source.customPlantsPer100m2 ?? undefined,
+    notes: source.additionalInfo?.notes || '',
+  };
+}
+
+/** Derives the density-chooser's local (non-RHF) UI state from a source record. */
+function deriveDensityState(source: PlantDataEnhanced): { mode: DensityMode; unit: DensityUnit; input: string } {
+  if (source.customPlantsPer100m2 != null) {
+    const raw = source.customPlantsPer100m2;
+    // Show in plants/m² if it's divisible by 100 for a clean whole number, otherwise use per100m²
+    if (raw % 100 === 0) {
+      return { mode: 'custom', unit: 'perm2', input: String(raw / 100) };
+    }
+    return { mode: 'custom', unit: 'per100m2', input: String(raw) };
+  }
+  if (source.spacingCategory) {
+    return { mode: 'category', unit: 'per100m2', input: '' };
+  }
+  return { mode: 'none', unit: 'per100m2', input: '' };
+}
+
+export function PlantDataFormModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  plantData,
+  motherContext,
+  duplicateFromVariety,
+}: PlantDataFormModalProps) {
   const isEdit = !!plantData;
+
+  // Plant Library Phase 3 — variety mode. Creating: motherContext is passed
+  // and there's no existing plantData. Editing: the variety being edited
+  // already carries motherPlantId (basic info inherited, read-only).
+  const isVarietyCreate = !isEdit && !!motherContext;
+  const isVarietyOfMother = isEdit && !!plantData?.motherPlantId;
+  const isVarietyMode = isVarietyCreate || isVarietyOfMother;
+  const showBasicInfoInputs = !isVarietyMode;
+  const contextPlantName = motherContext?.plantName ?? plantData?.plantName;
+  const contextScientificName = motherContext?.scientificName ?? plantData?.scientificName;
+  const contextPlantType = motherContext?.plantType ?? plantData?.plantType;
 
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
@@ -710,7 +875,7 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
     watch,
     setValue,
   } = useForm<PlantDataFormData>({
-    resolver: zodResolver(isEdit ? updateSchema : createSchema),
+    resolver: zodResolver(isEdit ? updateSchema : isVarietyCreate ? varietyCreateSchema : createSchema),
     defaultValues: isEdit ? undefined : createDefaultValues,
   });
 
@@ -749,72 +914,15 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
         plantName: plantData.plantName || '',
         scientificName: plantData.scientificName || '',
         plantType: plantData.plantType || 'vegetable',
-        farmTypeCompatibility: plantData.farmTypeCompatibility || [],
-        tags: plantData.tags?.join(', ') || '',
-        spacingCategory: plantData.spacingCategory || undefined,
-
-        germinationDays: plantData.growthCycle?.germinationDays ?? undefined,
-        vegetativeDays: plantData.growthCycle?.vegetativeDays ?? undefined,
-        floweringDays: plantData.growthCycle?.floweringDays ?? undefined,
-        fruitingDays: plantData.growthCycle?.fruitingDays ?? undefined,
-        harvestDurationDays: plantData.growthCycle?.harvestDurationDays ?? undefined,
-        totalCycleDays: plantData.growthCycle?.totalCycleDays ?? undefined,
-
-        yieldPerPlant: plantData.yieldInfo?.yieldPerPlant ?? undefined,
-        yieldUnit: plantData.yieldInfo?.yieldUnit || '',
-        expectedWastePercent: plantData.yieldInfo?.expectedWastePercentage ?? undefined,
-        seedsPerPlantingPoint: plantData.yieldInfo?.seedsPerPlantingPoint ?? undefined,
-
-        temperatureMin: plantData.environmentalRequirements?.temperatureMin ?? undefined,
-        temperatureOptimal: plantData.environmentalRequirements?.temperatureOptimal ?? undefined,
-        temperatureMax: plantData.environmentalRequirements?.temperatureMax ?? undefined,
-        humidityMin: plantData.environmentalRequirements?.humidityMin ?? undefined,
-        humidityOptimal: plantData.environmentalRequirements?.humidityOptimal ?? undefined,
-        humidityMax: plantData.environmentalRequirements?.humidityMax ?? undefined,
-
-        wateringFrequencyDays: plantData.wateringRequirements?.wateringFrequencyDays ?? undefined,
-        waterAmountPerPlant: plantData.wateringRequirements?.waterAmountPerPlant ?? undefined,
-        waterAmountUnit: plantData.wateringRequirements?.waterAmountUnit || '',
-
-        phMin: plantData.soilRequirements?.phMin ?? undefined,
-        phOptimal: plantData.soilRequirements?.phOptimal ?? undefined,
-        phMax: plantData.soilRequirements?.phMax ?? undefined,
-
-        dailyLightHoursMin: plantData.lightRequirements?.dailyLightHoursMin ?? undefined,
-        dailyLightHoursOptimal: plantData.lightRequirements?.dailyLightHoursOptimal ?? undefined,
-        dailyLightHoursMax: plantData.lightRequirements?.dailyLightHoursMax ?? undefined,
-
-        averageMarketValuePerKg: plantData.economicsAndLabor?.averageMarketValuePerKg ?? undefined,
-        currency: plantData.economicsAndLabor?.currency || '',
-
-        customPlantsPer100m2: plantData.customPlantsPer100m2 ?? undefined,
-        notes: plantData.additionalInfo?.notes || '',
-
+        varietyName: plantData.varietyName || '',
         isActive: plantData.isActive ?? true,
+        ...detailFieldsFromSource(plantData),
       });
 
-      // Prefill density chooser mode
-      if (plantData.customPlantsPer100m2 != null) {
-        const raw = plantData.customPlantsPer100m2;
-        // Show in plants/m² if it's divisible by 100 for a clean whole number, otherwise use per100m²
-        if (raw % 100 === 0) {
-          setDensityMode('custom');
-          setDensityUnit('perm2');
-          setCustomDensityInput(String(raw / 100));
-        } else {
-          setDensityMode('custom');
-          setDensityUnit('per100m2');
-          setCustomDensityInput(String(raw));
-        }
-      } else if (plantData.spacingCategory) {
-        setDensityMode('category');
-        setDensityUnit('per100m2');
-        setCustomDensityInput('');
-      } else {
-        setDensityMode('none');
-        setDensityUnit('per100m2');
-        setCustomDensityInput('');
-      }
+      const density = deriveDensityState(plantData);
+      setDensityMode(density.mode);
+      setDensityUnit(density.unit);
+      setCustomDensityInput(density.input);
     }
     // Depend on plantData.plantDataId rather than the whole object: if any
     // upstream auto-refresh produces a new plantData reference with the same
@@ -822,6 +930,30 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
     // editing. We only want the reset when the user picks a genuinely
     // different plant record to edit.
   }, [plantData?.plantDataId, reset]);
+
+  // Duplicate-variety mode: seed the create form from a source variety's
+  // detailed fields, same mapping edit mode uses above, minus identity
+  // (plantDataId/motherPlantId — this is a NEW variety) and with varietyName
+  // defaulted to "Copy of {source}" instead of copied verbatim. Only applies
+  // in variety-create mode; a plain "Add Variety" (no duplicateFromVariety)
+  // keeps using createDefaultValues from useForm's initial state untouched.
+  useEffect(() => {
+    if (!isEdit && isVarietyCreate && duplicateFromVariety) {
+      reset({
+        ...createDefaultValues,
+        varietyName: `Copy of ${duplicateFromVariety.varietyName || duplicateFromVariety.plantName}`,
+        ...detailFieldsFromSource(duplicateFromVariety),
+      });
+
+      const density = deriveDensityState(duplicateFromVariety);
+      setDensityMode(density.mode);
+      setDensityUnit(density.unit);
+      setCustomDensityInput(density.input);
+    }
+    // The parent conditionally-renders (mounts fresh) this modal per open, so
+    // this effectively fires once per Duplicate click; keyed on the source's
+    // identity in case that ever changes.
+  }, [duplicateFromVariety?.plantDataId, isEdit, isVarietyCreate, reset, createDefaultValues]);
 
   const onSubmit = async (data: PlantDataFormData) => {
     if (submittingRef.current) return;
@@ -834,8 +966,14 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
 
       if (isEdit && plantData) {
         const updateData: PlantDataEnhancedUpdate = {
-          plantName: data.plantName,
-          scientificName: data.scientificName,
+          // A variety's plantName/scientificName are inherited from its
+          // mother — the backend REJECTS (422) a client-supplied change to
+          // either for a variety, so they're omitted here; varietyName (the
+          // variety's own field) is sent instead. A standalone (non-variety)
+          // plant keeps renaming plantName/scientificName as before.
+          ...(isVarietyOfMother
+            ? { varietyName: data.varietyName }
+            : { plantName: data.plantName, scientificName: data.scientificName }),
           farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
           tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
           spacingCategory: data.spacingCategory as SpacingCategory | undefined,
@@ -859,16 +997,20 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
         };
 
         const updated = await plantDataEnhancedApi.updatePlantDataEnhanced(plantData.plantDataId, updateData);
-        setSuccessMessage(`Plant "${updated.plantName}" updated to version ${updated.dataVersion}!`);
+        setSuccessMessage(
+          isVarietyOfMother
+            ? `Variety "${updated.varietyName || updated.plantName}" updated to version ${updated.dataVersion}!`
+            : `Plant "${updated.plantName}" updated to version ${updated.dataVersion}!`
+        );
         setTimeout(() => {
           onSuccess?.();
           onClose();
         }, 1500);
       } else {
-        const createData: PlantDataEnhancedCreate = {
-          plantName: data.plantName!,
-          scientificName: data.scientificName,
-          plantType: data.plantType as PlantTypeEnum,
+        // Shared detailed-field payload — identical for a standalone plant
+        // and a variety-under-a-mother; only the basic-info wrapper differs
+        // (plantName/scientificName/plantType vs. varietyName).
+        const detailFields = {
           farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
           tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
           spacingCategory: data.spacingCategory as SpacingCategory | undefined,
@@ -936,8 +1078,23 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
           } : undefined,
         };
 
-        await plantDataEnhancedApi.createPlantDataEnhanced(createData);
-        setSuccessMessage(`Plant "${data.plantName}" created successfully!`);
+        if (isVarietyCreate && motherContext) {
+          const varietyData: VarietyCreateForMother = {
+            varietyName: data.varietyName!,
+            ...detailFields,
+          };
+          const created = await createVarietyForMother(motherContext.plantMotherId, varietyData);
+          setSuccessMessage(`Variety "${created.varietyName}" created for ${motherContext.plantName}!`);
+        } else {
+          const createData: PlantDataEnhancedCreate = {
+            plantName: data.plantName!,
+            scientificName: data.scientificName,
+            plantType: data.plantType as PlantTypeEnum,
+            ...detailFields,
+          };
+          await plantDataEnhancedApi.createPlantDataEnhanced(createData);
+          setSuccessMessage(`Plant "${data.plantName}" created successfully!`);
+        }
         setTimeout(() => {
           reset();
           onSuccess?.();
@@ -1068,13 +1225,58 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
     return updated;
   };
 
+  // Shared across the standalone-plant and variety-mode layouts of the Basic
+  // Information section (both need it, just in a different grid slot).
+  const densityChooserField = (
+    <FormGroup>
+      <Label htmlFor="densityChooser">Default Plant Density</Label>
+      {/*
+        Density chooser — mutually exclusive: None / preconfigured category / Custom.
+        Selecting None means density is chosen at planting time.
+        spacingCategory and customPlantsPer100m2 are kept mutually exclusive.
+      */}
+      <Select
+        id="densityChooser"
+        value={densitySelectValue}
+        onChange={(e) => handleDensitySelectChange(e.target.value)}
+        disabled={submitting}
+      >
+        <option value="">— None (choose at planting) —</option>
+        {spacingCategories.length > 0
+          ? spacingCategories.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.name} — {formatCategoryDensity(cat)}
+              </option>
+            ))
+          : (Object.keys(SPACING_CATEGORY_LABELS) as SpacingCategory[]).map((key) => (
+              <option key={key} value={key}>
+                {SPACING_CATEGORY_LABELS[key]}
+              </option>
+            ))}
+        <option value="custom">Custom…</option>
+      </Select>
+      <HelpText>
+        {densityMode === 'none' && 'Density will be chosen at planting time.'}
+        {densityMode === 'category' && 'Uses the preconfigured density for this size category.'}
+        {densityMode === 'custom' && 'Enter a custom density; stored as integer plants/100 m².'}
+      </HelpText>
+      {errors.spacingCategory && <ErrorText>{errors.spacingCategory.message}</ErrorText>}
+    </FormGroup>
+  );
+
   return (
     <Overlay $isOpen={isOpen}>
       <Modal>
         <ModalHeader>
           <ModalHeaderContent>
             <ModalTitle>
-              {isEdit ? `Edit Plant: ${plantData!.plantName}` : 'Add New Plant Data'}
+              {isEdit
+                ? isVarietyOfMother
+                  ? `Edit Variety: ${plantData!.varietyName || plantData!.plantName}`
+                  : `Edit Plant: ${plantData!.plantName}`
+                : isVarietyCreate
+                  ? `Add Variety to ${motherContext!.plantName}`
+                  : 'Add New Plant Data'}
             </ModalTitle>
             {isEdit && (
               <VersionBadge>
@@ -1093,89 +1295,91 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
             <Section>
               <SectionHeader>
                 <SectionTitle>Basic Information</SectionTitle>
-                {!isEdit && <RequiredBadge>Required</RequiredBadge>}
+                {(!isEdit || isVarietyCreate) && <RequiredBadge>Required</RequiredBadge>}
               </SectionHeader>
 
-              <FormGroup>
-                <Label htmlFor="plantName">Plant Name {!isEdit && '*'}</Label>
-                <Input
-                  id="plantName"
-                  type="text"
-                  placeholder="e.g., Tomato, Lettuce"
-                  $hasError={!!errors.plantName}
-                  disabled={submitting}
-                  {...register('plantName')}
-                />
-                {errors.plantName && <ErrorText>{errors.plantName.message}</ErrorText>}
-              </FormGroup>
+              {isVarietyMode && (
+                <MotherContextBanner>
+                  <MotherContextLabel>{isVarietyCreate ? 'New variety of' : 'Variety of'}</MotherContextLabel>
+                  <MotherContextName>{contextPlantName}</MotherContextName>
+                  {(contextScientificName || contextPlantType) && (
+                    <MotherContextMeta>
+                      {[contextScientificName, contextPlantType].filter(Boolean).join(' · ')}
+                    </MotherContextMeta>
+                  )}
+                </MotherContextBanner>
+              )}
 
-              <GridRow $columns={3}>
-                <FormGroup>
-                  <Label htmlFor="scientificName">Scientific Name {!isEdit && '(Optional)'}</Label>
-                  <Input
-                    id="scientificName"
-                    type="text"
-                    placeholder="e.g., Solanum lycopersicum"
-                    $hasError={!!errors.scientificName}
-                    disabled={submitting}
-                    {...register('scientificName')}
-                  />
-                </FormGroup>
+              {showBasicInfoInputs && (
+                <>
+                  <FormGroup>
+                    <Label htmlFor="plantName">Plant Name {!isEdit && '*'}</Label>
+                    <Input
+                      id="plantName"
+                      type="text"
+                      placeholder="e.g., Tomato, Lettuce"
+                      $hasError={!!errors.plantName}
+                      disabled={submitting}
+                      {...register('plantName')}
+                    />
+                    {errors.plantName && <ErrorText>{errors.plantName.message}</ErrorText>}
+                  </FormGroup>
 
-                <FormGroup>
-                  <Label htmlFor="plantType">Plant Type {!isEdit && '*'}</Label>
-                  <Select
-                    id="plantType"
-                    $hasError={!!errors.plantType}
-                    disabled={submitting}
-                    {...register('plantType')}
-                  >
-                    <option value="vegetable">Vegetable</option>
-                    <option value="fruit">Fruit</option>
-                    <option value="herb">Herb</option>
-                    <option value="crop">Crop</option>
-                    <option value="tree">Tree</option>
-                    <option value="ornamental">Ornamental</option>
-                    <option value="medicinal">Medicinal</option>
-                  </Select>
-                  {errors.plantType && <ErrorText>{errors.plantType.message}</ErrorText>}
-                </FormGroup>
+                  <GridRow $columns={3}>
+                    <FormGroup>
+                      <Label htmlFor="scientificName">Scientific Name {!isEdit && '(Optional)'}</Label>
+                      <Input
+                        id="scientificName"
+                        type="text"
+                        placeholder="e.g., Solanum lycopersicum"
+                        $hasError={!!errors.scientificName}
+                        disabled={submitting}
+                        {...register('scientificName')}
+                      />
+                    </FormGroup>
 
-                <FormGroup>
-                  <Label htmlFor="densityChooser">Default Plant Density</Label>
-                  {/*
-                    Density chooser — mutually exclusive: None / preconfigured category / Custom.
-                    Selecting None means density is chosen at planting time.
-                    spacingCategory and customPlantsPer100m2 are kept mutually exclusive.
-                  */}
-                  <Select
-                    id="densityChooser"
-                    value={densitySelectValue}
-                    onChange={(e) => handleDensitySelectChange(e.target.value)}
-                    disabled={submitting}
-                  >
-                    <option value="">— None (choose at planting) —</option>
-                    {spacingCategories.length > 0
-                      ? spacingCategories.map((cat) => (
-                          <option key={cat.value} value={cat.value}>
-                            {cat.name} — {formatCategoryDensity(cat)}
-                          </option>
-                        ))
-                      : (Object.keys(SPACING_CATEGORY_LABELS) as SpacingCategory[]).map((key) => (
-                          <option key={key} value={key}>
-                            {SPACING_CATEGORY_LABELS[key]}
-                          </option>
-                        ))}
-                    <option value="custom">Custom…</option>
-                  </Select>
-                  <HelpText>
-                    {densityMode === 'none' && 'Density will be chosen at planting time.'}
-                    {densityMode === 'category' && 'Uses the preconfigured density for this size category.'}
-                    {densityMode === 'custom' && 'Enter a custom density; stored as integer plants/100 m².'}
-                  </HelpText>
-                  {errors.spacingCategory && <ErrorText>{errors.spacingCategory.message}</ErrorText>}
-                </FormGroup>
-              </GridRow>
+                    <FormGroup>
+                      <Label htmlFor="plantType">Plant Type {!isEdit && '*'}</Label>
+                      <Select
+                        id="plantType"
+                        $hasError={!!errors.plantType}
+                        disabled={submitting}
+                        {...register('plantType')}
+                      >
+                        <option value="vegetable">Vegetable</option>
+                        <option value="fruit">Fruit</option>
+                        <option value="herb">Herb</option>
+                        <option value="crop">Crop</option>
+                        <option value="tree">Tree</option>
+                        <option value="ornamental">Ornamental</option>
+                        <option value="medicinal">Medicinal</option>
+                      </Select>
+                      {errors.plantType && <ErrorText>{errors.plantType.message}</ErrorText>}
+                    </FormGroup>
+
+                    {densityChooserField}
+                  </GridRow>
+                </>
+              )}
+
+              {isVarietyMode && (
+                <GridRow $columns={2}>
+                  <FormGroup>
+                    <Label htmlFor="varietyName">Variety Name *</Label>
+                    <Input
+                      id="varietyName"
+                      type="text"
+                      placeholder="e.g., Cherry, Roma"
+                      $hasError={!!errors.varietyName}
+                      disabled={submitting}
+                      {...register('varietyName')}
+                    />
+                    {errors.varietyName && <ErrorText>{errors.varietyName.message}</ErrorText>}
+                  </FormGroup>
+
+                  {densityChooserField}
+                </GridRow>
+              )}
 
               {/* Custom density input — only shown when Custom is selected */}
               {densityMode === 'custom' && (
