@@ -157,6 +157,23 @@
 
 ---
 
+### T-918 | Cache-key isolation — @cache_response leaked responses across users/tenants
+- **Category:** Backend (security) · **Priority:** P1
+- **Assigned:** main session · **Completed:** 2026-08-14 · **Merged:** PR #4 → main
+- **Depends on:** — · **Blocks:** —
+- **Description:** `@cache_response` built its key from query params only
+  (`current_user` was filtered out), so every caller shared one cache entry —
+  the first caller's role/tenant-scoped response was served to everyone for the
+  TTL window. Affected `get_farms` (per-user/role), farm + sales dashboards
+  (per-org). Fix: `_generate_cache_key_from_args` folds the caller's `userId` +
+  `organizationId` into the key; genuinely-global endpoints still cache on params
+  alone. No change to what any role is *allowed* to see.
+- **Tests:** `tests/unit/test_cache_key_isolation.py` (5 cases, passing).
+- **DevLog:** `2026-08-14_farm-manager-cache-isolation-and-access-review.md`.
+- **Deploy:** api restart.
+
+---
+
 ### T-917 | Plant Library CSV template/import — required-fields-first, minimal-CSV import, variety-modal parity
 - **Category:** Backend · **Priority:** P2
 - **Assigned:** backend-dev-expert · **Started:** 2026-08-07
