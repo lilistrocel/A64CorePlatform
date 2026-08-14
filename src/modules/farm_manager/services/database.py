@@ -22,6 +22,7 @@ class FarmDatabaseManager:
     - farms
     - blocks
     - plant_data
+    - plant_mothers
     - plantings
     - daily_harvests
     - harvests
@@ -87,6 +88,14 @@ class FarmDatabaseManager:
             await db.plant_data.create_index("plantType")
             await db.plant_data.create_index("tags")
             await db.plant_data.create_index([("createdAt", -1)])
+
+            # Plant mothers collection (Plant Library Phase 1 - product/SKU level,
+            # groups plant_data_enhanced varieties for harvest/inventory/sales rollup)
+            await db.plant_mothers.create_index("plantMotherId", unique=True)
+            await db.plant_mothers.create_index("organizationId")
+            await db.plant_mothers.create_index("plantName")
+            await db.plant_mothers.create_index("isActive")
+            await db.plant_mothers.create_index([("createdAt", -1)])
 
             # Plantings collection
             await db.plantings.create_index("plantingId", unique=True)

@@ -1,6 +1,6 @@
 # Service Map
 
-> Generated: 2026-08-03 12:15 UTC  
+> Generated: 2026-08-07 08:14 UTC  
 > Source: MongoDB `mapper_nodes` (layer=service)
 
 ## Overview
@@ -10,7 +10,7 @@ Services are injected into API endpoints via FastAPI dependency injection.
 
 **Related Maps:** [api-map.md](api-map.md) | [database-map.md](database-map.md) | [module-map.md](module-map.md)
 
-## Services by Module (90 total)
+## Services by Module (91 total)
 
 ### `ai_analytics`
 
@@ -63,8 +63,9 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `HarvestAggregatorService` | `src/modules/farm_manager/services/task/harvest_aggregator.py:19` | HarvestAggregatorService | Daily aggregation of harvest entries into block_harvests (runs at 23:00). |
 | `HarvestAggregatorService` | `src/modules/farm_manager/services/task/harvest_aggregator.py` | HarvestAggregatorService | Cron-driven aggregator for daily harvest tasks. Aggregates entries at 23:00, creates harvest records, updates block KPIs, generates next-day task if block still HARVESTING. |
 | `HarvestService` | `src/modules/farm_manager/services/block/harvest_service.py:28` | HarvestService | Block harvest CRUD with quality grade mapping to inventory integration. |
-| `PlantDataEnhancedService` | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py:25` | PlantDataEnhancedService | Enhanced plant data CRUD with growth cycles, fertigation, search, clone. |
+| `PlantDataEnhancedService` | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py:25` | PlantDataEnhancedService | Enhanced plant data CRUD with growth cycles, fertigation, search, clone. Now mother/variety-aware: CSV import resolves/creates PlantMother rows and stamps motherPlantId/varietyName; supports variety-create under a mother. |
 | `PlantDataService` | `src/modules/farm_manager/services/plant_data/plant_data_service.py:20` | PlantDataService | Simple plant data CRUD with CSV import/export. |
+| `PlantMotherService` | `src/modules/farm_manager/services/plant_data/plant_mother_service.py:33` | PlantMotherService | Plant Library mother CRUD and variety orchestration: create/list/get/update/delete mothers, list varieties, create variety for mother (delegates variety-create to PlantDataEnhancedService). |
 | `PlantingService` | `src/modules/farm_manager/services/planting/planting_service.py:22` | PlantingService | Planting plan management: create plan, mark planted, list plantings. |
 | `SenseHubClient` | `src/modules/farm_manager/services/sensehub/sensehub_client.py:26` | SenseHubClient | HTTP client for SenseHub edge devices: equipment, automations, alerts, relay control. |
 | `SenseHubConnectionService` | `src/modules/farm_manager/services/sensehub/sensehub_connection_service.py:23` | SenseHubConnectionService | SenseHub connection lifecycle: connect, disconnect, status, get_client, get_mcp_client. |

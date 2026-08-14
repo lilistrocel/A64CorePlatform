@@ -762,6 +762,14 @@ export interface PlantDataEnhanced {
   contributor?: string;   // Name of agronomist/contributor who provided this data
   targetRegion?: string;  // Geographic region where data was tested (e.g., 'UAE')
 
+  // Mother/Variety hierarchy (Plant Library Phase 1/2). This record IS a
+  // "variety" (cultivation recipe) — motherPlantId links it up to its
+  // "mother" (product/SKU, plant_mothers collection); varietyName is its
+  // display name within that mother's variety list (e.g. 'Standard').
+  // Optional so pre-migration records still type-check.
+  motherPlantId?: string;
+  varietyName?: string;
+
   // Audit fields
   createdByUserId: string;
   createdByEmail: string;
@@ -828,6 +836,12 @@ export interface PlantDataEnhancedUpdate {
   // 13. Fertigation Schedule (editor modal uses this field)
   fertigationSchedule?: FertigationSchedule;
   // Note: isActive is NOT updatable - only set at creation
+
+  // Variety's own display name within its mother (editable). plantName/
+  // scientificName/motherPlantId are inherited from the mother and are
+  // REJECTED (422) by the backend if sent here for a variety — do not add
+  // them to this DTO's usage for a variety update.
+  varietyName?: string;
 }
 
 // Search Parameters
@@ -846,6 +860,98 @@ export interface PlantDataEnhancedSearchParams {
 // Clone Request
 export interface PlantDataCloneRequest {
   newPlantName: string;
+}
+
+// ============================================================================
+// PLANT MOTHER TYPES (Plant Library Phase 1/2 — mother/variety hierarchy)
+//
+// mother (plant_mothers)      = the product/SKU. Harvest, inventory, and
+//   sales roll up here — one "Cabbage" product rather than one per variety.
+// variety (plant_data_enhanced, i.e. PlantDataEnhanced above) = the
+//   cultivation recipe. UNCHANGED in meaning — see its motherPlantId/
+//   varietyName fields for the link back to its mother.
+// ============================================================================
+
+export interface PlantMother {
+  plantMotherId: string;
+  plantName: string;
+  scientificName?: string;
+  plantType: PlantTypeEnum;
+  isActive: boolean;
+  divisionId?: string;
+  organizationId?: string;
+  createdBy?: string;
+  createdByEmail?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+/** Shape returned by GET /plant-mothers (list) — each row annotated with its active variety count. */
+export interface PlantMotherWithVarietyCount extends PlantMother {
+  varietyCount: number;
+}
+
+/** Lightweight variety reference embedded in GET /plant-mothers/{id} (mother detail). */
+export interface VarietySummary {
+  plantDataId: string;
+  varietyName?: string;
+  isActive: boolean;
+}
+
+/** Shape returned by GET /plant-mothers/{id} (mother detail) — active varieties embedded. */
+export interface PlantMotherWithVarieties extends PlantMother {
+  varieties: VarietySummary[];
+}
+
+export interface PlantMotherCreate {
+  plantName: string;
+  scientificName?: string;
+  plantType: PlantTypeEnum;
+}
+
+export interface PlantMotherUpdate {
+  plantName?: string;
+  scientificName?: string;
+  plantType?: PlantTypeEnum;
+  isActive?: boolean;
+}
+
+/**
+ * Request body for POST /plant-mothers/{motherId}/varieties.
+ *
+ * Same detailed cultivation fields as PlantDataEnhancedCreate EXCEPT the
+ * basic info (plantName/scientificName/plantType) — those are inherited
+ * from the mother identified by the URL path and must not be sent here.
+ * varietyName is the one new required field.
+ */
+export interface VarietyCreateForMother {
+  varietyName: string;
+  farmTypeCompatibility: FarmTypeCompatibility[];
+  tags?: string[];
+  spacingCategory?: SpacingCategory;
+  customPlantsPer100m2?: number | null;
+
+  growthCycle: GrowthCycleInfo;
+  yieldInfo: YieldWasteInfo;
+
+  environmentalRequirements?: EnvironmentalRequirements;
+  wateringRequirements?: WateringRequirements;
+  soilRequirements?: SoilRequirements;
+  diseasesAndPests?: DiseaseOrPest[];
+  lightRequirements?: LightRequirements;
+  qualityGrades?: QualityGradeSpec[];
+  economicsAndLabor?: EconomicsAndLabor;
+  additionalInfo?: AdditionalInformation;
+
+  contributor?: string;
+  targetRegion?: string;
+}
+
+export interface PlantMotherSearchParams {
+  page?: number;
+  perPage?: number;
+  search?: string;
 }
 
 // ============================================================================

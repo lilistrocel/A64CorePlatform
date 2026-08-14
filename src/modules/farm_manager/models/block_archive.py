@@ -58,6 +58,18 @@ class BlockArchive(BaseModel):
     targetCrop: UUID = Field(..., description="Plant data reference")
     targetCropName: str = Field(..., description="Plant name (denormalized)")
 
+    # Product reference (Plant Library Phase 1). targetCrop above stays the
+    # VARIETY (meaning UNCHANGED); these two carry the MOTHER (product/SKU)
+    # so archived cycles roll up to the same product as their live block did.
+    # Optional: pre-migration archives and any unresolved targetCrop leave
+    # these unset (the migration logs+skips rather than guessing).
+    productMotherId: Optional[UUID] = Field(
+        None, description="Mother plant (product) ID, resolved from targetCrop's variety"
+    )
+    productName: Optional[str] = Field(
+        None, description="Mother plant (product) name (denormalized)"
+    )
+
     # Cycle Performance
     plantedDate: datetime = Field(..., description="When planting started")
     harvestCompletedDate: datetime = Field(

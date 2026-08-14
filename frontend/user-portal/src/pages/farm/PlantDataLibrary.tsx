@@ -1,24 +1,28 @@
 /**
  * PlantDataLibrary Component
  *
- * Main page for the Plant Data Library showing comprehensive agronomic knowledge base.
- * Features: search, filters, cards grid, pagination, and quick stats.
+ * Main page for the Plant Data Library. Plant Library Phase 3 (frontend):
+ * cards are now MOTHER plants (products) — plantName, scientificName,
+ * plantType, and how many varieties (cultivation recipes) they hold.
+ * Detailed cultivation data (density, fertigation, yield, waste %, farm
+ * type compatibility, etc.) lives one level down, on each variety —
+ * reachable via a mother's "Add Variety" action or by opening its detail.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { Download, Loader2, Upload, Plus, CheckCircle2, XCircle, Sprout } from 'lucide-react';
-import { PlantDataCard } from '../../components/farm/PlantDataCard';
-import { PlantDataDetail } from '../../components/farm/PlantDataDetail';
+import { useQueryClient } from '@tanstack/react-query';
+import { PlantMotherCard } from '../../components/farm/PlantMotherCard';
+import { PlantMotherFormModal } from '../../components/farm/PlantMotherFormModal';
+import { PlantMotherDetailModal } from '../../components/farm/PlantMotherDetailModal';
 import { PlantDataFormModal } from '../../components/farm/PlantDataFormModal';
+import type { PlantDataFormModalMotherContext } from '../../components/farm/PlantDataFormModal';
 import { plantDataEnhancedApi, type CSVImportResult } from '../../services/plantDataEnhancedApi';
+import { usePlantMothers, useDeletePlantMother } from '../../hooks/queries/usePlantMothers';
+import { queryKeys } from '../../config/react-query.config';
 import { useAuthStore } from '../../stores/auth.store';
-import type {
-  PlantDataEnhanced,
-  PlantDataEnhancedSearchParams,
-  FarmTypeCompatibility,
-} from '../../types/farm';
-import type { PlantDataFilterOptions } from '../../services/plantDataEnhancedApi';
+import type { PlantDataEnhanced } from '../../types/farm';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -176,29 +180,6 @@ const SearchInput = styled.input`
 
   &::placeholder {
     color: ${({ theme }) => theme.colors.textDisabled};
-  }
-`;
-
-const Select = styled.select`
-  padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-  min-width: 140px;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.colors.primary[500]}1a`};
-  }
-
-  option {
-    color: ${({ theme }) => theme.colors.textPrimary};
-    background: ${({ theme }) => theme.colors.background};
   }
 `;
 
@@ -413,24 +394,28 @@ const ProgressBarInner = styled.div<{ $progress: number }>`
 
 export function PlantDataLibrary() {
   const { user } = useAuthStore();
-  const [plants, setPlants] = useState<PlantDataEnhanced[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [totalPlants, setTotalPlants] = useState(0);
+  const queryClient = useQueryClient();
+
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedFarmType, setSelectedFarmType] = useState<FarmTypeCompatibility | ''>('');
-  const [selectedContributor, setSelectedContributor] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
-  const [filterOptions, setFilterOptions] = useState<PlantDataFilterOptions | null>(null);
-  const [selectedPlant, setSelectedPlant] = useState<PlantDataEnhanced | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [plantToEdit, setPlantToEdit] = useState<PlantDataEnhanced | null>(null);
+
+  // Mother modal state (create/edit) — motherIdToEdit null means create mode.
+  const [motherFormOpen, setMotherFormOpen] = useState(false);
+  const [motherIdToEdit, setMotherIdToEdit] = useState<string | null>(null);
+
+  // Mother detail modal (view varieties) — id-based so it always reflects
+  // the latest cached data after any mutation invalidates the list.
+  const [motherDetailId, setMotherDetailId] = useState<string | null>(null);
+
+  // Variety form modal (PlantDataFormModal in variety mode) — either
+  // creating under a mother, editing an existing variety, or duplicating one
+  // (create under the same mother, pre-filled from the source variety).
+  const [varietyFormOpen, setVarietyFormOpen] = useState(false);
+  const [varietyFormMotherId, setVarietyFormMotherId] = useState<string | null>(null);
+  const [varietyFormPlantData, setVarietyFormPlantData] = useState<PlantDataEnhanced | null>(null);
+  const [varietyFormDuplicateSource, setVarietyFormDuplicateSource] = useState<PlantDataEnhanced | null>(null);
+
   const [importing, setImporting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [importResult, setImportResult] = useState<CSVImportResult | null>(null);
@@ -442,11 +427,6 @@ export function PlantDataLibrary() {
   // Check if user has agronomist permission
   const hasAgronomistPermission = user?.permissions?.includes('agronomist') || ['admin', 'super_admin'].includes(user?.role as string) || false;
 
-  // Load filter options on mount
-  useEffect(() => {
-    loadFilterOptions();
-  }, []);
-
   // Debounce search term (300ms delay)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -456,70 +436,37 @@ export function PlantDataLibrary() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  useEffect(() => {
-    loadPlants();
-  }, [currentPage, debouncedSearch, selectedFarmType, selectedContributor, selectedRegion]);
+  const mothersQuery = usePlantMothers(currentPage, perPage, debouncedSearch || undefined);
+  const deleteMother = useDeletePlantMother();
 
-  const loadFilterOptions = async () => {
-    try {
-      const options = await plantDataEnhancedApi.getPlantDataFilterOptions();
-      setFilterOptions(options);
-    } catch (err) {
-      console.error('Error loading filter options:', err);
-    }
-  };
+  const mothers = mothersQuery.data?.items ?? [];
+  const totalMothers = mothersQuery.data?.total ?? 0;
+  const totalPages = mothersQuery.data?.totalPages ?? 1;
+  const initialLoading = mothersQuery.isLoading && !mothersQuery.data;
+  const loading = mothersQuery.isFetching;
 
-  const loadPlants = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params: PlantDataEnhancedSearchParams = {
-        page: currentPage,
-        perPage,
-        search: debouncedSearch || undefined,
-        farmType: selectedFarmType || undefined,
-        contributor: selectedContributor || undefined,
-        targetRegion: selectedRegion || undefined,
-      };
-
-      const response = await plantDataEnhancedApi.getPlantDataEnhancedList(params);
-      setPlants(response.items);
-      setTotalPlants(response.total);
-      setTotalPages(response.totalPages);
-    } catch (err) {
-      setError('Failed to load plant data. Please try again.');
-      console.error('Error loading plant data:', err);
-    } finally {
-      setLoading(false);
-      setInitialLoading(false);
-    }
-  };
+  // Derive the mother record for whichever modal is open from the current
+  // page's cache — always fresh after a mutation invalidates the list.
+  const motherToEdit = motherIdToEdit ? mothers.find((m) => m.plantMotherId === motherIdToEdit) ?? null : null;
+  const motherForDetail = motherDetailId ? mothers.find((m) => m.plantMotherId === motherDetailId) ?? null : null;
+  const motherForVarietyCreate = varietyFormMotherId
+    ? mothers.find((m) => m.plantMotherId === varietyFormMotherId) ?? null
+    : null;
+  const varietyMotherContext: PlantDataFormModalMotherContext | null = motherForVarietyCreate
+    ? {
+        plantMotherId: motherForVarietyCreate.plantMotherId,
+        plantName: motherForVarietyCreate.plantName,
+        scientificName: motherForVarietyCreate.scientificName,
+        plantType: motherForVarietyCreate.plantType,
+      }
+    : null;
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
 
-  const handleFarmTypeChange = (value: string) => {
-    setSelectedFarmType(value as FarmTypeCompatibility | '');
-    setCurrentPage(1);
-  };
-
-  const handleContributorChange = (value: string) => {
-    setSelectedContributor(value);
-    setCurrentPage(1);
-  };
-
-  const handleRegionChange = (value: string) => {
-    setSelectedRegion(value);
-    setCurrentPage(1);
-  };
-
   const handleClearFilters = () => {
     setSearchTerm('');
-    setSelectedFarmType('');
-    setSelectedContributor('');
-    setSelectedRegion('');
     setCurrentPage(1);
   };
 
@@ -564,7 +511,10 @@ export function PlantDataLibrary() {
         (progress) => setUploadProgress(progress)
       );
       setImportResult(result);
-      loadPlants(); // Refresh the list
+      // CSV import writes to plant_data_enhanced directly (untouched by
+      // Plant Library Phase 2/3) — refresh mothers in case any imported
+      // rows resolved onto existing products' varietyCount.
+      queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.lists() });
     } catch (err: any) {
       console.error('Error importing CSV:', err);
       // Handle different error formats
@@ -592,78 +542,105 @@ export function PlantDataLibrary() {
     }
   };
 
-  const handleViewPlant = async (plantDataId: string) => {
-    try {
-      const plant = await plantDataEnhancedApi.getPlantDataEnhancedById(plantDataId);
-      setSelectedPlant(plant);
-      setShowDetailModal(true);
-    } catch (err) {
-      console.error('Error loading plant details:', err);
-      alert('Failed to load plant details');
-    }
-  };
-
-  const handleEditPlant = async (plantDataId: string) => {
-    if (!hasAgronomistPermission) {
-      alert('You do not have permission to edit plant data. Agronomist role required.');
-      return;
-    }
-
-    try {
-      const plant = await plantDataEnhancedApi.getPlantDataEnhancedById(plantDataId);
-      setPlantToEdit(plant);
-      setShowEditModal(true);
-    } catch (err) {
-      console.error('Error loading plant for edit:', err);
-      alert('Failed to load plant data for editing');
-    }
-  };
-
-  const handleClonePlant = async (plantDataId: string) => {
-    const plant = plants.find((p) => p.plantDataId === plantDataId);
-    if (!plant) return;
-
-    const newName = prompt(`Clone "${plant.plantName}" as:`, `${plant.plantName} (Copy)`);
-    if (!newName) return;
-
-    try {
-      await plantDataEnhancedApi.clonePlantDataEnhanced(plantDataId, { newPlantName: newName });
-      alert('Plant cloned successfully!');
-      loadPlants();
-    } catch (err) {
-      console.error('Error cloning plant:', err);
-      alert('Failed to clone plant');
-    }
-  };
-
-  const handleDeletePlant = async (plantDataId: string) => {
-    try {
-      await plantDataEnhancedApi.deletePlantDataEnhanced(plantDataId);
-      alert('Plant deleted successfully!');
-      loadPlants();
-    } catch (err) {
-      console.error('Error deleting plant:', err);
-      alert('Failed to delete plant');
-    }
-  };
-
   const handleCreateNew = () => {
     if (!hasAgronomistPermission) {
       alert('You do not have permission to create plant data. Agronomist role required.');
       return;
     }
-    setShowAddModal(true);
+    setMotherIdToEdit(null);
+    setMotherFormOpen(true);
   };
 
-  const handleAddSuccess = () => {
-    setShowAddModal(false);
-    loadPlants();
+  const handleEditMother = (motherId: string) => {
+    if (!hasAgronomistPermission) {
+      alert('You do not have permission to edit plant data. Agronomist role required.');
+      return;
+    }
+    setMotherIdToEdit(motherId);
+    setMotherFormOpen(true);
   };
 
-  const handleEditSuccess = () => {
-    setShowEditModal(false);
-    setPlantToEdit(null);
-    loadPlants();
+  const handleViewMother = (motherId: string) => {
+    setMotherDetailId(motherId);
+  };
+
+  const handleAddVariety = (motherId: string) => {
+    if (!hasAgronomistPermission) {
+      alert('You do not have permission to create plant data. Agronomist role required.');
+      return;
+    }
+    setVarietyFormMotherId(motherId);
+    setVarietyFormPlantData(null);
+    setVarietyFormDuplicateSource(null);
+    setVarietyFormOpen(true);
+  };
+
+  const handleEditVariety = (variety: PlantDataEnhanced) => {
+    setVarietyFormMotherId(null);
+    setVarietyFormPlantData(variety);
+    setVarietyFormDuplicateSource(null);
+    setVarietyFormOpen(true);
+  };
+
+  // Duplicate: opens the same variety-create form as "Add Variety", under
+  // the source variety's own mother, pre-filled from its data (see
+  // PlantDataFormModal's duplicateFromVariety prop). plantData stays null —
+  // this always submits through the CREATE path, never touching the source.
+  const handleDuplicateVariety = (variety: PlantDataEnhanced) => {
+    if (!hasAgronomistPermission) {
+      alert('You do not have permission to create plant data. Agronomist role required.');
+      return;
+    }
+    if (!variety.motherPlantId) {
+      // Should not happen in the mother/variety hierarchy — every variety
+      // reachable from PlantMotherDetailModal belongs to a mother.
+      console.error('Cannot duplicate variety: missing motherPlantId', variety);
+      return;
+    }
+    setVarietyFormMotherId(variety.motherPlantId);
+    setVarietyFormPlantData(null);
+    setVarietyFormDuplicateSource(variety);
+    setVarietyFormOpen(true);
+  };
+
+  const handleDeleteMother = async (motherId: string) => {
+    try {
+      await deleteMother.mutateAsync(motherId);
+      alert('Plant deleted successfully!');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      if (err?.response?.status === 409 && typeof detail === 'string') {
+        // Guard message from the backend: this mother still has active
+        // varieties — remove/deactivate them first (never cascade-deleted).
+        alert(detail);
+      } else {
+        console.error('Error deleting mother:', err);
+        alert('Failed to delete plant.');
+      }
+    }
+  };
+
+  const handleMotherFormClose = () => {
+    setMotherFormOpen(false);
+    setMotherIdToEdit(null);
+  };
+
+  const handleVarietyFormClose = () => {
+    setVarietyFormOpen(false);
+    setVarietyFormMotherId(null);
+    setVarietyFormPlantData(null);
+    setVarietyFormDuplicateSource(null);
+  };
+
+  const handleVarietyFormSuccess = () => {
+    // A variety UPDATE (not create — the create hook already invalidates)
+    // doesn't go through a TanStack mutation, so refresh explicitly here.
+    const motherId = varietyFormMotherId || varietyFormPlantData?.motherPlantId;
+    if (motherId) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.varieties(motherId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.lists() });
+    }
+    handleVarietyFormClose();
   };
 
   if (initialLoading) {
@@ -676,10 +653,10 @@ export function PlantDataLibrary() {
     );
   }
 
-  if (error && !plants.length) {
+  if (mothersQuery.isError && mothers.length === 0) {
     return (
       <Container>
-        <ErrorContainer>{error}</ErrorContainer>
+        <ErrorContainer>Failed to load plant data. Please try again.</ErrorContainer>
       </Container>
     );
   }
@@ -690,10 +667,14 @@ export function PlantDataLibrary() {
         <Header>
         <HeaderLeft>
           <Title>Plant Data Library</Title>
-          <Subtitle>Comprehensive agronomic knowledge base</Subtitle>
+          <Subtitle>Comprehensive agronomic knowledge base — organized by product</Subtitle>
         </HeaderLeft>
         <HeaderActions>
-          <Button $variant="secondary" onClick={handleDownloadTemplate}>
+          <Button
+            $variant="secondary"
+            onClick={handleDownloadTemplate}
+            title="Each row is one variety under a plant (mother). Columns marked * are required; the rest are optional and get sensible defaults."
+          >
             <Download size={15} strokeWidth={1.8} /> Download CSV Template
           </Button>
           {hasAgronomistPermission && (
@@ -745,12 +726,22 @@ export function PlantDataLibrary() {
         <ImportFeedback $type="success">
           <ImportFeedbackIcon><CheckCircle2 size={20} strokeWidth={1.8} /></ImportFeedbackIcon>
           <ImportFeedbackContent>
-            <ImportFeedbackTitle>CSV Import Successful</ImportFeedbackTitle>
+            <ImportFeedbackTitle>CSV Import Complete</ImportFeedbackTitle>
             <ImportFeedbackDetails>
-              {importResult.created} plant(s) created, {importResult.updated} plant(s) updated
-              {importResult.errors && importResult.errors.length > 0 && (
+              {importResult.varietiesCreated} variet{importResult.varietiesCreated === 1 ? 'y' : 'ies'} created
+              {' · '}{importResult.mothersCreated} new plant{importResult.mothersCreated === 1 ? '' : 's'}
+              {importResult.mothersReused > 0 && `, ${importResult.mothersReused} existing reused`}
+              {' · '}{importResult.totalRows} row(s) processed
+              {importResult.rowsSkipped.length > 0 && (
                 <div style={{ marginTop: '8px', fontSize: '13px' }}>
-                  <strong>Warnings:</strong> {importResult.errors.join('; ')}
+                  <strong>Skipped ({importResult.rowsSkipped.length}):</strong>{' '}
+                  {importResult.rowsSkipped.map((s) => `row ${s.row}: ${s.reason}`).join('; ')}
+                </div>
+              )}
+              {importResult.rowsFailed.length > 0 && (
+                <div style={{ marginTop: '8px', fontSize: '13px', color: '#b91c1c' }}>
+                  <strong>Failed ({importResult.rowsFailed.length}):</strong>{' '}
+                  {importResult.rowsFailed.map((f) => `row ${f.row}: ${f.error}`).join('; ')}
                 </div>
               )}
             </ImportFeedbackDetails>
@@ -771,12 +762,12 @@ export function PlantDataLibrary() {
 
       <StatsRow>
         <StatCard>
-          <StatLabel>Total Plants</StatLabel>
-          <StatValue>{totalPlants}</StatValue>
+          <StatLabel>Total Products</StatLabel>
+          <StatValue>{totalMothers}</StatValue>
         </StatCard>
         <StatCard>
-          <StatLabel>Filtered Results</StatLabel>
-          <StatValue>{plants.length}</StatValue>
+          <StatLabel>Shown on This Page</StatLabel>
+          <StatValue>{mothers.length}</StatValue>
         </StatCard>
         <StatCard>
           <StatLabel>Current Page</StatLabel>
@@ -790,61 +781,35 @@ export function PlantDataLibrary() {
         <FilterRow>
           <SearchInput
             type="text"
-            placeholder="Search plants by name, scientific name, or tags..."
+            placeholder="Search products by name or scientific name..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
           />
-          <Select value={selectedFarmType} onChange={(e) => handleFarmTypeChange(e.target.value)}>
-            <option value="">All Farm Types</option>
-            <option value="open_field">Open Field</option>
-            <option value="greenhouse">Greenhouse</option>
-            <option value="hydroponic">Hydroponic</option>
-            <option value="vertical_farm">Vertical Farm</option>
-            <option value="aquaponic">Aquaponic</option>
-            <option value="indoor_farm">Indoor Farm</option>
-            <option value="polytunnel">Polytunnel</option>
-          </Select>
-          <Select value={selectedContributor} onChange={(e) => handleContributorChange(e.target.value)}>
-            <option value="">All Contributors</option>
-            {filterOptions?.contributors?.map((contributor) => (
-              <option key={contributor} value={contributor}>
-                {contributor}
-              </option>
-            ))}
-          </Select>
-          <Select value={selectedRegion} onChange={(e) => handleRegionChange(e.target.value)}>
-            <option value="">All Regions</option>
-            {filterOptions?.targetRegions?.map((region) => (
-              <option key={region} value={region}>
-                {region}
-              </option>
-            ))}
-          </Select>
           <ClearButton onClick={handleClearFilters}>Clear Filters</ClearButton>
         </FilterRow>
       </FilterBar>
 
-      {plants.length === 0 ? (
+      {mothers.length === 0 ? (
         <EmptyState>
           <EmptyIcon><Sprout size={40} strokeWidth={1.4} /></EmptyIcon>
           <EmptyTitle>No plants found</EmptyTitle>
           <EmptyDescription>
-            {searchTerm || selectedFarmType || selectedContributor || selectedRegion
-              ? 'Try adjusting your filters or search term'
-              : 'Get started by creating your first plant data entry'}
+            {searchTerm
+              ? 'Try adjusting your search term'
+              : 'Get started by creating your first plant'}
           </EmptyDescription>
         </EmptyState>
       ) : (
         <>
           <CardsGrid $loading={loading}>
-            {plants.map((plant) => (
-              <PlantDataCard
-                key={plant.plantDataId}
-                plant={plant}
-                onView={handleViewPlant}
-                onEdit={hasAgronomistPermission ? handleEditPlant : undefined}
-                onClone={hasAgronomistPermission ? handleClonePlant : undefined}
-                onDelete={hasAgronomistPermission ? handleDeletePlant : undefined}
+            {mothers.map((mother) => (
+              <PlantMotherCard
+                key={mother.plantMotherId}
+                mother={mother}
+                onView={handleViewMother}
+                onEdit={hasAgronomistPermission ? handleEditMother : undefined}
+                onDelete={hasAgronomistPermission ? handleDeleteMother : undefined}
+                onAddVariety={hasAgronomistPermission ? handleAddVariety : undefined}
               />
             ))}
           </CardsGrid>
@@ -893,58 +858,37 @@ export function PlantDataLibrary() {
       )}
       </Container>
 
-      {/* Detail Modal */}
-      {showDetailModal && selectedPlant && (
-        <PlantDataDetail
-          plant={selectedPlant}
-          onClose={() => {
-            setShowDetailModal(false);
-            setSelectedPlant(null);
-          }}
-          onEdit={hasAgronomistPermission ? (id) => {
-            setShowDetailModal(false);
-            handleEditPlant(id);
-          } : undefined}
-          onClone={hasAgronomistPermission ? async (id) => {
-            setShowDetailModal(false);
-            await handleClonePlant(id);
-          } : undefined}
-          onDelete={hasAgronomistPermission ? async (id) => {
-            setShowDetailModal(false);
-            await handleDeletePlant(id);
-          } : undefined}
-          onSaved={async () => {
-            // Refetch the selected plant so fertigation section renders updated data
-            try {
-              const refreshed = await plantDataEnhancedApi.getPlantDataEnhancedById(selectedPlant.plantDataId);
-              setSelectedPlant(refreshed);
-            } catch {
-              // Non-fatal: the list will still reload on close
-            }
-            loadPlants();
-          }}
+      {/* Mother Detail Modal (view/manage a product's varieties) */}
+      {motherForDetail && (
+        <PlantMotherDetailModal
+          mother={motherForDetail}
+          onClose={() => setMotherDetailId(null)}
+          onEditMother={hasAgronomistPermission ? handleEditMother : undefined}
+          onAddVariety={hasAgronomistPermission ? handleAddVariety : undefined}
+          onEditVariety={hasAgronomistPermission ? handleEditVariety : undefined}
+          onDuplicateVariety={hasAgronomistPermission ? handleDuplicateVariety : undefined}
         />
       )}
 
-      {/* Create Plant Data Modal */}
-      {showAddModal && (
-        <PlantDataFormModal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onSuccess={handleAddSuccess}
+      {/* Create/Edit Mother Modal */}
+      {motherFormOpen && (
+        <PlantMotherFormModal
+          isOpen={motherFormOpen}
+          mother={motherToEdit}
+          onClose={handleMotherFormClose}
+          onSuccess={handleMotherFormClose}
         />
       )}
 
-      {/* Edit Plant Data Modal */}
-      {showEditModal && plantToEdit && (
+      {/* Create/Edit Variety Modal (PlantDataFormModal in variety mode) */}
+      {varietyFormOpen && (varietyMotherContext || varietyFormPlantData) && (
         <PlantDataFormModal
-          isOpen={showEditModal}
-          plantData={plantToEdit}
-          onClose={() => {
-            setShowEditModal(false);
-            setPlantToEdit(null);
-          }}
-          onSuccess={handleEditSuccess}
+          isOpen={varietyFormOpen}
+          plantData={varietyFormPlantData}
+          motherContext={varietyMotherContext}
+          duplicateFromVariety={varietyFormDuplicateSource}
+          onClose={handleVarietyFormClose}
+          onSuccess={handleVarietyFormSuccess}
         />
       )}
     </>

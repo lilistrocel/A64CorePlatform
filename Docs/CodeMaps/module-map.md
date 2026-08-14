@@ -1,6 +1,6 @@
 # Module Map
 
-> Generated: 2026-08-03 12:15 UTC  
+> Generated: 2026-08-07 08:14 UTC  
 > Source: MongoDB `mapper_nodes` (grouped by module)
 
 ## Backend Module Architecture
@@ -23,8 +23,8 @@ Each module contains API, service, and model layers.
 | `crm` | 13 | api, frontend, infrastructure, model, repository, service |
 | `dashboard` | 7 | frontend |
 | `debug` | 1 | frontend |
-| `farm` | 83 | frontend |
-| `farm_manager` | 154 | api, config, infrastructure, model, repository, service |
+| `farm` | 88 | frontend |
+| `farm_manager` | 159 | api, config, infrastructure, model, repository, service |
 | `finance` | 55 | frontend |
 | `finance_bridge` | 5 | service |
 | `frontend` | 7 | config, frontend |
@@ -228,7 +228,7 @@ Each module contains API, service, and model layers.
 |------|------|-------|------|
 | component | `ClearCache` | frontend | `frontend/user-portal/src/pages/debug/ClearCache.tsx` |
 
-### `farm` (83 nodes)
+### `farm` (88 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -284,6 +284,9 @@ Each module contains API, service, and model layers.
 | component | `PlantDataDetail` | frontend | `frontend/user-portal/src/components/farm/PlantDataDetail.tsx` |
 | component | `PlantDataFormModal` | frontend | `frontend/user-portal/src/components/farm/PlantDataFormModal.tsx` |
 | component | `PlantDataLibrary` | frontend | `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx` |
+| component | `PlantMotherCard` | frontend | `frontend/user-portal/src/components/farm/PlantMotherCard.tsx` |
+| component | `PlantMotherDetailModal` | frontend | `frontend/user-portal/src/components/farm/PlantMotherDetailModal.tsx` |
+| component | `PlantMotherFormModal` | frontend | `frontend/user-portal/src/components/farm/PlantMotherFormModal.tsx` |
 | component | `QuickPlanModal` | frontend | `frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx` |
 | component | `ResolveAlertModal` | frontend | `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx` |
 | component | `SensorFusionTab` | frontend | `frontend/user-portal/src/components/farm/weather/SensorFusionTab.tsx` |
@@ -298,6 +301,7 @@ Each module contains API, service, and model layers.
 | function | `inventoryApi` | frontend | `frontend/user-portal/src/services/inventoryApi.ts` |
 | file | `mapConfig` | frontend | `frontend/user-portal/src/config/mapConfig.ts` |
 | function | `plantDataEnhancedApi` | frontend | `frontend/user-portal/src/services/plantDataEnhancedApi.ts` |
+| function | `plantMotherApi` | frontend | `frontend/user-portal/src/services/plantMotherApi.ts` |
 | type | `task types` | frontend | `frontend/user-portal/src/types/tasks.ts` |
 | function | `tasksApi` | frontend | `frontend/user-portal/src/services/tasksApi.ts` |
 | hook | `useBlockActions` | frontend | `frontend/user-portal/src/hooks/farm/useBlockActions.ts` |
@@ -313,10 +317,11 @@ Each module contains API, service, and model layers.
 | hook | `useFarms` | frontend | `frontend/user-portal/src/hooks/queries/useFarms.ts` |
 | hook | `useGlobalAnalytics` | frontend | `frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts` |
 | hook | `useMultiLevelAIChat` | frontend | `frontend/user-portal/src/hooks/farm/useMultiLevelAIChat.ts` |
+| hook | `usePlantMothers` | frontend | `frontend/user-portal/src/hooks/queries/usePlantMothers.ts` |
 | hook | `useWeatherData` | frontend | `frontend/user-portal/src/hooks/farm/useWeatherData.ts` |
 | function | `weatherApi` | frontend | `frontend/user-portal/src/services/weatherApi.ts` |
 
-### `farm_manager` (154 nodes)
+### `farm_manager` (159 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -324,6 +329,7 @@ Each module contains API, service, and model layers.
 | api_endpoint | `CRUD /ai-hub` | api | `src/modules/farm_manager/api/v1/ai_hub.py` |
 | api_endpoint | `CRUD /config` | api | `src/modules/farm_manager/api/v1/config.py` |
 | api_endpoint | `CRUD /config/watchdog` | api | `src/modules/farm_manager/api/v1/watchdog.py` |
+| api_endpoint | `CRUD /farm/plant-mothers` | api | `src/modules/farm_manager/api/v1/plant_mothers.py` |
 | api_endpoint | `CRUD /farms/{farm_id}/blocks/{block_id}/alerts` | api | `src/modules/farm_manager/api/v1/block_alerts.py` |
 | api_endpoint | `CRUD /farms/{farm_id}/blocks/{block_id}/cameras` | api | `src/modules/farm_manager/api/v1/cameras.py` |
 | api_endpoint | `CRUD /farms/{farm_id}/blocks/{block_id}/harvests` | api | `src/modules/farm_manager/api/v1/block_harvests.py` |
@@ -408,6 +414,7 @@ Each module contains API, service, and model layers.
 | db_model | `HarvestTotal` | model | `src/modules/farm_manager/models/farm_task.py` |
 | pydantic_model | `PlantData` | model | `src/modules/farm_manager/models/plant_data.py` |
 | pydantic_model | `PlantDataEnhanced` | model | `src/modules/farm_manager/models/plant_data_enhanced.py` |
+| pydantic_model | `PlantMother` | model | `src/modules/farm_manager/models/plant_mother.py` |
 | db_model | `TaskCompletionData` | model | `src/modules/farm_manager/models/farm_task.py` |
 | db_model | `TaskData` | model | `src/modules/farm_manager/models/farm_task.py` |
 | db_model | `TaskPriority` | model | `src/modules/farm_manager/models/farm_task.py` |
@@ -430,6 +437,7 @@ Each module contains API, service, and model layers.
 | db_model | `inventory_movements` | model | `src/modules/farm_manager/services/database.py` |
 | db_model | `plant_data` | model | `src/modules/farm_manager/services/plant_data/plant_data_repository.py` |
 | db_model | `plant_data_enhanced` | model | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py` |
+| db_model | `plant_mothers` | model | `src/modules/farm_manager/services/plant_data/plant_mother_repository.py` |
 | db_model | `plantings` | model | `src/modules/farm_manager/services/planting/planting_repository.py` |
 | db_model | `products` | model | `src/modules/farm_manager/services/database.py` |
 | db_model | `stock_inventory` | model | `src/modules/farm_manager/services/database.py` |
@@ -442,6 +450,7 @@ Each module contains API, service, and model layers.
 | class | `HarvestRepository` | repository | `src/modules/farm_manager/services/block/harvest_repository.py` |
 | class | `PlantDataEnhancedRepository` | repository | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py` |
 | class | `PlantDataRepository` | repository | `src/modules/farm_manager/services/plant_data/plant_data_repository.py` |
+| class | `PlantMotherRepository` | repository | `src/modules/farm_manager/services/plant_data/plant_mother_repository.py` |
 | class | `PlantingRepository` | repository | `src/modules/farm_manager/services/planting/planting_repository.py` |
 | class | `TaskRepository` | repository | `src/modules/farm_manager/services/task/task_repository.py` |
 | class | `AlertService` | service | `src/modules/farm_manager/services/block/alert_service.py` |
@@ -460,6 +469,7 @@ Each module contains API, service, and model layers.
 | class | `HarvestService` | service | `src/modules/farm_manager/services/block/harvest_service.py` |
 | class | `PlantDataEnhancedService` | service | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py` |
 | class | `PlantDataService` | service | `src/modules/farm_manager/services/plant_data/plant_data_service.py` |
+| class | `PlantMotherService` | service | `src/modules/farm_manager/services/plant_data/plant_mother_service.py` |
 | class | `PlantingService` | service | `src/modules/farm_manager/services/planting/planting_service.py` |
 | class | `SenseHubClient` | service | `src/modules/farm_manager/services/sensehub/sensehub_client.py` |
 | class | `SenseHubConnectionService` | service | `src/modules/farm_manager/services/sensehub/sensehub_connection_service.py` |

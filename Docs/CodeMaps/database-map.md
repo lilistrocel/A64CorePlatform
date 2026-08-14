@@ -1,6 +1,6 @@
 # Database Map
 
-> Generated: 2026-08-03 12:15 UTC  
+> Generated: 2026-08-07 08:14 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=db_model, layer=model)
 
 ## Overview
@@ -10,7 +10,7 @@ This map covers all collections, document schemas, and inter-collection relation
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md)
 
-## Collections by Module (57 models)
+## Collections by Module (58 models)
 
 ### Module: `ai_analytics`
 
@@ -43,9 +43,9 @@ This map covers all collections, document schemas, and inter-collection relation
 
 | Collection/Model | File | Description |
 |------------------|------|-------------|
-| `Block` | `src/modules/farm_manager/models/block.py:244` | Block model with status lifecycle, KPI, IoT controller, virtual crop support. | Block, BlockCreate, BlockUpdate, BlockStatus, BlockKPI, IoTController |
+| `Block` | `src/modules/farm_manager/models/block.py:244` | Block model with status lifecycle, KPI, IoT controller, virtual crop support. Stamps productMotherId + productName from the planted variety's PlantMother at planting. | Block, BlockCreate, BlockUpdate, BlockStatus, BlockKPI, IoTController |
 | `BlockAlert` | `src/modules/farm_manager/models/block_alert.py:72` | Block alert model with severity, status, category, and comments. | BlockAlert, BlockAlertCreate, AlertSeverity, AlertStatus |
-| `BlockArchive` | `src/modules/farm_manager/models/block_archive.py:28` | Archive record for completed block cycles with yield and alert summaries. | BlockArchive, BlockArchiveAnalytics |
+| `BlockArchive` | `src/modules/farm_manager/models/block_archive.py:28` | Archive record for completed block cycles with yield and alert summaries. Carries productMotherId + productName copied from the block at archive time. | BlockArchive, BlockArchiveAnalytics |
 | `BlockHarvest` | `src/modules/farm_manager/models/block_harvest.py:61` | Harvest record model with quality grades and metadata. | BlockHarvest, BlockHarvestCreate, QualityGrade |
 | `CurrentWeather` | `src/modules/farm_manager/models/weather.py:78` | Weather models: current conditions, agricultural forecast, cache entries. | CurrentWeather, AgriWeatherData, WeatherCacheEntry |
 | `DashboardSummary` | `src/modules/farm_manager/models/dashboard.py:108` | Dashboard summary models with block states, harvest data, and farming year context. | DashboardSummary, DashboardResponse, DashboardSummaryResponse |
@@ -64,7 +64,8 @@ This map covers all collections, document schemas, and inter-collection relation
 | `HarvestInventory` | `src/modules/farm_manager/models/inventory.py:397` | Comprehensive inventory models: harvest, input, asset, waste types with movements and transfers. | HarvestInventory, InputInventory, AssetInventory, WasteInventory, InventoryMovem |
 | `HarvestTotal` | `src/modules/farm_manager/models/farm_task.py:73` | Aggregated harvest totals (totalQuantity, gradeBreakdown per grade, contributors, entryCount). | HarvestTotal |
 | `PlantData` | `src/modules/farm_manager/models/plant_data.py:101` | Simple plant data model (legacy format). | PlantData, PlantDataCreate |
-| `PlantDataEnhanced` | `src/modules/farm_manager/models/plant_data_enhanced.py:441` | Enhanced plant library with growth cycles, fertigation, environmental requirements. | PlantDataEnhanced, PlantDataEnhancedCreate, GrowthCycleDuration, FertigationSche |
+| `PlantDataEnhanced` | `src/modules/farm_manager/models/plant_data_enhanced.py:441` | Enhanced plant library with growth cycles, fertigation, environmental requirements. Now variety-aware: carries motherPlantId + varietyName linking each row to its PlantMother. | PlantDataEnhanced, PlantDataEnhancedCreate, GrowthCycleDuration, FertigationSche |
+| `PlantMother` | `src/modules/farm_manager/models/plant_mother.py:72` | Plant Library product/folder: plantName, scientificName, plantType. Groups variety rows (PlantDataEnhanced) under one mother; varieties reference it via motherPlantId. | PlantMother, PlantMotherBase, PlantMotherCreate, PlantMotherUpdate, PlantMotherW |
 | `TaskCompletionData` | `src/modules/farm_manager/models/farm_task.py:250` | Request schema for completing a non-harvest task (notes, photoUrls, triggerTransition for Phase 2 block state change). | TaskCompletionData |
 | `TaskData` | `src/modules/farm_manager/models/farm_task.py:106` | Task-specific completion data: harvestEntries list, totalHarvest, notes, photoUrls. Validators coerce None to empty list for backward compatibility. | TaskData |
 | `TaskPriority` | `src/modules/farm_manager/models/farm_task.py:33` | Enum: high, medium, low. | TaskPriority |
@@ -87,6 +88,7 @@ This map covers all collections, document schemas, and inter-collection relation
 | `inventory_movements` | `src/modules/farm_manager/services/database.py` | MongoDB collection: inventory_movements - tracks inventory transfers and usage |
 | `plant_data` | `src/modules/farm_manager/services/plant_data/plant_data_repository.py` | MongoDB collection: plant_data - simple plant catalog schema |
 | `plant_data_enhanced` | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py` | MongoDB collection: plant_data_enhanced - comprehensive plant library with growth cycles, farm type compatibility |
+| `plant_mothers` | `src/modules/farm_manager/services/plant_data/plant_mother_repository.py` | MongoDB collection: plant_mothers - Plant Library product/folder catalog (plantName, scientificName, plantType); each doc groups variety rows stored in plant_data_enhanced. |
 | `plantings` | `src/modules/farm_manager/services/planting/planting_repository.py` | MongoDB collection: plantings - stores planting plans with block assignments |
 | `products` | `src/modules/farm_manager/services/database.py` | MongoDB collection: products - master product catalog for inventory |
 | `stock_inventory` | `src/modules/farm_manager/services/database.py` | MongoDB collection: stock_inventory - farm stock/harvest inventory for FIFO tracking |
@@ -222,6 +224,7 @@ This map covers all collections, document schemas, and inter-collection relation
 | `finance_bridge.tenant_flag` | reads_from | `collection_organizations` | modules.financeEnabled projection on cache miss |
 | `finance_bridge.outbox_repository` | reads_from | `collection_finance_outbox` | consumer worker status-transition queries via atomic findOneAndUpdate |
 | `core.service.deployment_settings_service` | reads_from | `collection_platform_settings` | db.platform_settings.find_one/update_one({'_id': 'deployment'}) |
+| `PlantMotherRepository` | reads_from | `collection_plant_mothers` | PlantMotherRepository reads/writes the 'plant_mothers' collection. |
 | `farm_manager.service.FarmRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | FarmRepository reads/writes 'farms' collection via farm_db. |
 | `farm_manager.service.BlockRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | BlockRepository reads/writes 'blocks' collection via farm_db. |
 | `farm_manager.service.HarvestRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | HarvestRepository reads/writes 'block_harvests' collection via farm_db. |
@@ -261,4 +264,3 @@ This map covers all collections, document schemas, and inter-collection relation
 | `core.service.auth_service` | stores_in | `collection_mfa_pending_tokens` | short-lived MFA challenge tokens issued by _issue_mfa_challenge |
 | `core.service.deployment_settings_service` | stores_in | `collection_platform_settings` | singleton doc _id='deployment' — new today |
 | `core.service.deployment_settings_service` | stores_in | `collection_admin_audit_log` | deployment_settings.updated audit entry with masked before/after |
-| `core.service.mfa_service` | stores_in | `collection_users` | mfaSecret, mfaBackupCodes, mfaPendingSecret, mfaLastUsedCounter fields |

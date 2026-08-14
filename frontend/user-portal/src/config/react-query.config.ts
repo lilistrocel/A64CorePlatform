@@ -83,6 +83,18 @@ export const queryKeys = {
       [...queryKeys.farmingYearConfig.all, 'list', { count, includeNext }] as const,
   },
 
+  // Plant Mother queries (Plant Library Phase 3 — mother/variety hierarchy)
+  plantMothers: {
+    all: ['plantMothers'] as const,
+    lists: () => [...queryKeys.plantMothers.all, 'list'] as const,
+    list: (page: number, perPage: number, search?: string) =>
+      [...queryKeys.plantMothers.lists(), { page, perPage, search }] as const,
+    details: () => [...queryKeys.plantMothers.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.plantMothers.details(), id] as const,
+    varieties: (motherId: string) =>
+      [...queryKeys.plantMothers.detail(motherId), 'varieties'] as const,
+  },
+
   // Block queries
   blocks: {
     all: ['blocks'] as const,

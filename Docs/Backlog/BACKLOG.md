@@ -157,6 +157,969 @@
 
 ---
 
+### T-917 | Plant Library CSV template/import — required-fields-first, minimal-CSV import, variety-modal parity
+- **Category:** Backend · **Priority:** P2
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-07
+- **Depends on:** T-915 🔵 (the mother/variety CSV rework this refines —
+  same two methods, no shape changes to its result dict)
+- **Blocks:** —
+- **Description:** T-915's CSV template/import worked but didn't make clear
+  which columns are actually required, buried them mid-list, and hard-failed
+  a row for a blank `plantType` even though the model defaults it to
+  `'crop'`. Reworked in two passes within this same ticket (second pass was
+  a coordinator-relayed set of final user decisions superseding the first
+  pass's `growthCycleDays` design):
+  1. First pass: 4 required columns (plantName/scientificName/varietyName/
+     yieldPerPlant), single optional `growthCycleDays` column with a
+     percentage-split-into-stages placeholder. Hit a real conflict:
+     `GrowthCycleDuration.totalCycleDays` is `Field(..., gt=0)`, so a
+     literal "blank -> 0" default (as first specified) would 422 every
+     minimal-CSV row — worked around with a `totalCycleDays=1` placeholder,
+     flagged for sign-off.
+  2. **Final pass (supersedes the placeholder above):** the single
+     `growthCycleDays` column was replaced with the 5 individual
+     growth-cycle PHASE columns, all hard-required, with `totalCycleDays`
+     computed as their sum (mirrors the variety modal, where the total is
+     read-only/derived) — this removes the `totalCycleDays=1` hack
+     entirely; a real phase breakdown always sums to a valid total. The
+     optional-column set was also expanded to full parity with the variety
+     modal (humidity, light hours, water amount, economics).
+  Final result: `generate_csv_template()` and `import_from_csv()` (both in
+  `PlantDataEnhancedService`, same single file throughout both passes) — 9
+  columns are truly required and marked `*` first in the template; every
+  other column is optional with a documented safe default or is left
+  entirely unset; a CSV containing ONLY the 9 required columns imports
+  successfully as a "skeleton" variety. Import must NOT break for any
+  existing CSV — verified via the full pre-existing test suite (still
+  green) plus new coverage below.
+- **Fix (`src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`
+  — the only file changed across both passes):**
+  - **9 hard-required columns, first in the template, marked with `*`, in
+    this order:** `plantName*`, `scientificName*`, `varietyName*`,
+    `yieldPerPlant*` (>0), `germinationDays*`, `vegetativeDays*`,
+    `floweringDays*`, `fruitingDays*`, `harvestDurationDays*`. Each phase
+    cell must be PRESENT (blank → row fails, e.g. "floweringDays is
+    required") but `0` is a legal value for any individual phase (leafy
+    greens: flowering=0, fruiting=0). The 5 phases are summed into
+    `totalCycleDays`; if that sum is `0`, the row fails with "growth cycle
+    total must be greater than 0" (satisfies the model's `gt=0` — no
+    placeholder needed since a real breakdown is now mandatory).
+    `scientificName` is enforced at import even though the underlying
+    model (`PlantMotherBase.scientificName`) allows null — a deliberate
+    import-time tightening, not a model change.
+  - **Full final column order** (9 required, then optional):
+    `plantName*, scientificName*, varietyName*, yieldPerPlant*,
+    germinationDays*, vegetativeDays*, floweringDays*, fruitingDays*,
+    harvestDurationDays*, plantType, farmTypeCompatibility, yieldUnit,
+    expectedWastePercentage, seedsPerPlantingPoint, spacingCategory,
+    minTemperatureCelsius, maxTemperatureCelsius, optimalTemperatureCelsius,
+    humidityMin, humidityMax, humidityOptimal, minPH, maxPH, optimalPH,
+    wateringFrequencyDays, waterAmountPerPlantLiters, dailyLightHoursMin,
+    dailyLightHoursMax, dailyLightHoursOptimal, averageMarketValuePerKg,
+    currency, tags, notes`. (`growthCycleDays` from the first pass no
+    longer exists as a column — superseded by the 5 phase columns above; a
+    stray legacy `growthCycleDays` header on an old CSV is now simply
+    ignored, not read.) The grouping/order for the newly added optional
+    columns (seedsPerPlantingPoint, humidity*, waterAmountPerPlantLiters,
+    dailyLightHours*, averageMarketValuePerKg, currency) was my own
+    judgment call — the coordinator specified the set but not their exact
+    position among the pre-existing optional columns; I grouped each new
+    field next to its related existing field (e.g. `seedsPerPlantingPoint`
+    beside the other yieldInfo fields, `humidityMin/Max/Optimal` beside
+    the temperature fields).
+  - **Third pass — `waterAmountUnit` data-integrity fix (coordinator
+    catch, not a user-facing bug yet since not deployed):** the water
+    group originally shipped as two columns, `waterAmountPerPlant` +
+    `waterAmountUnit`, but `WateringRequirements.amountPerPlantLiters` is
+    fixed to liters with no unit field on the model — `waterAmountUnit`
+    was parsed and silently discarded, so a CSV entering `amount=500
+    unit="ml"` would have stored `500` LITERS, a 500,000x error with no
+    warning. Fixed by removing `waterAmountUnit` entirely (column, header
+    map, import parsing, example rows) and renaming the amount column
+    itself to `waterAmountPerPlantLiters` so the unit is unambiguous in
+    the header. `_CSV_HEADER_CANONICAL_MAP` maps BOTH
+    `"wateramountperplantliters"` (current) and `"wateramountperplant"`
+    (the old pre-fix spelling) to the same canonical
+    `"waterAmountPerPlantLiters"`, so an existing CSV built against the
+    column order shipped earlier in this same ticket still imports
+    without modification — verified by a dedicated test using the old
+    header spelling alone.
+  - **`plantType` optional** — blank defaults to `'crop'` (only used when
+    CREATING a new mother; ignored when the mother already exists). A
+    non-blank value is still validated against the mother's Literal
+    vocabulary via the existing `PlantMotherCreate` attempt/catch.
+  - **Nested-Optional-group build rule** (`environmentalRequirements` incl.
+    nested `humidity`, `soilRequirements`, `wateringRequirements`,
+    `lightRequirements`, `economicsAndLabor`): each group is built ONLY
+    when at least one of its own CSV cells is filled; when built, any of
+    that group's own required sub-fields left blank get a sensible
+    default so the Pydantic model's constraints are satisfied — never
+    fabricated when the whole group is untouched.
+    - `environmentalRequirements`: `TemperatureRange` is required inside
+      it, so this group is gated on the 3 temperature columns, NOT on
+      humidity alone — humidity-only cells with no temperature cells are
+      silently not enough to build the group (matches the coordinator's
+      explicit rule). When built, `humidity` (`HumidityRange`) is nested
+      inside it only if at least one `humidityMin/Max/Optimal` cell is
+      filled (defaults 40/80/60 for any missing member).
+    - `lightRequirements`: `lightType` is required but there is no
+      `lightType` CSV column — defaulted to `LightTypeEnum.FULL_SUN`
+      whenever any `dailyLightHours*` cell is provided (defaults 6/12/8
+      for any missing hour). Otherwise stays `None` (previously always
+      built with hardcoded defaults — this is a deliberate behavior
+      change per the coordinator's explicit rule).
+    - `wateringRequirements`: built if `wateringFrequencyDays` OR
+      `waterAmountPerPlantLiters` is provided; `frequencyDays` (required,
+      `gt=0`) defaults to `2` if only the water-amount cell was given. See
+      the third-pass note above — the column is now unambiguously in
+      liters (no separate unit field exists on the model, so the header
+      name carries the unit instead of a discarded column).
+    - `economicsAndLabor`: built if `averageMarketValuePerKg` OR
+      `currency` is provided; required `totalManHoursPerPlant` defaults to
+      `1.0` (unchanged from T-915/first pass).
+    - `seedsPerPlantingPoint` (plain int on `yieldInfo`, not a nested
+      group) defaults to `1` when blank, per the model's own default.
+    - Unaffected/unchanged from the first pass: `farmTypeCompatibility` →
+      `['open_field']`, `yieldUnit` → `'kg'`, `expectedWastePercentage` →
+      `0`, `spacingCategory` → left unset when blank.
+  - **Header normalization (`_normalize_csv_header`,
+    `_CSV_HEADER_CANONICAL_MAP`, unchanged mechanism from the first pass,
+    map extended with all new header names):** every header from
+    `csv.DictReader` is stripped of surrounding whitespace and a trailing
+    `*`, lowercased, and matched against a canonical-name lookup before
+    any `row.get(...)` call runs. Built once from `reader.fieldnames`,
+    applied per-row via a dict remap. This makes import STRICTLY more
+    tolerant, never less — both the marked template (`plantName*`) and a
+    plain CSV (`plantName`, any case) import identically.
+  - **`generate_csv_template()`** — new column order above; both example
+    rows (`plantName` "Tomato", `plantType` "vegetable", `varietyName`
+    "Roma"/"Cherry") kept fully filled across every column (including all
+    the new optional ones) so the template still documents the full
+    format.
+  - **Result dict shape, mother find-or-create, variety-under-mother
+    delegation to `PlantMotherService.create_variety_for_mother`,
+    duplicate-skip semantics, and the "only raise 422 when the whole batch
+    is unusable" rule are all unchanged from T-915.**
+- **Tests:** `tests/unit/test_farm_manager/test_plant_library_csv_import.py`
+  — extended in place across all three passes (same fake-Motor-collection
+  style, no live DB), **15 passed** in this file: the 5 original T-915
+  cases (still pass, header assertions updated for the final column
+  order/markers); minimal CSV with only the 9 marked required columns
+  imports (mother+variety created, `totalCycleDays` == sum of the 5 phase
+  values supplied, `farmTypeCompatibility=['open_field']`,
+  `yieldUnit='kg'`, `plantType='crop'`, `seedsPerPlantingPoint=1`
+  default, all nested-optional groups `None`); the same minimal CSV with
+  plain unmarked headers imports identically; blank `scientificName`/
+  blank `yieldPerPlant`/`yieldPerPlant<=0`/non-numeric `yieldPerPlant`
+  each fail their row with a field-named message, valid rows still
+  import; blank `plantType` → mother created as `'crop'`; invalid
+  non-blank `plantType` still fails; a blank individual phase column
+  fails with a field-named message; all-5-phases-zero fails with "greater
+  than 0"; `0` accepted as one individual phase's value when the total is
+  still positive; a fully-filled CSV (every optional column) builds
+  `humidity` nested in `environmentalRequirements`, `lightRequirements`
+  (defaulted `lightType`), `wateringRequirements.amountPerPlantLiters`,
+  `economicsAndLabor`, and a non-default `seedsPerPlantingPoint`; a CSV
+  using the OLD `waterAmountPerPlant` header spelling (pre-third-pass)
+  alone still imports and still lands in `amountPerPlantLiters`, proving
+  the tolerant dual-mapping. Run locally (miniconda `python3 -m pytest`,
+  no Docker needed): **15 passed** in this file. Full
+  `tests/unit/test_farm_manager/` suite re-run for regressions: **62
+  passed** (47 pre-T-915 + 15 in this file), 0 failed.
+- **Deploy note:** `docker restart <prefix>-api-1` required before this is
+  live anywhere — the api container has no `--reload`, and only
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`
+  changed. Not restarted/verified live by this ticket (no deployment
+  target confirmed in this session).
+- **CodeMaps:** not regenerated — no new/removed endpoints, services, or
+  collections; changed logic inside two already-mapped functions
+  (`generate_csv_template`, `import_from_csv`) plus two new private
+  helpers (`_normalize_csv_header`, `_CSV_HEADER_CANONICAL_MAP`) on the
+  same already-mapped service class.
+- **Frontend NOT touched** (out of scope, single-file instruction) —
+  flagging for the parent session: a short "* = required" help note next
+  to the CSV import control in `PlantDataLibrary.tsx` would make the new
+  template markers self-explanatory in the UI; T-915's flagged frontend
+  gap (`CSVImportResult` interface / import-result display still assuming
+  the old `{created, updated, errors}` shape) is still outstanding and
+  unrelated to this ticket.
+- **Files changed:**
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`,
+  `tests/unit/test_farm_manager/test_plant_library_csv_import.py`.
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  restart the api container, verify live (download the template, import a
+  minimal CSV and a fully-filled CSV, mongosh-check the resulting
+  `plant_mothers`/`plant_data_enhanced` docs), consider the frontend
+  "* = required" note, and commit. No git command was run in this ticket.
+  (The `waterAmountUnit` data-integrity gap flagged after the second pass
+  is now resolved — see the third-pass note above — nothing outstanding
+  on that point.)
+
+---
+
+### T-916 | Plant Library — "Duplicate variety" action (clone into a new variety under the same mother)
+- **Category:** Frontend · **Priority:** P2
+- **Assigned:** frontend-dev-expert · **Started:** 2026-08-07
+- **Depends on:** T-914 🔵 (mother/variety hierarchy this extends — trusted
+  as-is, not re-verified here), T-913 🔵 (create-variety API, unchanged by
+  this ticket)
+- **Blocks:** —
+- **Description:** Lets a user clone an existing variety into a new one
+  (e.g. same cultivation recipe, new requirements) without re-entering every
+  field. Frontend-only — the backend variety-create endpoint already exists
+  (`POST /api/v1/farm/plant-mothers/{motherId}/varieties`, exposed via
+  `createVarietyForMother`/`useCreateVarietyForMother`, both unchanged).
+  Extends `PlantDataFormModal`'s existing variety-create mode with a prefill
+  path rather than forking a new modal/form.
+- **Fix:**
+  - **`PlantMotherDetailModal.tsx`** — added a `Duplicate` action (lucide
+    `Copy` icon) to each variety row's `RowActions`, next to Edit/Delete,
+    reusing the existing default `RowButton` styling (no new `$variant`).
+    New optional prop `onDuplicateVariety?: (variety: PlantDataEnhanced) =>
+    void`.
+  - **`PlantDataFormModal.tsx`** — new optional prop
+    `duplicateFromVariety?: PlantDataEnhanced | null`. Only applied when
+    already in variety-CREATE mode (`!isEdit && isVarietyCreate`); ignored
+    otherwise. Refactored the edit-mode prefill `reset(...)` (previously one
+    large inline object) into two shared module-level helpers so the two
+    prefill paths can never drift apart: `detailFieldsFromSource(source)`
+    (every detailed cultivation field the form manages — growth cycle,
+    yield, environmental/watering/soil/light requirements, economics, tags,
+    notes, density — deliberately excluding identity/basic-info fields
+    `plantName`/`scientificName`/`plantType`/`varietyName`/`isActive`) and
+    `deriveDensityState(source)` (the density-chooser's local non-RHF UI
+    state: mode/unit/input). Edit mode's `useEffect` now calls both helpers;
+    a new second `useEffect` (keyed on `duplicateFromVariety?.plantDataId`,
+    guarded to `!isEdit && isVarietyCreate`) calls
+    `reset({ ...createDefaultValues, varietyName: "Copy of {source}",
+    ...detailFieldsFromSource(duplicateFromVariety) })` plus the same
+    density-state derivation. `varietyName` defaults to `"Copy of
+    {sourceVarietyName || sourcePlantName}"` (user edits before saving).
+    `plantDataId`/`motherPlantId` are never copied — submit still routes
+    through the existing variety-create path
+    (`createVarietyForMother(motherContext.plantMotherId, ...)`), which
+    always creates a NEW record; the source variety is never written to.
+  - **`PlantDataLibrary.tsx`** — new state
+    `varietyFormDuplicateSource: PlantDataEnhanced | null`, reset alongside
+    `varietyFormPlantData` in `handleAddVariety`/`handleEditVariety`/
+    `handleVarietyFormClose`. New `handleDuplicateVariety(variety)`: permission
+    check, resolves `variety.motherPlantId` (guaranteed present — every
+    variety reachable from `PlantMotherDetailModal` belongs to a mother),
+    sets `varietyFormMotherId` to it (same mother, reusing the existing
+    variety-create modal-open path) + `varietyFormDuplicateSource` +
+    `varietyFormPlantData(null)` (create, not edit), opens the form. Wired
+    `onDuplicateVariety={handleDuplicateVariety}` into
+    `PlantMotherDetailModal` and `duplicateFromVariety={varietyFormDuplicateSource}`
+    into `PlantDataFormModal`. Post-create invalidation/refetch and success
+    feedback needed no changes: `handleVarietyFormSuccess` already
+    invalidates `queryKeys.plantMothers.varieties(motherId)` +
+    `.lists()` keyed off `varietyFormMotherId` (set identically for
+    duplicate as for plain "Add Variety"), and `PlantDataFormModal`'s
+    existing success-message/submit-routing logic for variety-create is
+    unchanged.
+- **Not touched (explicitly out of scope):** backend (`src/`), CSV
+  import/template code (owned by T-915), any other plant-library component.
+- **Verify:** `npx tsc -b --noEmit` — zero new errors in any touched file
+  (`PlantDataFormModal.tsx`, `PlantMotherDetailModal.tsx`,
+  `PlantDataLibrary.tsx`); the only errors remaining in
+  `PlantDataFormModal.tsx` are the same 2 pre-existing TS6133
+  (`isValid`/`isSubmitting` unused, now at line ~872 after this ticket's
+  insertions — line shift confirms nothing else changed there) already
+  flagged in T-914's entry. Playwright NOT run (project rule — user
+  verifies in the browser). Modal still closes only via the X button, never
+  on backdrop click (unchanged, project rule) — this ticket added no new
+  overlay/backdrop handling.
+- **Files changed:**
+  `frontend/user-portal/src/components/farm/PlantMotherDetailModal.tsx`,
+  `frontend/user-portal/src/components/farm/PlantDataFormModal.tsx`,
+  `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx`.
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  verify in the browser (Duplicate opens a pre-filled create form under the
+  same mother, defaults `varietyName` to "Copy of …", submits as CREATE with
+  the source variety untouched) and commit. No git command was run in this
+  ticket.
+
+---
+
+### T-914 | Plant Library redesign Phase 3 — frontend mother/variety hierarchy (final)
+- **Category:** Frontend · **Priority:** P2
+- **Assigned:** frontend-dev-expert · **Started:** 2026-08-07
+- **Depends on:** T-912 ✅ (data model/migration), T-913 🔵 (CRUD API — trusted
+  as-is, not re-verified here; still Active pending the parent session's
+  restart/mongosh verification/CodeMap regen/commit)
+- **Blocks:** —
+- **Description:** Turns the flat Plant Library UI into the two-level
+  hierarchy Phase 1/2 built server-side: cards are now MOTHER plants
+  (product/folder — plantName/scientificName/plantType + variety count)
+  instead of individual cultivation entries. Detailed cultivation data
+  (density, fertigation, yield, waste %, farm type compatibility, etc.)
+  moved one level down to VARIETIES, reached via a mother's "Add Variety"
+  action or its detail view. The planting-crop dropdown (AddVirtualCropModal
+  → PlantCombobox) deliberately stays variety-based, unchanged in behavior —
+  only its label got a mother-context suffix.
+- **Fix:**
+  - **New API client** `frontend/user-portal/src/services/plantMotherApi.ts`
+    — `listPlantMothers`/`createPlantMother`/`getPlantMother`/
+    `updatePlantMother`/`deletePlantMother`/`listVarietiesForMother`/
+    `createVarietyForMother`, mirroring `plantDataEnhancedApi.ts`'s
+    `response.data.data`/`meta` envelope-unwrapping convention.
+  - **New TanStack Query hooks**
+    `frontend/user-portal/src/hooks/queries/usePlantMothers.ts` —
+    `usePlantMothers`/`usePlantMother`/`useVarietiesForMother` (queries) +
+    `useCreatePlantMother`/`useUpdatePlantMother`/`useDeletePlantMother`/
+    `useCreateVarietyForMother` (mutations, each invalidating the affected
+    list/detail/varieties query keys). New `queryKeys.plantMothers.*`
+    namespace added to `frontend/user-portal/src/config/react-query.config.ts`.
+  - **Types** — `PlantMother`/`PlantMotherWithVarietyCount`/`VarietySummary`/
+    `PlantMotherWithVarieties`/`PlantMotherCreate`/`PlantMotherUpdate`/
+    `VarietyCreateForMother`/`PlantMotherSearchParams` added to
+    `frontend/user-portal/src/types/farm.ts`; `PlantDataEnhanced`/
+    `PlantDataEnhancedUpdate` gained optional `motherPlantId`/`varietyName`
+    fields matching the Phase 1/2 backend models.
+  - **New components:**
+    - `PlantMotherCard.tsx` — mirrors `PlantDataCard.tsx`'s
+      `glassPanelHover` styling; shows plantName/scientificName/plantType +
+      "N varieties"; View/Add Variety/Edit/Delete actions.
+    - `PlantMotherFormModal.tsx` — small create/edit modal, plantName +
+      scientificName + plantType only (per project rule, closes only via
+      the X button, never on backdrop click).
+    - `PlantMotherDetailModal.tsx` — shows a mother's active varieties
+      (fetched via `useVarietiesForMother`, full records — no per-row
+      follow-up fetch), each with View (reuses `PlantDataDetail` unmodified)/
+      Edit/Delete, plus an "Add Variety" action. Closes only via X button.
+  - **Extended (not forked) `PlantDataFormModal.tsx`** with a variety mode:
+    - New optional prop `motherContext` (plantMotherId + inherited basic
+      info). `isVarietyCreate = !isEdit && !!motherContext`;
+      `isVarietyOfMother = isEdit && !!plantData?.motherPlantId`.
+    - When in either variety mode, the Basic Information section hides the
+      plantName/scientificName/plantType inputs behind a new
+      `MotherContextBanner` read-only summary ("New variety of {mother}" /
+      "Variety of {mother}") and shows a required `varietyName` field
+      instead; farmTypeCompatibility/tags/density chooser/all Advanced
+      sections are unchanged and still per-variety.
+    - New `varietyCreateSchema` (extends `createSchema`, basic-info fields
+      optional, `varietyName` required); `updateSchema` gained an optional
+      `varietyName` field.
+    - Submit routes to `createVarietyForMother(motherId, ...)` for
+      variety-create, and — critically — the variety-edit path OMITS
+      `plantName`/`scientificName` from the PATCH body (backend now rejects
+      those with 422 for a variety) and sends `varietyName` instead.
+    - Extracted the previously-duplicated density-chooser JSX into a single
+      `densityChooserField` variable reused by both the standalone and
+      variety layouts (avoids forking the block).
+  - **`PlantDataLibrary.tsx`** rewritten to list mothers instead of
+    varieties: `usePlantMothers` (TanStack Query, replacing the page's old
+    manual `useState`/`useEffect` fetch loop) drives the grid/pagination/
+    stats; "New Plant" opens `PlantMotherFormModal`; each card's actions
+    wire to `PlantMotherDetailModal`/`PlantMotherFormModal`/
+    `PlantDataFormModal` (variety mode) via id-based modal state that
+    re-derives the target record from the live query cache (so a
+    mutation's invalidation is immediately reflected, no stale snapshots).
+    CSV import/template download left wired to the untouched
+    `plantDataEnhancedApi` endpoints exactly as before (Phase 2 didn't
+    touch that path either). Farm type/contributor/region filter selects
+    were DROPPED — `GET /plant-mothers` only supports `search`, and those
+    are variety-level fields a mother doesn't carry; kept only Search +
+    Clear.
+  - **`PlantCombobox.tsx`** — added a `varietyLabel()` helper
+    (`"{plantName} · {varietyName}"` when a variety carries one) used for
+    the chip, dropdown rows, and search matching. Still 100% variety-based
+    (`plants` prop unchanged, still fed by `getActivePlants()` from
+    `plantDataEnhancedApi` in `AddVirtualCropModal.tsx`, which was NOT
+    touched) — planting behavior is unchanged.
+  - **`PlantDataDetail.tsx`** — header now appends `· {varietyName}` next
+    to the plant name when the record being viewed is a variety.
+- **Verify:** `npx tsc -b --noEmit` — confirmed via a stash/pop round-trip
+  that isolated this ticket's tracked-file diff: only 2 pre-existing errors
+  remain in `PlantDataFormModal.tsx` (`isValid`/`isSubmitting` unused at
+  line 779, on a line this ticket never touched — reproduces identically
+  on the pre-change baseline). Zero errors in any new or touched file.
+  Playwright NOT run (project rule — user verifies in the browser).
+- **CodeMaps:** need regeneration — new components (`PlantMotherCard`,
+  `PlantMotherFormModal`, `PlantMotherDetailModal`), new hook file
+  (`usePlantMothers.ts`), new service (`plantMotherApi.ts`),
+  `PlantDataFormModal`/`PlantDataLibrary`/`PlantCombobox`/`PlantDataDetail`
+  structurally changed. Not regenerated in this ticket — flagging for the
+  parent session (same as T-913's still-open flag).
+- **Files changed:**
+  `frontend/user-portal/src/services/plantMotherApi.ts` (new),
+  `frontend/user-portal/src/hooks/queries/usePlantMothers.ts` (new),
+  `frontend/user-portal/src/components/farm/PlantMotherCard.tsx` (new),
+  `frontend/user-portal/src/components/farm/PlantMotherFormModal.tsx` (new),
+  `frontend/user-portal/src/components/farm/PlantMotherDetailModal.tsx` (new),
+  `frontend/user-portal/src/components/farm/PlantDataFormModal.tsx`,
+  `frontend/user-portal/src/components/farm/PlantDataDetail.tsx`,
+  `frontend/user-portal/src/components/farm/PlantCombobox.tsx`,
+  `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx`,
+  `frontend/user-portal/src/types/farm.ts`,
+  `frontend/user-portal/src/config/react-query.config.ts`.
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  verify in the browser (hard project rule: Playwright not run by the
+  implementing agent), regenerate CodeMaps, and commit. No git command was
+  run in this ticket.
+
+---
+
+### T-915 | Plant Library CSV template + bulk import reworked for the mother/variety model
+- **Category:** Backend · **Priority:** P2
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-07
+- **Depends on:** T-913 🔵 (CRUD API this reuses — trusted as-is, not
+  re-verified here; still Active pending the parent session's restart/
+  mongosh verification/CodeMap regen/commit)
+- **Blocks:** —
+- **Description:** The Plant Library CSV template/import was still the
+  pre-Phase-1 flat "one plant per row, upsert by plantName straight into
+  `plant_data_enhanced`" shape — never updated when Phases 1-3 (T-912/
+  T-913/T-914) introduced the mother/variety hierarchy. Reworked to "one
+  VARIETY per row, grouped under a find-or-created MOTHER by plantName,"
+  matching how the rest of the Plant Library now works.
+- **Fix:**
+  - **`PlantDataEnhancedService.generate_csv_template()`**
+    (`src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`)
+    — new column order: `plantName, scientificName, plantType, varietyName,
+    farmTypeCompatibility, growthCycleDays, minTemperatureCelsius,
+    maxTemperatureCelsius, optimalTemperatureCelsius, minPH, maxPH,
+    optimalPH, wateringFrequencyDays, yieldPerPlant, yieldUnit,
+    expectedWastePercentage, spacingCategory, tags, notes`. Two example
+    rows, both `plantName` "Tomato" with distinct `varietyName` ("Roma" /
+    "Cherry"), demonstrating multi-row-collapses-to-one-mother.
+    `spacingCategory` (short enum: xs/s/m/l/xl/bush/large_bush/small_tree/
+    medium_tree/large_tree) was chosen over a raw density number per the
+    ticket's guidance — friendlier for a CSV template, matches the field
+    `PlantDataEnhancedBase` already exposes.
+  - **`PlantDataEnhancedService.import_from_csv()`** (same file) — gained
+    `organization_id`/`division_id` params (threaded from the route, from
+    `current_user.organizationId`/`getattr(current_user, "divisionId",
+    None)` — `CurrentUser` has no `divisionId` attribute today, kept
+    future-proof) so mothers created by import are org-scoped like mothers
+    created via `POST /plant-mothers`. Per-row loop rewritten:
+    1. Validates `plantName`/`varietyName` presence and `plantType` against
+       the mother's Literal vocabulary by attempting
+       `PlantMotherCreate(plantName=..., plantType=...)` and catching
+       `pydantic.ValidationError` (single source of truth for the allow-list
+       — no separate list to keep in sync). Missing/invalid → recorded in
+       `rowsFailed`, `continue` — never aborts the batch.
+    2. Mother find-or-create, **cached within the run** (a local
+       `dict[plantName, PlantMother]`) so N rows sharing a plantName only
+       call the repository once: `PlantMotherRepository.get_by_name` first;
+       if found (or already in the cache), REUSED as-is (the row's
+       `plantType`/`scientificName` are ignored — the existing mother
+       already defines them); otherwise created via
+       `PlantMotherRepository.create(...)`.
+    3. Builds a `VarietyCreateForMother` from the row's detail fields
+       (farm types, growth cycle, environmental/soil/watering requirements,
+       `YieldInfo` including `expectedWastePercentage`, `spacingCategory`,
+       tags, `notes` via `AdditionalInformation(notes=...)`) reusing the
+       same flat-field parsing the old import already had.
+    4. Calls `PlantMotherService.create_variety_for_mother(mother.
+       plantMotherId, variety_create, user_id, user_email)` DIRECTLY —
+       does not reimplement its 404/409 validation, basic-info inheritance,
+       or `_validate_detail_fields` call. Catches `HTTPException`: 409
+       (duplicate `varietyName` under that mother) → recorded in
+       `rowsSkipped`; any other `HTTPException`/`Exception` → recorded in
+       `rowsFailed`; either way the loop continues to the next row.
+  - **Growth-cycle arithmetic bug fixed as a side effect of reuse:** the
+    old per-stage percentage split (germination/vegetative/flowering/
+    fruiting each independently `int(days * fraction)`, `harvestDurationDays`
+    forced to `max(int(days*0.05), 1)`, `totalCycleDays` set to `days`
+    directly) rounds short of `days` for most non-round `growthCycleDays`
+    values (e.g. 85 → stages summed to 83) — invisible before this ticket
+    because the old import wrote straight to the repository, bypassing
+    `PlantDataEnhancedService._validate_detail_fields`'s growth-cycle-sum
+    check entirely. Now that variety creation goes through
+    `PlantMotherService.create_variety_for_mother`, which calls that same
+    validation, the mismatch would have 422'd on nearly every realistic CSV
+    row (including the ticket's own template examples). Fixed by computing
+    `harvestDurationDays` as the exact remainder
+    (`max(days - germination - vegetative - flowering - fruiting, 0)`) so
+    the five stages always sum to precisely `totalCycleDays`, no truncation
+    gap possible.
+  - **API routes**
+    (`src/modules/farm_manager/api/v1/plant_data_enhanced.py`) — both
+    endpoints kept at their existing paths (`GET
+    /plant-data-enhanced/template/csv`, `POST
+    /plant-data-enhanced/import/csv`) so the frontend's existing
+    download/upload wiring keeps working unchanged. `download_csv_template`
+    docstring updated to the new column list.  `import_plant_data_csv` now
+    passes `organization_id=current_user.organizationId,
+    division_id=getattr(current_user, "divisionId", None)` through to the
+    service, docstring rewritten for the new mother/variety semantics, and
+    the `SuccessResponse` message string rebuilt from the new result keys.
+  - **`export_to_csv()` deliberately left untouched** — reads FROM the DB
+    with its own independent header list, still works unchanged (verified
+    it doesn't reference anything this ticket touched). **Flagging as a
+    follow-up, not fixed here:** it now reads as somewhat misleading — it
+    exports one row per variety with no `plantType`/`varietyName`/mother
+    grouping, so a round-trip export→re-import would silently collapse into
+    one "Standard"-style variety naming pattern rather than preserving the
+    mother/variety structure. Out of scope per the ticket's explicit
+    instruction; CSV export mirroring the grouped format is future work.
+  - **Result dict shape changed** (was `{created, updated, errors}`,
+    documented in ARCHIVE/BACKLOG as a genuine behavior change, not
+    preserved for backward compat since the old semantics don't map 1:1
+    onto mother/variety):
+    ```
+    {
+      "totalRows": int,
+      "mothersCreated": int,
+      "mothersReused": int,
+      "varietiesCreated": int,
+      "rowsSkipped": [{"row": int, "reason": str}, ...],  # duplicate varietyName under its mother
+      "rowsFailed": [{"row": int, "error": str}, ...],    # missing/invalid fields, any other error
+    }
+    ```
+    Raises 422 only when the CSV was completely unusable (zero varieties
+    created, zero rows skipped, only failures) — never for a partially-bad
+    CSV where at least one row succeeded.
+  - **Frontend NOT touched** (out of scope for this ticket) — flagging for
+    the parent session: `frontend/user-portal/src/services/
+    plantDataEnhancedApi.ts`'s `CSVImportResult` interface (~line 163) and
+    `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx`'s import
+    result display (~line 701, currently reads
+    `importResult.created`/`importResult.updated`) both still assume the
+    old `{created, updated, errors}` shape and need updating to the new
+    keys above or the import-success panel will show `undefined`.
+- **Tests:** `tests/unit/test_farm_manager/test_plant_library_csv_import.py`
+  (NEW, 5 cases, same hand-rolled fake-Motor-collection style as
+  `test_plant_mother_api.py` — no live DB, no mongomock): (1) two rows,
+  same plantName distinct varietyName → 1 mother created + 2 varieties
+  created; (2) a row whose plantName matches a pre-seeded mother → reused
+  (mothersReused increments, mothersCreated does not), 1 new variety added;
+  (3) a row whose (mother, varietyName) already exists → skipped as
+  duplicate, no exception, other rows in the same CSV still process; (4) a
+  row missing varietyName + a row with an invalid plantType both land in
+  `rowsFailed` with correct row numbers, while a third valid row in the
+  same CSV still imports; (5) `generate_csv_template()`'s exact header list
+  and both example rows sharing plantName "Tomato" with distinct
+  varietyName. Run locally (miniconda `python3 -m pytest`, no Docker
+  needed): **5 passed**. Full `tests/unit/test_farm_manager/` suite re-run
+  for regressions (Phase 1-3's existing 47 tests): **52 passed** (47
+  pre-existing + 5 new), 0 failed.
+- **Deploy note:** `docker restart a64coreplatform-api-1` required — the
+  api container has no `--reload`; only
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`
+  and `src/modules/farm_manager/api/v1/plant_data_enhanced.py` changed.
+- **CodeMaps:** not regenerated — no new/removed endpoints, services, or
+  collections; this is changed logic inside two already-mapped functions
+  (`generate_csv_template`, `import_from_csv`) on an existing service/route
+  pair. No regeneration needed for this ticket specifically, though the
+  broader Phase 1-3 CodeMap regeneration flagged by T-912/T-913/T-914 is
+  still outstanding.
+- **Files changed:**
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`,
+  `src/modules/farm_manager/api/v1/plant_data_enhanced.py`,
+  `tests/unit/test_farm_manager/test_plant_library_csv_import.py` (new).
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  restart the api container, verify (download the template, import it live,
+  mongosh-check the resulting `plant_mothers`/`plant_data_enhanced` docs),
+  regenerate CodeMaps if bundled with the rest of the Phase 1-3 regen, and
+  commit. No git command was run in this ticket.
+
+---
+
+### T-913 | Plant Library redesign Phase 2 — mother/variety CRUD API + planting product stamp
+- **Category:** Backend/API · **Priority:** P2
+- **Assigned:** api-developer · **Started:** 2026-08-07
+- **Depends on:** T-912 🔵 (Phase 1 models/migration — trusted as-is, not
+  re-verified here)
+- **Blocks:** Frontend for the new hierarchy (not started, deliberately out
+  of scope — this ticket is backend API only)
+- **Description:** Builds the CRUD API on top of T-912's mother/variety data
+  model: full mother-plant (product) CRUD, variety-creation nested under a
+  mother (inheriting basic info), and the operational core — wiring the
+  planting flow so every new planting stamps `block.productMotherId`/
+  `productName` from the planted variety's mother, atomically with the same
+  write that sets `targetCrop`. No frontend changes.
+- **Fix:**
+  - **New router** `src/modules/farm_manager/api/v1/plant_mothers.py`
+    (prefix `/plant-mothers`), registered in
+    `src/modules/farm_manager/api/v1/__init__.py`:
+    - `POST /plant-mothers` — create mother (agronomist permission)
+    - `GET /plant-mothers` — list mothers, excludes soft-deleted, each
+      annotated with `varietyCount` (active variety count), search +
+      pagination, org-scoped when the acting user has an `organizationId`
+    - `GET /plant-mothers/{id}` — mother + embedded active-variety summary
+      list (`plantDataId`/`varietyName`/`isActive`)
+    - `PATCH /plant-mothers/{id}` — update; renaming `plantName`/
+      `scientificName` cascades to every variety's denormalized
+      `plantName`/`scientificName` and to referencing blocks'/
+      `block_archives`' denormalized `productName` (update_many by
+      `motherPlantId`/`productMotherId`, not scoped to active/deleted —
+      stale records should still show the corrected name)
+    - `DELETE /plant-mothers/{id}` — soft delete; 409-refuses (never
+      cascades) while the mother still has active varieties
+    - `POST /plant-mothers/{id}/varieties` — create a variety under a
+      mother: `plantName`/`scientificName` are ALWAYS sourced from the
+      mother (ignored if the client sends them anyway), `varietyName`
+      required + unique within the mother, detailed cultivation fields
+      reuse `PlantDataEnhancedService._validate_detail_fields` (extracted
+      from `create_plant_data` so both creation paths enforce identical
+      growth-cycle/temperature/humidity/pH validation)
+    - `GET /plant-mothers/{id}/varieties` — active varieties under a
+      mother, unpaginated (mirrors `GET /plant-data-enhanced/active`'s
+      dropdown-listing convention)
+  - **Existing `/plant-data-enhanced` router/service left otherwise
+    untouched** — its list/get/clone/CSV endpoints are unaffected and still
+    serve the planting dropdown exactly as before. One guard added to
+    `PlantDataEnhancedService.update_plant_data`: rejects (422) a
+    client-supplied `plantName`/`scientificName`/`motherPlantId` change,
+    since basic info is now inherited from the mother — rename the mother
+    instead. `varietyName` remains editable through this endpoint (it's the
+    variety's own field, not inherited).
+  - **Repository expansions**:
+    `services/plant_data/plant_mother_repository.py` — added
+    `list_mothers` (search + pagination + per-row `varietyCount` via
+    `count_documents`, deliberately not a `$lookup` aggregation — this
+    collection is expected to stay small, so N+1 simplicity wins per KISS),
+    `update`, `soft_delete`, `cascade_rename` (touches
+    `plant_data_enhanced`, `blocks`, `block_archives`); `create()` gained
+    optional `organization_id`/`division_id` params.
+    `services/plant_data/plant_data_enhanced_repository.py` — added
+    `get_by_mother`, `get_by_mother_and_variety_name`; `create()` gained
+    optional `mother_plant_id`/`variety_name` params (stringified like
+    every other UUID field before insert, matching the Phase 1 migration's
+    own convention) so a new variety is written with its mother link in the
+    same insert, not a follow-up patch.
+  - **New service** `services/plant_data/plant_mother_service.py`
+    (`PlantMotherService`) — all mother CRUD + `create_variety_for_mother`
+    business logic described above.
+  - **Planting product stamp** — the actual write path for
+    `block.targetCrop` is `BlockRepository.update_status` in
+    `services/block/block_repository_new.py` (confirmed the single choke
+    point: both the direct block status-change flow
+    (`BlockService.change_status` → `update_status`) and virtual-crop
+    planting (`VirtualBlockService.plant_virtual_crop` → same
+    `update_status` call) funnel through it — `BlockCreate`/`create()`
+    technically has a dead `targetCrop` passthrough but every real block
+    starts `EMPTY` and is never planted at creation, so it was left
+    untouched). Added `BlockRepository._resolve_product_ref(variety_id)`:
+    resolves a variety → its mother's `(plantMotherId, plantName)`,
+    mirroring the Phase 1 migration's own resolution style (no active/
+    deleted filter on either lookup — a block can reference a
+    since-deactivated variety or mother). Wired into the `if target_crop:`
+    branch of `update_status` so `productMotherId`/`productName` are set in
+    the SAME `update_dict`/`update_one` write as `targetCrop` — truly
+    atomic, not a follow-up call. Returns `(None, None)` + logs a warning
+    (never raises) when the variety has no `motherPlantId` or the mother
+    doesn't resolve, so a lookup gap never blocks the actual planting
+    write. The EMPTY-transition clearing block now also clears
+    `productMotherId`/`productName` alongside `targetCrop`/`targetCropName`.
+  - **New models** in `models/plant_mother.py`:
+    `PlantMotherWithVarietyCount`, `VarietySummary`,
+    `PlantMotherWithVarieties`, `VarietyCreateForMother` (subclasses
+    `PlantDataEnhancedBase`, overrides `plantName`/`scientificName` to
+    Optional-and-ignored, adds required `varietyName`). Registered in
+    `models/__init__.py`.
+- **Org scoping judgment call:** `plant_data_enhanced` does zero org
+  scoping anywhere today (shared reference data), and no farm_manager API
+  route currently reads `current_user.organizationId` at all. Phase 2's
+  spec explicitly asked for org-scoped mother listing, and the model
+  already carries `organizationId` (indexed by Phase 1). Resolved as:
+  filter by `organizationId` only when the acting user has one, no-op
+  otherwise — ready for multi-tenancy without breaking single-org/dev setups
+  where it's `None`. Flagging as a deliberate judgment call, not a
+  established convention followed elsewhere in this module.
+- **Tests:** `tests/unit/test_farm_manager/test_plant_mother_api.py` (NEW,
+  17 cases) — create/duplicate-name mother, `varietyCount` accuracy across
+  multiple mothers, variety creation inherits + ignores client-supplied
+  basic info, duplicate `varietyName` under one mother rejected, unknown
+  mother 404s, delete blocked while active varieties exist then succeeds
+  once they're deactivated, mother rename cascades to variety + block
+  `productName`, the update-guard rejects `plantName`/`scientificName`
+  changes but still allows `varietyName`, `_resolve_product_ref` resolves/
+  degrades-to-None correctly (missing `motherPlantId`, unresolvable
+  mother), and `update_status` stamps + clears the product ref atomically.
+  No live DB — a hand-rolled fake Motor-collection (find/find_one/
+  insert_one/update_one/update_many/count_documents), following this
+  codebase's existing DB-free unit-test convention (mongomock is not in
+  requirements.txt — see `tests/unit/test_genetics/test_line_purge.py` for
+  the precedent). `FarmingYearService`'s singleton (eagerly grabs
+  `farm_db.get_database()` at construction and caches it process-wide) is
+  sidestepped with its own monkeypatched fake rather than exercised, since
+  it's orthogonal to what these tests assert. **Run locally** (miniconda
+  `python3 -m pytest`, no Docker needed — this suite imports only
+  services/models/database, not `middleware.auth`, so it avoids a
+  pre-existing, unrelated host-only `.env`/pydantic-settings collection
+  error that currently blocks `tests/unit/test_genetics/*` on this box —
+  confirmed pre-existing via `git stash`-equivalent reasoning: the same
+  error reproduces on `test_line_purge.py`, a file this ticket never
+  touched): **17 passed**. Full `tests/unit/test_farm_manager/` suite
+  re-run for regressions (Phase 1's `test_plant_library_migration.py` +
+  `test_plant_library_models.py`): **47 passed** (30 pre-existing + 17
+  new), 0 failed. In-container run (once `tests/` is copied in, per
+  standard convention):
+  `docker exec a64coreplatform-api-1 sh -c 'rm -rf /app/tests'` then
+  `docker cp tests a64coreplatform-api-1:/app/tests` then
+  `docker exec a64coreplatform-api-1 python -m pytest tests/unit/test_farm_manager -q`.
+- **Deploy note:** `docker restart a64coreplatform-api-1` required — the
+  api container has no `--reload`; several `src/` files changed (new
+  router, new service, model + repository edits).
+- **CodeMaps:** need regeneration — new router (`plant_mothers.py`, 7 new
+  endpoints), new service (`PlantMotherService`), `plant_mother_repository.py`
+  gained real CRUD (was migration-only skeleton in Phase 1's map entry).
+  Not regenerated in this ticket — flagging for the parent session.
+- **Files changed:**
+  `src/modules/farm_manager/api/v1/plant_mothers.py` (new),
+  `src/modules/farm_manager/api/v1/__init__.py`,
+  `src/modules/farm_manager/models/plant_mother.py`,
+  `src/modules/farm_manager/models/__init__.py`,
+  `src/modules/farm_manager/services/plant_data/plant_mother_repository.py`,
+  `src/modules/farm_manager/services/plant_data/plant_mother_service.py`
+  (new),
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py`,
+  `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py`,
+  `src/modules/farm_manager/services/plant_data/__init__.py`,
+  `src/modules/farm_manager/services/block/block_repository_new.py`,
+  `tests/unit/test_farm_manager/test_plant_mother_api.py` (new).
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  restart the api container, verify live (mongosh + a real planting flow),
+  regenerate CodeMaps, and commit. No git command was run in this ticket.
+
+---
+
+### T-912 | Plant Library redesign Phase 1 — mother/variety hierarchy (data model + migration script only)
+- **Category:** Backend/Database · **Priority:** P2
+- **Assigned:** database-schema-architect · **Started:** 2026-08-07
+- **Depends on:** —
+- **Blocks:** Phase 2 (CRUD API + frontend for the new hierarchy — not
+  started, deliberately out of scope for this ticket)
+- **Description:** Introduces a two-level Plant Library hierarchy: a
+  "mother plant" (product/SKU) holding multiple "varieties" (cultivation
+  recipes). VARIETY = the existing `plant_data_enhanced` collection/model —
+  a block reads ALL growing data (density, fertigation, yield, waste %)
+  from its variety, meaning UNCHANGED. MOTHER = the product; harvest,
+  inventory, and sales roll up to the mother so a farm sells one "Cabbage"
+  product rather than one line item per variety. This ticket is DATA MODEL
+  + MIGRATION SCRIPT ONLY — no API routes, no frontend changes, fully
+  additive/backward-compatible; everything that works today keeps working
+  unchanged until the migration is actually run.
+- **Fix:**
+  - **New model** `src/modules/farm_manager/models/plant_mother.py` —
+    `PlantMotherBase`/`Create`/`Update`/`PlantMother`, following the exact
+    Base/Create/Update/Full convention used by `plant_data.py` and
+    `plant_data_enhanced.py`. Fields: `plantMotherId: UUID`,
+    `plantName: str` (required), `scientificName: Optional[str]`,
+    `plantType: Literal['crop','tree','herb','fruit','vegetable',
+    'ornamental','medicinal']` (default `'crop'`, reusing
+    `plant_data_enhanced`'s existing vocabulary — not a new enum),
+    `organizationId`/`divisionId: Optional[str]`, `isActive: bool = True`,
+    `deletedAt: Optional[datetime]`, `createdBy: Optional[UUID]`,
+    `createdByEmail: Optional[str]` (both Optional, unlike
+    `PlantDataEnhanced`'s required equivalents — Phase 1 populates this
+    collection entirely via the migration script, which has no acting
+    user), `createdAt`/`updatedAt: datetime`. Registered in
+    `models/__init__.py`.
+  - **New repository skeleton**
+    `src/modules/farm_manager/services/plant_data/plant_mother_repository.py`
+    (`create`/`get_by_id`/`get_by_name`/`get_active_mothers` only — no full
+    CRUD API, that's Phase 2) and collection registration + indexes
+    (`plantMotherId` unique, `organizationId`, `plantName`, `isActive`,
+    `createdAt` desc) added to `FarmDatabaseManager._create_indexes()` in
+    `src/modules/farm_manager/services/database.py`, mirroring the existing
+    `plant_data` index block.
+  - **Variety fields** on `PlantDataEnhanced`
+    (`src/modules/farm_manager/models/plant_data_enhanced.py`):
+    `motherPlantId: Optional[UUID]`, `varietyName: Optional[str]` — added
+    to the main model (alongside `isActive`/`dataVersion`, not
+    `PlantDataEnhancedBase`) and mirrored onto `PlantDataEnhancedUpdate`.
+    Both Optional so pre-migration documents (57 active docs today) still
+    validate; `plantName`/`scientificName` untouched — version snapshots
+    and display code still read them. `plantDataId` untouched everywhere.
+  - **Product ref on blocks**
+    (`src/modules/farm_manager/models/block.py`, `Block` class only — the
+    only class that already carries both `targetCrop`/`targetCropName`):
+    `productMotherId: Optional[UUID]`, `productName: Optional[str]`.
+    `targetCrop` stays = the variety, meaning UNCHANGED. Same two fields
+    added to `BlockArchive`
+    (`src/modules/farm_manager/models/block_archive.py`).
+  - **Migration script**
+    `scripts/migrations/plant_library_mother_variety_migration.py` (NOT
+    run — see below). Follows the `wave4_purchasing_status_migration.py`
+    style: module docstring, `MONGODB_URL`/`MONGODB_DB_NAME` env vars
+    (same defaults), `logging`, async Motor, fully idempotent.
+- **Migration mechanics:**
+  - **Idempotency:** deterministic mother id =
+    `uuid.uuid5(uuid.NAMESPACE_OID, str(variety_plantDataId))`. Re-running
+    always resolves to the same mother id for the same variety — mothers
+    are never duplicated, `plantDataId` is never reissued.
+  - **Step 1 (mothers):** for every `plant_data_enhanced` doc with
+    `deletedAt: null` (isActive is deliberately NOT used as a gate here —
+    it only controls dropdown visibility for new plantings, not whether a
+    variety is in use; existing blocks can reference an isActive=False
+    variety), create/link a `plant_mothers` doc; `plantType` inferred from
+    `tags` (see mapping below); sets `motherPlantId` +
+    `varietyName='Standard'` on the variety. Skips docs that already have
+    `motherPlantId`.
+  - **Step 2/3 (blocks / block_archives):** for every doc with non-null
+    `targetCrop`, resolves the mother by looking up the variety doc (no
+    `deletedAt` filter — a block can reference a since-deleted variety) and
+    RECOMPUTING the mother id via the same uuid5 formula directly from
+    `targetCrop` (more robust than trusting the variety's own
+    `motherPlantId` field, which may not be backfilled yet or could be
+    stale). Sets `productMotherId`/`productName`; `targetCrop` untouched.
+    Idempotent: skips when `productMotherId` already matches the freshly
+    resolved value, re-backfills when `targetCrop` changed since the last
+    run. Unresolvable `targetCrop` → logged warning + skip, never a crash.
+    `block_harvests` (13,947 docs) is never touched — it carries no plant
+    reference; rollups derive through the block/archive.
+  - **Tag → plantType mapping** (`_TAG_TO_PLANT_TYPE` /
+    `TAG_PLANT_TYPE_PRECEDENCE` in the script):
+    `tree→tree`, `herb→herb`, `ornamental→ornamental`,
+    `medicinal→medicinal`, `vegetable→vegetable`, `fruit→fruit`; default
+    `crop` when no tag matches. **Conflict precedence** when a doc has
+    multiple mapped tags: `tree > herb > ornamental > medicinal >
+    vegetable > fruit` — growth-habit tags rank highest (most
+    decision-relevant for a product grouping), use-category tags next,
+    `vegetable` beats `fruit` as the final fixed tie-break.
+  - **`--dry-run` / `--execute`:** dry-run is the DEFAULT (no flags, or
+    `--dry-run` explicitly) — every read/resolution step still runs so the
+    summary is accurate, but zero writes happen. `--execute` is required to
+    actually write. Commands (parent runs these, NOT run in this ticket):
+    `docker compose exec api python scripts/migrations/plant_library_mother_variety_migration.py`
+    (dry-run first) then
+    `docker compose exec api python scripts/migrations/plant_library_mother_variety_migration.py --execute`.
+  - Logs a full summary: mothers created vs already-linked, plantType
+    inference breakdown, blocks/archives backfilled vs already-correct vs
+    unresolved (with unresolved ids listed).
+- **Tests:** `tests/unit/test_farm_manager/test_plant_library_migration.py`
+  (NEW) — unit tests for the standalone `infer_plant_type_from_tags()`
+  helper: each mapped tag individually, case-insensitivity, every
+  multi-tag conflict pairing against the documented precedence, input-order
+  independence, and the `crop` fallback (None/empty/unmapped/blank tags).
+  `tests/unit/test_farm_manager/test_plant_library_models.py` (NEW) —
+  `PlantMother` constructs with/without `scientificName` and
+  with/without `createdBy`; `PlantDataEnhanced` constructs identically
+  with/without `motherPlantId`/`varietyName` (pre-migration-doc backward
+  compat proof) and confirms `plantDataId` is never implicitly reissued;
+  `Block` constructs identically with/without
+  `productMotherId`/`productName` and confirms `targetCrop` /
+  `productMotherId` are independent fields. **NOT run in this ticket**
+  (`tests/` is not bind-mounted into the api container in this
+  environment) — syntax/import-checked locally instead (`ast.parse` +
+  direct model construction against installed `pydantic`/`motor` on the
+  host, no pytest). Parent runs via:
+  `docker exec a64coreplatform-api-1 sh -c 'rm -rf /app/tests'` then
+  `docker cp tests a64coreplatform-api-1:/app/tests` then
+  `docker exec a64coreplatform-api-1 python -m pytest tests/unit/test_farm_manager -q`
+  (note: a container restart wipes `/app/tests` again).
+- **Deploy note:** `docker restart a64coreplatform-api-1` required after
+  this lands — the api container has no `--reload`.
+- **CodeMaps:** need regeneration — new model file (`plant_mother.py`), new
+  collection (`plant_mothers`), new repository
+  (`plant_mother_repository.py`). Not regenerated in this ticket — flagging
+  for the parent session.
+- **Files changed:**
+  `src/modules/farm_manager/models/plant_mother.py` (new),
+  `src/modules/farm_manager/models/plant_data_enhanced.py`,
+  `src/modules/farm_manager/models/block.py`,
+  `src/modules/farm_manager/models/block_archive.py`,
+  `src/modules/farm_manager/models/__init__.py`,
+  `src/modules/farm_manager/services/plant_data/plant_mother_repository.py`
+  (new),
+  `src/modules/farm_manager/services/database.py`,
+  `scripts/migrations/plant_library_mother_variety_migration.py` (new),
+  `tests/unit/test_farm_manager/__init__.py` (new),
+  `tests/unit/test_farm_manager/test_plant_library_migration.py` (new),
+  `tests/unit/test_farm_manager/test_plant_library_models.py` (new).
+- **Not moving to ARCHIVE** — the migration has NOT been run against any
+  database (57 live `plant_data_enhanced` docs + live `blocks`/
+  `block_archives`); no git command was run either. Leaving Active for the
+  parent session to review, run the dry-run, inspect the summary, then run
+  `--execute`, verify with `mongosh`, regenerate CodeMaps, and commit.
+
+---
+
+### T-911 | PO-from-PR conversion now creates a live (Open) PO, not Draft
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-04
+- **Depends on:** T-810 ✅ (event-payload state mapping this change relies on)
+- **Blocks:** —
+- **Description:** Deliberate product decision: converting an already-Approved
+  PR into a PO must produce a LIVE (Open) PO directly, not a Draft. The PR
+  approval already covers it, so a second PO approval step is redundant.
+  Previously `DocumentService.create_po_from_pr` (in
+  `src/modules/purchasing/services/document_service.py`) always built the
+  new PO header with `status: DocumentStatus.DRAFT.value` and
+  `issuedDate: None`, requiring a manual extra approve/issue step on every
+  PR→PO conversion despite the PR already being Approved.
+- **Fix:** In `create_po_from_pr` (~line 2064), the new PO header now sets:
+  - `status: DocumentStatus.OPEN.value` (was `DRAFT.value`)
+  - `issuedDate: now` (was `None`) — issued immediately since the PO is live
+    from creation; `dueDate` stays `None` unchanged (computed at Send time
+    elsewhere).
+  - `approvalState` stays `"NotRequired"` unchanged — the PR approval IS the
+    approval; the approval engine (`self._engine`) is deliberately NOT
+    invoked on this path.
+  - The existing `await self._emit_po_event(header, None, company_code,
+    session=session)` call is unchanged in code, but now naturally emits
+    `po_state_changed` with `payload.state == "Open"` (via the existing
+    `map_po_state_for_event`/`build_po_event_payload` from T-810) instead of
+    `"Draft"`. `previousState` stays `None` — correct for a document that
+    never existed as Draft. No second event added.
+  - Docstring updated to state the PO is created directly OPEN/live because
+    the source PR was already Approved.
+  - Everything else in the method (PR auto-close to CLOSED, line copy with
+    `baseLineId` preserved, PR event emission, best-effort audit write) is
+    untouched.
+- **Tests:** `tests/unit/test_purchasing/test_create_po_from_pr.py` (NEW, 4
+  cases) — no prior test file covered this method at all, so nothing needed
+  updating for a stale `'draft'` assertion. New cases: (1) returned PO
+  `status == 'open'`; (2) `po_state_changed` outbox event emitted with
+  `payload['state'] == 'Open'`, round-tripped against the REAL
+  `PurchaseOrderStateChangedPayload` contract model (proof this doesn't
+  reintroduce the T-810 crash class), `previousState is None`; (3) source PR
+  transitions to `status == 'closed'` via `document_headers.update_one` and
+  emits `pr_state_changed` with `state == 'Closed'`; (4) `approvalState ==
+  'NotRequired'` on the returned PO, with `service._engine.evaluate` spied to
+  raise if ever called — proves the approval engine is never invoked on this
+  path. Run locally (miniconda `python3 -m pytest`, no Docker needed — full
+  `src`/`contracts` tree imports cleanly on this host): **4 passed**. Full
+  `tests/unit/test_purchasing/` suite re-run for regressions: **109 passed**
+  (105 pre-existing + 4 new), 0 failed.
+- **Deploy note:** `docker restart a64coreplatform-api-1` required — the api
+  container has no `--reload`; only
+  `src/modules/purchasing/services/document_service.py` changed.
+- **CodeMaps:** not regenerated — no new/removed endpoints, services, or
+  collections; this is a status/field-value change inside one existing
+  service method.
+- **Files changed:**
+  `src/modules/purchasing/services/document_service.py`,
+  `tests/unit/test_purchasing/test_create_po_from_pr.py` (new).
+- **Not moving to ARCHIVE** — leaving Active for the parent session to
+  restart the api container, verify, and commit.
+
+---
+
+### T-811 | Purchasing detail pages — Wave 4 status vocabulary never updated on frontend (no action buttons render)
+- **Category:** Frontend · **Priority:** P0
+- **Assigned:** frontend-dev-expert · **Started:** 2026-08-04
+- **Depends on:** T-810 ✅ (backend counterpart — same root migration)
+- **Blocks:** —
+- **Description:** Companion regression to T-810. `wave4_purchasing_status_migration.py`
+  rewrote stored `document_headers.status` from TitleCase to lowercase_snake
+  (`draft`, `pending_approval`, `open`, `partly_closed`, `closed`, `cancelled`
+  — plus unchanged `'Rejected'`/`'Sent'`/`'Partially Received'`/`'Received'`),
+  but the frontend was never updated: `statusPhase.ts`'s
+  `PURCHASING_STATUS_PHASE` map and all 4 purchasing detail pages' action
+  gating still compared against the old TitleCase strings, so a Draft PO
+  (status `"draft"`) showed zero action buttons (no Submit/Edit/Delete) and
+  badges rendered the raw lowercase string instead of a display label.
+- **Fix:** re-keyed `PURCHASING_STATUS_PHASE` on backend values (old
+  TitleCase kept as harmless aliases), added `statusDisplayLabel()`, fixed
+  gating in `PurchaseOrderDetailPage.tsx` / `PurchaseRequestDetailPage.tsx` /
+  `GoodsReceiptDetailPage.tsx` / `APInvoiceDetailPage.tsx` /
+  `PurchaseOrderFormPage.tsx`, added `useDeletePurchaseOrder` + a Delete
+  button for draft POs, updated `POStatus`/`PRStatus` types in
+  `purchasingApi.ts`, aligned list-page filters/badges. Verified with
+  `npx tsc -b --noEmit` only — no Playwright (user verifies in browser per
+  project rule). Not moving to ARCHIVE — leaving for the parent session to
+  verify + commit.
+- **Follow-up noted, not done:** PR/GR/AP have delete endpoints/client
+  methods but no delete UI — same pattern as the new PO delete button could
+  be added later if wanted.
+
+---
+
 ### T-910 | Finance-outbox silent drop — ap_down_payment_posted / ap_credit_note_posted never registered as contracts (Stage 1 of 2)
 - **Category:** Backend · **Priority:** P0
 - **Assigned:** backend-dev-expert · **Started:** 2026-08-04

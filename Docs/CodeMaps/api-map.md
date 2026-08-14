@@ -1,6 +1,6 @@
 # API Map
 
-> Generated: 2026-08-03 12:15 UTC  
+> Generated: 2026-08-07 08:14 UTC  
 > Source: MongoDB `mapper_nodes` (layer=api, node_type=api_endpoint)
 
 ## Quick Reference
@@ -29,7 +29,7 @@ and their connections to frontend service calls.
 > Before treating any other row as public, read the route's own
 > `Depends(...)`. Do not infer auth from this map.
 
-## API Endpoints (114 total)
+## API Endpoints (115 total)
 
 ### Module: `ai_analytics`
 
@@ -68,6 +68,7 @@ and their connections to frontend service calls.
 | `CRUD /ai-hub` | `src/modules/farm_manager/api/v1/ai_hub.py:40` | Unified AI Hub interface, super_admin only for all 6 endpoints. POST /chat (message to a Hub section assistant — Control/Monitor/Report/Advise; Control can produce pending write actions for relay control/automation), POST /confirm (confirm/deny a pending write action), POST /transcribe (audio transcription via Vertex AI), GET /history/{section}, POST /tts (ElevenLabs text-to-speech), POST /export-report (PDF/Excel export). | router, chat, confirm_action, transcribe_audio, get_history, text_to_speech, exp |
 | `CRUD /config` | `src/modules/farm_manager/api/v1/config.py:1` | Spacing standards CRUD, plant calculator, farming year configuration. | router |
 | `CRUD /config/watchdog` | `src/modules/farm_manager/api/v1/watchdog.py:18` | Telegram-based watchdog alerting configuration and control, all endpoints admin+ only (_require_admin checks role in ('admin','super_admin')). GET/PATCH config (bot token masked in responses), POST test-notification (send a test Telegram message), GET status, POST trigger-check (manual watchdog run), GET history (past notification log). | router, get_watchdog_config, update_watchdog_config, test_watchdog_notification, |
+| `CRUD /farm/plant-mothers` | `src/modules/farm_manager/api/v1/plant_mothers.py:32` | Plant Library mother (product/folder) CRUD plus variety listing/creation: POST/GET/GET{id}/PATCH{id}/DELETE{id} /plant-mothers, GET+POST /plant-mothers/{id}/varieties. | router |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/alerts` | `src/modules/farm_manager/api/v1/block_alerts.py:1` | CRUD for block alerts with resolve/dismiss, active alerts, and farm-level listing. | router, farm_router |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/cameras` | `src/modules/farm_manager/api/v1/cameras.py:23` | Camera integration for a block's SenseHub. list_cameras (live MCP call, cache fallback on unreachable hub), capture_snapshot, list_snapshots/latest_snapshots (cached snapshot browsing), serve_snapshot_image (serves image files from local storage). | router, list_cameras, capture_snapshot, list_snapshots, latest_snapshots, serve_ |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/harvests` | `src/modules/farm_manager/api/v1/block_harvests.py:1` | CRUD for block harvest records with summary and farm-level aggregation. | router, farm_router |
@@ -190,7 +191,7 @@ and their connections to frontend service calls.
 | `CRUD /sales/returns (legacy)` | `src/modules/sales/api/v1/returns.py:1` | Legacy Return Order CRUD with inventory restoration on process. | router |
 | `CRUD /sales/returns-v2` | `src/modules/sales/api/v1/returns_v2.py:1` | T-100.11 Return Note (RTN) CRUD + from-request copy + status transitions. Physical goods return. Emits return_posted to finance outbox. | router |
 
-## API Router Files (115 total)
+## API Router Files (116 total)
 
 | Name | File | Description |
 |------|------|-------------|
@@ -212,6 +213,7 @@ and their connections to frontend service calls.
 | `CRUD /ai-hub` | `src/modules/farm_manager/api/v1/ai_hub.py:40` | Unified AI Hub interface, super_admin only for all 6 endpoints. POST /chat (message to a Hub section assistant — Control/Monitor/Report/Advise; Control can produce pending write actions for relay control/automation), POST /confirm (confirm/deny a pending write action), POST /transcribe (audio transcription via Vertex AI), GET /history/{section}, POST /tts (ElevenLabs text-to-speech), POST /export-report (PDF/Excel export). | router, chat, confirm_action, transcribe_audio, get_history, text_to_speech, exp |
 | `CRUD /config` | `src/modules/farm_manager/api/v1/config.py:1` | Spacing standards CRUD, plant calculator, farming year configuration. | router |
 | `CRUD /config/watchdog` | `src/modules/farm_manager/api/v1/watchdog.py:18` | Telegram-based watchdog alerting configuration and control, all endpoints admin+ only (_require_admin checks role in ('admin','super_admin')). GET/PATCH config (bot token masked in responses), POST test-notification (send a test Telegram message), GET status, POST trigger-check (manual watchdog run), GET history (past notification log). | router, get_watchdog_config, update_watchdog_config, test_watchdog_notification, |
+| `CRUD /farm/plant-mothers` | `src/modules/farm_manager/api/v1/plant_mothers.py:32` | Plant Library mother (product/folder) CRUD plus variety listing/creation: POST/GET/GET{id}/PATCH{id}/DELETE{id} /plant-mothers, GET+POST /plant-mothers/{id}/varieties. | router |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/alerts` | `src/modules/farm_manager/api/v1/block_alerts.py:1` | CRUD for block alerts with resolve/dismiss, active alerts, and farm-level listing. | router, farm_router |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/cameras` | `src/modules/farm_manager/api/v1/cameras.py:23` | Camera integration for a block's SenseHub. list_cameras (live MCP call, cache fallback on unreachable hub), capture_snapshot, list_snapshots/latest_snapshots (cached snapshot browsing), serve_snapshot_image (serves image files from local storage). | router, list_cameras, capture_snapshot, list_snapshots, latest_snapshots, serve_ |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/harvests` | `src/modules/farm_manager/api/v1/block_harvests.py:1` | CRUD for block harvest records with summary and farm-level aggregation. | router, farm_router |

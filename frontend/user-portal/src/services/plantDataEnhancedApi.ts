@@ -160,10 +160,27 @@ export async function downloadPlantDataEnhancedTemplate(): Promise<void> {
  * @param onProgress - Optional callback for upload progress (0-100)
  * @returns Import result with created/updated counts and errors
  */
+export interface CSVImportRowSkip {
+  row: number;
+  reason: string;
+}
+
+export interface CSVImportRowFailure {
+  row: number;
+  error: string;
+}
+
+/**
+ * Result of a mother/variety CSV import: one row = one variety, grouped under a
+ * find-or-created mother (by plantName).
+ */
 export interface CSVImportResult {
-  created: number;
-  updated: number;
-  errors: string[] | null;
+  totalRows: number;
+  mothersCreated: number;
+  mothersReused: number;
+  varietiesCreated: number;
+  rowsSkipped: CSVImportRowSkip[];
+  rowsFailed: CSVImportRowFailure[];
 }
 
 export async function importPlantDataEnhancedCSV(

@@ -31,6 +31,16 @@ import { X } from 'lucide-react';
 import { glassControl, glassOpaque, monoLabel } from '@a64core/shared';
 import type { PlantDataEnhanced } from '../../types/farm';
 
+/**
+ * Display label for a variety: "{plantName}" alone, or "{plantName} · {varietyName}"
+ * when the variety carries a mother-assigned varietyName (Plant Library
+ * Phase 1/2 — plantName is the mother's denormalized product name, kept in
+ * sync server-side on rename; varietyName is the sibling label within it).
+ */
+function varietyLabel(plant: PlantDataEnhanced): string {
+  return plant.varietyName ? `${plant.plantName} · ${plant.varietyName}` : plant.plantName;
+}
+
 // ─── Public interface ─────────────────────────────────────────────────────────
 
 export interface PlantComboboxProps {
@@ -282,9 +292,7 @@ export function PlantCombobox({
   const filtered =
     query.trim().length === 0
       ? plants
-      : plants.filter((p) =>
-          p.plantName.toLowerCase().includes(query.toLowerCase()),
-        );
+      : plants.filter((p) => varietyLabel(p).toLowerCase().includes(query.toLowerCase()));
 
   const displayItems = filtered.slice(0, MAX_DISPLAY);
 
@@ -430,7 +438,7 @@ export function PlantCombobox({
         }}
         onMouseEnter={() => setHighlightedIndex(index)}
       >
-        <PlantName>{plant.plantName}</PlantName>
+        <PlantName>{varietyLabel(plant)}</PlantName>
         <PlantMeta>
           {plant.growthCycle.totalCycleDays} days cycle &middot;{' '}
           {plant.yieldInfo.yieldPerPlant}
@@ -453,14 +461,14 @@ export function PlantCombobox({
           $disabled={disabled}
           aria-label="Selected crop"
         >
-          <ChipLabel title={selectedPlant?.plantName ?? value}>
-            {selectedPlant?.plantName ?? value}
+          <ChipLabel title={selectedPlant ? varietyLabel(selectedPlant) : value}>
+            {selectedPlant ? varietyLabel(selectedPlant) : value}
           </ChipLabel>
           {!disabled && (
             <ClearButton
               type="button"
               onClick={handleClear}
-              aria-label={`Clear selected crop ${selectedPlant?.plantName ?? ''}`}
+              aria-label={`Clear selected crop ${selectedPlant ? varietyLabel(selectedPlant) : ''}`}
               title="Clear selection"
             >
               <X size={13} strokeWidth={1.8} />

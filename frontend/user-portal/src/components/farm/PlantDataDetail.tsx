@@ -499,7 +499,10 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
             <PlantIcon aria-hidden="true">
               <PlantTypeIcon size={28} strokeWidth={1.6} />
             </PlantIcon>
-            <PlantName>{plant.plantName}</PlantName>
+            <PlantName>
+              {plant.plantName}
+              {plant.varietyName ? ` · ${plant.varietyName}` : ''}
+            </PlantName>
             {plant.scientificName && <ScientificName>{plant.scientificName}</ScientificName>}
             <VersionInfo>
               Version {plant.dataVersion} | Created by {plant.createdByEmail} | Last updated:{' '}
