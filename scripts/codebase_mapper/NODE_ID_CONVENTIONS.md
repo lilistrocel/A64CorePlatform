@@ -325,22 +325,56 @@ in them unless your task owns them:
 | Prefix                              | Owning task                  |
 |-------------------------------------|------------------------------|
 | `sales.*`                           | `map_sales_module`           |
-| `purchasing.*`                      | `map_purchasing_module` (TBA)|
+| `purchasing.*`                      | `map_purchasing_module`      |
 | `crm.*`                             | `map_crm_module`             |
 | `hr.*`                              | `map_hr_module`              |
 | `farm_manager.*`                    | `map_farm_*` (multiple)      |
 | `logistics.*`                       | `map_logistics_module`       |
 | `marketing.*`                       | `map_marketing_module`       |
 | `ai_analytics.*`                    | `map_ai_analytics_module`    |
+| `ai_assistant.*`                    | `map_ai_assistant_module`    |
+| `attachments.*`                     | `map_attachments_module`     |
+| `mushroom_manager.*`                | `map_mushroom_module`        |
+| `protocols.*`                       | `map_protocols_module`       |
+| `genetics.*`                        | `map_genetics_module`        |
 | `core.*`                            | `map_core_services`          |
 | `core.api.*`                        | `map_core_api`               |
-| `finance.*`                         | `map_finance_module` (TBA)   |
+| `finance.*`                         | `map_finance_module`         |
 | `finance_bridge.*`                  | `map_core_services`          |
 | `component::*`                      | `map_frontend_components`    |
 | `hook::*`, `service::*`, `store::*` | `map_frontend_hooks_services`|
 | `type::*`                           | `map_frontend_types`         |
 | `file::*`                           | `map_frontend_components`    |
-| `collection_*`                      | `map_database_collections`   |
+| `collection_*`                      | see note below               |
+
+### `collection_*` is owned per-module, not centrally
+
+The row above used to read `map_database_collections`, which is not what the
+graph does. Every module task that has collections emits its own
+`collection_<name>` `db_model` nodes carrying its own `module` field —
+`map_hr_module` owns `collection_employees`, `map_genetics_module` owns
+`collection_genetic_lines`, and so on. `map_database_collections` is the
+sweep-up task for collections that belong to no single module. Emit your
+module's collections from your module's task; do not wait for
+`map_database_collections` to notice them (it did not notice six whole
+modules).
+
+### `module` field: backend uses the directory name
+
+`module` is the directory under `src/modules/`, so backend mushroom nodes are
+`module: "mushroom_manager"`. The pre-existing React nodes for the same feature
+use the short name (`module: "mushroom"`), exactly as `farm_manager` (backend)
+and `farm` (frontend) already coexist. Keep that split; do not retarget one to
+the other, and expect two adjacent sections in `module-map.md`.
+
+### The two finances
+
+`finance.*` covers `src/modules/finance/` — the ops-side operational P&L module
+mounted at `/api/v1/operations`, owned by `map_finance_module`. The statutory
+finance microservice under `services/finance/` (MySQL GL, `/api/v1/finance/*`,
+`finance.model.JournalEntry` in the examples above) is a **separate deployment
+artefact with no mapping task at all and zero nodes in the graph**. If you map
+it, disambiguate by `file_path`, not by node_id prefix.
 
 When emitting cross-namespace edges, target the consumer's expected
 node_id — if you create an edge pointing at a node that doesn't exist

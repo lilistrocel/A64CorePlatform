@@ -50,10 +50,27 @@ FILE_TO_TASK_MAP = [
     ("src/modules/ai_analytics/", ["map_ai_analytics_module", "gen_module_map"]),
     # Modules added after the original seed. Without these prefixes, rerun.sh
     # silently re-seeds nothing when their files change.
+    #
+    # Two failure modes have already bitten here, both silent:
+    #   1. A prefix naming a task_id that setup.py never defined. cmd_reseed
+    #      calls update_one({task_id: ...}), which matches nothing and reports
+    #      no error — so only the generic gen_* tasks got dirtied and the
+    #      module-specific scan never ran. All ids below are now defined in
+    #      setup.py; keep the two files in sync.
+    #   2. A prefix listing only gen_module_map. These modules own API
+    #      endpoints, services and collections, so a change to them must dirty
+    #      gen_api_map / gen_service_map / gen_database_map too, or the module
+    #      reappears in module-map.md while staying absent from the others.
     ("src/modules/genetics/", ["map_genetics_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
-    ("src/modules/mushroom_manager/", ["map_mushroom_module", "gen_module_map"]),
-    ("src/modules/purchasing/", ["map_purchasing_module", "gen_module_map"]),
-    ("src/modules/finance/", ["map_finance_module", "gen_module_map"]),
+    ("src/modules/mushroom_manager/", ["map_mushroom_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
+    ("src/modules/purchasing/", ["map_purchasing_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
+    ("src/modules/finance/", ["map_finance_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
+    ("src/modules/protocols/", ["map_protocols_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
+    ("src/modules/attachments/", ["map_attachments_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
+    ("src/modules/ai_assistant/", ["map_ai_assistant_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
+    # finance_bridge has no module task of its own — its nodes (finance_bridge.*)
+    # are owned by map_core_services, per NODE_ID_CONVENTIONS.md.
+    ("src/modules/finance_bridge/", ["map_core_services", "gen_module_map", "gen_service_map"]),
     ("frontend/user-portal/src/components/farm/", ["map_frontend_farm", "gen_frontend_map"]),
     ("frontend/user-portal/src/pages/farm/", ["map_frontend_farm", "gen_frontend_map"]),
     ("frontend/user-portal/src/hooks/farm/", ["map_frontend_farm", "gen_frontend_map"]),
