@@ -5,6 +5,141 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Security Hardening: role/activation audit trail, seed_admin lockdown, defense-in-depth route gating
+
+**Scope:** A three-part security audit (backend, frontend, live-DB forensics)
+of how users obtain the `super_admin` role, followed by fixes.
+**Audit conclusion: there was no privilege-escalation bug.** Registration
+hardcodes `role: USER`, JWTs are never trusted for role (every request
+re-reads the role from the database), `can_change_role` correctly caps
+`admin` at `moderator`/`user`/`guest`, and `UserUpdate` has no `role` field.
+Every super_admin grant on the live deployment was made by an existing
+super_admin — the reason those grants *looked* unapproved is that the
+system recorded neither approver nor audit entry, which is what this work
+fixes. **Classification: PATCH** — security patches and bug fixes only; no
+new endpoints, no endpoint signature changes, no collections added or
+removed. **Version number TBD pending release:** `src/main.py`'s version
+constant (currently `1.17.0`) already trails this file's documented history
+through `[1.20.0]` — see the drift note in `Versioning.md`'s Current
+Versions section, unresolved by this entry. This entry sits independently
+of, and does not presume an ordering against, the Genetics and Wave 3
+Phase 2 Sales AR `[Unreleased]` entries below — all three are currently
+unreleased, on three different branches (this one: `various-fixes-140826`).
+(Viet Anh)
+
+### Added
+
+- **Shared audit-trail writer** — `src/services/audit_log_service.py`
+  (`write_user_audit_log`), matching the `admin_audit_log` document shape
+  already used by `deployment_settings_service.update()`, the
+  organizations modules-update endpoint, and `admin.py`'s `mfa_reset`.
+  Wired into every role/activation write path: `UserService
+  .change_user_role` / `activate_user` / `deactivate_user`
+  (`src/services/user_service.py`) and the sibling raw-update endpoints in
+  `src/api/v1/admin.py` (`PATCH /admin/users/{id}/role`, `PATCH
+  /admin/users/{id}/status`). Each entry records actor userId + email,
+  target userId + email, before/after value, and a UTC timestamp. Role
+  changes — the most sensitive mutation in the system — previously wrote
+  no audit record at all.
+- **`guard_target_not_super_admin`** (`src/middleware/permissions.py`) —
+  shared guard, now used by `POST /users/{id}/activate` and `/deactivate`
+  (via `UserService.activate_user`/`deactivate_user`), which previously
+  lacked the super_admin-target check their `admin.py` sibling
+  (`PATCH /admin/users/{id}/status`) already had — a plain `admin` could
+  activate or deactivate a `super_admin` account.
+- **Frontend route-level role gating** — `ProtectedRoute` gains an optional
+  `allowedRoles` prop and a "Not authorized" fallback view. `/admin/users`
+  now requires `admin`/`super_admin`; `/admin/tenant-setup` and `/ai`
+  require `super_admin`; enforced in `App.tsx`. Previously these routes had
+  no route-level check — only the sidebar link was hidden, so any
+  authenticated user could reach them by typing the URL directly. This is
+  defense-in-depth only; the backend already rejected the underlying
+  requests with 403.
+- **Frontend role-dropdown restriction** — `UserManagementPage`'s inline
+  role `<select>` previously offered `super_admin` to every viewer
+  unconditionally. New `getAssignableRoles()` helper mirrors
+  `can_change_role` in `src/middleware/permissions.py` so the dropdown only
+  ever offers roles the viewer is actually permitted to assign.
+- 24 new backend unit tests: `tests/unit/test_main/test_seed_admin.py` (5),
+  `tests/unit/test_users/test_admin_role_status_audit.py` (4),
+  `test_user_service_role_activation_audit.py` (8),
+  `test_users_route_activation_wiring.py` (4), plus 3 appended to
+  `tests/unit/test_deployment_settings/test_deployment_settings_service.py`.
+
+### Fixed
+
+- **`seed_admin()` silent re-promotion** (`src/main.py`) — previously,
+  whenever the super_admin count hit zero on any deployment (not just a
+  fresh one), whatever pre-existing account matched the public
+  `ADMIN_EMAIL` value was silently re-promoted to super_admin, with no
+  approver and no audit trail. Since `ADMIN_EMAIL` is documented publicly
+  and registration is open, anyone could pre-register that address as an
+  ordinary user and wait for a future restart where the super_admin count
+  dropped to zero. Now gated on "genuinely uninitialised" (no organization
+  has ever been created on this deployment); once initialised, a
+  zero-super_admin state is refused rather than auto-repaired, and logged
+  at WARNING. The surviving genuine first-boot promotion path is preserved
+  but always audit-logged (`performedBy="system:seed_admin"`).
+- **`CF_ACCESS_DEFAULT_ROLE` validation gap**
+  (`src/services/deployment_settings_service.py::update()`) — the runtime
+  `PATCH /api/v1/admin/deployment-settings` write path only type-checked
+  this value (`isinstance(value, str)`); the `UserRole` enum-membership
+  check that `config/settings.py`'s startup validator already enforces on
+  the env-var path was never applied here. Fixed to match the startup
+  validator's strictness exactly (enum-membership only — `"super_admin"`
+  remains a valid value on both paths; this closes a validation gap, it
+  does not add a new business restriction). Relevant because Cloudflare
+  Access JIT provisioning is enabled by default wherever
+  `CF_ACCESS_ENABLED = true`.
+
+### Internal / Tooling
+
+- **Codebase mapper task-coverage gap** (`scripts/codebase_mapper/`) — six
+  backend modules (~118 Python files: purchasing, mushroom_manager,
+  protocols, ai_assistant, attachments, finance, plus finance_bridge) had
+  **zero** representation in any generated map while `task_manager.py`
+  reported a confident "26/26 completed," because its invalidation table
+  referenced task IDs (`map_purchasing_module`, `map_finance_module`, etc.)
+  that `setup.py` never defined — matches against nothing, silent no-op.
+  `setup.py` now seeds 33 task definitions (was 26); `task_manager.py`
+  gained the missing invalidation prefixes and upgraded several modules'
+  prefixes to also dirty the api/service/database generators, not just
+  `gen_module_map`. Also fixed `MONGO_URL` being hard-coded to an
+  unauthenticated `localhost` URI in `setup.py`, which meant it could not
+  seed a credentialed deployment at all. `NODE_ID_CONVENTIONS.md` and
+  `map_generator.py`'s INDEX Module Directory corrected to match. Not part
+  of the running application; no version-bump implication.
+
+### Not done / deliberately out of scope
+
+- `UserService.change_user_role` still does not gate on the target's
+  *current* role, only the role being assigned — an `admin` can demote an
+  existing `super_admin` to `moderator`. Flagged, not fixed (only
+  activate/deactivate were in scope for the super_admin-target guard in
+  this audit).
+- No approval workflow was added to registration or role assignment —
+  explicitly out of scope; this work is audit logging plus gap-closing
+  only, not a new business process.
+
+### Compatibility
+
+- No breaking changes to any existing endpoint signature, request/response
+  shape, or MongoDB collection.
+- `CF_ACCESS_DEFAULT_ROLE` validation is stricter than before — a request
+  that previously wrote an invalid role string now gets 422 instead of
+  silently persisting it; no previously-valid value is newly rejected.
+- `POST /users/{id}/activate` and `/deactivate` now return 403 for the one
+  previously-permitted case (`admin` acting on a `super_admin` target) that
+  every sibling role-mutation endpoint already blocked — closing an
+  inconsistency, not changing documented behavior.
+- **CodeMaps:** not structural — no new/removed endpoints, services, or
+  collections; one new internal helper module and one new permissions
+  function, both additive to modules already represented in the maps.
+  Regeneration not required per this repo's own rule ("bug fixes, logic
+  changes... NOT needed").
+
+---
+
 ## [Unreleased] — Genetics: label/QR traceability, safe line removal, public info page
 
 **Scope:** T-804 through T-809 on the `genetics` module — per-vessel QR labels

@@ -1,8 +1,196 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 112 tasks
+> **Total completed:** 115 tasks
 
 ## 2026-08
+
+### T-920 | Backend security audit fixes — role/activation audit trail, seed_admin lockdown, CF_ACCESS_DEFAULT_ROLE validation, activate/deactivate super_admin guard
+- **Category:** Backend (security) · **Priority:** P0
+- **Completed:** 2026-08-14 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** — · **Related:** T-919 (frontend half of the
+  same defense-in-depth audit — route-level role gating + role-dropdown
+  clamping; no file overlap with this task)
+- **Summary:** Four fixes from a backend security audit:
+  1. **Audit trail for role/activation changes.** `UserService.change_user_role`
+     / `activate_user` / `deactivate_user` (`src/services/user_service.py`)
+     and the sibling raw-`update_one` endpoints in `src/api/v1/admin.py`
+     (`PATCH /admin/users/{id}/role`, `PATCH /admin/users/{id}/status`) did a
+     bare Mongo update plus a `logger.info` — nothing written to
+     `admin_audit_log`, the most sensitive mutation in the system left with
+     no "who granted this, and when" trail. New shared writer
+     `src/services/audit_log_service.py::write_user_audit_log` matches the
+     existing `admin_audit_log` document shape (`action`, `targetUserId`,
+     `targetUserEmail`, `performedBy`, `performedByEmail`, `performedByRole`,
+     `timestamp`, `details.before/after`) used by `deployment_settings_service
+     .update()`, the organizations modules-update endpoint, and admin.py's
+     `mfa_reset` — not a new parallel mechanism. Wired into all 6 write paths
+     (2 in `user_service.py` methods x role/activate/deactivate = 3, plus the
+     2 admin.py endpoints, plus `seed_admin`'s promotion branch below).
+  2. **`seed_admin()` lockdown (`src/main.py`).** Previously, whenever the
+     super_admin count hit zero, it silently promoted any pre-existing
+     account matching `settings.ADMIN_EMAIL` — no approver, no audit entry.
+     Since `ADMIN_EMAIL` is documented publicly (this repo's own CLAUDE.md)
+     and registration is open, anyone could pre-register that address as an
+     ordinary user and get auto-promoted on a future restart where
+     super_admin count dropped to zero. Fixed by gating promotion/creation on
+     "genuinely uninitialised" = no organization has ever been created on
+     this deployment (org creation only happens inside this same startup-time
+     function, before the app accepts HTTP traffic, so this signal cannot be
+     manufactured externally). On an already-initialised deployment, zero
+     super_admins is now treated as an operational incident requiring an
+     explicit operator action — never auto-repaired. The one remaining
+     promotion path (a registration racing the very first boot before any
+     org exists) is preserved for genuine first-boot bootstrap but is never
+     silent: always audit-logged (`performedBy="system:seed_admin"`) and
+     logged at WARNING.
+  3. **`CF_ACCESS_DEFAULT_ROLE` runtime validation
+     (`src/services/deployment_settings_service.py::update()`).** Previously
+     type-checked only (`isinstance(value, str)`); the `UserRole`
+     enum-membership check existed solely in `config/settings.py`'s startup
+     validator, which covers the env-var path, not a runtime DB write via
+     `PATCH /api/v1/admin/deployment-settings`. Added the same
+     enum-membership check to `update()` — matches the startup validator's
+     strictness exactly (enum membership only; `"super_admin"` is still a
+     valid value, same as the env-var path — this is a validation-gap fix,
+     not a new business-rule restriction).
+  4. **Missing super_admin-target guard on activate/deactivate
+     (`src/api/v1/users.py` `POST /users/{id}/activate` /`/deactivate` ->
+     `UserService.activate_user`/`deactivate_user`).** Its sibling
+     `PATCH /admin/users/{id}/status` already blocked a plain `admin` from
+     touching a `super_admin` account; these two did not. New shared guard
+     `guard_target_not_super_admin` in `src/middleware/permissions.py`, used
+     by both `user_service.py` methods (existing `admin.py` inline checks
+     left untouched — different message wording, no behavior change risked
+     there).
+- **Not done / deliberately out of scope:** `UserService.change_user_role`
+  (called from `users.py`'s `PATCH /{id}/role`) does not gate on the
+  target's *current* role, only the role being assigned via
+  `can_change_role` — an admin could demote an existing super_admin to
+  `moderator`. Flagged to the user, not fixed here (only activate/deactivate
+  were in scope for the super_admin guard per this audit). No approval
+  workflow was added to user creation/registration — explicitly out of
+  scope per the audit brief (audit logging only, not a new business
+  process).
+- **Tests:** 24 new unit tests, all passing in the live container
+  (`docker exec a64coreplatform-api-1 python -m pytest tests/unit/test_users
+  tests/unit/test_main tests/unit/test_deployment_settings -q` → 59 passed,
+  0 failed — includes pre-existing tests in those dirs):
+  - `tests/unit/test_users/test_user_service_role_activation_audit.py` (8) —
+    audit entry shape/actor, 403 guard blocks admin-on-super_admin,
+    super_admin-on-super_admin allowed + audited, refresh-token revocation
+    preserved.
+  - `tests/unit/test_users/test_admin_role_status_audit.py` (4) — admin.py's
+    role/status endpoints write the audit entry; pre-existing super_admin
+    guard on the status endpoint still holds with no audit entry on a
+    blocked attempt.
+  - `tests/unit/test_users/test_users_route_activation_wiring.py` (4) — the
+    HTTP route actually passes `current_user` through to the service (the
+    pre-fix bug: it didn't, at all).
+  - `tests/unit/test_main/test_seed_admin.py` (5) — dormant branch unchanged,
+    fresh-deployment bootstrap preserved, racing-registration promotion
+    audited, already-initialised deployment refuses to promote OR
+    auto-create (the two scenarios the audit's attack description named).
+  - 3 appended to `tests/unit/test_deployment_settings/test_deployment_settings_service.py`
+    — invalid `CF_ACCESS_DEFAULT_ROLE` rejected (422), `"super_admin"`
+    accepted (pins enum-membership-only strictness), valid role accepted.
+  - Full `tests/unit` suite run for regressions: 838 passed, 1 skipped, 2
+    failed — both pre-existing failures in
+    `tests/unit/test_finance_bridge/test_outbox_reconciler.py`
+    (`TestRunSweep::test_scenario_a_missing_event_emitted`,
+    `::test_scenario_d_po_open_emits_po_event`), unrelated to this task
+    (MagicMock-awaited-as-coroutine in `is_finance_enabled_for_org` —
+    finance outbox module, untouched by this work) and reproduces the same
+    way run in isolation, confirming pre-existing.
+- **CodeMaps:** not structural — no new/removed endpoints, services, or
+  collections; one new internal helper module
+  (`src/services/audit_log_service.py`) and one new function in
+  `src/middleware/permissions.py`, both additive to existing modules already
+  in the maps. Regeneration not required by this task's own rule ("bug
+  fixes, logic changes... NOT needed"), though the separately-flagged
+  mapper-gap issue (T-903-era CodeMaps regen blocker) is unrelated and
+  still open.
+- **Deploy:** `docker restart a64coreplatform-api-1` (done — verified clean
+  startup, health check 200, no import/circular-import errors).
+
+### T-919 | Frontend authorization-gating gaps — /admin/users route + role-dropdown escalation
+- **Category:** Frontend/Security · **Priority:** P1
+- **Completed:** 2026-08-14 · **Assigned:** frontend-dev-expert
+- **Depends on:** — · **Blocks:** — · **Related:** T-920 (backend half of the
+  same defense-in-depth audit — audit trail, seed_admin lockdown,
+  CF_ACCESS_DEFAULT_ROLE validation, activate/deactivate guard; no file
+  overlap with this task)
+- **Summary:** Defense-in-depth audit found two frontend gaps (server
+  already 403s both — `require_admin` and `can_change_role` in
+  `src/middleware/permissions.py` are correct and were not the problem):
+  1. `/admin/users`, `/admin/tenant-setup`, and `/ai` had no route-level
+     role gate — any authenticated user could load the page by typing the
+     URL directly; only the sidebar link was hidden. Fixed with a new
+     optional `allowedRoles` prop on `ProtectedRoute`
+     (`frontend/user-portal/src/components/common/ProtectedRoute.tsx`) and
+     a clean "Not authorized" fallback view, wrapped around the three
+     routes in `App.tsx` (`/admin/users`: `['admin','super_admin']`;
+     `/admin/tenant-setup` and `/ai`: `['super_admin']`).
+  2. `UserManagementPage`'s inline role `<select>` offered
+     `super_admin`/`admin` to every viewer unconditionally, regardless of
+     what they were actually permitted to assign — a mere `admin` could
+     attempt to escalate a user to `super_admin` and get a 403 back with no
+     clear explanation. Fixed with a new `getAssignableRoles(viewerRole)`
+     helper mirroring `can_change_role`, used for the role-edit dropdown
+     options only (not the unrelated role *filter* dropdown) and to clamp
+     the initial edit value to a valid option.
+- **Both fixes are defense-in-depth only** — the backend already rejected
+  every request these gaps could have produced with 403. No server-side
+  behavior changed as a result of this task.
+- **Verify:** `npx tsc -b` (not `tsc --noEmit`, which is a no-op) — 234
+  pre-existing errors across 165 files, zero new errors from this change.
+- **CodeMaps:** not structural — no new components/routes/files, only a new
+  prop and a new helper function on existing ones. Regeneration not
+  required.
+- **Deploy:** none required — Vite hot reload picks up frontend changes.
+
+### T-921 | Codebase mapper — 6 backend modules had zero mapping task despite "26/26 completed"
+- **Category:** Tooling/Docs · **Priority:** P2
+- **Completed:** 2026-08-14 · **Assigned:** main session (Viet Anh)
+- **Depends on:** — · **Blocks:** — · **Related:** unrelated to T-919/T-920;
+  found and fixed in the same session while investigating adjacent code
+- **Summary:** `scripts/codebase_mapper/task_manager.py`'s
+  `FILE_TO_TASK_MAP` invalidation table already referenced task IDs
+  (`map_purchasing_module`, `map_mushroom_module`, `map_finance_module`,
+  etc.) that `setup.py` had never defined in its `TASKS` seed list —
+  `cmd_reseed`'s `update_one({task_id: ...})` matched nothing and silently
+  no-op'd. Net effect: six backend modules (~118 Python files —
+  `purchasing`, `mushroom_manager`, `protocols`, `ai_assistant`,
+  `attachments`, `finance`, plus `finance_bridge`) had **zero**
+  representation in any generated map, while `task_manager.py stats`
+  confidently reported "26/26 mapping tasks completed." `module-map.md`
+  carried `purchasing` and `mushroom` sections built entirely from React
+  component nodes — a UI with no backend behind it in the graph.
+- **Fix:** `setup.py` now seeds 33 task definitions (was 26), one per
+  previously-missing module, each specifying the exact node types/layers
+  and `collection_*` db_model nodes its agent must emit (`output_map` is
+  advisory only — `map_generator.py` selects by `node_type`/`layer`, not by
+  task, which is exactly how these modules stayed invisible despite a task
+  existing for some of them). `task_manager.py` gained the missing
+  invalidation prefixes for `protocols/`, `attachments/`, `ai_assistant/`,
+  `finance_bridge/`, and upgraded the mushroom/purchasing/finance prefixes
+  to also dirty `gen_api_map`/`gen_service_map`/`gen_database_map`, not
+  just `gen_module_map`. Also fixed `setup.py`'s `MONGO_URL` being
+  hard-coded to an unauthenticated `mongodb://localhost:27017` — every
+  other script in the package honours the `MONGO_URL` env var, so
+  `setup.py` alone could not seed a credentialed deployment at all.
+  `NODE_ID_CONVENTIONS.md`'s reserved-namespace table and
+  `map_generator.py`'s INDEX Module Directory corrected to match (both
+  previously listed `purchasing`/`finance` as "(TBA)" despite tasks already
+  existing, and were missing `ai_assistant`/`attachments`/`protocols`/
+  `finance_bridge` entirely).
+- **Not part of the running application** — this is dev tooling only; no
+  version-bump or CHANGELOG.md entry beyond a brief "Internal / Tooling"
+  note, no API/behavior change to the platform itself.
+- **Next step (not done here):** re-run `bash scripts/codebase_mapper/
+  rerun.sh` then `python3 scripts/codebase_mapper/map_generator.py all` to
+  actually populate the six modules' map coverage — this task only fixed
+  the task *definitions*; the graph itself still needs the mapping agents
+  to run against the corrected task list.
 
 ### T-909 | Cloudflare Access runbook correction
 - **Category:** Docs · **Priority:** P2

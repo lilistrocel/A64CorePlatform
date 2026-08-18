@@ -43,12 +43,17 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 > **Known drift (flagged, not resolved by this update):** this section's
 > `1.15.0` and the `src/main.py` version constant (`1.17.0`) both trail the
-> Version History below, which already documents through `v1.20.0` plus two
-> further independent Unreleased entries (Genetics, and Wave 3 Phase 2 Sales
-> AR). `src/main.py` has not been bumped since the `v1.16.0` release commit.
-> Out of scope for this pass (docs/CodeMaps only, no source-file edits) —
-> reconciling `main.py`, this summary table, and a real release/tag is a
-> release-manager decision, not a `change-guardian` doc-sync one.
+> Version History below, which already documents through `v1.20.0` plus three
+> further independent Unreleased entries (Security Hardening, Genetics, and
+> Wave 3 Phase 2 Sales AR). `src/main.py` has not been bumped since the
+> `v1.16.0` release commit. Out of scope for this pass (docs/CHANGELOG only,
+> no source-file edits) — reconciling `main.py`, this summary table, and a
+> real release/tag is a release-manager decision, not a `change-guardian`
+> doc-sync one. The Security Hardening entry deliberately follows the same
+> "flag classification, defer concrete number" convention already used below
+> for Genetics and Wave 3 Sales AR, rather than picking a number that would
+> either collide with one of those two pending threads or appear to revert
+> the already-documented `v1.18.0`–`v1.20.0` history.
 
 ### Platform Version
 **A64 Core Platform:** `1.15.0` (Unreleased) — see drift note above; the
@@ -99,6 +104,97 @@ shipped/landed.
 ## Version History
 
 ### Platform Version History
+
+#### Unreleased — Security Hardening: role/activation audit trail, seed_admin lockdown, defense-in-depth route gating — 2026-08-14
+
+**Type:** Patch Release (pending) — three-part security audit (backend audit
+of the authorization/role code, frontend audit of route/UI gating, and
+live-DB forensics on how existing super_admin accounts on the deployment
+were actually granted) followed by fixes. See `CHANGELOG.md` (`## [Unreleased]
+— Security Hardening: ...`) for the full itemised list; summarized here per
+this document's own "update on every version change" rule.
+
+**Author: Viet Anh**
+
+**Audit conclusion (the reason this is a PATCH, not a MAJOR fix for an actual
+escalation bug):** there was no privilege-escalation vulnerability.
+Registration hardcodes `role: USER`; JWTs are never trusted for role (every
+request re-reads the role from the database); `can_change_role`
+(`src/middleware/permissions.py`) correctly caps `admin` at
+`moderator`/`user`/`guest`; `UserUpdate` has no `role` field at all. Every
+super_admin grant found on the live deployment traced back to an action by
+an existing super_admin. The reason those grants *looked* unapproved under
+review is that the system recorded neither an approver nor an audit entry
+for role/activation changes — that gap is what this work closes, not a hole
+that let anyone actually escalate themselves.
+
+**Note on version number:** Not yet assigned a concrete `X.Y.Z`, for the
+same reason as the Genetics and Wave 3 Phase 2 Sales AR entries below: this
+sits on its own branch (`various-fixes-140826`), independent of and not
+presuming an ordering against either of those two, and `src/main.py`'s
+actual running value (`1.17.0`) already trails this file's own documented
+history through `v1.20.0` (see the drift note above) — picking a number now
+would either collide with a pending thread or misrepresent that drift as
+resolved. **Classification is fixed regardless of numbering: PATCH** —
+every change is a security/bug fix or an added audit trail on existing
+write paths; no endpoint was added, removed, or had its signature changed.
+
+**Added (summary — see CHANGELOG.md for full detail):**
+- Shared `write_user_audit_log` (`src/services/audit_log_service.py`),
+  wired into all five role/activation write paths across
+  `src/services/user_service.py` and `src/api/v1/admin.py` — previously the
+  most sensitive mutation in the system (who holds `super_admin`) left no
+  audit trail at all.
+- `guard_target_not_super_admin` (`src/middleware/permissions.py`), closing
+  a gap where `POST /users/{id}/activate`/`/deactivate` lacked the
+  super_admin-target check their `admin.py` sibling already enforced.
+- Frontend defense-in-depth: `ProtectedRoute`'s new `allowedRoles` prop
+  route-gates `/admin/users`, `/admin/tenant-setup`, `/ai`; role dropdown on
+  `UserManagementPage` now offers only roles the viewer may actually assign.
+- 24 new backend unit tests across `tests/unit/test_main/`,
+  `tests/unit/test_users/`, and `tests/unit/test_deployment_settings/`.
+
+**Fixed (summary):**
+- `seed_admin()` (`src/main.py`) no longer silently re-promotes a
+  pre-existing account matching the public `ADMIN_EMAIL` value whenever the
+  super_admin count hits zero on an already-initialised deployment; that
+  path is now refused (logged at WARNING) rather than auto-repaired. The
+  one surviving genuine first-boot promotion path is preserved but always
+  audit-logged.
+- `CF_ACCESS_DEFAULT_ROLE` on the runtime `PATCH
+  /api/v1/admin/deployment-settings` path now gets the same `UserRole`
+  enum-membership validation `config/settings.py`'s startup validator
+  already enforces on the env-var path — previously type-checked only.
+
+**Compatibility:**
+- No breaking changes to any endpoint signature, request/response shape, or
+  MongoDB collection.
+- Two narrow, intentional behavior tightenings: `CF_ACCESS_DEFAULT_ROLE`
+  now rejects invalid role strings (422) that previously wrote silently;
+  `POST /users/{id}/activate`/`/deactivate` now 403 the one case
+  (`admin` acting on a `super_admin` target) every sibling endpoint already
+  blocked. Both are closing inconsistencies, not new restrictions on
+  previously-valid requests.
+
+**Verification:** Full backend unit suite in-container: 838 passed, 1
+skipped, 2 pre-existing failures unrelated to this work (`tests/unit/
+test_finance_bridge/test_outbox_reconciler.py`, a `MagicMock`-awaited-as-
+coroutine bug in the finance-bridge reconciler, confirmed pre-existing by
+reproducing in isolation). Frontend `npx tsc -b`: 234 pre-existing errors
+across 165 files, zero new errors from this work.
+
+**CodeMaps:** Not structural — no new/removed endpoints, services, or
+collections. One new internal helper module
+(`src/services/audit_log_service.py`) and one new function in
+`src/middleware/permissions.py`, both additive to modules already
+represented in the maps. Regeneration not required by this repo's own rule.
+Separately (same session, unrelated to the security audit): the codebase
+mapper itself had a task-coverage gap — six backend modules with zero
+mapping task despite `task_manager.py` reporting "26/26 completed" — fixed
+in `scripts/codebase_mapper/`; see `CHANGELOG.md`'s "Internal / Tooling"
+note under this same entry.
+
+---
 
 #### Unreleased — Genetics: label/QR traceability, safe line removal, public info page — 2026-08-01
 **Type:** Minor Release (pending) — T-804 through T-809 on the `genetics`
