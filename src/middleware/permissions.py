@@ -170,6 +170,43 @@ def can_change_role(current_user: UserResponse, target_role: UserRole) -> bool:
     return False
 
 
+def guard_target_not_super_admin(
+    target_role, current_user: UserResponse, action: str = "modify"
+) -> None:
+    """
+    Block a non-super-admin actor from acting on a super_admin-owned target.
+
+    Mirrors the inline check already enforced by `admin.py`'s role-update
+    and status-update endpoints (`PATCH /admin/users/{id}/role`,
+    `PATCH /admin/users/{id}/status`) — call this instead of copy-pasting
+    that comparison at additional call sites (e.g. `POST /users/{id}
+    /activate` and `/deactivate`, which lacked this guard entirely until it
+    was added here).
+
+    Args:
+        target_role: The target user's CURRENT role — a `UserRole` enum
+            member or its string value. This must be the role held
+            *before* the request, not a role being newly assigned.
+        current_user: The acting user.
+        action: Verb used in the 403 message, e.g. "activate", "deactivate".
+
+    Raises:
+        HTTPException: 403 if `target_role` is `super_admin` and
+            `current_user` is not also `super_admin`.
+    """
+    target_role_value = (
+        target_role.value if hasattr(target_role, "value") else target_role
+    )
+    if (
+        target_role_value == UserRole.SUPER_ADMIN.value
+        and current_user.role != UserRole.SUPER_ADMIN
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Only super admins can {action} other super admin accounts",
+        )
+
+
 def require_role(allowed_roles: List[UserRole], current_user) -> None:
     """
     Check if user has one of the allowed roles
