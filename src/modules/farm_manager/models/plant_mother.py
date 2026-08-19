@@ -22,6 +22,7 @@ meantime.
 """
 
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional, Literal
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
@@ -34,6 +35,96 @@ from .plant_data_enhanced import PlantDataEnhancedBase
 PlantMotherTypeLiteral = Literal[
     "crop", "tree", "herb", "fruit", "vegetable", "ornamental", "medicinal"
 ]
+
+
+# ==================== Stage 1: products[] (Plant Library product extension) ====================
+#
+# See Docs/2-Working-Progress/plant-library-product-extension-design.md §4.1.
+# A mother (product/SKU) carries a list of the concrete products it can
+# yield — e.g. "Capsicum" yields "Green Capsicum" (sellable), "Capsicum
+# Puree" (process), "Capsicum Trim" (waste). Later stages route harvest
+# lines by category; see the design doc §3.1 for why `process`/`waste`
+# lines must NEVER become `block_harvests` rows.
+
+
+class ProductUnit(str, Enum):
+    """
+    Unit of measure for a product. Deliberately a real enum with a single
+    member today (kg) rather than a bare string/constant — a future
+    animal-husbandry module adds a member here (e.g. head, litre) rather
+    than backfilling every existing harvest row with a unit it never
+    recorded.
+    """
+
+    KG = "kg"
+
+
+class ProductCategory(str, Enum):
+    """
+    Fixed vocabulary — no user-created categories (design doc §2). Governs
+    which destination a harvest line for this product routes to in later
+    stages: sellable -> block_harvests, process -> processing inventory,
+    waste -> inventory_waste. See design doc §3.1 for why sellable is the
+    ONLY category that may ever produce a block_harvests row.
+    """
+
+    SELLABLE = "sellable"
+    PROCESS = "process"
+    WASTE = "waste"
+
+
+class PlantProductBase(BaseModel):
+    """Base product fields shared by create/full models."""
+
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Product name, unique within the mother (case-insensitive comparison)",
+    )
+    unit: ProductUnit = Field(
+        ProductUnit.KG, description="Unit of measure — kg is the only member today"
+    )
+    category: ProductCategory = Field(
+        ..., description="Routing category: sellable | process | waste"
+    )
+
+
+class PlantProductCreate(PlantProductBase):
+    """Schema for adding a new product to a mother."""
+
+    pass
+
+
+class PlantProductUpdate(BaseModel):
+    """
+    Schema for updating an existing product. `unit` is deliberately not
+    editable here — it is not part of this stage's update surface (see
+    design doc §4.1; a future stage may reconsider once a second unit
+    exists). `productId` is immutable and never reused.
+    """
+
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[ProductCategory] = None
+    isActive: Optional[bool] = Field(
+        None, description="Deactivating hides the product from picklists without removing it"
+    )
+
+
+class PlantProduct(PlantProductBase):
+    """
+    Complete product record, embedded in PlantMother.products[]. Deletion
+    is deactivation only (isActive=False) — never removed from the array —
+    following the mother-delete precedent (refuse/deactivate, don't
+    cascade), so later stages that reference productId by harvest rows
+    need no migration once that lands.
+    """
+
+    productId: UUID = Field(
+        default_factory=uuid4,
+        description="Stable product identifier (UUID); never reused",
+    )
+    isActive: bool = Field(True, description="Whether this product is active")
 
 
 class PlantMotherBase(BaseModel):
@@ -53,9 +144,31 @@ class PlantMotherBase(BaseModel):
 
 
 class PlantMotherCreate(PlantMotherBase):
-    """Schema for creating a new mother plant (product)"""
+    """
+    Schema for creating a new mother plant (product).
 
-    pass
+    `products` is optional — a client may supply an initial picklist in the
+    same request (e.g. the products-editor's create-mode draft list), or
+    omit it entirely and add products afterwards via
+    `POST /plant-mothers/{id}/products`. Either way, the server enforces the
+    "at least one active sellable product" invariant (see
+    PlantMotherService._ensure_active_sellable_default / design doc §"new
+    invariant") on the created mother: if the resulting products list has no
+    active `sellable` entry — because none were supplied, or only
+    `process`/`waste` ones were — the server auto-adds one named after
+    `plantName` before returning. Each supplied product gets its own random
+    `productId` (same as `POST .../products`); only the server's own
+    auto-added default uses the deterministic id scheme.
+    """
+
+    products: List[PlantProductCreate] = Field(
+        default_factory=list,
+        description=(
+            "Optional initial products for this mother. The server "
+            "guarantees at least one active sellable product exists after "
+            "creation — it auto-adds a default one if this list has none."
+        ),
+    )
 
 
 class PlantMotherUpdate(BaseModel):
@@ -81,6 +194,13 @@ class PlantMother(PlantMotherBase):
     # Active status
     isActive: bool = Field(
         True, description="Whether this product is active"
+    )
+
+    # Products this mother can yield (Stage 1 — see module docstring section
+    # above). Embedded, not a separate collection: products are meaningless
+    # outside their mother, and the mother is already the product/SKU level.
+    products: List[PlantProduct] = Field(
+        default_factory=list, description="Products this mother yields"
     )
 
     # Multi-industry scoping

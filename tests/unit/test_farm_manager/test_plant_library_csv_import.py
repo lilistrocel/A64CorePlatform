@@ -75,7 +75,10 @@ from src.modules.farm_manager.services.plant_data.plant_mother_repository import
 from src.modules.farm_manager.services.plant_data.plant_mother_service import (
     PlantMotherService,
 )
-from src.modules.farm_manager.models.plant_mother import PlantMotherCreate
+from src.modules.farm_manager.models.plant_mother import (
+    PlantMotherCreate,
+    ProductCategory,
+)
 from src.modules.farm_manager.models.plant_data_enhanced import (
     FarmTypeEnum,
     LightTypeEnum,
@@ -808,3 +811,157 @@ class TestGenerateCsvTemplate:
         for r in example_rows:
             total = sum(int(r[i]) for i in phase_idxs)
             assert total > 0
+
+
+class TestImportCreatedMothersGetDefaultSellableProduct:
+    """CSV-created mothers must go through PlantMotherService.create_mother
+    (not the bare repository), so they get the same "at least one active
+    sellable product" invariant every other creation path gets — see
+    plant-library-product-extension-design.md §4.1a. Guards against the
+    former bypass at the CSV mother find-or-create."""
+
+    @pytest.mark.asyncio
+    async def test_csv_created_mother_has_auto_seeded_sellable_product(
+        self, fake_db: _FakeDB
+    ):
+        csv_content = _build_csv([{"varietyName": "Roma"}])
+
+        result = await PlantDataEnhancedService.import_from_csv(
+            csv_content, uuid4(), "importer@example.com"
+        )
+
+        assert result["mothersCreated"] == 1
+        assert result["rowsFailed"] == []
+
+        mothers, total, _ = await PlantMotherService.list_mothers()
+        assert total == 1
+        mother = mothers[0]
+
+        active_sellables = [
+            p
+            for p in mother.products
+            if p.category == ProductCategory.SELLABLE and p.isActive
+        ]
+        assert len(active_sellables) == 1
+        assert active_sellables[0].name == mother.plantName == "Tomato"
+
+    @pytest.mark.asyncio
+    async def test_multiple_rows_same_plant_name_only_create_one_default_product(
+        self, fake_db: _FakeDB, monkeypatch: pytest.MonkeyPatch
+    ):
+        """The mother_cache must still short-circuit repeated rows for the
+        same plantName when creation now goes through the service — a CSV
+        with many rows for one plant name must only call
+        PlantMotherService.create_mother (and therefore only auto-seed the
+        default product) once, not once per row."""
+        create_calls: List[str] = []
+        original_create_mother = PlantMotherService.create_mother
+
+        async def counting_create_mother(data, *args, **kwargs):
+            create_calls.append(data.plantName)
+            return await original_create_mother(data, *args, **kwargs)
+
+        monkeypatch.setattr(
+            PlantMotherService, "create_mother", counting_create_mother
+        )
+
+        csv_content = _build_csv(
+            [
+                {"varietyName": "Roma"},
+                {"varietyName": "Cherry"},
+                {"varietyName": "Beefsteak"},
+            ]
+        )
+
+        result = await PlantDataEnhancedService.import_from_csv(
+            csv_content, uuid4(), "importer@example.com"
+        )
+
+        assert result["mothersCreated"] == 1
+        assert result["mothersReused"] == 2
+        assert result["varietiesCreated"] == 3
+        assert result["rowsFailed"] == []
+        # create_mother (and thus the invariant/default-product auto-seed)
+        # was invoked exactly once, not once per row — mother_cache still
+        # works with the service-backed creation path.
+        assert create_calls == ["Tomato"]
+
+        mothers, total, _ = await PlantMotherService.list_mothers()
+        assert total == 1
+        active_sellables = [
+            p
+            for p in mothers[0].products
+            if p.category == ProductCategory.SELLABLE and p.isActive
+        ]
+        assert len(active_sellables) == 1
+
+
+class TestImportHandlesMotherCreateRaceAs409:
+    """create_mother re-checks get_by_name itself and raises 409 on a name
+    collision. The CSV loop's own get_by_name check makes this only
+    reachable via a genuine race (another writer inserting the same
+    plantName between the loop's check and create_mother's own check).
+    Simulate that race and confirm the row is recorded in rowsFailed
+    without aborting the rest of the import."""
+
+    @pytest.mark.asyncio
+    async def test_race_condition_409_recorded_as_row_failure_not_aborted(
+        self, fake_db: _FakeDB, monkeypatch: pytest.MonkeyPatch
+    ):
+        # A mother named "Tomato" already exists, as if another request won
+        # a race and inserted it between this row's own get_by_name check
+        # and create_mother's internal one.
+        await PlantMotherRepository.create(
+            PlantMotherCreate(
+                plantName="Tomato",
+                scientificName="Solanum lycopersicum",
+                plantType="vegetable",
+            ),
+            created_by=uuid4(),
+            created_by_email="seed@example.com",
+        )
+
+        original_get_by_name = PlantMotherRepository.get_by_name
+        call_count = {"n": 0}
+
+        async def racy_get_by_name(plant_name: str):
+            call_count["n"] += 1
+            # Only the very first call (the CSV loop's own pre-check for
+            # the first data row) lies and reports "not found" — every
+            # other call (including create_mother's internal re-check)
+            # behaves normally.
+            if call_count["n"] == 1:
+                return None
+            return await original_get_by_name(plant_name)
+
+        monkeypatch.setattr(
+            PlantMotherRepository, "get_by_name", racy_get_by_name
+        )
+
+        csv_content = _build_csv(
+            [
+                {"plantName": "Tomato", "varietyName": "Roma"},  # row 2: races, 409s
+                {"plantName": "Basil", "varietyName": "Genovese"},  # row 3: unaffected
+            ]
+        )
+
+        result = await PlantDataEnhancedService.import_from_csv(
+            csv_content, uuid4(), "importer@example.com"
+        )
+
+        # Row 2 failed (not skipped) — matches the surrounding loop's
+        # existing per-row error-reporting shape.
+        assert len(result["rowsFailed"]) == 1
+        assert result["rowsFailed"][0]["row"] == 2
+        assert "Tomato" in result["rowsFailed"][0]["error"]
+        assert "already exists" in result["rowsFailed"][0]["error"]
+        assert result["rowsSkipped"] == []
+
+        # The rest of the batch still processed — row 3 (Basil) succeeded,
+        # proving the 409 did not abort the whole import.
+        assert result["mothersCreated"] == 1
+        assert result["varietiesCreated"] == 1
+
+        mothers, total, _ = await PlantMotherService.list_mothers()
+        names = {m.plantName for m in mothers}
+        assert names == {"Tomato", "Basil"}

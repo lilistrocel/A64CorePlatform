@@ -23,6 +23,10 @@ from ...models.plant_mother import (
     PlantMotherWithVarietyCount,
     PlantMotherWithVarieties,
     VarietyCreateForMother,
+    PlantProduct,
+    PlantProductCreate,
+    PlantProductUpdate,
+    ProductCategory,
 )
 from ...models.plant_data_enhanced import PlantDataEnhanced
 from ...services.plant_data import PlantMotherService
@@ -50,6 +54,12 @@ async def create_mother(
 
     **Validations**:
     - `plantName` must be unique among mother plants
+
+    **Invariant**: the mother is guaranteed to have at least one active
+    sellable product when this returns. If `products` omits one — no
+    products at all, or only `process`/`waste` ones — the server adds a
+    default sellable product named after `plantName` automatically; the
+    response `message` says so when that happens.
     """
     mother = await PlantMotherService.create_mother(
         mother_data,
@@ -57,7 +67,21 @@ async def create_mother(
         current_user.email,
         organization_id=current_user.organizationId,
     )
-    return SuccessResponse(data=mother, message="Mother plant created successfully")
+    # The service guarantees the invariant server-side; recompute here
+    # (cheaply, from the request) purely to phrase the response message —
+    # see PlantMotherService.create_mother's docstring for why it isn't
+    # returned from the service call itself.
+    auto_seeded = not any(
+        p.category == ProductCategory.SELLABLE for p in mother_data.products
+    )
+    message = "Mother plant created successfully"
+    if auto_seeded:
+        message += (
+            f" — a default sellable product '{mother.plantName}' was "
+            f"created automatically because no active sellable product was "
+            f"supplied"
+        )
+    return SuccessResponse(data=mother, message=message)
 
 
 @router.get(
@@ -224,3 +248,109 @@ async def create_variety(
         data=variety,
         message=f"Variety '{variety_data.varietyName}' created successfully",
     )
+
+
+# ==================== Stage 1: products[] CRUD ====================
+#
+# Plant Library product extension — see
+# Docs/2-Working-Progress/plant-library-product-extension-design.md §4.1.
+# A mother carries a picklist of products it can yield; later stages route
+# harvest lines by each product's category. Deletion here is deactivation
+# only, matching the mother-delete precedent above.
+
+
+@router.post(
+    "/{plant_mother_id}/products",
+    response_model=SuccessResponse[PlantProduct],
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a product to a mother plant",
+)
+async def add_product(
+    plant_mother_id: UUID,
+    product_data: PlantProductCreate,
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
+):
+    """
+    Add a product this mother plant can yield.
+
+    Requires **agronomist** permission.
+
+    **Validations**:
+    - Mother plant must exist and not be soft-deleted
+    - `name` must be unique within this mother (case-insensitive)
+    """
+    product = await PlantMotherService.add_product(plant_mother_id, product_data)
+    return SuccessResponse(
+        data=product, message=f"Product '{product.name}' added successfully"
+    )
+
+
+@router.get(
+    "/{plant_mother_id}/products",
+    response_model=SuccessResponse[List[PlantProduct]],
+    summary="List a mother plant's products",
+)
+async def list_products(
+    plant_mother_id: UUID,
+    activeOnly: bool = Query(
+        False, description="Filter to active (non-deactivated) products only"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """
+    List products belonging to a mother plant. Returns all products
+    (active and deactivated) unless `activeOnly=true`.
+    """
+    products = await PlantMotherService.list_products(
+        plant_mother_id, active_only=activeOnly
+    )
+    return SuccessResponse(data=products)
+
+
+@router.patch(
+    "/{plant_mother_id}/products/{product_id}",
+    response_model=SuccessResponse[PlantProduct],
+    summary="Update a mother plant's product",
+)
+async def update_product(
+    plant_mother_id: UUID,
+    product_id: UUID,
+    update_data: PlantProductUpdate,
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
+):
+    """
+    Update a product's name/category/isActive. `unit` is not editable.
+
+    Requires **agronomist** permission.
+
+    **Validations**:
+    - Mother plant and product must exist
+    - Renaming onto a name (case-insensitive) already used by another
+      product under the same mother is rejected with 409
+    """
+    product = await PlantMotherService.update_product(
+        plant_mother_id, product_id, update_data
+    )
+    return SuccessResponse(data=product, message="Product updated successfully")
+
+
+@router.delete(
+    "/{plant_mother_id}/products/{product_id}",
+    response_model=SuccessResponse[PlantProduct],
+    summary="Deactivate a mother plant's product",
+)
+async def delete_product(
+    plant_mother_id: UUID,
+    product_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("agronomist")),
+):
+    """
+    Deactivate a product (isActive=False). Never removes it from the
+    mother's products list — mirrors the mother-delete precedent
+    (refuse/deactivate, don't cascade) so history referencing this
+    productId in a future stage needs no migration.
+
+    Requires **agronomist** permission.
+    """
+    product = await PlantMotherService.deactivate_product(plant_mother_id, product_id)
+    return SuccessResponse(data=product, message="Product deactivated successfully")

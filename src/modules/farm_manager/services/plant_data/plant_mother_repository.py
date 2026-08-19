@@ -19,7 +19,12 @@ from datetime import datetime
 import logging
 import re
 
-from ...models.plant_mother import PlantMother, PlantMotherCreate, PlantMotherUpdate
+from ...models.plant_mother import (
+    PlantMother,
+    PlantMotherCreate,
+    PlantMotherUpdate,
+    PlantProduct,
+)
 from ..database import farm_db
 from .plant_data_enhanced_repository import PlantDataEnhancedRepository
 
@@ -39,6 +44,7 @@ class PlantMotherRepository:
         created_by_email: Optional[str] = None,
         organization_id: Optional[str] = None,
         division_id: Optional[str] = None,
+        products: Optional[List[PlantProduct]] = None,
     ) -> PlantMother:
         """
         Create a new mother plant (product).
@@ -51,6 +57,13 @@ class PlantMotherRepository:
                 acting user (not client-supplied) — mirrors PlantDataEnhanced's
                 treatment of scoping fields.
             division_id: Division scope, same treatment as organization_id.
+            products: Fully-built `PlantProduct` list to store, overriding
+                `mother_data.products`. Pure pass-through — this is a dumb
+                writer, so any business rule (e.g. the "at least one active
+                sellable product" invariant / auto-seeding the default) is
+                the service's job, done before calling this. Defaults to
+                `mother_data.products` converted as-is (random productId,
+                isActive=True) when not supplied.
 
         Returns:
             Created PlantMother object
@@ -60,8 +73,14 @@ class PlantMotherRepository:
         """
         db = farm_db.get_database()
 
+        mother_dict_in = mother_data.model_dump(exclude={"products"})
         mother = PlantMother(
-            **mother_data.model_dump(),
+            **mother_dict_in,
+            products=(
+                products
+                if products is not None
+                else [PlantProduct(**p.model_dump()) for p in mother_data.products]
+            ),
             createdBy=created_by,
             createdByEmail=created_by_email,
             organizationId=organization_id,
@@ -75,6 +94,14 @@ class PlantMotherRepository:
         mother_dict["plantMotherId"] = str(mother_dict["plantMotherId"])
         if mother_dict.get("createdBy") is not None:
             mother_dict["createdBy"] = str(mother_dict["createdBy"])
+        # Reason: stringify nested product ids too — same convention as
+        # `set_products` below (this collection stores every id as a plain
+        # string, not a BSON representation, so lookups comparing
+        # `product.productId == product_id` after a str->UUID round trip
+        # via the PlantProduct model stay consistent regardless of which
+        # write path populated `products`).
+        for product_entry in mother_dict.get("products", []):
+            product_entry["productId"] = str(product_entry["productId"])
 
         # Reason: Parameterized insert prevents injection
         result = await db[PlantMotherRepository.COLLECTION].insert_one(mother_dict)
@@ -358,3 +385,43 @@ class PlantMotherRepository:
             "blocksUpdated": blocks_result.modified_count,
             "blockArchivesUpdated": archives_result.modified_count,
         }
+
+    # ==================== Stage 1: products[] ====================
+
+    @staticmethod
+    async def set_products(
+        plant_mother_id: UUID, products: List[PlantProduct]
+    ) -> Optional[PlantMother]:
+        """
+        Replace a mother's entire `products` array.
+
+        Pure data-access primitive, same as `update` — callers (the
+        service layer) are responsible for business rules (name uniqueness,
+        finding/mutating the right product in the list before calling this).
+        Writing the whole array back rather than a positional `$` update
+        keeps this correct against the hand-rolled fake Motor collection
+        used by this module's unit tests (see test_plant_mother_api.py),
+        which does not implement positional array-filter updates, and is
+        no less correct against real MongoDB — the list only ever holds a
+        handful of products per mother.
+
+        Returns:
+            Updated PlantMother, or None if the mother doesn't exist /
+            is soft-deleted.
+        """
+        db = farm_db.get_database()
+
+        products_dicts = []
+        for product in products:
+            product_dict = product.model_dump()
+            product_dict["productId"] = str(product_dict["productId"])
+            products_dicts.append(product_dict)
+
+        result = await db[PlantMotherRepository.COLLECTION].update_one(
+            {"plantMotherId": str(plant_mother_id), "deletedAt": None},
+            {"$set": {"products": products_dicts, "updatedAt": datetime.utcnow()}},
+        )
+        if result.matched_count == 0:
+            return None
+
+        return await PlantMotherRepository.get_by_id(plant_mother_id)

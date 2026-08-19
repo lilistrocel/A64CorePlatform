@@ -1074,14 +1074,28 @@ class PlantDataEnhancedService:
                     if mother:
                         mothers_reused += 1
                     else:
-                        mother = await PlantMotherRepository.create(
+                        # Reason: go through the service (not the bare
+                        # repository) so CSV-created mothers get the same
+                        # "at least one active sellable product" invariant
+                        # every other creation path gets —
+                        # PlantMotherService.create_mother auto-seeds a
+                        # default sellable product named after plantName
+                        # when none is supplied. create_mother re-checks
+                        # get_by_name itself and raises 409 on a name
+                        # collision; the get_by_name check just above makes
+                        # that only reachable via a same-name-inserted-
+                        # mid-loop race, but it's still handled safely —
+                        # the enclosing `except _HTTPException` below
+                        # catches it and records this row as failed without
+                        # aborting the rest of the import.
+                        mother = await PlantMotherService.create_mother(
                             PlantMotherCreate(
                                 plantName=plant_name,
                                 scientificName=scientific_name,
                                 plantType=plant_type,
                             ),
-                            created_by=user_id,
-                            created_by_email=user_email,
+                            user_id=user_id,
+                            user_email=user_email,
                             organization_id=organization_id,
                             division_id=division_id,
                         )
