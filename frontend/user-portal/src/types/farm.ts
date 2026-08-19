@@ -186,6 +186,13 @@ export interface Block {
   plantDataIsStale?: boolean;
   plantDataSnapshot?: PlantDataSnapshot | null;
 
+  // Product reference (Plant Library product extension). The MOTHER
+  // (product/SKU) this block's harvest picklist resolves live from —
+  // distinct from targetCrop/targetCropName above, which stay the VARIETY.
+  // Optional/denormalized; populated on all blocks by the Phase 1 migration.
+  productMotherId?: string | null;
+  productName?: string | null;
+
   // Additional fields from backend
   blockCode?: string;
   legacyBlockCode?: string;
@@ -344,6 +351,14 @@ export interface BlockHarvest {
     crop?: string;
     season?: number;
   };
+
+  // Plant Library product extension Stage 3/4. Optional — null on all
+  // 13,947 legacy rows and never backfilled. `productName` is a FROZEN
+  // snapshot at harvest time, not synced to later product renames.
+  productId?: string | null;
+  productName?: string | null;
+  /** Groups every line (sellable/process/waste) from one multi-line submission. */
+  harvestBatchId?: string | null;
 }
 
 export interface BlockHarvestCreate {
@@ -366,6 +381,87 @@ export interface BlockHarvestSummary {
   averageQuality: string;
   firstHarvestDate?: string;
   lastHarvestDate?: string;
+}
+
+// ============================================================================
+// HARVEST BATCH TYPES (Plant Library product extension Stage 3/4 — design
+// doc §5/§7). One multi-line submission -> N product lines, each routed by
+// its product's category (`ProductCategory`, declared further down in this
+// file with the plant-mother/product types) to one of three destinations,
+// all sharing a server-generated harvestBatchId.
+// ============================================================================
+
+/** One product line submitted in POST .../harvests/batch. */
+export interface HarvestBatchLineCreate {
+  productId: string;
+  /** Quantity in the product's unit (kg). */
+  quantity: number;
+  /** Required for sellable/process lines; MUST be omitted for waste lines
+   *  — the server rejects (400) a waste line that supplies one. */
+  qualityGrade?: QualityGrade;
+  notes?: string;
+}
+
+/** Request body for POST /farms/{farmId}/blocks/{blockId}/harvests/batch. */
+export interface HarvestBatchSubmitRequest {
+  harvestDate: string;
+  /** At least one line required. */
+  lines: HarvestBatchLineCreate[];
+  farmingYear?: number;
+}
+
+/** Where a submitted line actually got written. */
+export type HarvestLineDestination = 'block_harvests' | 'processing_inventory' | 'inventory_waste';
+
+/** Per-line result from a completed batch submission. */
+export interface HarvestBatchLineResult {
+  productId: string;
+  productName: string;
+  category: ProductCategory;
+  destination: HarvestLineDestination;
+  /** harvestId / processingInventoryId / wasteId, depending on destination. */
+  recordId: string;
+  quantity: number;
+  qualityGrade?: QualityGrade | string | null;
+}
+
+export interface HarvestBatchSubmitResponse {
+  harvestBatchId: string;
+  blockId: string;
+  harvestDate: string;
+  lines: HarvestBatchLineResult[];
+}
+
+/**
+ * One line from any of the three destinations, normalized for display by
+ * GET .../harvests/batch-lookup (design doc §7). productId/productName are
+ * null on legacy rows that predate this feature.
+ */
+export interface HarvestBatchLookupLine {
+  destination: HarvestLineDestination;
+  category: ProductCategory;
+  recordId: string;
+  productId?: string | null;
+  productName?: string | null;
+  quantity: number;
+  unit: string;
+  qualityGrade?: QualityGrade | string | null;
+  harvestBatchId?: string | null;
+}
+
+/** Lines sharing one harvestBatchId (or, for legacy rows, one recordId). */
+export interface HarvestBatchGroup {
+  harvestBatchId?: string | null;
+  lines: HarvestBatchLookupLine[];
+}
+
+/** Response for GET .../harvests/batch-lookup. A block can have more than
+ *  one submission on the same date — that's why `batches` is an array of
+ *  groups rather than a flat line list. */
+export interface HarvestBatchLookupResponse {
+  blockId: string;
+  harvestDate: string;
+  batches: HarvestBatchGroup[];
 }
 
 // ============================================================================
@@ -882,8 +978,8 @@ export type ProductUnit = 'kg';
 
 /**
  * Fixed, backend-enforced vocabulary — users cannot create categories.
- * Routing (see design doc §3): sellable -> block_harvests, process -> new
- * processing inventory (not yet built), waste -> inventory_waste directly.
+ * Routing (see design doc §3): sellable -> block_harvests, process ->
+ * processing_inventory, waste -> inventory_waste directly.
  */
 export type ProductCategory = 'sellable' | 'process' | 'waste';
 

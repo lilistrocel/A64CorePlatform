@@ -105,6 +105,10 @@ export const queryKeys = {
       [...queryKeys.blocks.detail(farmId, blockId), 'alerts'] as const,
     harvests: (farmId: string, blockId: string) =>
       [...queryKeys.blocks.detail(farmId, blockId), 'harvests'] as const,
+    // Plant Library product extension Stage 4 (design doc §7) — unions
+    // block_harvests/processing_inventory/inventory_waste for one block+date.
+    harvestBatchLookup: (farmId: string, blockId: string, harvestDate: string) =>
+      [...queryKeys.blocks.detail(farmId, blockId), 'harvestBatchLookup', harvestDate] as const,
   },
 
   // Sales queries
