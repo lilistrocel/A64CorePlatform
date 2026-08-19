@@ -33,6 +33,7 @@ class PlantDataEnhancedRepository:
         created_by_email: str,
         mother_plant_id: Optional[UUID] = None,
         variety_name: Optional[str] = None,
+        organization_id: Optional[str] = None,
     ) -> PlantDataEnhanced:
         """
         Create new enhanced plant data.
@@ -49,6 +50,13 @@ class PlantDataEnhancedRepository:
                 behavior exactly.
             variety_name: Display name for the variety within its mother.
                 Only meaningful together with mother_plant_id.
+            organization_id: Org scope, stamped from the acting user's auth
+                context (Plant Library product extension Stage 3, design
+                doc §9 #3 — this collection previously never set
+                organizationId at all, which is why filtering reads by it
+                was a no-op / cross-tenant leak). Optional so migration
+                scripts and any caller without an org context keep working
+                exactly as before.
 
         Returns:
             Created PlantDataEnhanced object
@@ -69,6 +77,7 @@ class PlantDataEnhancedRepository:
             deletedAt=None,
             motherPlantId=mother_plant_id,
             varietyName=variety_name,
+            organizationId=organization_id,
         )
 
         # Convert to dict and convert UUID fields to strings for MongoDB
@@ -227,6 +236,7 @@ class PlantDataEnhancedRepository:
         contributor: Optional[str] = None,
         target_region: Optional[str] = None,
         is_active: Optional[bool] = None,
+        organization_id: Optional[str] = None,
     ) -> tuple[List[PlantDataEnhanced], int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -245,6 +255,13 @@ class PlantDataEnhancedRepository:
             contributor: Filter by data contributor name
             target_region: Filter by target region
             is_active: Filter by active status (True/False/None for all)
+            organization_id: Filter to this org only, when supplied (design
+                doc §9 #3 — this collection had zero organizationId
+                filtering, unlike plant_mothers.list_mothers, which is the
+                cross-tenant leak this parameter closes). Matches
+                PlantMotherRepository.list_mothers' convention: filters only
+                when a value is supplied, so callers without an org context
+                (e.g. scripts) are unaffected.
 
         Returns:
             Tuple of (list of plant data, total count)
@@ -258,6 +275,11 @@ class PlantDataEnhancedRepository:
         # Soft delete filter
         if not include_deleted:
             query["deletedAt"] = None
+
+        # Reason: closes the cross-tenant leak described above — only
+        # applied when a caller supplies an org context.
+        if organization_id:
+            query["organizationId"] = organization_id
 
         # Text search - use regex fallback if text index not available
         if search:
@@ -422,9 +444,17 @@ class PlantDataEnhancedRepository:
         return True
 
     @staticmethod
-    async def get_active_plants() -> List[PlantDataEnhanced]:
+    async def get_active_plants(
+        organization_id: Optional[str] = None,
+    ) -> List[PlantDataEnhanced]:
         """
         Get all active plant data for dropdown use.
+
+        Args:
+            organization_id: Filter to this org only, when supplied — see
+                `search`'s docstring (design doc §9 #3). This is the
+                dropdown endpoint used for block planting, so leaving it
+                unscoped was the most directly reachable half of the leak.
 
         Returns:
             List of active PlantDataEnhanced objects sorted by name
@@ -434,7 +464,9 @@ class PlantDataEnhancedRepository:
         # Query for active, non-deleted plants
         # Use $ne: false to include documents where isActive is true, null, or missing
         # This handles legacy data that doesn't have isActive field
-        query = {"deletedAt": None, "isActive": {"$ne": False}}
+        query: Dict[str, Any] = {"deletedAt": None, "isActive": {"$ne": False}}
+        if organization_id:
+            query["organizationId"] = organization_id
 
         # Get all active plants sorted by name
         cursor = (

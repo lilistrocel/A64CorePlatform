@@ -130,6 +130,14 @@ export function useProductsForMother(motherId: string | undefined, activeOnly?: 
     queryKey: queryKeys.plantMothers.products(motherId!, activeOnly),
     queryFn: () => plantMotherApi.listProductsForMother(motherId!, activeOnly),
     enabled: !!motherId,
+    // The harvest picklist is a LIVE read from the mother (design doc §5):
+    // a product added in the Plant Library must be selectable immediately,
+    // with no page refresh. staleTime 0 opts out of the global 30s window
+    // so opening the harvest modal always reflects the current picklist.
+    // refetchOnMount is pinned here too rather than relying on the global
+    // default, so this stays correct even if that default changes again.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

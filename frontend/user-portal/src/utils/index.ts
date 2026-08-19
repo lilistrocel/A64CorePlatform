@@ -18,3 +18,9 @@ export {
   positiveNumberInputProps,
   positiveIntegerInputProps,
 } from './inputGuards';
+
+export {
+  CATEGORY_LABELS as HARVEST_CATEGORY_LABELS,
+  DESTINATION_LABELS as HARVEST_DESTINATION_LABELS,
+  getCategoryColor as getHarvestCategoryColor,
+} from './harvestCategory';

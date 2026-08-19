@@ -3455,68 +3455,48 @@
 
 ## 🟢 Ready
 
-### T-923 | Plant Library product extension Stage 3-5 — harvest modal multi-line rework, block_harvests/waste/processing-inventory routing, batch lookup
-- **Category:** Backend + Frontend · **Priority:** P2
+### T-924 | Plant Library — batch edit/delete endpoints (Stage 5 remnant); CodeMap regeneration debt
+- **Category:** Backend + Frontend · **Priority:** P3
 - **Assigned:** — · **Started:** —
-- **Depends on:** T-922 ✅ (products[] CRUD + sellable invariant, Stage 1+2 —
-  archived; this stage builds on `PlantProduct.productId` and the live
-  mother→products picklist it shipped) · **Blocks:** —
+- **Depends on:** T-923 ✅ (product extension Stages 3+4 — archived; this is
+  the one design §7 capability that stage did not ship) · **Blocks:** —
 - **Design doc:** `Docs/2-Working-Progress/plant-library-product-extension-design.md`
-  — §5 (harvest modal), §3/§3.1 (routing — **do not** centralise waste/process
-  into `block_harvests`; §3.1 explains why in detail: 48 backend consumers,
-  including the finance P&L, sum `block_harvests.quantityKg` on the
-  assumption every row is sellable), §4.2-4.4 (model changes), §4.5
-  (remaining indexes), §6 (yield), §7 (batch lookup/editing).
-- **Description:** T-922 shipped the products picklist and its CRUD only —
-  no harvest modal changes, no routing, no processing inventory. This stage
-  is the rest of the design doc:
-  1. **Harvest modal multi-line rework** (§5) — one submission produces N
-     lines (e.g. green *and* red capsicum off one planting), each routed by
-     its product's category, all sharing a `harvestBatchId`. Product picker
-     resolves live from `block.productMotherId` → mother `products[]`
-     (`isActive` only). Grade control hidden for `waste` lines. The old
-     waste write path (`BlockHarvestEntryModal.tsx:145` →
-     `farmApi.ts:500-520`) is retired — waste now flows through the product
-     line.
-  2. **Routing** (§3) — `sellable` → `block_harvests` (unchanged shape, plus
-     `productId`/`productName`/`harvestBatchId`, all optional so legacy rows
-     stay valid); `process` → new processing-inventory collection (§4.4,
-     mirrors harvest-inventory shape, graded); `waste` → `inventory_waste`
-     directly (§4.3, already has the `sourceType: 'harvest'` +
-     `sourceBlockId` shape — the one live row proves the path end-to-end).
-  3. **Batch lookup/editing** (§7) — default harvest list stays
-     sellable-only (reads `block_harvests`); a separate view filters by
-     source block + harvest date, unions all three destinations, and uses
-     `harvestBatchId` to disambiguate same-day submissions for
-     edit/delete-as-a-unit.
-  4. **Remaining indexes** (§4.5): `block_harvests.productId`,
-     `block_harvests.harvestBatchId`, `inventory_waste.harvestBatchId`,
-     `inventory_waste.sourceBlockId` (the `plant_mothers`/
-     `plant_data_enhanced`/`blocks` indexes already shipped in T-922).
-- **Fold in while touching these files (design doc §9, found during the
-  T-922 audit, not yet fixed):**
-  1. `harvest_service.py:123-125` writes the **variety** name into
-     `inventory_harvest.plantName` — must write the **product** name.
-  2. `archive_repository.py:488-513` builds `BlockArchive` without copying
-     `productMotherId`/`productName`, though the model has both fields.
-     Latent only because no archive has been created since the mother/
-     variety migration — the next one gets a null.
-  3. `plant_data_enhanced` is not org-scoped on read (zero
-     `organizationId` references in its repository, while `plant_mothers`
-     *is* filtered) — a live cross-tenant leak of the same family as the
-     T-918 cache-isolation fix.
-- **Known overlap:** T-917 (CSV template/import rework, Active) also
-  touches `plant_data_enhanced_service.py`; coordinate before starting to
-  avoid a painful rebase — T-922 already changed `import_from_csv`'s mother
-  find-or-create call (routes through `PlantMotherService.create_mother`
-  now, not the repository directly).
-- **Deferred out of this stage** (design doc §11) — do not pull in without
-  a separate decision: `sales_order_lines.cropName` free-text→product join
-  (13,281 rows, needs human adjudication, see T-500 decision #1 and
-  T-201.8b); deleting the unused `products` collection (0 rows); legacy
-  `plant_data` collection/routes (0 rows).
-
----
+  — §7 (batch lookup and editing): *"the user filters by source block +
+  harvest date... `harvestBatchId`... is the key for editing or deleting a
+  submission as a unit"* — only the lookup half of that sentence shipped.
+- **Description:** `BlockHarvestBatchLookupModal.tsx` (shipped in T-923
+  Stage 4) reads a mixed submission across `block_harvests`/
+  `processing_inventory`/`inventory_waste`, grouped by `harvestBatchId`,
+  but there is no backend endpoint to edit or delete one — correcting a
+  batch today means manually correcting up to 3 rows across up to 3
+  collections by hand. Needs a batch-scoped update/delete endpoint (likely
+  `PATCH`/`DELETE .../harvests/batch/{harvestBatchId}`) honoring the same
+  per-category routing as submission (design §3), plus the frontend action
+  the read-only lookup modal is already shaped for.
+- **Also tracked here (not new work — just not yet done, and otherwise at
+  risk of being lost now that both T-922 and T-923 are archived):**
+  - **CodeMap regeneration** — flagged and deferred twice (T-922's Stage
+    1+2 close, then again at Stage 3+4 close): 7 new endpoints across the
+    two stages (4 products CRUD + `POST`/`GET .../harvests/batch[-lookup]`
+    + `GET /inventory/processing`), 1 new collection
+    (`processing_inventory`), and 6+ new/changed frontend files.
+    `bash scripts/codebase_mapper/rerun.sh` then
+    `python3 scripts/codebase_mapper/map_generator.py all`. Worth doing in
+    the same pass as running **T-921**'s fix (PR #6, commit `8860e4a`):
+    that fix seeded 7 previously-invisible module tasks (purchasing,
+    mushroom_manager, protocols, ai_assistant, attachments, finance,
+    finance_bridge) into `setup.py`, but the seeded tasks themselves have
+    not actually been run yet — one full regen closes both gaps at once.
+  - **Design doc §11 deferred items — still outstanding, no ticket
+    filed:** `sales_order_lines.cropName` free-text with no product
+    reference (13,281 rows, 63 distinct values — needs human adjudication,
+    see T-500 decision #1 and T-201.8b); the `products` collection (0
+    rows, 0 frontend references) as a dead fourth claimant on the word
+    "product," a candidate for deletion; the legacy `plant_data`
+    collection + routes (0 rows, no importers). None of these block
+    T-924's own scope (batch edit/delete) — noted here only so they don't
+    disappear now that the tickets that would have carried the reminder
+    forward are both closed.
 
 ### T-700 | Task Manager redesign — state-driven tasks, assignment UI & farmer portal
 - **Category:** Farm Manager (Operations) · Frontend-heavy + some backend · **Priority:** P2

@@ -13,6 +13,14 @@ from uuid import UUID, uuid4
 from enum import Enum
 from pydantic import BaseModel, Field
 
+# Reused for ProcessingInventory.qualityGrade below and for
+# WasteInventory's new productId link (Plant Library product extension
+# Stage 3) — the A/B/C scale block_harvests already uses, so a multi-line
+# harvest submission's single grade picklist works identically regardless of
+# which category (sellable/process) a line routes to. See design doc
+# §4.3/§4.4.
+from .block_harvest import QualityGrade as HarvestQualityGrade
+
 # ============================================================================
 # ENUMS
 # ============================================================================
@@ -1051,6 +1059,91 @@ class TransferRecord(BaseModel):
 
 
 # ============================================================================
+# PROCESSING INVENTORY (Plant Library product extension Stage 3)
+# ============================================================================
+#
+# Destination for `process`-category harvest lines (design doc §3/§4.4) —
+# mirrors HarvestInventory's shape but is a SEPARATE collection from sellable
+# stock. This is deliberate: block_harvests/inventory_harvest must stay
+# sellable-only by construction (design doc §3.1 — 48 backend consumers,
+# including the finance P&L, sum block_harvests.quantityKg assuming every
+# row is sellable). Process output is graded (unlike waste), but is not
+# itself sellable stock, so it gets no reservedQuantity/availableQuantity/
+# FIFO machinery — that is out of scope for this stage (YAGNI; a future
+# stage can add sales integration if/when process output is sold directly).
+
+
+class ProcessingInventoryBase(BaseModel):
+    """Base schema for processing inventory."""
+
+    organizationId: UUID = Field(
+        ..., description="Organization this inventory belongs to"
+    )
+    farmId: Optional[UUID] = Field(None, description="Farm this inventory belongs to")
+    blockId: Optional[UUID] = Field(None, description="Source block")
+
+    productId: UUID = Field(..., description="Process-category PlantProduct")
+    productName: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="FROZEN snapshot of the product's name at harvest time",
+    )
+
+    quantity: float = Field(..., gt=0, description="Quantity harvested")
+    unit: str = Field(
+        ..., min_length=1, max_length=20, description="Unit of measurement (kg)"
+    )
+    qualityGrade: HarvestQualityGrade = Field(
+        ..., description="Process output IS graded (unlike waste)"
+    )
+
+    harvestDate: datetime = Field(..., description="When the harvest occurred")
+    harvestBatchId: Optional[UUID] = Field(
+        None, description="Groups this line with its sibling sellable/waste lines"
+    )
+
+    notes: Optional[str] = Field(None, max_length=1000, description="Additional notes")
+
+
+class ProcessingInventoryCreate(ProcessingInventoryBase):
+    """Schema for creating a processing inventory item."""
+
+    organizationId: Optional[UUID] = Field(
+        None, description="Organization ID (set automatically from auth)"
+    )
+
+
+class ProcessingInventory(ProcessingInventoryBase):
+    """Complete processing inventory item."""
+
+    inventoryId: UUID = Field(default_factory=uuid4, description="Unique identifier")
+
+    divisionId: Optional[str] = Field(None, description="Division scope")
+
+    createdBy: UUID = Field(..., description="User who created this entry")
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "inventoryId": "inv-proc-001",
+                "organizationId": "org-001",
+                "farmId": "farm-001",
+                "blockId": "block-001",
+                "productId": "prod-001",
+                "productName": "Capsicum Puree",
+                "quantity": 40.0,
+                "unit": "kg",
+                "qualityGrade": "A",
+                "harvestDate": "2026-08-19T08:00:00Z",
+                "harvestBatchId": "batch-001",
+            }
+        }
+
+
+# ============================================================================
 # WASTE INVENTORY
 # ============================================================================
 
@@ -1097,6 +1190,17 @@ class WasteInventoryBase(BaseModel):
     )
     sourceBlockId: Optional[UUID] = Field(
         None, description="Block ID (for harvest waste)"
+    )
+
+    # Plant Library product extension Stage 3 (design doc §4.3). Optional —
+    # only populated for waste lines routed through the multi-line harvest
+    # submission (POST .../harvests/batch); the pre-existing waste write
+    # path (returns, expired, damaged, etc.) leaves both null, unchanged.
+    productId: Optional[UUID] = Field(
+        None, description="Waste-category PlantProduct this waste line records"
+    )
+    harvestBatchId: Optional[UUID] = Field(
+        None, description="Groups this line with its sibling sellable/process lines"
     )
 
     # Product info
