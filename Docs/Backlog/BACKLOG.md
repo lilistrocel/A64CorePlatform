@@ -157,6 +157,93 @@
 
 ---
 
+### T-923 | Plant Library product extension Stage 3-5 — harvest modal multi-line rework, block_harvests/waste/processing-inventory routing, batch lookup
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Assigned:** backend-dev-expert · **Started:** 2026-08-19
+- **Depends on:** T-922 ✅ (products[] CRUD + sellable invariant, Stage 1+2 —
+  archived; this stage builds on `PlantProduct.productId` and the live
+  mother→products picklist it shipped) · **Blocks:** —
+- **Design doc:** `Docs/2-Working-Progress/plant-library-product-extension-design.md`
+  — §5 (harvest modal), §3/§3.1 (routing — **do not** centralise waste/process
+  into `block_harvests`; §3.1 explains why in detail: 48 backend consumers,
+  including the finance P&L, sum `block_harvests.quantityKg` on the
+  assumption every row is sellable), §4.2-4.4 (model changes), §4.5
+  (remaining indexes), §6 (yield), §7 (batch lookup/editing).
+- **Progress (2026-08-19): Stage 3 (BACKEND) DONE — Stage 4 (frontend
+  harvest modal rework) NOT started, this ticket stays Active.**
+  - **Models:** `block_harvest.py` — `BlockHarvest` gained optional
+    `productId`/`productName`(frozen snapshot)/`harvestBatchId` (null on all
+    13,947 legacy rows, no backfill); new `HarvestBatchLineCreate`/
+    `HarvestBatchSubmitRequest`/`HarvestBatchSubmitResponse`/
+    `HarvestBatchLookupResponse` etc. `inventory.py` — new
+    `ProcessingInventory`/`ProcessingInventoryCreate` family (mirrors
+    `HarvestInventory`'s shape, separate collection); `WasteInventoryBase`
+    gained optional `productId`/`harvestBatchId`.
+  - **Routing (§3/§3.1 honored exactly — no consumer of `block_harvests`
+    touched):** `HarvestService.submit_harvest_batch` (new, in
+    `services/block/harvest_service.py`) resolves the block's mother via
+    `block.productMotherId`, validates every line up-front (product belongs
+    to mother + is active; grade required for sellable/process, REJECTED
+    — not silently dropped — for waste), then routes: sellable reuses
+    `record_harvest`/`HarvestRepository.create` (now accepts optional
+    product routing kwargs) so `_add_to_inventory` still runs unchanged;
+    process inserts directly into the new `processing_inventory` collection;
+    waste inserts directly into `inventory_waste` (`sourceType: 'harvest'`,
+    `sourceBlockId`, `plantName` from the PRODUCT name). All three share one
+    server-generated `harvestBatchId`. Zero of the 48 `block_harvests`
+    consumers changed.
+  - **Endpoints:** `POST .../harvests/batch` (multi-line submit),
+    `GET .../harvests/batch-lookup?harvestDate=` (unions all three
+    destinations by block+date, groups by `harvestBatchId` — §7); default
+    `GET .../harvests` unchanged (sellable-only). `GET /inventory/processing`
+    (read-only listing) added for visibility.
+  - **3 pre-existing bugs fixed (§9), all in files this stage touched:**
+    1. `harvest_service.py` `_add_to_inventory` now writes the PRODUCT name
+       (`block.productName`, or the per-line product name override from a
+       batch submission) into `inventory_harvest.plantName`, not the
+       variety name — fixes both the single-harvest and multi-line paths.
+    2. `archive_repository.py`'s cycle-archive constructor now copies
+       `block.productMotherId`/`productName` onto the new `BlockArchive`.
+    3. `plant_data_enhanced_repository.py` (`search`/`get_active_plants`/
+       `create`) plus the API routes and `create_variety_for_mother` now
+       thread/filter `organizationId` — closes the cross-tenant leak (2 of
+       58 pre-existing test-junk records with no org are now invisible;
+       real data unaffected since only one org exists on this deployment).
+  - **Indexes:** shipped in `services/database.py` —
+    `block_harvests.{productId,harvestBatchId}`,
+    `inventory_waste.{harvestBatchId,sourceBlockId}`, full
+    `processing_inventory` index set. Verified live via `docker restart` +
+    `mongosh getIndexes()`.
+  - **Migration:** `scripts/migrations/plant_library_harvest_routing_migration.py`
+    (new) — backfills `productId`/`harvestBatchId` onto the one live
+    harvest-sourced `inventory_waste` row (resolves product by block→mother
+    or plantName match, deterministic `harvestBatchId` via uuid5, idempotent,
+    `--dry-run` default). **Already run against production**: backup taken
+    first (`/home/noobcity/backups/waste-migration-2026-08-19/`, 1 doc
+    verified), dry-run reviewed, then `--execute` — 1 row migrated. The
+    source block had been hard-deleted, so resolution fell back to the
+    plantName→mother match rather than block→mother; verified the resulting
+    `productId` matches the actual product on the Ash Gourd mother.
+    Idempotency proven live: a second `--execute` reported
+    `migrated: 0, skipped: 1`.
+  - **Tests:** `tests/unit/test_farm_manager/test_harvest_batch_routing.py`
+    (new, 9 cases) — mixed 3-line batch routes each category correctly and
+    shares one batch id while producing exactly ONE `block_harvests` row
+    (the §3.1 invariant); grade required/rejected per category; rejects a
+    product not on the mother; rejects an inactive product; rejects the
+    whole submission on one bad line (no partial writes); legacy
+    null-product rows still sum via the real aggregation pipeline; the
+    existing single-harvest call path is unaffected. Full suite: 883
+    passed, 1 skipped, 2 pre-existing unrelated failures (same baseline as
+    before this change) — `black --check`/`flake8` both clean.
+  - **Not started:** Stage 4 — `BlockHarvestEntryModal` multi-line rework,
+    `BlockHarvestsTab`, `HarvestInventoryList`, batch-lookup UI, retiring the
+    old frontend waste write path (`BlockHarvestEntryModal.tsx:145` →
+    `farmApi.ts:500-520`). No CodeMap regeneration done yet — new endpoints/
+    collection are structural, flag for the mapper before Stage 4 ships.
+
+---
+
 ### T-918 | Cache-key isolation — @cache_response leaked responses across users/tenants
 - **Category:** Backend (security) · **Priority:** P1
 - **Assigned:** main session · **Completed:** 2026-08-14 · **Merged:** PR #4 → main
@@ -3454,69 +3541,6 @@
   9. Tests
 
 ## 🟢 Ready
-
-### T-923 | Plant Library product extension Stage 3-5 — harvest modal multi-line rework, block_harvests/waste/processing-inventory routing, batch lookup
-- **Category:** Backend + Frontend · **Priority:** P2
-- **Assigned:** — · **Started:** —
-- **Depends on:** T-922 ✅ (products[] CRUD + sellable invariant, Stage 1+2 —
-  archived; this stage builds on `PlantProduct.productId` and the live
-  mother→products picklist it shipped) · **Blocks:** —
-- **Design doc:** `Docs/2-Working-Progress/plant-library-product-extension-design.md`
-  — §5 (harvest modal), §3/§3.1 (routing — **do not** centralise waste/process
-  into `block_harvests`; §3.1 explains why in detail: 48 backend consumers,
-  including the finance P&L, sum `block_harvests.quantityKg` on the
-  assumption every row is sellable), §4.2-4.4 (model changes), §4.5
-  (remaining indexes), §6 (yield), §7 (batch lookup/editing).
-- **Description:** T-922 shipped the products picklist and its CRUD only —
-  no harvest modal changes, no routing, no processing inventory. This stage
-  is the rest of the design doc:
-  1. **Harvest modal multi-line rework** (§5) — one submission produces N
-     lines (e.g. green *and* red capsicum off one planting), each routed by
-     its product's category, all sharing a `harvestBatchId`. Product picker
-     resolves live from `block.productMotherId` → mother `products[]`
-     (`isActive` only). Grade control hidden for `waste` lines. The old
-     waste write path (`BlockHarvestEntryModal.tsx:145` →
-     `farmApi.ts:500-520`) is retired — waste now flows through the product
-     line.
-  2. **Routing** (§3) — `sellable` → `block_harvests` (unchanged shape, plus
-     `productId`/`productName`/`harvestBatchId`, all optional so legacy rows
-     stay valid); `process` → new processing-inventory collection (§4.4,
-     mirrors harvest-inventory shape, graded); `waste` → `inventory_waste`
-     directly (§4.3, already has the `sourceType: 'harvest'` +
-     `sourceBlockId` shape — the one live row proves the path end-to-end).
-  3. **Batch lookup/editing** (§7) — default harvest list stays
-     sellable-only (reads `block_harvests`); a separate view filters by
-     source block + harvest date, unions all three destinations, and uses
-     `harvestBatchId` to disambiguate same-day submissions for
-     edit/delete-as-a-unit.
-  4. **Remaining indexes** (§4.5): `block_harvests.productId`,
-     `block_harvests.harvestBatchId`, `inventory_waste.harvestBatchId`,
-     `inventory_waste.sourceBlockId` (the `plant_mothers`/
-     `plant_data_enhanced`/`blocks` indexes already shipped in T-922).
-- **Fold in while touching these files (design doc §9, found during the
-  T-922 audit, not yet fixed):**
-  1. `harvest_service.py:123-125` writes the **variety** name into
-     `inventory_harvest.plantName` — must write the **product** name.
-  2. `archive_repository.py:488-513` builds `BlockArchive` without copying
-     `productMotherId`/`productName`, though the model has both fields.
-     Latent only because no archive has been created since the mother/
-     variety migration — the next one gets a null.
-  3. `plant_data_enhanced` is not org-scoped on read (zero
-     `organizationId` references in its repository, while `plant_mothers`
-     *is* filtered) — a live cross-tenant leak of the same family as the
-     T-918 cache-isolation fix.
-- **Known overlap:** T-917 (CSV template/import rework, Active) also
-  touches `plant_data_enhanced_service.py`; coordinate before starting to
-  avoid a painful rebase — T-922 already changed `import_from_csv`'s mother
-  find-or-create call (routes through `PlantMotherService.create_mother`
-  now, not the repository directly).
-- **Deferred out of this stage** (design doc §11) — do not pull in without
-  a separate decision: `sales_order_lines.cropName` free-text→product join
-  (13,281 rows, needs human adjudication, see T-500 decision #1 and
-  T-201.8b); deleting the unused `products` collection (0 rows); legacy
-  `plant_data` collection/routes (0 rows).
-
----
 
 ### T-700 | Task Manager redesign — state-driven tasks, assignment UI & farmer portal
 - **Category:** Farm Manager (Operations) · Frontend-heavy + some backend · **Priority:** P2
