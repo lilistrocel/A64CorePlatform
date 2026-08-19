@@ -498,6 +498,14 @@ class ArchiveRepository:
             areaUnit=block.areaUnit,
             targetCrop=block.targetCrop,
             targetCropName=block.targetCropName or "Unknown",
+            # Reason (pre-existing bug fix, design doc §9 #2): BlockArchive
+            # has carried productMotherId/productName since the Plant
+            # Library Phase 1 migration, but this constructor never copied
+            # them from the block being archived — every archive created
+            # since then would silently get nulls. block already carries
+            # both (see models/block.py), so this is a straight copy.
+            productMotherId=block.productMotherId,
+            productName=block.productName,
             plantedDate=planted_date,
             harvestCompletedDate=harvest_completed_date,
             cycleDurationDays=cycle_duration_days,

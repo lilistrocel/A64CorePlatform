@@ -60,9 +60,27 @@ class HarvestRepository:
 
     @staticmethod
     async def create(
-        harvest_data: BlockHarvestCreate, user_id: UUID, user_email: str
+        harvest_data: BlockHarvestCreate,
+        user_id: UUID,
+        user_email: str,
+        *,
+        product_id: Optional[UUID] = None,
+        product_name: Optional[str] = None,
+        harvest_batch_id: Optional[UUID] = None,
     ) -> BlockHarvest:
-        """Create a new harvest record"""
+        """
+        Create a new harvest record.
+
+        Args:
+            product_id: Plant Library product extension Stage 3 — the
+                sellable PlantProduct this line records. None for every
+                existing caller (the single-harvest endpoint's request body
+                has no product field), matching legacy rows exactly.
+            product_name: FROZEN snapshot of the product's name at harvest
+                time (design doc §4.2) — never re-derived later.
+            harvest_batch_id: Groups this row with its sibling sellable/
+                process/waste lines from the same multi-line submission.
+        """
         db = farm_db.get_database()
 
         # Get farm ID from block
@@ -96,6 +114,9 @@ class HarvestRepository:
             farmId=UUID(farm_id),
             recordedBy=user_id,
             recordedByEmail=user_email,
+            productId=product_id,
+            productName=product_name,
+            harvestBatchId=harvest_batch_id,
         )
 
         harvest_dict = harvest.model_dump()
@@ -103,6 +124,10 @@ class HarvestRepository:
         harvest_dict["blockId"] = str(harvest_dict["blockId"])
         harvest_dict["farmId"] = str(harvest_dict["farmId"])
         harvest_dict["recordedBy"] = str(harvest_dict["recordedBy"])
+        if harvest_dict.get("productId") is not None:
+            harvest_dict["productId"] = str(harvest_dict["productId"])
+        if harvest_dict.get("harvestBatchId") is not None:
+            harvest_dict["harvestBatchId"] = str(harvest_dict["harvestBatchId"])
 
         result = await db.block_harvests.insert_one(harvest_dict)
 

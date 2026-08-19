@@ -738,6 +738,57 @@ async def delete_harvest_inventory(
 
 
 # ============================================================================
+# PROCESSING INVENTORY ENDPOINTS (Plant Library product extension Stage 3)
+# ============================================================================
+#
+# Rows here are created only by the harvest batch-submission routing
+# (HarvestService._route_process_line, see block_harvests.py's POST .../batch
+# endpoint) — never by a standalone create endpoint in this stage. This is a
+# read-only listing for visibility/verification; write access follows the
+# harvest-routing path exclusively (see design doc §3/§3.1).
+
+
+@router.get("/processing", response_model=dict)
+async def list_processing_inventory(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    block_id: Optional[UUID] = Query(None, description="Filter by source block"),
+    product_id: Optional[UUID] = Query(None, description="Filter by product"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """List processing inventory items with pagination, scoped to the caller's organization."""
+    org_id = await get_organization_id(current_user)
+
+    query: dict = {"organizationId": str(org_id)}
+    if farm_id:
+        query["farmId"] = str(farm_id)
+    if block_id:
+        query["blockId"] = str(block_id)
+    if product_id:
+        query["productId"] = str(product_id)
+
+    skip = (page - 1) * per_page
+    total = await db.processing_inventory.count_documents(query)
+    items = (
+        await db.processing_inventory.find(query)
+        .sort("harvestDate", -1)
+        .skip(skip)
+        .limit(per_page)
+        .to_list(per_page)
+    )
+
+    return {
+        "items": [serialize_doc(item) for item in items],
+        "total": total,
+        "page": page,
+        "perPage": per_page,
+        "totalPages": (total + per_page - 1) // per_page,
+    }
+
+
+# ============================================================================
 # INPUT INVENTORY ENDPOINTS
 # ============================================================================
 
