@@ -1,8 +1,81 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 112 tasks
+> **Total completed:** 113 tasks
 
 ## 2026-08
+
+### T-922 | Plant Library product extension Stage 1+2 — products[] CRUD + products editor UI + sellable-product invariant
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Completed:** 2026-08-19 · **Assigned:** backend-dev-expert (Stage 1) +
+  frontend-dev-expert (Stage 2) (Viet Anh)
+- **Depends on:** — · **Blocks:** — (unblocks T-923, filed as follow-up below)
+- **Design doc:** `Docs/2-Working-Progress/plant-library-product-extension-design.md`
+- **Summary:** First two stages of a multi-stage extension letting each
+  plant mother (product/SKU) carry a picklist of concrete products it can
+  yield (e.g. "Capsicum" → "Green Capsicum" sellable, "Capsicum Puree"
+  process, "Capsicum Trim" waste), so a block's harvest can eventually be
+  routed by destination without centralising everything into
+  `block_harvests` — see the design doc §3.1 for why that matters (48
+  backend consumers, including the finance P&L, sum
+  `block_harvests.quantityKg` on the assumption every row is sellable).
+  - **Backend:** new `ProductUnit`/`ProductCategory` enums, `PlantProduct`
+    model, `products: List[PlantProduct]` embedded on `PlantMother`. Four
+    endpoints (`POST`/`GET`/`PATCH`/`DELETE` under
+    `/api/v1/farm/plant-mothers/{id}/products`) — `DELETE` deactivates
+    only, mirroring the existing mother-delete refuse-don't-cascade
+    precedent. New server-side invariant: every mother always keeps at
+    least one active sellable product — auto-seeded on create when none is
+    supplied, 409 on any mutation that would drop the last one (`DELETE`,
+    `PATCH category`, `PATCH isActive:false` all funnel through one
+    guarded code path). Closed a bypass where CSV-imported mothers escaped
+    the invariant (`plant_data_enhanced_service.py`'s CSV importer now
+    routes mother creation through `PlantMotherService.create_mother`
+    instead of the repository directly). Three new indexes:
+    `plant_mothers.products.productId`,
+    `plant_data_enhanced.motherPlantId`, `blocks.productMotherId` (the
+    latter two were missing entirely and made every mother→variety lookup
+    and the whole rename cascade a collection scan).
+  - **Migration:** `scripts/migrations/plant_library_default_product_migration.py`
+    — seeded one sellable/kg product, named after the mother, for every
+    existing `plant_mothers` document without one. Run against production:
+    59 seeded, verified 59/59; a second run reported 59 skipped / 0
+    seeded, proving idempotency.
+  - **Frontend:** new shared `ProductsEditor.tsx` (draft mode in
+    `PlantMotherFormModal` create flow; live mode there once the mother
+    exists, and always in `PlantMotherDetailModal`, which is now the
+    single home for managing products on an *existing* mother — edit mode
+    reverted to the plain 3-field form). Pre-submit confirmation dialogue
+    when no sellable draft product exists, naming the product that will
+    be auto-created.
+- **Tests:** `tests/unit/test_farm_manager`: 98 passed (was 78 before this
+  work). Full `tests/unit`: 851 passed, 1 skipped, 2 pre-existing/unrelated
+  failures (`test_outbox_reconciler.py` MagicMock-await bug). Frontend
+  `npx tsc -b`: 234 errors / 129 TS6133, matching the documented baseline
+  exactly — zero new, none in any touched file.
+- **Not built (Stages 3-5) — carried forward as T-923:** harvest modal
+  multi-line rework, `block_harvests`/waste/processing-inventory routing,
+  processing inventory collection, batch lookup/editing. Also carries
+  forward three pre-existing bugs found during the design audit (design
+  doc §9) that were deliberately left alone this round: `harvest_service.py`
+  writes the variety name instead of the product name into
+  `inventory_harvest.plantName`; `archive_repository.py` doesn't copy
+  `productMotherId`/`productName` onto `BlockArchive`; `plant_data_enhanced`
+  reads are not org-scoped (a live cross-tenant leak of the same family as
+  T-918).
+- **Not verified:** frontend changes not run through Playwright — pending
+  user click-through. No live-mother smoke test against production data
+  (backend verified via full unit suite + clean container restart +
+  `getIndexes()` only).
+- **CodeMaps:** stale, not regenerated — 4 new endpoints
+  (`CRUD /farm/plant-mothers/.../products`), new models
+  (`PlantProduct`/`PlantProductCreate`/`PlantProductUpdate`/`ProductUnit`/
+  `ProductCategory`), and a new frontend component (`ProductsEditor.tsx`).
+  Flagged per CLAUDE.md; regeneration deferred to whoever picks up T-923,
+  since Stage 3-5 will touch the same surface again shortly.
+- **DevLog:** `2026-08-19_plant-library-product-extension-stage1-2.md`.
+- **Commits:** branch `plant-library-product-extension` (4 commits —
+  backend, frontend, migration, docs; see CHANGELOG.md and the branch's
+  commit messages for full detail).
 
 ### T-909 | Cloudflare Access runbook correction
 - **Category:** Docs · **Priority:** P2
