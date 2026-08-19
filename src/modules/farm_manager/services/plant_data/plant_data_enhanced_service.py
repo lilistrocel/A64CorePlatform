@@ -186,7 +186,10 @@ class PlantDataEnhancedService:
 
     @staticmethod
     async def create_plant_data(
-        plant_data: PlantDataEnhancedCreate, user_id: UUID, user_email: str
+        plant_data: PlantDataEnhancedCreate,
+        user_id: UUID,
+        user_email: str,
+        organization_id: Optional[str] = None,
     ) -> PlantDataEnhanced:
         """
         Create new enhanced plant data with validation.
@@ -195,6 +198,8 @@ class PlantDataEnhancedService:
             plant_data: Plant data creation data
             user_id: User creating the plant data
             user_email: Email of user creating the plant data
+            organization_id: Org scope, stamped from the acting user's auth
+                context (design doc §9 #3).
 
         Returns:
             Created PlantDataEnhanced object
@@ -214,7 +219,7 @@ class PlantDataEnhancedService:
 
         # Create plant data
         plant = await PlantDataEnhancedRepository.create(
-            plant_data, user_id, user_email
+            plant_data, user_id, user_email, organization_id=organization_id
         )
 
         logger.info(
@@ -258,6 +263,7 @@ class PlantDataEnhancedService:
         contributor: Optional[str] = None,
         target_region: Optional[str] = None,
         is_active: Optional[bool] = None,
+        organization_id: Optional[str] = None,
     ) -> Tuple[List[PlantDataEnhanced], int, int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -273,6 +279,8 @@ class PlantDataEnhancedService:
             contributor: Filter by data contributor name
             target_region: Filter by target region
             is_active: Filter by active status (True/False/None for all)
+            organization_id: Filter to this org only, when supplied (design
+                doc §9 #3 — closes the cross-tenant leak on this endpoint).
 
         Returns:
             Tuple of (list of plant data, total count, total pages)
@@ -297,6 +305,7 @@ class PlantDataEnhancedService:
             contributor=contributor,
             target_region=target_region,
             is_active=is_active,
+            organization_id=organization_id,
         )
 
         # Calculate total pages
@@ -305,14 +314,22 @@ class PlantDataEnhancedService:
         return plants, total, total_pages
 
     @staticmethod
-    async def get_active_plants() -> List[PlantDataEnhanced]:
+    async def get_active_plants(
+        organization_id: Optional[str] = None,
+    ) -> List[PlantDataEnhanced]:
         """
         Get all active plant data for dropdown use.
+
+        Args:
+            organization_id: Filter to this org only, when supplied (design
+                doc §9 #3).
 
         Returns:
             List of active PlantDataEnhanced objects
         """
-        return await PlantDataEnhancedRepository.get_active_plants()
+        return await PlantDataEnhancedRepository.get_active_plants(
+            organization_id=organization_id
+        )
 
     @staticmethod
     async def get_filter_options() -> dict:

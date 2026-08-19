@@ -60,7 +60,10 @@ async def create_plant_data(
     - Humidity range must be valid (if provided)
     """
     plant = await PlantDataEnhancedService.create_plant_data(
-        plant_data, UUID(current_user.userId), current_user.email
+        plant_data,
+        UUID(current_user.userId),
+        current_user.email,
+        organization_id=current_user.organizationId,
     )
 
     return SuccessResponse(
@@ -135,6 +138,7 @@ async def search_plant_data(
         contributor=contributor,
         target_region=targetRegion,
         is_active=isActive,
+        organization_id=current_user.organizationId,
     )
 
     return PaginatedResponse(
@@ -188,7 +192,9 @@ async def get_active_plants(
     **Response**:
     - List of active PlantDataEnhanced objects
     """
-    plants = await PlantDataEnhancedService.get_active_plants()
+    plants = await PlantDataEnhancedService.get_active_plants(
+        organization_id=current_user.organizationId
+    )
     return SuccessResponse(data=plants)
 
 

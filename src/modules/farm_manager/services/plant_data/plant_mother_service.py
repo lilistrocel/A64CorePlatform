@@ -333,6 +333,11 @@ class PlantMotherService:
             user_email,
             mother_plant_id=plant_mother_id,
             variety_name=variety_data.varietyName,
+            # Reason (design doc §9 #3): a variety belongs to the same org
+            # as its mother — stamping this closes the same cross-tenant
+            # gap for the mother-scoped variety-create path as the
+            # standalone POST /plant-data-enhanced route.
+            organization_id=mother.organizationId,
         )
 
         logger.info(
