@@ -114,6 +114,75 @@ models, and one new frontend component (`ProductsEditor.tsx`). Flagged
 per CLAUDE.md; deferred to whoever picks up T-923, since that stage will
 touch the same surface again shortly.
 
+## [Unreleased] — Plant Library: cross-tenant leak + two data-integrity bugs fixed during Stage 3's design audit
+
+**Scope:** T-923 (Plant Library product-extension Stage 3, harvest batch
+routing — backend only, commits `450629f`/`dbccb1f`/`fd9211a`) surfaced
+three pre-existing bugs during its design audit (design doc §9), all in
+files the stage touched anyway. This entry documents those three fixes.
+It deliberately does **not** cover the harvest batch submission feature
+itself — the new `POST .../harvests/batch` / `GET
+.../harvests/batch-lookup` endpoints, the new `processing_inventory`
+collection, `GET /inventory/processing`, or the `block_harvests`/
+`inventory_waste` routing behind them (design doc §3/§3.1/§4). That work
+shipped in the same commits but has no UI caller yet — Stage 4 (the
+harvest-modal multi-line rework) hasn't started — so it gets one coherent
+`Added` entry once Stage 4 ships instead of being split across two.
+**Classification: PATCH** (bug fixes only — no new endpoint, no
+request/response shape change, no field removed). Version number TBD —
+same open drift noted in the Stage 1+2 entry above and `Versioning.md`'s
+"Known drift" note. (Viet Anh)
+
+### Fixed
+
+- **Harvest inventory recorded the block's variety name, not the product
+  name** (`src/modules/farm_manager/services/block/harvest_service.py`,
+  `_add_to_inventory`) — `inventory_harvest.plantName` was written from
+  `block.targetCropName` (the *variety*, e.g. "Purple Beauty") instead of
+  the product actually being harvested. This is the fix that matters
+  operationally: `_add_to_inventory` is the one function both the
+  existing single-harvest submission path (`record_harvest`) and the new
+  batch path share, so the correction changes what **every harvest
+  recorded today** writes to inventory, not just the new batch path.
+  Existing `inventory_harvest` rows are not backfilled — this changes
+  writes from this deploy forward only.
+- **Cycle-complete archiving silently dropped the product link**
+  (`src/modules/farm_manager/services/block/archive_repository.py`) —
+  `BlockArchive` has carried `productMotherId`/`productName` since the
+  mother/variety migration, but the archive constructor never copied
+  them from the block being archived, so every archive created since
+  then got nulls in both fields. Lower stakes than the other two fixes
+  here (nothing currently reads those fields off an archive), but it
+  ships in the same commit as the rest of Stage 3, so a changelog that
+  omitted it would be incomplete about what actually changed. The next
+  block cycle any user completes now archives correctly.
+
+### Security
+
+- **Closed a cross-tenant read leak on plant/variety data**
+  (`src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py`,
+  `plant_data_enhanced_service.py`, `plant_mother_service.py`,
+  `src/modules/farm_manager/api/v1/plant_data_enhanced.py`) — the
+  `plant_data_enhanced` collection (variety search, the active-plants
+  dropdown used when planting a block, and variety create) had **zero
+  `organizationId` references anywhere in its read or write path**,
+  while the sibling `plant_mothers` collection has always filtered by
+  org. Any authenticated user of any organization could read and search
+  every other organization's variety data through these live endpoints.
+  Same bug family as the T-918 cache cross-tenant leak (PR #4), a
+  different layer: a missing query filter rather than a missing cache
+  key. Now threaded through `create`/`search`/`get_active_plants` and
+  the org-scoped mother→variety create path, matching
+  `PlantMotherRepository`'s existing convention of filtering only when a
+  caller supplies an org context (so scripts/migrations without one are
+  unaffected). **Impact on this deployment verified as junk-only**:
+  exactly 2 of ~58 existing `plant_data_enhanced` records had no
+  `organizationId` at all ("Test 1", and "Lettuce Test" — already
+  soft-deleted since 2026-07-20); neither is referenced by any block,
+  and only one organization exists on this deployment today, so no real
+  cross-tenant read has actually occurred — but the gap was live and
+  would have been exploitable the moment a second organization existed.
+
 ## [Unreleased] — Security Hardening: role/activation audit trail, seed_admin lockdown, defense-in-depth route gating
 
 **Scope:** A three-part security audit (backend, frontend, live-DB forensics)
