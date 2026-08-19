@@ -43,10 +43,11 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 > **Known drift (flagged, not resolved by this update):** this section's
 > `1.15.0` and the `src/main.py` version constant (`1.17.0`) both trail the
-> Version History below, which already documents through `v1.20.0` plus four
-> further independent Unreleased entries (Plant Library product extension,
-> Security Hardening, Genetics, and Wave 3 Phase 2 Sales AR). `src/main.py`
-> has not been bumped since the `v1.16.0` release commit. Out of scope for
+> Version History below, which already documents through `v1.20.0` plus five
+> further independent Unreleased entries (Plant Library product extension —
+> now spanning Stage 1+2 and Stage 3+4, a global React Query `refetchOnMount`
+> fix, Security Hardening, Genetics, and Wave 3 Phase 2 Sales AR).
+> `src/main.py` has not been bumped since the `v1.16.0` release commit. Out of scope for
 > these passes (docs/CHANGELOG only, no source-file edits) — reconciling
 > `main.py`, this summary table, and a real release/tag is a release-manager
 > decision, not a `change-guardian` doc-sync one. Each pending entry
@@ -104,6 +105,90 @@ shipped/landed.
 ## Version History
 
 ### Platform Version History
+
+#### Unreleased — Plant Library: harvest batch routing + multi-line harvest modal (Stage 3+4) — 2026-08-19
+**Type:** Minor Release (pending) — T-923 on the `farm_manager` module,
+Stages 3 (backend) + 4 (frontend); the one remaining design §7 capability
+(batch editing) is not built and is filed separately as **T-924**. See
+`CHANGELOG.md` (`## [Unreleased] — Plant Library: harvest batch routing +
+multi-line harvest modal ...`) for the full itemised list; summarized here
+per this document's own "update on every version change" rule.
+
+**Author: Viet Anh**
+
+**Note on version number:** Not yet assigned a concrete `X.Y.Z`, for the
+same reason as every other pending entry in this section — this document
+already carries an unresolved version-number drift (see "Known drift" note
+above), and it is not this pass's place to resolve it or decide ordering
+among the now six pending unreleased threads. **Classification is fixed
+regardless of numbering: MINOR** — every change is additive (new
+endpoints, a new collection, new optional model fields); nothing existing
+was removed or changed shape.
+
+**Added (summary — see CHANGELOG.md for full detail):**
+- `POST .../harvests/batch` + `GET .../harvests/batch-lookup`, a new
+  `processing_inventory` collection, and per-category routing (`sellable`
+  → `block_harvests`, `process` → `processing_inventory`, `waste` →
+  `inventory_waste`) that leaves all 48 existing
+  `block_harvests.quantityKg` consumers — including the finance P&L — 
+  untouched by construction (design §3.1).
+- `BlockHarvestEntryModal.tsx` rewritten for multi-line submission with a
+  live per-block product picklist; `BlockHarvestsTab.tsx` gains a Product
+  column + Batch Lookup entry point; new read-only
+  `BlockHarvestBatchLookupModal.tsx`.
+- Retires the old direct-to-waste frontend write path
+  (`farmApi.recordBlockWaste`).
+
+**Known gap:** batch lookup ships read-only — no batch edit/delete
+endpoint exists yet, though design §7 framed lookup as the route to
+editing. Filed as **T-924**.
+
+**Compatibility:**
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. All new model fields are optional; legacy rows keep nulls, no
+  backfill beyond the one row migrated by
+  `plant_library_harvest_routing_migration.py`.
+
+**Verification:** Backend suite unchanged since Stage 3 (883 passed, 1
+skipped, 2 pre-existing unrelated failures). Frontend `npx tsc -b`
+byte-identical to the 234-error/129-TS6133 baseline, zero new. User
+click-through verified the feature end to end.
+
+**CodeMaps:** Not regenerated — two stages of accumulated drift now (4
+endpoints from Stage 1+2, 3 more here, 1 new collection, 4+ new/changed
+frontend files). Tracked in **T-924**.
+
+---
+
+#### Unreleased — React Query: `refetchOnMount` default fix (app-wide) — 2026-08-19
+**Type:** Patch Release (pending). See `CHANGELOG.md` (`## [Unreleased] —
+Fix: global React Query refetchOnMount default ...`) for the full detail;
+summarized here per this document's own "update on every version change"
+rule.
+
+**Author: Viet Anh**
+
+**Note on version number:** Not yet assigned, same open drift as every
+other pending entry above. **Classification: PATCH** — a bug fix
+restoring behavior the setting's own pre-existing comment already claimed
+it had; no new endpoint, no schema change, no new capability.
+
+**Fixed (summary):** The global `refetchOnMount: false`
+(`frontend/user-portal/src/config/react-query.config.ts`) silently
+suppressed refetch of stale/invalidated queries app-wide, contradicting
+its own comment (which described `true`'s behavior). Symptom: a record
+created on one page could keep showing a stale list on another page for
+up to 5 minutes, until `gcTime` eviction. Concretely broke the Plant
+Library harvest picklist (`useProductsForMother`) after a product was
+added — the bug that surfaced this while verifying the entry above. Fixed
+to `true`; `useProductsForMother` additionally pins `staleTime: 0` /
+`refetchOnMount: 'always'` per design doc §5's live-read requirement, so
+it stays correct even if the global default changes again. Verified safe
+against all 20+ existing per-query overrides (none touch
+`refetchOnMount`) and against `staleTime: Infinity` queries (unaffected
+by definition).
+
+---
 
 #### Unreleased — Plant Library: product extension Stage 1+2 — 2026-08-19
 **Type:** Minor Release (pending) — T-922 on the `farm_manager` module. See

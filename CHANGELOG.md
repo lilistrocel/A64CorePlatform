@@ -5,6 +5,196 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Plant Library: harvest batch routing + multi-line harvest modal (Stage 3+4 — product extension reachable end to end)
+
+**Scope:** T-923 Stages 3 (backend, commits `450629f`/`dbccb1f`/`fd9211a`) and
+4 (frontend, this pass) — the harvest modal now records N products in one
+submission, each routed to the destination its category implies (design doc
+§3/§5). This is the one coherent `Added` entry the Stage-3-only bug-fix entry
+below (`fd0f3d2`) deliberately deferred, since Stage 3 shipped with no UI
+caller until now. The three pre-existing bugs folded into the same Stage 3
+commits (harvest inventory writing the variety name instead of the product
+name, cycle-archive dropping the product link, and the `plant_data_enhanced`
+cross-tenant read leak) are documented in that PATCH entry, not repeated
+here. **Classification: MINOR** (additive only — new endpoints, a new
+collection, new optional model fields; nothing existing was removed or
+changed shape). Version number TBD — same open drift as every other pending
+entry in this file (see `Versioning.md`'s "Known drift" note); this entry
+does not attempt to resolve it or pick a number that would collide with the
+other pending threads. (Viet Anh)
+
+### Added
+
+- **`POST /api/v1/farm/farms/{farmId}/blocks/{blockId}/harvests/batch`** —
+  submit N product lines in one call, sharing a server-generated
+  `harvestBatchId`. `HarvestService.submit_harvest_batch` validates every
+  line up front (product belongs to the block's mother and is active; grade
+  required for sellable/process, rejected outright — not silently dropped —
+  for waste) before writing anything: one bad line rejects the whole
+  submission, never a partial write.
+- **Per-category routing (design §3/§3.1).** `sellable` reuses the existing
+  `record_harvest`/`HarvestRepository.create` path into `block_harvests` →
+  `inventory_harvest` FIFO, now accepting optional
+  `productId`/`productName`/`harvestBatchId`; `process` writes to the new
+  `processing_inventory` collection (mirrors `inventory_harvest`'s shape,
+  graded, kept separate from sellable stock); `waste` writes straight to
+  `inventory_waste` (`sourceType: 'harvest'`, `sourceBlockId`, `plantName`
+  set from the product name), retiring the old direct-write path. **Zero of
+  the 48 existing `block_harvests.quantityKg` consumers — including the
+  finance P&L (`pnl_service.py:394`) — were touched**; every row in that
+  collection stays sellable-only, legacy and new alike, by construction
+  rather than by a filter that could later be forgotten somewhere.
+- **`GET .../harvests/batch-lookup?harvestDate=`** — unions all three
+  destinations for one block + calendar date, grouped by `harvestBatchId`
+  (a block can have more than one same-day submission). `GET
+  /inventory/processing` added for read visibility into the new collection.
+  The existing default `GET .../harvests` is unchanged — still
+  `block_harvests`-only, sellable.
+- **Harvest modal rewritten for multi-line submission**
+  (`BlockHarvestEntryModal.tsx`): the product picklist resolves LIVE from
+  `block.productMotherId` → the mother's active products (design §5) via a
+  new `useBlock` hook; lines can be added/removed, each with product + kg
+  quantity + grade; the grade control is hidden entirely for a
+  waste-category line, matching the server's reject-if-supplied rule. One
+  POST submits the whole batch; on success the modal swaps to a results
+  view (not an auto-close) reporting each line's actual destination,
+  colour-coded, surfacing the server's verbatim rejection detail if one
+  line failed the whole submission. The old "Waste" pseudo-grade toggle and
+  its direct `POST /inventory/waste` write are gone — `farmApi.ts` drops
+  `recordBlockWaste`/`RecordBlockWastePayload` entirely (grep-verified zero
+  other callers) in favour of `submitHarvestBatch`/`getHarvestBatchLookup`.
+- **`BlockHarvestsTab.tsx`** gains a Product column
+  (`harvest.productName ?? 'Unspecified'` on the 13,947 legacy
+  null-product rows) and a Batch Lookup button. The default list
+  deliberately stays sellable-only per design §7 — it is NOT unioned across
+  destinations; that union is what the new lookup modal is for.
+- **New `BlockHarvestBatchLookupModal.tsx`** — read-only, block +
+  harvest-date filter, groups results by `harvestBatchId`, reuses the
+  shared `genetics/Modal.tsx` shell. See "Known gap" below.
+- **New hooks/utils:** `hooks/queries/useBlocks.ts` (`useBlock`),
+  `hooks/queries/useHarvestBatch.ts` (submit + lookup),
+  `utils/harvestCategory.ts` (shared category/destination labels + colour,
+  used by both modals so the vocabulary can't drift between them).
+- **3 new indexes:** `block_harvests.{productId,harvestBatchId}`,
+  `inventory_waste.{harvestBatchId,sourceBlockId}`, the full
+  `processing_inventory` index set.
+- **Migration** `plant_library_harvest_routing_migration.py` — backfilled
+  `productId`/`harvestBatchId` onto the one pre-existing harvest-sourced
+  `inventory_waste` row. Already run against production (backup taken
+  first); idempotent, proven via a clean second run (`migrated: 0,
+  skipped: 1`).
+
+### Known gap
+
+- **Batch lookup ships read-only.** Design §7 frames it as the route to
+  *editing* a mixed submission, but no batch edit/delete endpoint exists
+  yet. Finding and viewing a batch works; correcting one from there does
+  not. Filed as backlog **T-924**.
+
+### Not changed
+
+- `HarvestInventoryList.tsx` — `inventory_harvest` has no `productId`
+  field; its existing Product column already reads `plantName`, which
+  `fd0f3d2`'s bug fix corrected to hold the product name. Nothing to add
+  here.
+- `BlockHarvestEntryModal.tsx` kept its bespoke modal chrome rather than
+  moving to the shared `genetics/Modal.tsx` shell — it has a
+  `stopPropagation` guard against `CompactBlockCard`'s hover-visibility
+  state that the shared shell doesn't support.
+
+### Compatibility
+
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. All new model fields (`productId`/`productName`/`harvestBatchId`
+  on `BlockHarvest`/`WasteInventoryBase`) are optional; the 13,947 legacy
+  `block_harvests` rows and pre-existing waste rows keep nulls, no backfill
+  beyond the one row migrated above.
+- `farmApi.recordBlockWaste`/`RecordBlockWastePayload` are removed
+  (frontend-only helper, not a wire contract) — any code calling `POST
+  /inventory/waste` directly for harvest-time waste must move to
+  `submitHarvestBatch`. Verified zero remaining callers in this codebase.
+
+**Verification:** Backend suite unchanged since Stage 3 (883 passed, 1
+skipped, 2 pre-existing unrelated failures). Frontend `npx tsc -b`: 234
+errors / 129 TS6133 — diffed the full sorted error list against baseline,
+byte-identical, zero new. User has click-through verified the feature end
+to end, including that a product added in Plant Library now appears live in
+the harvest modal's picklist (see the React Query entry below — that fix
+was necessary for this verification to pass).
+
+**CodeMaps:** Still not regenerated — two stages of accumulated drift now
+(4 endpoints from Stage 1+2, 3 more here, 1 new collection, 4+ new/changed
+frontend components/hooks from Stage 4). Flagged per CLAUDE.md; tracked in
+backlog **T-924** alongside the batch-edit gap so both land in the same
+regeneration pass.
+
+---
+
+## [Unreleased] — Fix: global React Query `refetchOnMount` default suppressed refetch of stale/invalidated data app-wide
+
+**Scope:** `frontend/user-portal/src/config/react-query.config.ts` +
+`hooks/queries/usePlantMothers.ts`. Found while verifying the Plant Library
+harvest-modal Stage 4 work above, but the bug itself is app-wide, not
+feature-specific — every query in the app was affected, which is why it
+gets its own entry rather than folding into the Plant Library one.
+**Classification: PATCH** (bug fix restoring already-documented intended
+behavior; no new capability). Version number TBD, same open drift as every
+other pending entry. (Viet Anh)
+
+### Fixed
+
+- **`refetchOnMount` default was `false` while its own comment said
+  `true`'s behavior.** The global React Query default read `refetchOnMount:
+  false` under the comment *"Don't refetch when component remounts if data
+  is still fresh"* — which describes what `true` actually does (skip the
+  refetch only when NOT stale). `false` unconditionally suppresses the
+  refetch, fresh or stale alike. Consequence:
+  `queryClient.invalidateQueries()` marks an inactive query stale but does
+  not itself trigger a refetch (by design — that happens on the next
+  mount); with the default at `false`, the refetch was then suppressed
+  *again* when the component finally did mount. Net effect: **a record
+  created on one page kept showing a stale cached list on another page
+  until `gcTime` evicted it 5 minutes later**, for every query in the app
+  that didn't override the default.
+- **Concretely:** a product added via the Plant Library's `ProductsEditor`
+  did not appear in the harvest modal's product picklist
+  (`useProductsForMother`) without a hard page reload, because the
+  picklist's query had gone inactive (modal closed) and the mother-update
+  mutation's `invalidateQueries()` had nothing mounted to refetch into.
+- Changed `refetchOnMount` to `true`
+  (`config/react-query.config.ts`). Each query's own `staleTime` still
+  governs whether a mount costs a network request — fresh data continues
+  to serve from cache exactly as before; only stale or explicitly
+  invalidated data now refetches, which is what the pre-existing comment
+  always claimed the setting did.
+- `useProductsForMother` (`hooks/queries/usePlantMothers.ts`) additionally
+  pins `staleTime: 0` + `refetchOnMount: 'always'`, since design doc §5
+  mandates the harvest picklist be a live read from the mother, not merely
+  "not stale" — this keeps that guarantee correct even if the global
+  default changes again later.
+
+### Verified safe
+
+- Grepped every `useQuery`/`useInfiniteQuery` call in
+  `frontend/user-portal/src`: the 20+ existing per-query overrides all
+  touch `staleTime` only, none override `refetchOnMount` — so none could
+  have been relying on the old `false` behavior surviving.
+- `staleTime: Infinity` queries are unaffected — `true` only changes
+  behavior for data that is stale or invalidated; an `Infinity`-staleTime
+  query is by definition never stale, so it never refetches on mount
+  either way.
+
+### Compatibility
+
+- No API or schema change. Behavior-only: components that mount while
+  their query data is stale now receive a background refetch they
+  previously did not. This restores documented intended behavior rather
+  than introducing new behavior — the "more requests than before" surface
+  is scoped to genuinely stale/invalidated queries only, which is the case
+  the setting's own comment already claimed to handle.
+
+---
+
 ## [Unreleased] — Plant Library: product extension Stage 1+2 (products picklist, sellable invariant, seeding migration)
 
 **Scope:** T-922 on the `farm_manager` module — each plant mother (the

@@ -1,6 +1,10 @@
 # Plant Library — Product Extension (Design)
 
-**Branch:** `plant-library-product-extension` · **Status:** design agreed, not yet built
+**Branch:** `plant-library-product-extension` (Stage 1+2),
+`plant-library-harvest-routing` (Stage 3+4) · **Status:** Stages 1-4 built
+and verified (T-922, T-923 — both archived). §7's batch-edit/delete
+capability (the "editing" half of "batch lookup and editing") was not
+built — filed as **T-924**.
 **Author:** Viet Anh · **Date:** 2026-08-19
 
 ## 1. Intent

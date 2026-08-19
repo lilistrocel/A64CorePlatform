@@ -1,14 +1,109 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 116 tasks
+> **Total completed:** 117 tasks
 
 ## 2026-08
+
+### T-923 | Plant Library product extension Stage 3+4 — harvest batch routing (backend) + multi-line harvest modal (frontend)
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Completed:** 2026-08-19 · **Assigned:** backend-dev-expert (Stage 3) +
+  frontend-dev-expert (Stage 4) (Viet Anh)
+- **Depends on:** T-922 ✅ (products[] CRUD + sellable invariant) ·
+  **Blocks:** — (design §7's batch-edit capability was not built here —
+  filed as follow-up **T-924**, Ready)
+- **Design doc:** `Docs/2-Working-Progress/plant-library-product-extension-design.md`
+  — §3/§3.1 (routing, and why waste/process must never become
+  `block_harvests` rows), §4.2-4.4 (model changes), §5 (harvest modal),
+  §7 (batch lookup/editing)
+- **Summary:** Closes the loop T-922 opened — the harvest modal now
+  records N products in one submission, each routed to the destination
+  its category implies, reachable end to end and user-verified.
+  - **Backend (commits `450629f`/`dbccb1f`/`fd9211a`):** new
+    `POST .../harvests/batch` (validates every line up front — product
+    belongs to the block's mother and is active, grade required for
+    sellable/process, rejected outright for waste — before writing
+    anything, so one bad line rejects the whole submission) and
+    `GET .../harvests/batch-lookup?harvestDate=` (unions all three
+    destinations by block+date, grouped by `harvestBatchId`). Routing:
+    `sellable` reuses `record_harvest`/`HarvestRepository.create` into
+    `block_harvests` (unchanged shape, now accepting optional
+    `productId`/`productName`/`harvestBatchId`); `process` writes to the
+    new `processing_inventory` collection; `waste` writes straight to
+    `inventory_waste`. **Zero of the 48 existing
+    `block_harvests.quantityKg` consumers — including the finance P&L
+    (`pnl_service.py:394`) — were touched**, by construction rather than
+    by a filter that could later be forgotten. `GET /inventory/processing`
+    added for read visibility. 5 new indexes across `block_harvests`,
+    `inventory_waste`, and `processing_inventory`.
+  - **Folded in — 3 pre-existing bugs found during the design audit
+    (§9), documented separately in `CHANGELOG.md`'s PATCH entry
+    `fd0f3d2`:** harvest inventory writing the block's variety name
+    instead of the product name (fixed in the shared
+    `_add_to_inventory`, so it also corrects the pre-existing
+    single-harvest path); cycle-archiving silently dropping
+    `productMotherId`/`productName`; a live cross-tenant read leak on
+    `plant_data_enhanced` (zero `organizationId` filtering, same bug
+    family as T-918).
+  - **Migration** `plant_library_harvest_routing_migration.py` — backfilled
+    `productId`/`harvestBatchId` onto the one pre-existing harvest-sourced
+    `inventory_waste` row. Run against production (backup taken first);
+    idempotent, proven via a clean second `--execute` (`migrated: 0,
+    skipped: 1`).
+  - **Frontend (Stage 4):** `BlockHarvestEntryModal.tsx` rewritten for
+    multi-line submission — product picklist resolves LIVE from
+    `block.productMotherId` via a new `useBlock` hook, grade control
+    hidden for waste-category lines, one POST per submission, a results
+    view reporting each line's actual destination. `farmApi.ts` drops
+    `recordBlockWaste`/`RecordBlockWastePayload` entirely (grep-verified
+    zero other callers), retiring the old direct-to-waste write path, in
+    favour of new `submitHarvestBatch`/`getHarvestBatchLookup`.
+    `BlockHarvestsTab.tsx` gains a Product column (`'Unspecified'` on the
+    13,947 legacy null-product rows) and a Batch Lookup button — the
+    default list stays sellable-only per design §7, deliberately not
+    unioned. New read-only `BlockHarvestBatchLookupModal.tsx` (reuses the
+    shared `genetics/Modal.tsx` shell), `hooks/queries/useBlocks.ts`,
+    `hooks/queries/useHarvestBatch.ts`, `utils/harvestCategory.ts`
+    (shared category/destination vocabulary so the two modals can't
+    drift apart). `HarvestInventoryList.tsx` deliberately left unchanged
+    — `inventory_harvest` has no `productId`, and its existing Product
+    column already reads `plantName`, corrected by this same stage's bug
+    fix above.
+  - **Also fixed in this session, app-wide (not Plant-Library-specific —
+    its own commit and its own `CHANGELOG.md` entry):** global React
+    Query `refetchOnMount: false` was silently suppressing refetch of
+    stale/invalidated queries everywhere, contradicting its own comment.
+    Surfaced concretely by this stage's own verification — a product
+    added in the Plant Library didn't appear in the harvest modal's live
+    picklist. Fixed to `true`; `useProductsForMother` additionally pins
+    `staleTime: 0` / `refetchOnMount: 'always'` per design §5's live-read
+    requirement.
+- **Known gap carried forward — filed as T-924 (Ready):** batch lookup
+  ships read-only. Design §7 framed it as the route to *editing* a mixed
+  submission, but no batch edit/delete endpoint exists. T-924 also
+  carries the CodeMap-regeneration debt (now two stages deep) and a
+  reminder of design §11's still-untracked deferred items
+  (`sales_order_lines.cropName`, the dead `products` collection, legacy
+  `plant_data`).
+- **Tests:** `tests/unit/test_farm_manager/test_harvest_batch_routing.py`
+  (new, 9 cases) — mixed batch routes each category correctly while
+  producing exactly ONE `block_harvests` row; grade required/rejected per
+  category; rejects an off-mother or inactive product; rejects the whole
+  submission on one bad line; legacy null-product rows still sum
+  correctly. Full suite: 883 passed, 1 skipped, 2 pre-existing unrelated
+  failures. `black --check`/`flake8` clean.
+- **Verification:** Frontend `npx tsc -b` — 234 errors / 129 TS6133,
+  diffed byte-identical against baseline, zero new. **User click-through
+  verified the feature end to end**, including the React Query picklist
+  fix.
+- **CodeMaps:** Not regenerated — flagged at Stage 1+2 close, flagged
+  again here. Tracked in T-924 alongside the batch-edit gap so both land
+  in one regeneration pass.
 
 ### T-922 | Plant Library product extension Stage 1+2 — products[] CRUD + products editor UI + sellable-product invariant
 - **Category:** Backend + Frontend · **Priority:** P2
 - **Completed:** 2026-08-19 · **Assigned:** backend-dev-expert (Stage 1) +
   frontend-dev-expert (Stage 2) (Viet Anh)
-- **Depends on:** — · **Blocks:** — (unblocks T-923, filed as follow-up below)
+- **Depends on:** — · **Blocks:** — (unblocked T-923, Stage 3+4, archived above)
 - **Design doc:** `Docs/2-Working-Progress/plant-library-product-extension-design.md`
 - **Summary:** First two stages of a multi-stage extension letting each
   plant mother (product/SKU) carry a picklist of concrete products it can
