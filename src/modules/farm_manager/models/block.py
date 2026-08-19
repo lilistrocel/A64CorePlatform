@@ -407,7 +407,8 @@ class Block(BlockBase):
     # fields carry the MOTHER (product/SKU) that harvest/inventory/sales roll
     # up to. Optional/denormalized, backfilled by the Phase 1 migration.
     productMotherId: Optional[UUID] = Field(
-        None, description="Mother plant (product) ID, resolved from targetCrop's variety"
+        None,
+        description="Mother plant (product) ID, resolved from targetCrop's variety",
     )
     productName: Optional[str] = Field(
         None, description="Mother plant (product) name (denormalized)"

@@ -149,9 +149,7 @@ class PlantMotherService:
             )
 
         if update_data.plantName and update_data.plantName != current.plantName:
-            name_clash = await PlantMotherRepository.get_by_name(
-                update_data.plantName
-            )
+            name_clash = await PlantMotherRepository.get_by_name(update_data.plantName)
             if name_clash and name_clash.plantMotherId != current.plantMotherId:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -223,7 +221,9 @@ class PlantMotherService:
                 detail="Mother plant not found or already deleted",
             )
 
-        logger.info(f"[PlantMother Service] Soft-deleted mother plant: {plant_mother_id}")
+        logger.info(
+            f"[PlantMother Service] Soft-deleted mother plant: {plant_mother_id}"
+        )
 
     @staticmethod
     async def list_varieties(plant_mother_id: UUID) -> List[PlantDataEnhanced]:

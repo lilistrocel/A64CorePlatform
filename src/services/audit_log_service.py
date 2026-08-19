@@ -91,4 +91,6 @@ async def write_user_audit_log(
     except Exception:
         # Reason: an audit-log write failure must not surface as a failure
         # of the (already-committed) action it is recording.
-        logger.error("Failed to write admin_audit_log entry: %s", audit_entry, exc_info=True)
+        logger.error(
+            "Failed to write admin_audit_log entry: %s", audit_entry, exc_info=True
+        )
