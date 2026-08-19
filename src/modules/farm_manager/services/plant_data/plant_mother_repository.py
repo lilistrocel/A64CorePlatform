@@ -296,9 +296,7 @@ class PlantMotherRepository:
         if result.matched_count == 0:
             return None
 
-        logger.info(
-            f"[PlantMother Repository] Updated mother plant: {plant_mother_id}"
-        )
+        logger.info(f"[PlantMother Repository] Updated mother plant: {plant_mother_id}")
         return await PlantMotherRepository.get_by_id(plant_mother_id)
 
     @staticmethod
@@ -359,9 +357,7 @@ class PlantMotherRepository:
         mother_id_str = str(plant_mother_id)
         now = datetime.utcnow()
 
-        varieties_result = await db[
-            PlantDataEnhancedRepository.COLLECTION
-        ].update_many(
+        varieties_result = await db[PlantDataEnhancedRepository.COLLECTION].update_many(
             {"motherPlantId": mother_id_str},
             {
                 "$set": {

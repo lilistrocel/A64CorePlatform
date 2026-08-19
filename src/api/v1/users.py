@@ -295,7 +295,7 @@ async def change_user_role(
             detail=f"Insufficient permissions to assign role: {role.value}",
         )
 
-    updated_user = await user_service.change_user_role(user_id, role)
+    updated_user = await user_service.change_user_role(user_id, role, current_user)
     return updated_user
 
 
@@ -317,7 +317,7 @@ async def activate_user(
     - 403: Insufficient permissions
     - 404: User not found
     """
-    user = await user_service.activate_user(user_id)
+    user = await user_service.activate_user(user_id, current_user)
     return user
 
 
@@ -342,5 +342,5 @@ async def deactivate_user(
     **Note:** Deactivated users cannot login but data is preserved
     All refresh tokens are revoked
     """
-    user = await user_service.deactivate_user(user_id)
+    user = await user_service.deactivate_user(user_id, current_user)
     return user

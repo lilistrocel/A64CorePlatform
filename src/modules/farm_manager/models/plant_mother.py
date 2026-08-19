@@ -107,7 +107,8 @@ class PlantProductUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     category: Optional[ProductCategory] = None
     isActive: Optional[bool] = Field(
-        None, description="Deactivating hides the product from picklists without removing it"
+        None,
+        description="Deactivating hides the product from picklists without removing it",
     )
 
 
@@ -177,9 +178,7 @@ class PlantMotherUpdate(BaseModel):
     plantName: Optional[str] = Field(None, min_length=1, max_length=200)
     scientificName: Optional[str] = None
     plantType: Optional[PlantMotherTypeLiteral] = None
-    isActive: Optional[bool] = Field(
-        None, description="Whether this product is active"
-    )
+    isActive: Optional[bool] = Field(None, description="Whether this product is active")
 
 
 class PlantMother(PlantMotherBase):
@@ -192,9 +191,7 @@ class PlantMother(PlantMotherBase):
     )
 
     # Active status
-    isActive: bool = Field(
-        True, description="Whether this product is active"
-    )
+    isActive: bool = Field(True, description="Whether this product is active")
 
     # Products this mother can yield (Stage 1 — see module docstring section
     # above). Embedded, not a separate collection: products are meaningless
@@ -214,10 +211,12 @@ class PlantMother(PlantMotherBase):
     # require it on its own Create schema without touching this field's
     # optionality here.
     createdBy: Optional[UUID] = Field(
-        None, description="User ID who created this product (None for migration-created records)"
+        None,
+        description="User ID who created this product (None for migration-created records)",
     )
     createdByEmail: Optional[str] = Field(
-        None, description="Email of creator for audit trail (None for migration-created records)"
+        None,
+        description="Email of creator for audit trail (None for migration-created records)",
     )
     createdAt: datetime = Field(
         default_factory=datetime.utcnow, description="Creation timestamp (UTC)"
@@ -257,7 +256,8 @@ class PlantMotherWithVarietyCount(PlantMother):
     """
 
     varietyCount: int = Field(
-        0, description="Count of active (isActive, non-deleted) varieties under this mother"
+        0,
+        description="Count of active (isActive, non-deleted) varieties under this mother",
     )
 
 
@@ -268,7 +268,9 @@ class VarietySummary(BaseModel):
     duplicating its full plant_data_enhanced payload.
     """
 
-    plantDataId: UUID = Field(..., description="Variety's plant_data_enhanced.plantDataId")
+    plantDataId: UUID = Field(
+        ..., description="Variety's plant_data_enhanced.plantDataId"
+    )
     varietyName: Optional[str] = Field(None, description="Variety display name")
     isActive: bool = Field(True, description="Whether this variety is active")
 

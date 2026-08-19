@@ -428,8 +428,16 @@ function App() {
               {/* Division selector - full-page, outside MainLayout */}
               <Route path="/select-division" element={<DivisionSelector />} />
 
-              {/* AI Hub - full-screen, outside MainLayout, super admin only */}
-              <Route path="/ai" element={<AIHub />} />
+              {/* AI Hub - full-screen, outside MainLayout, super admin only.
+                  Was previously gated only by AIHub's own internal role
+                  check (belt-and-braces, left in place below); this
+                  route-level gate is the real fix so a non-super_admin
+                  hitting the URL directly gets a clean "not authorized"
+                  view via ProtectedRoute instead of relying on the page
+                  component to self-gate. */}
+              <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+                <Route path="/ai" element={<AIHub />} />
+              </Route>
 
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<IndustryDashboard />} />
@@ -625,13 +633,27 @@ function App() {
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/admin/users" element={<UserManagementPage />} />
+                {/* /admin/users — matches backend's require_admin on the
+                    endpoints this page calls (GET /v1/users,
+                    PATCH /v1/users/{id}/role, activate/deactivate, etc.):
+                    admin or super_admin. Previously reachable by ANY
+                    authenticated role by typing the URL — only the nav
+                    link was role-gated (MainLayout.tsx). */}
+                <Route element={<ProtectedRoute allowedRoles={['admin', 'super_admin']} />}>
+                  <Route path="/admin/users" element={<UserManagementPage />} />
+                </Route>
                 {/* Tenant Setup Wizard — super_admin only.
-                    Accessible without an orgId (bootstrap scenario). */}
-                <Route
-                  path="/admin/tenant-setup"
-                  element={<TenantSetupWizardPage />}
-                />
+                    Accessible without an orgId (bootstrap scenario).
+                    TenantSetupWizardPage.tsx:1268 already self-gates
+                    (`if (user?.role !== 'super_admin') return <AccessDenied/>`)
+                    — this route-level gate is the real fix; the self-gate
+                    stays in place as belt-and-braces. */}
+                <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+                  <Route
+                    path="/admin/tenant-setup"
+                    element={<TenantSetupWizardPage />}
+                  />
+                </Route>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Route>
