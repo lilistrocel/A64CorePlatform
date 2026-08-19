@@ -13,26 +13,14 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Wheat,
-  TreeDeciduous,
-  Leaf,
-  Apple,
-  Carrot,
-  Flower2,
-  Sprout,
-  Pencil,
-  Trash2,
-  X,
-  Plus,
-  Copy,
-} from 'lucide-react';
+import { Wheat, TreeDeciduous, Leaf, Apple, Carrot, Flower2, Sprout, Pencil, Trash2, X, Plus, Copy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { glassPanel, monoLabel } from '@a64core/shared';
 import { useVarietiesForMother } from '../../hooks/queries/usePlantMothers';
 import { queryKeys } from '../../config/react-query.config';
 import { deletePlantDataEnhanced } from '../../services/plantDataEnhancedApi';
 import { PlantDataDetail } from './PlantDataDetail';
+import { ProductsEditor } from './ProductsEditor';
 import type { PlantDataEnhanced, PlantMother } from '../../types/farm';
 
 const PLANT_TYPE_ICONS: Record<string, LucideIcon> = {
@@ -322,6 +310,19 @@ const ErrorBanner = styled.div`
 `;
 
 // ============================================================================
+// PRODUCTS SECTION (Plant Library Product Extension Stage 2 — T-922)
+// Editor itself lives in the shared ProductsEditor component (also used by
+// PlantMotherFormModal) — only the divider between Varieties and Products
+// belongs to this modal's own layout.
+// ============================================================================
+
+const ProductsDivider = styled.div`
+  height: 1px;
+  background: ${({ theme }) => theme.colors.line};
+  margin: 28px 0 24px 0;
+`;
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -452,6 +453,10 @@ export function PlantMotherDetailModal({
                 ))}
               </div>
             )}
+
+            <ProductsDivider />
+
+            <ProductsEditor motherId={mother.plantMotherId} />
           </Content>
         </Modal>
       </Overlay>

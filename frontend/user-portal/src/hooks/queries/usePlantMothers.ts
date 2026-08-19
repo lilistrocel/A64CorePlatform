@@ -9,7 +9,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { plantMotherApi } from '../../services/plantMotherApi';
 import { queryKeys } from '../../config/react-query.config';
-import type { PlantMotherCreate, PlantMotherUpdate, VarietyCreateForMother } from '../../types/farm';
+import type {
+  PlantMotherCreate,
+  PlantMotherUpdate,
+  VarietyCreateForMother,
+  PlantProductCreate,
+  PlantProductUpdate,
+} from '../../types/farm';
 
 /**
  * List mother plants (products) with pagination + search.
@@ -105,6 +111,88 @@ export function useCreateVarietyForMother() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.varieties(variables.motherId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.detail(variables.motherId) });
+    },
+  });
+}
+
+// ============================================================================
+// PRODUCTS (Plant Library Product Extension Stage 2 — yield picklist per mother)
+// ============================================================================
+
+/**
+ * List a mother's products (yield picklist). Pass `activeOnly` to hide
+ * deactivated products (used by future harvest picklists); the products
+ * editor itself always wants the full history, so it omits the param.
+ */
+export function useProductsForMother(motherId: string | undefined, activeOnly?: boolean) {
+  return useQuery({
+    queryKey: queryKeys.plantMothers.products(motherId!, activeOnly),
+    queryFn: () => plantMotherApi.listProductsForMother(motherId!, activeOnly),
+    enabled: !!motherId,
+  });
+}
+
+/**
+ * Add a new product to a mother. Invalidates that mother's products list
+ * (both activeOnly variants, via prefix match) and its detail (products is
+ * embedded on PlantMother too).
+ */
+export function useAddProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ motherId, data }: { motherId: string; data: PlantProductCreate }) =>
+      plantMotherApi.addProductToMother(motherId, data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.plantMothers.detail(variables.motherId), 'products'],
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.detail(variables.motherId) });
+    },
+  });
+}
+
+/**
+ * Update a product's name/category/isActive (rename, recategorise, or
+ * reactivate via isActive: true). `unit` is not editable — see PlantProductUpdate.
+ */
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      motherId,
+      productId,
+      data,
+    }: {
+      motherId: string;
+      productId: string;
+      data: PlantProductUpdate;
+    }) => plantMotherApi.updateMotherProduct(motherId, productId, data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.plantMothers.detail(variables.motherId), 'products'],
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.detail(variables.motherId) });
+    },
+  });
+}
+
+/**
+ * Deactivate a product (isActive: false). NOT deletion — the product stays
+ * in the array, just hidden from live harvest picklists. Idempotent.
+ */
+export function useDeactivateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ motherId, productId }: { motherId: string; productId: string }) =>
+      plantMotherApi.deactivateMotherProduct(motherId, productId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.plantMothers.detail(variables.motherId), 'products'],
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.plantMothers.detail(variables.motherId) });
     },
   });
