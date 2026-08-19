@@ -43,6 +43,44 @@ Test cases:
         motherPlantId doesn't resolve to an existing mother
     16. BlockRepository.update_status stamps productMotherId/productName on
         a PLANNED/GROWING transition, atomically with targetCrop
+
+Plant Library product extension Stage 1 (products[] embedded in
+PlantMother — see
+Docs/2-Working-Progress/plant-library-product-extension-design.md):
+    17. add_product succeeds and persists, defaulting unit to kg
+    18. add_product rejects a case-insensitive duplicate name (409)
+    19. add_product 404s for an unknown mother
+    20. PlantProductCreate rejects an unknown category (422 / ValidationError)
+    21. list_products returns all products by default
+    22. list_products(active_only=True) filters out deactivated products
+    23. list_products 404s for an unknown mother
+    24. update_product changes name/category/isActive
+    25. update_product rejects renaming onto a sibling's name, case-insensitive (409)
+    26. update_product 404s for an unknown product / unknown mother
+    27. deactivate_product sets isActive=False without removing the entry
+    28. deactivate_product is idempotent
+    29. deactivate_product 404s for an unknown product
+
+"At least one active sellable product" invariant (new platform invariant —
+every mother must always keep >=1 active sellable product, so its harvest
+can be recorded):
+    30. create_mother with no products auto-seeds a default sellable product
+        named after plantName, with the deterministic uuid5 id
+    31. create_mother with only waste/process products supplied still
+        auto-seeds a sellable (on top of the supplied ones)
+    32. create_mother with a sellable product already supplied does NOT
+        auto-seed an extra one
+    33. deactivate_product (DELETE) on the last active sellable product 409s
+    34. update_product changing category away from sellable on the last
+        active sellable product 409s
+    35. update_product(isActive=False) on the last active sellable product
+        409s (same guard as the DELETE route, both funnel through
+        update_product)
+    36. deactivating a non-last active sellable product succeeds
+    37. deactivating a waste/process product always succeeds regardless of
+        sellable state
+    38. renaming the last active sellable product succeeds (renaming never
+        trips the invariant)
 """
 
 from __future__ import annotations
@@ -51,19 +89,25 @@ import re
 from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5, NAMESPACE_OID
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from src.modules.farm_manager.models.block import Block, BlockStatus
 from src.modules.farm_manager.models.plant_data_enhanced import (
     PlantDataEnhancedUpdate,
 )
 from src.modules.farm_manager.models.plant_mother import (
+    PlantMother,
     PlantMotherCreate,
     PlantMotherUpdate,
     VarietyCreateForMother,
+    PlantProductCreate,
+    PlantProductUpdate,
+    ProductCategory,
+    ProductUnit,
 )
 from src.modules.farm_manager.services.database import farm_db
 from src.modules.farm_manager.services.block.block_repository_new import (
@@ -591,6 +635,301 @@ class TestUpdateStatusStampsProductRef:
         assert updated_block.productMotherId == mother.plantMotherId
         assert updated_block.productName == "Cabbage"
 
+
+# ---------------------------------------------------------------------------
+# Plant Library product extension Stage 1 — products[] CRUD
+# ---------------------------------------------------------------------------
+
+
+async def _make_mother(fake_db: _FakeDB, plant_name: str = "Capsicum") -> PlantMother:
+    """
+    Deliberately bypasses `PlantMotherService.create_mother` and its
+    "at least one active sellable product" auto-seeding (see
+    `TestActiveSellableInvariant` below for tests of that behavior) by
+    writing straight through the repository — a dumb writer with no
+    invariant enforcement, same path the CSV importer uses to find-or-create
+    a mother (plant_data_enhanced_service.py). This keeps every existing
+    Stage-1 product-CRUD test below starting from a clean `products == []`
+    mother, so their counts/indices stay about only the product(s) each
+    test itself adds.
+    """
+    return await PlantMotherRepository.create(
+        PlantMotherCreate(plantName=plant_name),
+        created_by=uuid4(),
+        created_by_email="a@example.com",
+    )
+
+
+class TestAddProduct:
+    @pytest.mark.asyncio
+    async def test_add_product_success_defaults_unit_kg(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+
+        product = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+
+        assert product.name == "Green Capsicum"
+        assert product.category == ProductCategory.SELLABLE
+        assert product.unit == ProductUnit.KG
+        assert product.isActive is True
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        assert len(stored.products) == 1
+        assert stored.products[0].productId == product.productId
+
+    @pytest.mark.asyncio
+    async def test_add_product_duplicate_name_case_insensitive_rejected(
+        self, fake_db: _FakeDB
+    ):
+        mother = await _make_mother(fake_db)
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.add_product(
+                mother.plantMotherId,
+                PlantProductCreate(
+                    name="green capsicum", category=ProductCategory.SELLABLE
+                ),
+            )
+        assert exc.value.status_code == 409
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        assert len(stored.products) == 1
+
+    @pytest.mark.asyncio
+    async def test_add_product_unknown_mother_404s(self, fake_db: _FakeDB):
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.add_product(
+                uuid4(),
+                PlantProductCreate(name="Waste Trim", category=ProductCategory.WASTE),
+            )
+        assert exc.value.status_code == 404
+
+    def test_unknown_category_rejected_by_enum(self):
+        with pytest.raises(ValidationError):
+            PlantProductCreate(name="Mystery", category="not-a-real-category")
+
+    def test_unknown_unit_rejected_by_enum(self):
+        with pytest.raises(ValidationError):
+            PlantProductCreate(
+                name="Mystery", category=ProductCategory.SELLABLE, unit="litre"
+            )
+
+
+class TestListProducts:
+    @pytest.mark.asyncio
+    async def test_lists_all_products_by_default(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+        added_waste = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Capsicum Trim", category=ProductCategory.WASTE),
+        )
+        await PlantMotherService.deactivate_product(
+            mother.plantMotherId, added_waste.productId
+        )
+
+        products = await PlantMotherService.list_products(mother.plantMotherId)
+        assert len(products) == 2
+
+    @pytest.mark.asyncio
+    async def test_active_only_filters_deactivated(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+        inactive = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Capsicum Trim", category=ProductCategory.WASTE),
+        )
+        await PlantMotherService.deactivate_product(
+            mother.plantMotherId, inactive.productId
+        )
+
+        products = await PlantMotherService.list_products(
+            mother.plantMotherId, active_only=True
+        )
+        assert len(products) == 1
+        assert products[0].name == "Green Capsicum"
+
+    @pytest.mark.asyncio
+    async def test_unknown_mother_404s(self, fake_db: _FakeDB):
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.list_products(uuid4())
+        assert exc.value.status_code == 404
+
+
+class TestUpdateProduct:
+    @pytest.mark.asyncio
+    async def test_updates_name_category_and_isActive(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        # A second active sellable product so recategorising/deactivating
+        # "Green Capsicum" below doesn't trip the "at least one active
+        # sellable product" invariant — that guard has its own dedicated
+        # tests in TestActiveSellableInvariantGuard; this test is about the
+        # general field-update mechanics.
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Red Capsicum", category=ProductCategory.SELLABLE),
+        )
+        product = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+
+        updated = await PlantMotherService.update_product(
+            mother.plantMotherId,
+            product.productId,
+            PlantProductUpdate(
+                name="Green Bell Pepper",
+                category=ProductCategory.PROCESS,
+                isActive=False,
+            ),
+        )
+
+        assert updated.name == "Green Bell Pepper"
+        assert updated.category == ProductCategory.PROCESS
+        assert updated.isActive is False
+        # Identity is stable across an update.
+        assert updated.productId == product.productId
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        by_id = {p.productId: p for p in stored.products}
+        assert by_id[product.productId].name == "Green Bell Pepper"
+
+    @pytest.mark.asyncio
+    async def test_rename_onto_sibling_name_case_insensitive_rejected(
+        self, fake_db: _FakeDB
+    ):
+        mother = await _make_mother(fake_db)
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+        red = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Red Capsicum", category=ProductCategory.SELLABLE),
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.update_product(
+                mother.plantMotherId,
+                red.productId,
+                PlantProductUpdate(name="green capsicum"),
+            )
+        assert exc.value.status_code == 409
+
+        # Unchanged.
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        by_id = {p.productId: p for p in stored.products}
+        assert by_id[red.productId].name == "Red Capsicum"
+
+    @pytest.mark.asyncio
+    async def test_renaming_to_own_current_name_is_not_a_clash(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        # Second active sellable so recategorising "Green Capsicum" away
+        # from sellable below doesn't trip the invariant guard (see the
+        # comment in test_updates_name_category_and_isActive above).
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Red Capsicum", category=ProductCategory.SELLABLE),
+        )
+        product = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+
+        updated = await PlantMotherService.update_product(
+            mother.plantMotherId,
+            product.productId,
+            PlantProductUpdate(name="Green Capsicum", category=ProductCategory.PROCESS),
+        )
+        assert updated.name == "Green Capsicum"
+        assert updated.category == ProductCategory.PROCESS
+
+    @pytest.mark.asyncio
+    async def test_unknown_product_404s(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.update_product(
+                mother.plantMotherId, uuid4(), PlantProductUpdate(name="Ghost")
+            )
+        assert exc.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_unknown_mother_404s(self, fake_db: _FakeDB):
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.update_product(
+                uuid4(), uuid4(), PlantProductUpdate(name="Ghost")
+            )
+        assert exc.value.status_code == 404
+
+
+class TestDeactivateProduct:
+    @pytest.mark.asyncio
+    async def test_deactivate_sets_inactive_without_removing(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        # Second active sellable so deactivating "Green Capsicum" below
+        # doesn't trip the "at least one active sellable product" invariant
+        # (dedicated tests for that guard live in
+        # TestActiveSellableInvariantGuard) — this test is about
+        # deactivate-not-remove mechanics.
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Red Capsicum", category=ProductCategory.SELLABLE),
+        )
+        product = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+
+        result = await PlantMotherService.deactivate_product(
+            mother.plantMotherId, product.productId
+        )
+        assert result.isActive is False
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        assert len(stored.products) == 2
+        by_id = {p.productId: p for p in stored.products}
+        assert by_id[product.productId].isActive is False
+
+    @pytest.mark.asyncio
+    async def test_deactivate_is_idempotent(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        # Second active sellable — same reasoning as the test above.
+        await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Red Capsicum", category=ProductCategory.SELLABLE),
+        )
+        product = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Green Capsicum", category=ProductCategory.SELLABLE),
+        )
+
+        await PlantMotherService.deactivate_product(
+            mother.plantMotherId, product.productId
+        )
+        result = await PlantMotherService.deactivate_product(
+            mother.plantMotherId, product.productId
+        )
+        assert result.isActive is False
+
+    @pytest.mark.asyncio
+    async def test_unknown_product_404s(self, fake_db: _FakeDB):
+        mother = await _make_mother(fake_db)
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.deactivate_product(mother.plantMotherId, uuid4())
+        assert exc.value.status_code == 404
+
     @pytest.mark.asyncio
     async def test_emptying_clears_product_ref(self, fake_db: _FakeDB):
         mother = await PlantMotherService.create_mother(
@@ -627,3 +966,193 @@ class TestUpdateStatusStampsProductRef:
         assert emptied.productMotherId is None
         assert emptied.productName is None
         assert emptied.targetCrop is None
+
+
+# ---------------------------------------------------------------------------
+# "At least one active sellable product" invariant
+# ---------------------------------------------------------------------------
+#
+# Unlike the Stage-1 CRUD tests above (which use `_make_mother` to bypass
+# this on purpose), these tests go through the real
+# `PlantMotherService.create_mother` so the auto-seed/guard behavior is
+# actually exercised.
+
+
+class TestCreateAutoSeedsDefaultSellable:
+    @pytest.mark.asyncio
+    async def test_no_products_supplied_auto_seeds_sellable(self, fake_db: _FakeDB):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(plantName="Okra"), uuid4(), "a@example.com"
+        )
+
+        assert len(mother.products) == 1
+        product = mother.products[0]
+        assert product.name == "Okra"
+        assert product.category == ProductCategory.SELLABLE
+        assert product.unit == ProductUnit.KG
+        assert product.isActive is True
+        # Deterministic id — same scheme as the seeding migration's
+        # product_id_for_mother, so either write path yields the same id.
+        assert product.productId == uuid5(NAMESPACE_OID, str(mother.plantMotherId))
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        assert len(stored.products) == 1
+        assert stored.products[0].productId == product.productId
+
+    @pytest.mark.asyncio
+    async def test_only_waste_and_process_supplied_still_auto_seeds_sellable(
+        self, fake_db: _FakeDB
+    ):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(
+                plantName="Okra",
+                products=[
+                    PlantProductCreate(name="Okra Trim", category=ProductCategory.WASTE),
+                    PlantProductCreate(
+                        name="Okra Puree", category=ProductCategory.PROCESS
+                    ),
+                ],
+            ),
+            uuid4(),
+            "a@example.com",
+        )
+
+        assert len(mother.products) == 3
+        by_category = {p.category: p for p in mother.products if p.category == ProductCategory.SELLABLE}
+        assert len(by_category) == 1
+        sellable = by_category[ProductCategory.SELLABLE]
+        assert sellable.name == "Okra"
+        assert sellable.isActive is True
+        assert sellable.productId == uuid5(NAMESPACE_OID, str(mother.plantMotherId))
+
+        names = {p.name for p in mother.products}
+        assert names == {"Okra", "Okra Trim", "Okra Puree"}
+
+    @pytest.mark.asyncio
+    async def test_sellable_already_supplied_does_not_auto_seed(self, fake_db: _FakeDB):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(
+                plantName="Okra",
+                products=[
+                    PlantProductCreate(name="Fresh Okra", category=ProductCategory.SELLABLE)
+                ],
+            ),
+            uuid4(),
+            "a@example.com",
+        )
+
+        assert len(mother.products) == 1
+        assert mother.products[0].name == "Fresh Okra"
+
+
+class TestActiveSellableInvariantGuard:
+    @pytest.mark.asyncio
+    async def test_deactivate_last_sellable_via_delete_route_409s(
+        self, fake_db: _FakeDB
+    ):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(plantName="Okra"), uuid4(), "a@example.com"
+        )
+        last_sellable = mother.products[0]
+
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.deactivate_product(
+                mother.plantMotherId, last_sellable.productId
+            )
+        assert exc.value.status_code == 409
+        assert "active sellable" in exc.value.detail
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        assert stored.products[0].isActive is True
+
+    @pytest.mark.asyncio
+    async def test_recategorising_last_sellable_away_from_sellable_409s(
+        self, fake_db: _FakeDB
+    ):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(plantName="Okra"), uuid4(), "a@example.com"
+        )
+        last_sellable = mother.products[0]
+
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.update_product(
+                mother.plantMotherId,
+                last_sellable.productId,
+                PlantProductUpdate(category=ProductCategory.PROCESS),
+            )
+        assert exc.value.status_code == 409
+        assert "active sellable" in exc.value.detail
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        assert stored.products[0].category == ProductCategory.SELLABLE
+
+    @pytest.mark.asyncio
+    async def test_patch_isactive_false_on_last_sellable_409s(self, fake_db: _FakeDB):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(plantName="Okra"), uuid4(), "a@example.com"
+        )
+        last_sellable = mother.products[0]
+
+        with pytest.raises(HTTPException) as exc:
+            await PlantMotherService.update_product(
+                mother.plantMotherId,
+                last_sellable.productId,
+                PlantProductUpdate(isActive=False),
+            )
+        assert exc.value.status_code == 409
+        assert "active sellable" in exc.value.detail
+
+    @pytest.mark.asyncio
+    async def test_deactivating_a_non_last_sellable_succeeds(self, fake_db: _FakeDB):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(plantName="Okra"), uuid4(), "a@example.com"
+        )
+        second_sellable = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Baby Okra", category=ProductCategory.SELLABLE),
+        )
+
+        result = await PlantMotherService.deactivate_product(
+            mother.plantMotherId, second_sellable.productId
+        )
+        assert result.isActive is False
+
+        stored = await PlantMotherRepository.get_by_id(mother.plantMotherId)
+        by_id = {p.productId: p for p in stored.products}
+        assert by_id[mother.products[0].productId].isActive is True
+        assert by_id[second_sellable.productId].isActive is False
+
+    @pytest.mark.asyncio
+    async def test_deactivating_waste_or_process_always_succeeds(
+        self, fake_db: _FakeDB
+    ):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(plantName="Okra"), uuid4(), "a@example.com"
+        )
+        waste = await PlantMotherService.add_product(
+            mother.plantMotherId,
+            PlantProductCreate(name="Okra Trim", category=ProductCategory.WASTE),
+        )
+
+        # Only sellable is the auto-seeded default, yet deactivating a
+        # waste/process product is never blocked by this invariant.
+        result = await PlantMotherService.deactivate_product(
+            mother.plantMotherId, waste.productId
+        )
+        assert result.isActive is False
+
+    @pytest.mark.asyncio
+    async def test_renaming_last_sellable_succeeds(self, fake_db: _FakeDB):
+        mother = await PlantMotherService.create_mother(
+            PlantMotherCreate(plantName="Okra"), uuid4(), "a@example.com"
+        )
+        last_sellable = mother.products[0]
+
+        updated = await PlantMotherService.update_product(
+            mother.plantMotherId,
+            last_sellable.productId,
+            PlantProductUpdate(name="Fresh Okra"),
+        )
+        assert updated.name == "Fresh Okra"
+        assert updated.category == ProductCategory.SELLABLE
+        assert updated.isActive is True

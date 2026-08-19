@@ -872,6 +872,47 @@ export interface PlantDataCloneRequest {
 //   varietyName fields for the link back to its mother.
 // ============================================================================
 
+/**
+ * Unit a product is measured in. `kg` is deliberately the only member today —
+ * a real enum so a future animal-husbandry module adds a member instead of
+ * backfilling every harvest row. Create-only: PlantProductUpdate cannot
+ * change an existing product's unit.
+ */
+export type ProductUnit = 'kg';
+
+/**
+ * Fixed, backend-enforced vocabulary — users cannot create categories.
+ * Routing (see design doc §3): sellable -> block_harvests, process -> new
+ * processing inventory (not yet built), waste -> inventory_waste directly.
+ */
+export type ProductCategory = 'sellable' | 'process' | 'waste';
+
+/** A concrete product a mother can yield (e.g. "Green Capsicum" off "Capsicum"). */
+export interface PlantProduct {
+  productId: string;
+  name: string;
+  unit: ProductUnit;
+  category: ProductCategory;
+  isActive: boolean;
+}
+
+/** Request body for POST /plant-mothers/{motherId}/products. */
+export interface PlantProductCreate {
+  name: string;
+  unit: ProductUnit;
+  category: ProductCategory;
+}
+
+/**
+ * Request body for PATCH /plant-mothers/{motherId}/products/{productId}.
+ * `unit` is intentionally absent — not editable on an existing product.
+ */
+export interface PlantProductUpdate {
+  name?: string;
+  category?: ProductCategory;
+  isActive?: boolean;
+}
+
 export interface PlantMother {
   plantMotherId: string;
   plantName: string;
@@ -885,6 +926,7 @@ export interface PlantMother {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+  products?: PlantProduct[];
 }
 
 /** Shape returned by GET /plant-mothers (list) — each row annotated with its active variety count. */

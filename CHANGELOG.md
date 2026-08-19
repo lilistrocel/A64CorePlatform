@@ -5,6 +5,115 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Plant Library: product extension Stage 1+2 (products picklist, sellable invariant, seeding migration)
+
+**Scope:** T-922 on the `farm_manager` module — each plant mother (the
+common crop name, e.g. "Capsicum") now carries a picklist of concrete
+products it can yield (e.g. "Green Capsicum" sellable, "Capsicum Puree"
+process, "Capsicum Trim" waste), CRUD for that picklist, a server-side
+invariant that every mother always keeps at least one active sellable
+product, a production-run seeding migration, and the UI to manage it.
+**Classification: MINOR** (purely additive — new endpoints, new optional
+model fields, new collection indexes; no existing endpoint, response
+shape, or field was removed or changed). Version number TBD, same open
+question as the Genetics and Wave 3 Phase 2 entries below — this repo
+currently has independent unreleased work stacked on top of a version
+drift (`src/main.py` at `1.17.0`, Versioning.md's summary table at
+`1.15.0`, CHANGELOG history already through `[1.20.0]`) that a prior
+change-guardian pass deliberately left unresolved (`various-fixes-140826`,
+PR #6, open). Not resolved here either — see `Versioning.md`'s "Known
+drift" note. (Viet Anh)
+
+### Added
+
+- **Products picklist on plant mothers.** New `ProductUnit` (`kg` only
+  today — deliberately a real enum so a future animal-husbandry module
+  adds a member instead of backfilling every harvest row) and
+  `ProductCategory` (`sellable`/`process`/`waste`, fixed vocabulary)
+  enums; `PlantProduct`/`PlantProductCreate`/`PlantProductUpdate` models;
+  `products: List[PlantProduct]` embedded on `PlantMother`
+  (`src/modules/farm_manager/models/plant_mother.py`). Products are
+  embedded rather than a separate collection — they're meaningless
+  outside their mother.
+- **4 new endpoints** at `/api/v1/farm/plant-mothers/{id}/products`:
+  `POST`/`GET` (add/list, `activeOnly` filter) and, at
+  `.../products/{product_id}`, `PATCH`/`DELETE` (update/deactivate).
+  `DELETE` deactivates only (`isActive: false`) and never removes the
+  entry — mirrors the existing mother-delete refuse-don't-cascade
+  precedent so a future harvest line referencing a `productId` never
+  needs a migration. `POST`/`PATCH`/`DELETE` require `agronomist`
+  permission; `GET` any active user.
+- **Sellable-product invariant.** Every mother must always carry at least
+  one active `sellable` product, enforced server-side: on mother
+  creation, if none results from the request (no products supplied, or
+  only `process`/`waste`), the server auto-creates one named after the
+  mother (`productId = uuid5(NAMESPACE_OID, motherId)`, matching the
+  seeding migration's id scheme so both paths agree). Any later mutation
+  that would drop the last active sellable — deactivate, `PATCH
+  isActive:false`, or `PATCH category` away from `sellable` — is rejected
+  with 409, all three routed through one guarded code path in
+  `plant_mother_service.py`.
+- **CSV importer invariant coverage.** The CSV importer's mother
+  find-or-create (`plant_data_enhanced_service.py::import_from_csv`)
+  previously called `PlantMotherRepository.create()` directly, bypassing
+  the invariant above entirely. Now routed through
+  `PlantMotherService.create_mother`, so CSV-created mothers get the same
+  auto-seeded default and the same 409 protection. A 409 from a
+  duplicate-name race is caught per-row into the import's existing
+  `rowsFailed` list rather than aborting the batch.
+- **3 new MongoDB indexes**: `plant_mothers.products.productId`, plus
+  `plant_data_enhanced.motherPlantId` and `blocks.productMotherId` — the
+  latter two were missing entirely, making every mother→variety lookup
+  and the whole `cascade_rename` a collection scan; pure additive perf
+  fix, no behavior change.
+- **Seeding migration**
+  (`scripts/migrations/plant_library_default_product_migration.py`,
+  `--dry-run` default / `--execute` to write, idempotent at the mother
+  level — a mother with ANY product is skipped entirely, never appended
+  to). **Already run against production**: 59 mothers seeded one
+  sellable/kg product each, verified 59/59; a second run reported 59
+  skipped / 0 seeded.
+- **Frontend — products editor.** New shared `ProductsEditor.tsx`
+  component with two modes: draft (create flow, before the mother
+  exists — local state, client-side name-collision check) and live
+  (CRUD against the four endpoints, used always in
+  `PlantMotherDetailModal` and once a mother exists in
+  `PlantMotherFormModal`). `PlantMotherFormModal` embeds the editor in
+  **create mode only**; edit mode is back to the plain 3-field form, so
+  `PlantMotherDetailModal` is the single place products are managed on an
+  existing mother. A confirmation dialogue fires before submit when no
+  sellable draft product exists, naming the product that will be
+  auto-created. Draft products are POSTed sequentially (not
+  `Promise.all`) on save for unambiguous 409 attribution; the mother is
+  never rolled back on a partial product-add failure — failures are
+  reported by name so the user can retry just those.
+
+### Compatibility
+
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. `products` is a new, empty-by-default field on `PlantMother` and
+  its subclasses (`PlantMotherWithVarietyCount`,
+  `PlantMotherWithVarieties`); existing clients ignore it.
+- The four new product endpoints are entirely new routes.
+- `PlantMotherCreate.products` is a new optional request field
+  (`[]` default) — existing create-mother callers are unaffected and will
+  now receive an auto-created default sellable product in the response.
+- New indexes are additive; no schema migration required for
+  already-passing documents.
+
+### Not included in this pass
+
+- Stages 3-5 of the design doc — harvest modal multi-line rework,
+  `block_harvests`/waste/processing-inventory routing, and batch
+  lookup/editing — are **not built**. Tracked as backlog T-923.
+- Frontend changes were not run through Playwright; pending user
+  click-through verification.
+
+**CodeMaps:** Stale, not regenerated — 4 new endpoints, 5 new/changed
+models, and one new frontend component (`ProductsEditor.tsx`). Flagged
+per CLAUDE.md; deferred to whoever picks up T-923, since that stage will
+touch the same surface again shortly.
+
 ## [Unreleased] — Security Hardening: role/activation audit trail, seed_admin lockdown, defense-in-depth route gating
 
 **Scope:** A three-part security audit (backend, frontend, live-DB forensics)

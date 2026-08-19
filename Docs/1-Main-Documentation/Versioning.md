@@ -43,17 +43,17 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 > **Known drift (flagged, not resolved by this update):** this section's
 > `1.15.0` and the `src/main.py` version constant (`1.17.0`) both trail the
-> Version History below, which already documents through `v1.20.0` plus three
-> further independent Unreleased entries (Security Hardening, Genetics, and
-> Wave 3 Phase 2 Sales AR). `src/main.py` has not been bumped since the
-> `v1.16.0` release commit. Out of scope for this pass (docs/CHANGELOG only,
-> no source-file edits) — reconciling `main.py`, this summary table, and a
-> real release/tag is a release-manager decision, not a `change-guardian`
-> doc-sync one. The Security Hardening entry deliberately follows the same
-> "flag classification, defer concrete number" convention already used below
-> for Genetics and Wave 3 Sales AR, rather than picking a number that would
-> either collide with one of those two pending threads or appear to revert
-> the already-documented `v1.18.0`–`v1.20.0` history.
+> Version History below, which already documents through `v1.20.0` plus four
+> further independent Unreleased entries (Plant Library product extension,
+> Security Hardening, Genetics, and Wave 3 Phase 2 Sales AR). `src/main.py`
+> has not been bumped since the `v1.16.0` release commit. Out of scope for
+> these passes (docs/CHANGELOG only, no source-file edits) — reconciling
+> `main.py`, this summary table, and a real release/tag is a release-manager
+> decision, not a `change-guardian` doc-sync one. Each pending entry
+> deliberately follows the same "flag classification, defer concrete number"
+> convention, rather than picking a number that would either collide with
+> another pending thread or appear to revert the already-documented
+> `v1.18.0`-`v1.20.0` history.
 
 ### Platform Version
 **A64 Core Platform:** `1.15.0` (Unreleased) — see drift note above; the
@@ -104,6 +104,61 @@ shipped/landed.
 ## Version History
 
 ### Platform Version History
+
+#### Unreleased — Plant Library: product extension Stage 1+2 — 2026-08-19
+**Type:** Minor Release (pending) — T-922 on the `farm_manager` module. See
+`CHANGELOG.md` (`## [Unreleased] — Plant Library: product extension Stage
+1+2 ...`) for the full itemised list; summarized here per this document's
+own "update on every version change" rule.
+
+**Author: Viet Anh**
+
+**Note on version number:** Not yet assigned a concrete `X.Y.Z`, for the
+same reason as the Genetics and Wave 3 Phase 2 Sales AR entries below —
+this document already carries an unresolved version-number drift (see
+"Known drift" note above), and it is not this pass's place to resolve it
+or decide ordering between the three unreleased entries. **Classification
+is fixed regardless of numbering: MINOR** — every change is additive (new
+endpoints, new optional model fields, new indexes); nothing existing was
+removed or changed shape.
+
+**Added (summary — see CHANGELOG.md for full detail):**
+- `PlantMother.products: List[PlantProduct]` — a picklist of concrete
+  products (e.g. "Green Capsicum") each mother can yield, with `unit`
+  (`kg` only today) and `category` (`sellable`/`process`/`waste`, fixed
+  enum). 4 new endpoints under
+  `/api/v1/farm/plant-mothers/{id}/products` (`POST`/`GET`/`PATCH`/
+  `DELETE` — `DELETE` deactivates, never removes).
+- Server-enforced invariant: every mother always keeps at least one
+  active sellable product (auto-seeded on create when none supplied;
+  409 on any mutation that would drop the last one). Closed a bypass
+  where CSV-imported mothers escaped this invariant.
+- 3 new indexes: `plant_mothers.products.productId`,
+  `plant_data_enhanced.motherPlantId`, `blocks.productMotherId` (the
+  latter two fix pre-existing collection scans, unrelated to the new
+  feature but bundled in per the design doc).
+- New migration `scripts/migrations/plant_library_default_product_migration.py`
+  — already run against production, 59 mothers seeded, idempotency
+  verified by a clean second run.
+- New frontend `ProductsEditor.tsx` (draft/live dual-mode), embedded in
+  `PlantMotherFormModal` (create only) and `PlantMotherDetailModal`
+  (always).
+
+**Compatibility:**
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. `products` is new and empty-by-default; existing clients ignore
+  it.
+- Fully backward-compatible with the prior farm-manager module baseline.
+
+**Not included in this pass:** Stages 3-5 (harvest modal multi-line
+rework, `block_harvests`/waste/processing-inventory routing, batch
+lookup/editing) — tracked as backlog T-923.
+
+**CodeMaps:** Not regenerated — 4 new endpoints, 5 new/changed models
+(`PlantProduct`/`PlantProductCreate`/`PlantProductUpdate`/`ProductUnit`/
+`ProductCategory`), and one new frontend component. Flagged per CLAUDE.md;
+deferred to whoever picks up T-923, since that stage touches the same
+surface again shortly.
 
 #### Unreleased — Security Hardening: role/activation audit trail, seed_admin lockdown, defense-in-depth route gating — 2026-08-14
 

@@ -96,6 +96,18 @@ class FarmDatabaseManager:
             await db.plant_mothers.create_index("plantName")
             await db.plant_mothers.create_index("isActive")
             await db.plant_mothers.create_index([("createdAt", -1)])
+            # Plant Library product extension Stage 1 (see
+            # Docs/2-Working-Progress/plant-library-product-extension-design.md
+            # §4.5) — supports looking up a mother by an embedded product id.
+            await db.plant_mothers.create_index("products.productId")
+
+            # plant_data_enhanced.motherPlantId and blocks.productMotherId are
+            # missing today, making every mother->variety lookup and the whole
+            # cascade_rename (plant_mother_repository.py) a collection scan.
+            # Pure additive performance fixes, no behaviour change — added
+            # here regardless of the product extension itself (design §4.5).
+            await db.plant_data_enhanced.create_index("motherPlantId")
+            await db.blocks.create_index("productMotherId")
 
             # Plantings collection
             await db.plantings.create_index("plantingId", unique=True)

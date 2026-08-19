@@ -18,6 +18,9 @@ import type {
   VarietyCreateForMother,
   PlantDataEnhanced,
   PaginatedResponse,
+  PlantProduct,
+  PlantProductCreate,
+  PlantProductUpdate,
 } from '../types/farm';
 
 /**
@@ -113,6 +116,71 @@ export async function createVarietyForMother(
   return response.data.data;
 }
 
+/**
+ * List a mother's products (yield picklist). `activeOnly` filters out
+ * deactivated products server-side; omit to see the full history including
+ * deactivated ones (deactivation hides from harvest picklists, it does not
+ * delete — see design doc §4.1).
+ */
+export async function listProductsForMother(
+  plantMotherId: string,
+  activeOnly?: boolean
+): Promise<PlantProduct[]> {
+  const response = await apiClient.get<{ data: PlantProduct[] }>(
+    `/v1/farm/plant-mothers/${plantMotherId}/products`,
+    { params: activeOnly ? { activeOnly: true } : undefined }
+  );
+  return response.data.data;
+}
+
+/**
+ * Add a new product to a mother. Requires agronomist permission. Backend
+ * 409s on a case-insensitive name clash with a sibling product under the
+ * same mother — callers should surface that message directly.
+ */
+export async function addProductToMother(
+  plantMotherId: string,
+  data: PlantProductCreate
+): Promise<PlantProduct> {
+  const response = await apiClient.post<{ data: PlantProduct }>(
+    `/v1/farm/plant-mothers/${plantMotherId}/products`,
+    data
+  );
+  return response.data.data;
+}
+
+/**
+ * Update a product's name/category/isActive. `unit` cannot be changed here.
+ * Renaming onto a sibling's name 409s (renaming to its own current name is
+ * not a clash).
+ */
+export async function updateMotherProduct(
+  plantMotherId: string,
+  productId: string,
+  data: PlantProductUpdate
+): Promise<PlantProduct> {
+  const response = await apiClient.patch<{ data: PlantProduct }>(
+    `/v1/farm/plant-mothers/${plantMotherId}/products/${productId}`,
+    data
+  );
+  return response.data.data;
+}
+
+/**
+ * Deactivate a product (isActive: false). This is NOT deletion — the
+ * product remains in the array and stays visible in the editor, just hidden
+ * from live harvest picklists. Idempotent.
+ */
+export async function deactivateMotherProduct(
+  plantMotherId: string,
+  productId: string
+): Promise<{ message: string }> {
+  const response = await apiClient.delete<{ message: string }>(
+    `/v1/farm/plant-mothers/${plantMotherId}/products/${productId}`
+  );
+  return response.data;
+}
+
 // Export all functions as a single object for convenience (mirrors plantDataEnhancedApi.ts)
 export const plantMotherApi = {
   listPlantMothers,
@@ -122,6 +190,10 @@ export const plantMotherApi = {
   deletePlantMother,
   listVarietiesForMother,
   createVarietyForMother,
+  listProductsForMother,
+  addProductToMother,
+  updateMotherProduct,
+  deactivateMotherProduct,
 };
 
 export default plantMotherApi;

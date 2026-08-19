@@ -93,6 +93,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.plantMothers.details(), id] as const,
     varieties: (motherId: string) =>
       [...queryKeys.plantMothers.detail(motherId), 'varieties'] as const,
+    products: (motherId: string, activeOnly?: boolean) =>
+      [...queryKeys.plantMothers.detail(motherId), 'products', { activeOnly }] as const,
   },
 
   // Block queries
