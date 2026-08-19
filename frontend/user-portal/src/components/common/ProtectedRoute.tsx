@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
 import { useDivisionStore } from '../../stores/division.store';
 import { useEffect, useRef, useState } from 'react';
@@ -32,7 +32,22 @@ function isDivisionExempt(pathname: string): boolean {
   return DIVISION_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
 }
 
-export function ProtectedRoute() {
+interface ProtectedRouteProps {
+  /**
+   * Route-level role gate. When provided, `user.role` must be one of these
+   * values or a "not authorized" view renders instead of the Outlet.
+   *
+   * This is defense-in-depth ONLY — the server independently re-checks
+   * authorization on every request (`require_admin` / `require_super_admin`
+   * / `can_change_role` in `src/middleware/permissions.py`) and is the real
+   * security boundary. This prop exists so the UI stops advertising and
+   * rendering screens/actions a role has no business seeing, not to secure
+   * anything by itself.
+   */
+  allowedRoles?: string[];
+}
+
+export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps = {}) {
   const {
     isAuthenticated,
     isLoading: authLoading,
@@ -207,6 +222,13 @@ export function ProtectedRoute() {
     return <Navigate to="/select-division" replace />;
   }
 
+  // ── Role gate (route-level) ────────────────────────────────────────────────
+  // See ProtectedRouteProps.allowedRoles above — UI-only courtesy, not the
+  // security boundary.
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return <NotAuthorized />;
+  }
+
   // ── MFA setup banner (for /mfa/setup route) ───────────────────────────────
   if (showMfaBanner && location.pathname === '/mfa/setup') {
     return (
@@ -223,6 +245,23 @@ export function ProtectedRoute() {
   }
 
   return <Outlet />;
+}
+
+// Clean "you can't be here" view for a role-gated route — an explicit,
+// accessible message rather than a blank screen or a crash. Rendered inside
+// whatever chrome the matched route tree already provides (e.g. inside
+// MainLayout for /admin/* routes, standalone for full-screen routes like /ai).
+function NotAuthorized() {
+  return (
+    <NotAuthorizedContainer role="alert">
+      <ShieldAlert size={40} strokeWidth={1.6} />
+      <NotAuthorizedTitle>Not authorized</NotAuthorizedTitle>
+      <NotAuthorizedText>
+        Your account does not have permission to view this page.
+      </NotAuthorizedText>
+      <NotAuthorizedLink to="/dashboard">Back to dashboard</NotAuthorizedLink>
+    </NotAuthorizedContainer>
+  );
 }
 
 const LoadingContainer = styled.div`
@@ -267,5 +306,41 @@ const BannerText = styled.span`
 
   @media (min-width: 640px) {
     font-size: ${({ theme }) => theme.typography.fontSize.base};
+  }
+`;
+
+const NotAuthorizedContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  min-height: 60vh;
+  padding: ${({ theme }) => theme.spacing.xl};
+  text-align: center;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const NotAuthorizedTitle = styled.h2`
+  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  margin: 0;
+`;
+
+const NotAuthorizedText = styled.p`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  max-width: 32rem;
+  margin: 0;
+`;
+
+const NotAuthorizedLink = styled(Link)`
+  margin-top: ${({ theme }) => theme.spacing.sm};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.secondary[500]};
+
+  &:hover {
+    text-decoration: underline;
   }
 `;

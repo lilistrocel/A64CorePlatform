@@ -64,7 +64,8 @@ class BlockArchive(BaseModel):
     # Optional: pre-migration archives and any unresolved targetCrop leave
     # these unset (the migration logs+skips rather than guessing).
     productMotherId: Optional[UUID] = Field(
-        None, description="Mother plant (product) ID, resolved from targetCrop's variety"
+        None,
+        description="Mother plant (product) ID, resolved from targetCrop's variety",
     )
     productName: Optional[str] = Field(
         None, description="Mother plant (product) name (denormalized)"

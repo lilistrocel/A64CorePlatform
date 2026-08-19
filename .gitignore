@@ -120,6 +120,9 @@ auth*.json
 node_modules/
 package-lock.json
 
+# TypeScript incremental build cache (e.g. `npx tsc -b` in frontend/user-portal/)
+*.tsbuildinfo
+
 # Test results and temporary test files
 test-results/
 *_test_results_*.json

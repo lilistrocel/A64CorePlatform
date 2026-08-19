@@ -303,6 +303,68 @@ async def test_wrong_type_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_cf_access_default_role_rejects_invalid_string(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fix 3: CF_ACCESS_DEFAULT_ROLE previously only had its TYPE checked
+    (`isinstance(value, str)`) on this runtime write path — a value like
+    "super_admin" or pure garbage would pass. The UserRole enum-membership
+    check in config/settings.py's startup validator only covers the env-var
+    path. This must now be rejected here too, matching that validator."""
+    db = _make_fake_db(platform_doc={}, user_doc=_default_user_doc())
+    _patch_db(monkeypatch, db)
+
+    with pytest.raises(HTTPException) as exc:
+        await deployment_settings_service.update(
+            changes={"CF_ACCESS_DEFAULT_ROLE": "not_a_real_role"},
+            actor_user_id=ACTOR_USER_ID,
+            actor_email=ACTOR_EMAIL,
+            current_password=ACTOR_PASSWORD,
+        )
+    assert exc.value.status_code == 422
+    db.platform_settings.update_one.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cf_access_default_role_rejects_super_admin_is_still_allowed_but_must_be_a_real_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The fix matches the startup validator's strictness — enum membership
+    only. "super_admin" IS a member of UserRole, so it is not rejected by
+    this check (same as the env-var path); this pins that the guard is
+    enum-membership, not a narrower allow-list, so a behavior change here
+    is caught if someone tightens one path without the other."""
+    db = _make_fake_db(platform_doc={}, user_doc=_default_user_doc())
+    _patch_db(monkeypatch, db)
+    monkeypatch.setattr(deployment_settings_service, "verify_password", lambda pw, h: True)
+
+    resolved = await deployment_settings_service.update(
+        changes={"CF_ACCESS_DEFAULT_ROLE": "super_admin"},
+        actor_user_id=ACTOR_USER_ID,
+        actor_email=ACTOR_EMAIL,
+        current_password=ACTOR_PASSWORD,
+    )
+    assert resolved["CF_ACCESS_DEFAULT_ROLE"].value == "super_admin"
+
+
+@pytest.mark.asyncio
+async def test_cf_access_default_role_accepts_a_valid_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = _make_fake_db(platform_doc={}, user_doc=_default_user_doc())
+    _patch_db(monkeypatch, db)
+    monkeypatch.setattr(deployment_settings_service, "verify_password", lambda pw, h: True)
+
+    resolved = await deployment_settings_service.update(
+        changes={"CF_ACCESS_DEFAULT_ROLE": "moderator"},
+        actor_user_id=ACTOR_USER_ID,
+        actor_email=ACTOR_EMAIL,
+        current_password=ACTOR_PASSWORD,
+    )
+    assert resolved["CF_ACCESS_DEFAULT_ROLE"].value == "moderator"
+
+
+@pytest.mark.asyncio
 async def test_empty_changes_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     db = _make_fake_db(platform_doc={}, user_doc=_default_user_doc())
     _patch_db(monkeypatch, db)

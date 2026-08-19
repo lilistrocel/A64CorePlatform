@@ -28,6 +28,7 @@ from .middleware.timing import TimingMiddlewareWithCollector
 from .middleware.division_context import DivisionContextMiddleware
 from .utils.security import hash_password
 from .models.user import UserRole
+from .services.audit_log_service import write_user_audit_log
 
 # Configure structured logging (JSON in production, text in development)
 setup_logging(log_level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
@@ -134,7 +135,28 @@ async def root() -> Dict[str, Any]:
 
 
 async def seed_admin() -> None:
-    """Create default super_admin, organization, and division if none exist."""
+    """Create default super_admin, organization, and division if none exist.
+
+    Security note (read before changing this function): this used to
+    unconditionally promote *any* pre-existing account matching
+    ``ADMIN_EMAIL`` to super_admin whenever the super_admin count hit zero
+    — silently, with no audit trail. Since ``ADMIN_EMAIL`` is a documented,
+    public value and registration is open, that meant anyone could
+    self-register that address as an ordinary "user" ahead of time and get
+    auto-promoted the next time this ran with zero super_admins (e.g. after
+    the last super_admin was demoted or deleted on a live deployment).
+
+    The fix: only the genuine first-boot path — no organization has ever
+    been created on this deployment — is allowed to create or promote an
+    account here. This function runs inside the FastAPI ``startup`` event,
+    before the server accepts any HTTP traffic, so "no organization exists
+    yet" is equivalent to "no external client has ever had a chance to
+    register on this deployment." Once an organization exists, a missing
+    super_admin is an operational incident (not a first boot) and must be
+    resolved explicitly by an operator, not auto-repaired by promoting
+    whatever account happens to match ``ADMIN_EMAIL``. Any promotion that
+    does occur is always audit-logged and logged at WARNING — never silent.
+    """
     import uuid
     from datetime import datetime
 
@@ -153,20 +175,90 @@ async def seed_admin() -> None:
         logger.warning("ADMIN_EMAIL or ADMIN_PASSWORD not set — skipping admin seed")
         return
 
+    # Reason: "genuinely uninitialised" = no organization has ever been
+    # created on this deployment. This function is the only place org
+    # creation happens on first boot, and it runs before the app accepts
+    # HTTP traffic, so this signal cannot be manufactured by an external
+    # actor — see the docstring above.
+    existing_org = await db.organizations.find_one({})
+    is_genuinely_uninitialised = existing_org is None
+
     # Check if the email is already registered (as a non-admin)
     existing_user = await db.users.find_one({"email": admin_email})
     if existing_user:
-        # Promote existing user to super_admin
+        if not is_genuinely_uninitialised:
+            # Reason: do NOT silently elevate a pre-existing account this
+            # process did not create. This deployment has already been
+            # initialised (an organization exists), so an account matching
+            # ADMIN_EMAIL could belong to anyone who registered it — auto
+            # -promoting it would be exactly the privilege-escalation path
+            # this fix closes. Zero super_admins here is an operational
+            # incident requiring an explicit operator action (promote via
+            # PATCH /admin/users/{id}/role or a database operator), not an
+            # auto-repair.
+            logger.warning(
+                "seed_admin: zero super_admins exist on an already-"
+                "initialised deployment. An account already exists for "
+                "ADMIN_EMAIL=%s but will NOT be auto-promoted — this must "
+                "be done explicitly by an operator to avoid silently "
+                "elevating an account this process did not create.",
+                admin_email,
+            )
+            return
+
+        # Reason: deployment is genuinely fresh (no organization exists
+        # yet), so the only way a user could already exist with this email
+        # is a registration that raced this exact startup call before the
+        # server ever accepted traffic — still first-boot bootstrap, not a
+        # later privilege-escalation risk. Promote, but never silently.
+        now = datetime.utcnow()
         await db.users.update_one(
             {"email": admin_email},
             {
                 "$set": {
                     "role": UserRole.SUPER_ADMIN.value,
-                    "updatedAt": datetime.utcnow(),
+                    "updatedAt": now,
                 }
             },
         )
-        logger.info(f"Promoted existing user to super_admin: {admin_email}")
+        logger.warning(
+            "seed_admin: promoted pre-existing first-boot account %s to "
+            "super_admin (no organization existed yet on this deployment).",
+            admin_email,
+        )
+        try:
+            await write_user_audit_log(
+                action="user.role.changed",
+                target_user_id=existing_user.get("userId"),
+                target_user_email=admin_email,
+                performed_by="system:seed_admin",
+                performed_by_email="system",
+                performed_by_role="system",
+                details={
+                    "before": existing_user.get("role"),
+                    "after": UserRole.SUPER_ADMIN.value,
+                    "reason": (
+                        "first-boot bootstrap promotion — no organization "
+                        "existed yet on this deployment"
+                    ),
+                },
+            )
+        except Exception:
+            logger.error("seed_admin: failed to write audit log entry", exc_info=True)
+        return
+
+    if not is_genuinely_uninitialised:
+        # Reason: zero super_admins on an already-initialised deployment
+        # and no account exists for ADMIN_EMAIL either — do not fabricate
+        # one automatically. This is an operational incident, not a first
+        # boot, and needs an explicit operator decision.
+        logger.warning(
+            "seed_admin: zero super_admins exist on an already-initialised "
+            "deployment and no account exists for ADMIN_EMAIL=%s. Refusing "
+            "to auto-create a new super_admin — create or promote one "
+            "explicitly.",
+            admin_email,
+        )
         return
 
     now = datetime.utcnow()
@@ -176,7 +268,6 @@ async def seed_admin() -> None:
 
     try:
         # Seed default organization
-        existing_org = await db.organizations.find_one({})
         if not existing_org:
             org_doc = {
                 "organizationId": org_id,

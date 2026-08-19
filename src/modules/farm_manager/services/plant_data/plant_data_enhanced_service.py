@@ -908,6 +908,7 @@ class PlantDataEnhancedService:
         )
         from ...models.spacing_standards import SpacingCategory
         from ...models.plant_mother import PlantMotherCreate, VarietyCreateForMother
+
         # Reason: deferred imports to avoid a circular import — this module
         # is imported by plant_mother_service.py at module load time
         # (services/plant_data/__init__.py imports plant_data_enhanced_service
@@ -986,7 +987,10 @@ class PlantDataEnhancedService:
                     continue
                 if yield_per_plant <= 0:
                     rows_failed.append(
-                        {"row": row_num, "error": "yieldPerPlant must be greater than 0"}
+                        {
+                            "row": row_num,
+                            "error": "yieldPerPlant must be greater than 0",
+                        }
                     )
                     continue
 
@@ -1176,9 +1180,7 @@ class PlantDataEnhancedService:
                 seeds_per_planting_point = int(seeds_raw) if seeds_raw else 1
 
                 yield_unit = row.get("yieldUnit", "kg") or "kg"
-                expected_waste = float(
-                    row.get("expectedWastePercentage", 0) or 0
-                )
+                expected_waste = float(row.get("expectedWastePercentage", 0) or 0)
 
                 # ---- Build nested structures from CSV flat fields ----
                 growth_cycle = GrowthCycleDuration(
@@ -1195,7 +1197,11 @@ class PlantDataEnhancedService:
                 # temperature cell is provided — humidity alone (with no
                 # temperature) is not enough to build it, per design.
                 environmental_reqs = None
-                if min_temp is not None or max_temp is not None or optimal_temp is not None:
+                if (
+                    min_temp is not None
+                    or max_temp is not None
+                    or optimal_temp is not None
+                ):
                     humidity_range = None
                     if (
                         humidity_min is not None
@@ -1253,7 +1259,11 @@ class PlantDataEnhancedService:
                 # natural, sensible baseline) whenever the daily-light-hours
                 # cells are provided. Otherwise this stays None.
                 light_reqs = None
-                if light_min is not None or light_max is not None or light_optimal is not None:
+                if (
+                    light_min is not None
+                    or light_max is not None
+                    or light_optimal is not None
+                ):
                     light_reqs = LightRequirements(
                         lightType=LightTypeEnum.FULL_SUN,
                         minHoursDaily=light_min if light_min is not None else 6.0,
@@ -1307,13 +1317,9 @@ class PlantDataEnhancedService:
                     varieties_created += 1
                 except _HTTPException as exc:
                     if exc.status_code == status.HTTP_409_CONFLICT:
-                        rows_skipped.append(
-                            {"row": row_num, "reason": str(exc.detail)}
-                        )
+                        rows_skipped.append({"row": row_num, "reason": str(exc.detail)})
                     else:
-                        rows_failed.append(
-                            {"row": row_num, "error": str(exc.detail)}
-                        )
+                        rows_failed.append({"row": row_num, "error": str(exc.detail)})
 
             except ValueError as e:
                 rows_failed.append(
@@ -1327,7 +1333,12 @@ class PlantDataEnhancedService:
         # Raise only when the CSV was completely unusable — nothing created,
         # nothing reused-and-skipped, only failures. A partially-bad CSV
         # (at least one variety created) never raises.
-        if total_rows > 0 and varieties_created == 0 and not rows_skipped and rows_failed:
+        if (
+            total_rows > 0
+            and varieties_created == 0
+            and not rows_skipped
+            and rows_failed
+        ):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail={

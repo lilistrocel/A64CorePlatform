@@ -48,6 +48,26 @@ interface AdminUserListResponse {
 
 const ROLE_OPTIONS = ['super_admin', 'admin', 'moderator', 'user', 'guest'];
 
+/**
+ * Roles the CURRENT viewer is permitted to assign to another user via
+ * PATCH /v1/users/{userId}/role. Mirrors `can_change_role` in
+ * `src/middleware/permissions.py` — keep the two in sync; this is a UI-only
+ * courtesy (the server independently re-checks and 403s any request outside
+ * this policy, so it is not the security boundary, just what the role
+ * dropdown offers):
+ *
+ * - super_admin: may assign any role
+ * - admin: may assign only moderator / user / guest (never admin or super_admin)
+ * - anyone else: none (this page is route-gated to admin/super_admin only —
+ *   see ProtectedRoute's allowedRoles in App.tsx — so this branch is a
+ *   defensive fallback, not an expected path)
+ */
+function getAssignableRoles(viewerRole: string | undefined): string[] {
+  if (viewerRole === 'super_admin') return ROLE_OPTIONS;
+  if (viewerRole === 'admin') return ['moderator', 'user', 'guest'];
+  return [];
+}
+
 type UserTab = 'all' | 'pending';
 
 export function UserManagementPage() {
@@ -278,6 +298,10 @@ export function UserManagementPage() {
     return role === 'admin' || role === 'super_admin';
   };
 
+  // Roles the viewer may offer in the role-edit dropdown (see
+  // getAssignableRoles' doc comment — mirrors can_change_role).
+  const assignableRoles = getAssignableRoles(currentUser?.role);
+
   return (
     <Container>
       <PageHeader
@@ -389,7 +413,9 @@ export function UserManagementPage() {
                             value={newRole}
                             onChange={(e) => setNewRole(e.target.value)}
                           >
-                            {ROLE_OPTIONS.map(role => (
+                            {/* Assignable-by-viewer only — NOT the full ROLE_OPTIONS list.
+                                See getAssignableRoles' doc comment. */}
+                            {assignableRoles.map(role => (
                               <option key={role} value={role}>{role.replace('_', ' ')}</option>
                             ))}
                           </RoleSelect>
@@ -428,7 +454,17 @@ export function UserManagementPage() {
                             <ActionButton
                               onClick={() => {
                                 setEditingUser(user);
-                                setNewRole(user.role);
+                                // Seed the dropdown with the target's current role only
+                                // if the viewer is actually permitted to (re-)assign it;
+                                // otherwise fall back to the viewer's lowest assignable
+                                // role so the visible selection always matches what would
+                                // actually be submitted (never a role absent from the
+                                // rendered <option> list — see assignableRoles above).
+                                setNewRole(
+                                  assignableRoles.includes(user.role)
+                                    ? user.role
+                                    : (assignableRoles[0] ?? '')
+                                );
                               }}
                               title="Change Role"
                             >

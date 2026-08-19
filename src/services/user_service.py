@@ -12,6 +12,8 @@ import logging
 from fastapi import HTTPException, status
 
 from ..models.user import UserResponse, UserUpdate, UserRole, UserOrganizationAssignment
+from ..middleware.permissions import guard_target_not_super_admin
+from .audit_log_service import write_user_audit_log
 from .database import mongodb
 
 logger = logging.getLogger(__name__)
@@ -363,13 +365,17 @@ class UserService:
         return True
 
     @staticmethod
-    async def change_user_role(user_id: str, new_role: UserRole) -> UserResponse:
+    async def change_user_role(
+        user_id: str, new_role: UserRole, current_user: UserResponse
+    ) -> UserResponse:
         """
         Change user's role
 
         Args:
             user_id: User's UUID
             new_role: New role to assign
+            current_user: The acting user — recorded as the audit trail's
+                actor (userId + email) so role grants are attributable.
 
         Returns:
             Updated UserResponse
@@ -389,6 +395,8 @@ class UserService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
+        old_role = user_doc.get("role")
+
         # Update role
         await db.users.update_one(
             {"userId": user_id},
@@ -397,23 +405,39 @@ class UserService:
 
         logger.info(f"User role changed: {user_id} -> {new_role.value}")
 
+        # Reason: role grants are the most sensitive mutation in the system —
+        # record who granted it, on whom, and the before/after value.
+        await write_user_audit_log(
+            action="user.role.changed",
+            target_user_id=user_id,
+            target_user_email=user_doc.get("email"),
+            performed_by=current_user.userId,
+            performed_by_email=current_user.email,
+            performed_by_role=current_user.role,
+            details={"before": old_role, "after": new_role.value},
+        )
+
         # Return updated user
         updated_user = await UserService.get_user_by_id(user_id)
         return updated_user
 
     @staticmethod
-    async def activate_user(user_id: str) -> UserResponse:
+    async def activate_user(user_id: str, current_user: UserResponse) -> UserResponse:
         """
         Activate user account
 
         Args:
             user_id: User's UUID
+            current_user: The acting user — used both for the super_admin
+                target guard and the audit trail's actor.
 
         Returns:
             Updated UserResponse
 
         Raises:
-            HTTPException: 404 if user not found
+            HTTPException: 404 if user not found. 403 if the target holds
+                super_admin and `current_user` does not (only a super_admin
+                may activate another super_admin's account).
         """
         db = mongodb.get_database()
 
@@ -424,6 +448,12 @@ class UserService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
+        guard_target_not_super_admin(
+            user_doc.get("role"), current_user, action="activate"
+        )
+
+        old_active = user_doc.get("isActive")
+
         await db.users.update_one(
             {"userId": user_id},
             {"$set": {"isActive": True, "updatedAt": datetime.utcnow()}},
@@ -431,21 +461,38 @@ class UserService:
 
         logger.info(f"User activated: {user_id}")
 
+        await write_user_audit_log(
+            action="user.activated",
+            target_user_id=user_id,
+            target_user_email=user_doc.get("email"),
+            performed_by=current_user.userId,
+            performed_by_email=current_user.email,
+            performed_by_role=current_user.role,
+            details={
+                "before": {"isActive": old_active},
+                "after": {"isActive": True},
+            },
+        )
+
         return await UserService.get_user_by_id(user_id)
 
     @staticmethod
-    async def deactivate_user(user_id: str) -> UserResponse:
+    async def deactivate_user(user_id: str, current_user: UserResponse) -> UserResponse:
         """
         Deactivate user account (suspend)
 
         Args:
             user_id: User's UUID
+            current_user: The acting user — used both for the super_admin
+                target guard and the audit trail's actor.
 
         Returns:
             Updated UserResponse
 
         Raises:
-            HTTPException: 404 if user not found
+            HTTPException: 404 if user not found. 403 if the target holds
+                super_admin and `current_user` does not (only a super_admin
+                may deactivate another super_admin's account).
 
         Note: Deactivated users cannot login but data is preserved
         """
@@ -458,6 +505,12 @@ class UserService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
+        guard_target_not_super_admin(
+            user_doc.get("role"), current_user, action="deactivate"
+        )
+
+        old_active = user_doc.get("isActive")
+
         await db.users.update_one(
             {"userId": user_id},
             {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}},
@@ -469,6 +522,19 @@ class UserService:
         )
 
         logger.info(f"User deactivated: {user_id}")
+
+        await write_user_audit_log(
+            action="user.deactivated",
+            target_user_id=user_id,
+            target_user_email=user_doc.get("email"),
+            performed_by=current_user.userId,
+            performed_by_email=current_user.email,
+            performed_by_role=current_user.role,
+            details={
+                "before": {"isActive": old_active},
+                "after": {"isActive": False},
+            },
+        )
 
         return await UserService.get_user_by_id(user_id)
 
