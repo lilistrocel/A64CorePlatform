@@ -185,6 +185,41 @@ debugging time twice — check it early when a field "isn't saving".
 
 ## Server & Git
 
+### THIS MACHINE (local, untracked — do not sync)
+
+> **This is the tracked TEMPLATE.** Copy it to `CLAUDE.md` on a new machine and
+> fill in the table below. `CLAUDE.md` itself is gitignored, because these facts
+> differ per box — production server, dev PC, another dev PC — and asserting one
+> box's values on another has caused real mistakes. Everything OUTSIDE this
+> section is shared knowledge and belongs in this template; keep it in sync.
+> Never `git add` `CLAUDE.md`.
+
+| | |
+|---|---|
+| **Role** | `TODO` — production deployment / dev PC / staging? |
+| Hostname | `TODO` — run `hostname` |
+| Container prefix | `TODO` — run `docker ps --format '{{.Names}}'`, take what precedes `-api-1` |
+| Serves | `TODO` — public URL, and whether anything (e.g. Cloudflare Access) sits in front |
+
+Run `scripts/preflight.sh` to resolve the first three automatically.
+
+#### ⚠ Does this box hold real data?
+
+`TODO` — state it explicitly. A box being a "dev PC" does NOT imply the database
+is disposable; an install may carry production-migrated data. If it does, say so
+here, name the collections that matter, and treat every write as production:
+never `deleteMany`/`updateMany` with an empty `{}` filter, never mutate a record
+you did not just create, and take a `mongodump` or have a documented reverse
+before any migration. Code is branch-scoped; data is not.
+
+#### Is a checkout here a deployment?
+
+`TODO` — if the containers bind-mount this working tree (`./src` → `/app/src`,
+`./frontend/user-portal/src` → Vite), then **changing branch changes what this
+box serves**, and uncommitted changes travel across checkouts. Use
+`git worktree add` when you need another branch's code without disturbing the
+running stack. If this box does not run the stack, say that instead.
+
 ### Determine THIS deployment's identity before doing anything below
 
 Every A64 deployment is its own machine, with its own hostname, its own
