@@ -577,8 +577,11 @@ async def delete_user(
 
     **Authentication:** Required (admin or super_admin)
 
-    **Note:** This performs a soft delete (sets deletedAt timestamp).
-    User can be restored within 90 days.
+    **Note:** This performs a soft delete (sets deletedAt timestamp and
+    isActive: False). The document is retained, not purged — but there is
+    currently no restore endpoint (T-938: this docstring previously
+    promised a 90-day restore window that was never implemented). Restoring
+    a soft-deleted user today requires a direct database edit.
 
     **Returns:**
     - 200: User deleted successfully

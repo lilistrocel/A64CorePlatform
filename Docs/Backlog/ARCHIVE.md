@@ -1,8 +1,88 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 120 tasks
+> **Total completed:** 121 tasks
 
 ## 2026-08
+
+### T-938 | Cloudflare Access login 500s on a soft-deleted email — DuplicateKeyError. SECURITY/PROD-INCIDENT.
+- **Category:** Backend (auth) · **Priority:** P0
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** —
+- **Description:** `users` carries a unique index (`email_1`, no partial
+  filter) and `delete_user` (`src/api/v1/admin.py`) is a SOFT delete — sets
+  `deletedAt` + `isActive: False`, document stays. The two login paths
+  disagreed about what that means: `AuthService.login_via_cf_access`
+  (`src/services/auth_service.py`) filtered its lookup to `deletedAt: None`,
+  making a soft-deleted user invisible, so a login for that email fell into
+  the JIT-provisioning branch and called `db.users.insert_one()` with the
+  SAME email — no try/except, so `DuplicateKeyError` propagated as an
+  unhandled 500 on `POST /api/v1/auth/cf-access/session` (30 occurrences in
+  production logs, `dup key: { email: "samah@agrinovame.com" }`).
+  Password registration (`AuthService.register_user`) queries without a
+  `deletedAt` filter and correctly returned 409 instead. User-visible
+  effect: enter the Cloudflare one-time PIN correctly, Cloudflare consumes
+  it, the app 500s, retry says the PIN is already used — reported as three
+  seemingly unrelated bugs that were all this one root cause. Two affected
+  accounts were restored and a backup taken by the parent session before
+  this task started; no live data was written by this task.
+- **Result:**
+  - `login_via_cf_access`'s lookup no longer filters `deletedAt` — it finds
+    ANY row for the email, live or soft-deleted. Since `delete_user` always
+    sets `isActive: False` alongside `deletedAt`, a soft-deleted row now
+    falls straight into the pre-existing "not active" branch and returns
+    the shared `pending_activation_exception()` 403 — identical shape to an
+    unknown email, preserving the non-disclosure property, with zero new
+    branching. The JIT `insert_one()` is additionally wrapped in
+    `except DuplicateKeyError` (logs at WARNING with the email) as
+    defense-in-depth against races.
+  - **The chosen rule** (documented inline in both `login_via_cf_access` and
+    `register_user`): a soft-deleted account still occupies its email — it
+    must not be silently resurrected (by JIT-provisioning or otherwise) and
+    a lookup against it must not crash either. This matches
+    `login_user`/`login_user_with_mfa_check`, which never filtered
+    `deletedAt` and already relied on `isActive` alone — CF login was the
+    outlier, not registration.
+  - **Root-cause completion, not just the try/except:** the schema itself
+    still forbade reusing a deleted email forever. Added
+    `scripts/migrations/t938_partial_unique_email_index.py` — replaces
+    `email_1` with a partial unique index
+    (`unique=True, partialFilterExpression={"deletedAt": None}`), create-
+    then-drop ordered so live-email uniqueness is never unprotected, with a
+    pre-flight abort if two live users already share an email (prints the
+    offending emails). Idempotent; NOT run against the live DB by this task
+    — parent to review and run.
+  - **Found and fixed the same day, not left as a landmine:**
+    `src/services/database.py`'s `MongoDBManager._create_indexes` runs on
+    every API boot and used to call
+    `create_index("email", unique=True)` — unnamed, defaulting to
+    `email_1`. Left alone, the very next `docker restart` after the
+    migration script ran would have silently recreated the old
+    non-partial index under the freed-up `email_1` name, undoing the
+    migration. Updated it to create the identical partial index under an
+    explicit name (`email_live_unique`, deliberately NOT `email_1`, so it
+    can coexist with the old index without a name collision before the
+    migration has run). Verified live: restarted `a64coreplatform-api-1`
+    with this change in place while `email_1` still existed (migration not
+    yet run) — both indexes coexist cleanly, no boot error, no data
+    touched (verified via `mongosh db.users.getIndexes()`).
+  - `src/api/v1/admin.py`'s `delete_user` docstring claimed "User can be
+    restored within 90 days" — no restore endpoint exists. Corrected the
+    docstring; the gap is real and out of scope (not built here).
+- **Tests:** `tests/unit/test_auth/test_t938_soft_deleted_email.py` (6 new:
+  soft-deleted email → pending 403 not 500 and no resurrection attempt;
+  JIT-insert `DuplicateKeyError` collision → pending 403 not 500;
+  soft-deleted vs. unknown-email responses byte-identical; live-inactive
+  still pending; live-active still succeeds; password registration against
+  a soft-deleted email → 409, not resurrected) +
+  `tests/unit/test_migrations/test_t938_partial_unique_email_index.py` (4
+  new: the migration's `find_live_duplicate_emails` pre-flight check
+  against a fake in-memory collection — no duplicates, two/three live
+  users sharing an email flagged, a soft-deleted+live pair on the same
+  email correctly NOT flagged). Full suite in the running container:
+  **962 passed, 2 failed, 1 skipped** (up from the 952/2/1 baseline by
+  exactly the 10 new tests; the 2 failures are pre-existing in
+  `tests/unit/test_finance_bridge/test_outbox_reconciler.py`, unrelated to
+  this change). `black==26.5.1` clean on every file touched.
 
 ### T-927 | `require_permission` fails open in farm_manager — fail-closed fix. SECURITY.
 - **Category:** Backend (security) · **Priority:** P0
