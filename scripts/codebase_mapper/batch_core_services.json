@@ -1,0 +1,554 @@
+{
+  "metadata": {
+    "task_id": "map_core_services",
+    "scope": [
+      "src/services/",
+      "src/core/",
+      "src/utils/ (shared helpers imported by src/services)"
+    ],
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "generated": "2026-08-21"
+  },
+  "nodes": [
+    {
+      "node_id": "core.service.audit_log_service",
+      "node_type": "function",
+      "name": "write_user_audit_log",
+      "file_path": "src/services/audit_log_service.py",
+      "line_number": 38,
+      "module": "core",
+      "layer": "service",
+      "exports": [
+        "write_user_audit_log"
+      ],
+      "description": "NEW since the last mapping run. Single shared writer for user-targeted entries in the admin_audit_log collection, extracted because that collection already received hand-built documents from four independent call sites (deployment_settings_service.update, the organizations modules-update endpoint, admin.py's mfa_reset, the genetics cascade-purge/orphan-sweep routes). Writes the canonical shape: action (dotted, e.g. 'user.role.changed'), targetUserId, targetUserEmail, performedBy (userId, or 'system:<name>' for server-initiated actions with no HTTP actor), performedByEmail, performedByRole (UserRole enum normalised to its string value), tz-aware UTC timestamp, and a details dict carrying before/after. Deliberately never raises: a DB/logging failure is logged with exc_info and swallowed so an audit-write failure can never surface as a failure of the already-committed action it records. Called by core.service.user_service (role change / activate / deactivate), core.api.admin, and src/main.py's seed_admin path."
+    },
+    {
+      "node_id": "core.service.label_printer_service",
+      "node_type": "function",
+      "name": "label_printer_service",
+      "file_path": "src/services/label_printer_service.py",
+      "line_number": 1,
+      "module": "core",
+      "layer": "service",
+      "exports": [
+        "is_configured",
+        "health",
+        "print_pdf",
+        "PrinterHealthResult",
+        "PrintResult",
+        "MAX_COPIES"
+      ],
+      "description": "NEW since the last mapping run (T-925). HTTP client for a Brother QL-800 network print agent, called by the genetics label routes. Configuration is NOT read from settings directly \u2014 all three managed keys (LABEL_PRINTER_ENABLED / LABEL_PRINTER_BASE_URL / LABEL_PRINTER_API_KEY) are resolved fresh on every call via deployment_settings_service.get_value (env -> db -> unset), so a super_admin toggling the printer or rotating the key takes effect within that service's 30s cache window. health() never raises \u2014 unconfigured/unreachable/timeout/non-2xx/unparseable all collapse to a structured PrinterHealthResult so GET /genetics/printer/health can always return 200; `configured=False` means 'no printer set up here', distinct from ok=False meaning 'printer is broken'. print_pdf() preflights /health and refuses unless status == ['ready'] (the printer's spooler silently discards jobs when disconnected, so HTTP 200 is not evidence a label came out), enforces copies 1..50, and maps failures to 409 (not configured), 422 (bad input, printer's own message passed through), 502 (not ready / API key rejected / spooler problem / unreachable). Retries a 502 at most once per the printer contract. The X-API-Key header is sent only to the configured base URL and is never logged (log lines name only the exception type, never its message)."
+    },
+    {
+      "node_id": "core.service.deployment_settings_service",
+      "node_type": "file",
+      "name": "deployment_settings_service",
+      "file_path": "src/services/deployment_settings_service.py",
+      "line_number": 1,
+      "module": "core",
+      "layer": "service",
+      "exports": [
+        "get_resolved",
+        "get_value",
+        "update",
+        "mask_value",
+        "invalidate_cache",
+        "record_cf_access_login",
+        "ResolvedSetting",
+        "MANAGED_KEYS"
+      ],
+      "description": "Resolves and updates deployment-wide config held in the platform_settings singleton doc, so a super_admin can change it from the browser without an .env edit + container restart. Resolution order per key: env var (if set and non-empty) -> DB value -> unset; env acts as a LOCK, reporting source='env', editable=False. 12 managed keys: PUBLIC_BASE_URL, FRONTEND_URL, the CF_ACCESS_* block (ENABLED/TEAM_DOMAIN/AUD/EXCLUSIVE/JIT_PROVISION/DEFAULT_ROLE), and \u2014 added by T-925 \u2014 LABEL_PRINTER_ENABLED, LABEL_PRINTER_BASE_URL, LABEL_PRINTER_API_KEY (consumed by core.service.label_printer_service). Secret tier (_SECRET_KEYS: CF_ACCESS_TEAM_DOMAIN, CF_ACCESS_AUD, LABEL_PRINTER_API_KEY) is never returned in full \u2014 isSet + last-4 masked hint only, masked in the audit log too; there is deliberately no reveal endpoint. update() enforces six guardrails: (a) CF_ACCESS_TEAM_DOMAIN validated against Cloudflare's JWKS before persisting, (b) CF_ACCESS_EXCLUSIVE blocked until a CF Access sign-in has actually succeeded here (anti-lockout), (c) the acting super_admin's current password re-verified, (d) every changed key written to admin_audit_log with masked before/after, (e) LABEL_PRINTER_BASE_URL must parse as an http(s) URL with a host (422 otherwise \u2014 bounds the SSRF surface this key opens), (f) LABEL_PRINTER_ENABLED cannot flip to True unless a base URL AND API key are already resolved (same PATCH or already stored), so enabling it can never produce a runtime 500 on first print. 30s in-process cache (time.monotonic) because get_value is on the auth hot path. Sole writer of platform_settings."
+    },
+    {
+      "node_id": "core.utils.email",
+      "node_type": "function",
+      "name": "email utilities",
+      "file_path": "src/utils/email.py",
+      "line_number": 15,
+      "module": "core",
+      "layer": "infrastructure",
+      "exports": [
+        "send_email_verification",
+        "send_password_reset",
+        "send_welcome_email"
+      ],
+      "description": "STUB, not a real mailer. All three senders build a link off settings.FRONTEND_URL and, when ENVIRONMENT == 'development', log the full message body to the application log and return True; in every other environment they fall through to a commented-out SendGrid example and still return True. No SMTP/SES/SendGrid integration exists, so on a non-development deployment verification and password-reset emails are silently never delivered while the caller sees success. Imported by core.service.auth_service for the register / send-verification / request-password-reset flows."
+    },
+    {
+      "node_id": "core.utils.security",
+      "node_type": "function",
+      "name": "password hashing + JWT helpers",
+      "file_path": "src/utils/security.py",
+      "line_number": 22,
+      "module": "core",
+      "layer": "infrastructure",
+      "exports": [
+        "hash_password",
+        "verify_password",
+        "create_access_token",
+        "create_refresh_token",
+        "decode_token",
+        "verify_access_token",
+        "verify_refresh_token",
+        "generate_token_id",
+        "create_verification_token",
+        "verify_verification_token",
+        "create_mfa_token",
+        "verify_mfa_token"
+      ],
+      "description": "Cryptographic primitives shared by every auth path: passlib/bcrypt password hashing and verification, plus python-jose HS256 token minting/verification for the four token kinds (access, refresh, email-verification/password-reset, pending-MFA). Keyed off settings.SECRET_KEY. Imported by core.service.auth_service, core.service.deployment_settings_service (verify_password for the guardrail-c password re-check), and core.middleware.auth."
+    },
+    {
+      "node_id": "core.utils.encryption",
+      "node_type": "function",
+      "name": "Fernet encryption helpers",
+      "file_path": "src/utils/encryption.py",
+      "line_number": 61,
+      "module": "core",
+      "layer": "infrastructure",
+      "exports": [
+        "encrypt_license_key",
+        "decrypt_license_key",
+        "encrypt_sensehub_password",
+        "decrypt_sensehub_password",
+        "encrypt_telegram_token",
+        "decrypt_telegram_token",
+        "hash_license_key",
+        "validate_encryption_key",
+        "generate_secure_key",
+        "test_encryption_roundtrip"
+      ],
+      "description": "Symmetric encryption-at-rest helpers built on Fernet with a PBKDF2-derived key. Three separately-named encrypt/decrypt pairs (module license keys, SenseHub device passwords, Telegram bot tokens) plus hash_license_key for lookup without decryption and a self-test roundtrip. Imported by core.service.module_manager for license-key storage."
+    },
+    {
+      "node_id": "core.utils.license_validator",
+      "node_type": "class",
+      "name": "LicenseValidator",
+      "file_path": "src/utils/license_validator.py",
+      "line_number": 90,
+      "module": "core",
+      "layer": "infrastructure",
+      "exports": [
+        "LicenseValidator",
+        "ValidationMode",
+        "generate_test_license"
+      ],
+      "description": "Validates module license keys before a module is allowed to install. ValidationMode selects between local (HMAC signature check) and remote validation-server modes; generate_test_license produces development keys. Consumed only by core.service.module_manager.install_module."
+    },
+    {
+      "node_id": "env_FRONTEND_URL",
+      "node_type": "config",
+      "name": "FRONTEND_URL",
+      "file_path": "src/config/settings.py",
+      "line_number": 52,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Base URL of the user-facing SPA (default 'http://localhost:3000'), used to build the links embedded in verification / password-reset emails (src/utils/email.py). Managed key: resolution order env -> platform_settings DB -> unset, editable via PATCH /admin/deployment-settings when not env-pinned."
+    },
+    {
+      "node_id": "env_LABEL_PRINTER_ENABLED",
+      "node_type": "config",
+      "name": "LABEL_PRINTER_ENABLED",
+      "file_path": "src/config/settings.py",
+      "line_number": 102,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "T-925. Master switch for Brother QL-800 network label printing (default False). Unset/false makes core.service.label_printer_service refuse to print rather than fire a request at an empty base URL. Cannot be flipped True via PATCH /admin/deployment-settings unless LABEL_PRINTER_BASE_URL and LABEL_PRINTER_API_KEY are both already resolved (guardrail f in deployment_settings_service.update)."
+    },
+    {
+      "node_id": "env_LABEL_PRINTER_BASE_URL",
+      "node_type": "config",
+      "name": "LABEL_PRINTER_BASE_URL",
+      "file_path": "src/config/settings.py",
+      "line_number": 107,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "T-925. Full http(s) URL including port of the deployment's print agent, e.g. 'http://<printer-host>:8765' (default '' \u2014 deliberately no default, since a wrong one would point every deployment's print jobs AND its API key at somebody else's printer). Validated on write by deployment_settings_service._validate_label_printer_base_url (must parse as http/https with a host, 422 otherwise), which bounds the SSRF surface this key opens."
+    },
+    {
+      "node_id": "env_LABEL_PRINTER_API_KEY",
+      "node_type": "config",
+      "name": "LABEL_PRINTER_API_KEY",
+      "file_path": "src/config/settings.py",
+      "line_number": 113,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "T-925. Secret-tier managed key (default ''), sent as the X-API-Key header on every request to LABEL_PRINTER_BASE_URL and nowhere else. Treated exactly like CF_ACCESS_TEAM_DOMAIN/CF_ACCESS_AUD: never logged, never returned in full by GET /admin/deployment-settings (isSet + last-4 masked hint only), masked in admin_audit_log, and there is deliberately no reveal endpoint."
+    },
+    {
+      "node_id": "collection_users",
+      "node_type": "db_model",
+      "name": "users",
+      "file_path": "src/services/database.py",
+      "line_number": 66,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Primary account collection. Indexes declared by MongoDBManager._create_indexes: unique email, unique userId, role, createdAt desc. Also carries the live MFA state inline (mfaSecret, mfaBackupCodes, mfaPendingSecret, mfaLastUsedCounter) rather than in the separate user_mfa collection, plus defaultDivisionId (set by division select), organizationId, authProvider and nameAutoDerived. Written by auth_service, user_service, mfa_service and division_service; read by deployment_settings_service for the guardrail-c password check."
+    },
+    {
+      "node_id": "collection_refresh_tokens",
+      "node_type": "db_model",
+      "name": "refresh_tokens",
+      "file_path": "src/services/database.py",
+      "line_number": 72,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Issued refresh tokens for rotation and revocation. Indexes: unique tokenId, userId, and a TTL index on expiresAt so expired rows self-delete. Written by auth_service (issue/rotate/logout) and user_service (revoke-all on deactivate/delete)."
+    },
+    {
+      "node_id": "collection_verification_tokens",
+      "node_type": "db_model",
+      "name": "verification_tokens",
+      "file_path": "src/services/database.py",
+      "line_number": 79,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "One-time tokens for email verification and password reset. Indexes: unique tokenId, userId, email, tokenType, plus a TTL index on expiresAt. Written and consumed by auth_service."
+    },
+    {
+      "node_id": "collection_mfa_pending_tokens",
+      "node_type": "db_model",
+      "name": "mfa_pending_tokens",
+      "file_path": "src/services/auth_service.py",
+      "line_number": 853,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Short-lived challenge tokens issued when a password login succeeds but MFA is still required; POST /auth/mfa/verify exchanges one for the real token pair. Created and consumed entirely inside auth_service (_issue_mfa_challenge / verify path) \u2014 note this collection is NOT declared in MongoDBManager._create_indexes, so it carries no indexes and no TTL."
+    },
+    {
+      "node_id": "collection_admin_audit_log",
+      "node_type": "db_model",
+      "name": "admin_audit_log",
+      "file_path": "src/services/database.py",
+      "line_number": 158,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Append-only trail of privileged actions: user-targeted admin actions (role change, activate/deactivate, forced MFA reset) via core.service.audit_log_service, deployment-settings changes with masked before/after via deployment_settings_service.update, tenant module toggles from the organizations endpoint, and the genetics cascade-purge / orphan-sweep routes. Every writer is best-effort \u2014 none rolls back the mutation if the audit insert fails."
+    },
+    {
+      "node_id": "collection_organizations",
+      "node_type": "db_model",
+      "name": "organizations",
+      "file_path": "src/services/organization_service.py",
+      "line_number": 1,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Top-level tenancy unit (unique slug). Holds the Wave 0 per-tenant modules sub-document: modules.financeEnabled (hides the Finance UI and gates the finance_bridge outbox writer) and modules.publicInfoPage (T-804 privacy config for scanned genetics labels). Written by organization_service; read by finance_bridge.tenant_flag and genetics.api.public."
+    },
+    {
+      "node_id": "collection_divisions",
+      "node_type": "db_model",
+      "name": "divisions",
+      "file_path": "src/services/division_service.py",
+      "line_number": 1,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Divisions scoped to an organization, each mapped to an IndustryType (vegetable_fruits / mushroom) and carrying a divisionCode unique per org. The divisionId here is what core.repository_base.DivisionScopedRepository auto-injects into every scoped query. Written by division_service."
+    },
+    {
+      "node_id": "collection_installed_modules",
+      "node_type": "db_model",
+      "name": "installed_modules",
+      "file_path": "src/services/database.py",
+      "line_number": 88,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Registry of Docker-Compose-installed modules. Indexes: unique module_name, status, health, installed_by_user_id, installed_at desc, updated_at desc, container_id. Written exclusively by core.service.module_manager."
+    },
+    {
+      "node_id": "collection_module_audit_log",
+      "node_type": "db_model",
+      "name": "module_audit_log",
+      "file_path": "src/services/database.py",
+      "line_number": 97,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Audit trail for module install/uninstall/status operations. Indexes: module_name, operation, user_id, status, timestamp desc, plus a 90-day TTL index on timestamp. Written by core.service.module_manager, surfaced by GET /modules/audit-log."
+    },
+    {
+      "node_id": "collection_port_registry",
+      "node_type": "db_model",
+      "name": "port_registry",
+      "file_path": "src/services/port_manager.py",
+      "line_number": 49,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "Allocation table for the 9001-19999 module port range. Indexes created by PortManager itself (not by MongoDBManager): unique port, module_name, status, and a compound (module_name, status). Written only by core.service.port_manager, which rolls back partial allocations on failure."
+    },
+    {
+      "node_id": "collection_user_mfa",
+      "node_type": "db_model",
+      "name": "user_mfa",
+      "file_path": "src/services/database.py",
+      "line_number": 118,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "DECLARED BUT UNUSED. MongoDBManager._create_indexes builds indexes here (unique mfaId, unique userId, isEnabled, createdAt/updatedAt desc) and src/models/mfa.py defines a matching schema, but core.service.mfa_service keeps all live MFA state inline on the users document instead. Nothing reads or writes this collection today \u2014 it is a parallel/legacy design that was indexed but never wired up."
+    },
+    {
+      "node_id": "collection_mfa_backup_codes",
+      "node_type": "db_model",
+      "name": "mfa_backup_codes",
+      "file_path": "src/services/database.py",
+      "line_number": 127,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "DECLARED BUT UNUSED, same story as user_mfa. Indexes exist (unique codeId, userId, (userId, codeHash), isUsed, (userId, isUsed), TTL) but mfa_service stores the 10 SHA-256-hashed backup codes on the users document."
+    },
+    {
+      "node_id": "collection_mfa_audit_log",
+      "node_type": "db_model",
+      "name": "mfa_audit_log",
+      "file_path": "src/services/database.py",
+      "line_number": 140,
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "DECLARED BUT UNUSED, same story as user_mfa / mfa_backup_codes. Indexed by MongoDBManager (unique logId, ...) but no code path writes it; MFA-related admin actions land in admin_audit_log instead."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "core.service.audit_log_service",
+      "target_id": "core.service.database",
+      "edge_type": "imports",
+      "source_file": "src/services/audit_log_service.py",
+      "target_file": "src/services/database.py",
+      "context": "line 33: from .database import mongodb"
+    },
+    {
+      "source_id": "core.service.audit_log_service",
+      "target_id": "collection_admin_audit_log",
+      "edge_type": "stores_in",
+      "source_file": "src/services/audit_log_service.py",
+      "target_file": "src/services/database.py",
+      "context": "write_user_audit_log: await db.admin_audit_log.insert_one(audit_entry) \u2014 best-effort, exceptions logged and swallowed"
+    },
+    {
+      "source_id": "core.service.user_service",
+      "target_id": "core.service.audit_log_service",
+      "edge_type": "depends_on",
+      "source_file": "src/services/user_service.py",
+      "target_file": "src/services/audit_log_service.py",
+      "context": "line 16: from .audit_log_service import write_user_audit_log (role change, activate, deactivate)"
+    },
+    {
+      "source_id": "core.api.admin",
+      "target_id": "core.service.audit_log_service",
+      "edge_type": "depends_on",
+      "source_file": "src/api/v1/admin.py",
+      "target_file": "src/services/audit_log_service.py",
+      "context": "line 32: from ...services.audit_log_service import write_user_audit_log"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "core.service.audit_log_service",
+      "edge_type": "depends_on",
+      "source_file": "src/main.py",
+      "target_file": "src/services/audit_log_service.py",
+      "context": "line 31: from .services.audit_log_service import write_user_audit_log \u2014 seed_admin logs as performedBy 'system:seed_admin'"
+    },
+    {
+      "source_id": "core.service.label_printer_service",
+      "target_id": "core.service.deployment_settings_service",
+      "edge_type": "depends_on",
+      "source_file": "src/services/label_printer_service.py",
+      "target_file": "src/services/deployment_settings_service.py",
+      "context": "line 41: from .deployment_settings_service import get_value as get_deployment_setting_value \u2014 resolves LABEL_PRINTER_ENABLED/_BASE_URL/_API_KEY fresh on every call"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "core.service.label_printer_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/services/label_printer_service.py",
+      "context": "line 35: from src.services import label_printer_service; line 1354 await label_printer_service.print_pdf(...)"
+    },
+    {
+      "source_id": "genetics.api.printer",
+      "target_id": "core.service.label_printer_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/api/v1/printer.py",
+      "target_file": "src/services/label_printer_service.py",
+      "context": "line 21: from src.services import label_printer_service; line 82 await label_printer_service.health() backs GET /genetics/printer/health"
+    },
+    {
+      "source_id": "core.service.auth_service",
+      "target_id": "core.utils.security",
+      "edge_type": "imports",
+      "source_file": "src/services/auth_service.py",
+      "target_file": "src/utils/security.py",
+      "context": "line 26: from ..utils.security import (hash_password, verify_password, create_access_token, ...)"
+    },
+    {
+      "source_id": "core.service.auth_service",
+      "target_id": "core.utils.email",
+      "edge_type": "imports",
+      "source_file": "src/services/auth_service.py",
+      "target_file": "src/utils/email.py",
+      "context": "line 37: from ..utils.email import (send_email_verification, send_password_reset, ...)"
+    },
+    {
+      "source_id": "core.service.deployment_settings_service",
+      "target_id": "core.utils.security",
+      "edge_type": "imports",
+      "source_file": "src/services/deployment_settings_service.py",
+      "target_file": "src/utils/security.py",
+      "context": "line 82: from ..utils.security import verify_password \u2014 guardrail (c), the acting super_admin's current password"
+    },
+    {
+      "source_id": "core.service.deployment_settings_service",
+      "target_id": "core.model.user",
+      "edge_type": "imports",
+      "source_file": "src/services/deployment_settings_service.py",
+      "target_file": "src/models/user.py",
+      "context": "line 81: from ..models.user import UserRole \u2014 validates CF_ACCESS_DEFAULT_ROLE against the enum"
+    },
+    {
+      "source_id": "core.service.user_service",
+      "target_id": "core.middleware.permissions",
+      "edge_type": "imports",
+      "source_file": "src/services/user_service.py",
+      "target_file": "src/middleware/permissions.py",
+      "context": "line 15: from ..middleware.permissions import guard_target_not_super_admin"
+    },
+    {
+      "source_id": "core.service.port_manager",
+      "target_id": "core.model.module",
+      "edge_type": "imports",
+      "source_file": "src/services/port_manager.py",
+      "target_file": "src/models/module.py",
+      "context": "line 20: from ..models.module import PortAllocation, PortRange"
+    },
+    {
+      "source_id": "core.service.module_manager",
+      "target_id": "core.utils.encryption",
+      "edge_type": "imports",
+      "source_file": "src/services/module_manager.py",
+      "target_file": "src/utils/encryption.py",
+      "context": "line 65: from ..utils.encryption import encrypt_license_key, decrypt_license_key"
+    },
+    {
+      "source_id": "core.service.module_manager",
+      "target_id": "core.utils.license_validator",
+      "edge_type": "imports",
+      "source_file": "src/services/module_manager.py",
+      "target_file": "src/utils/license_validator.py",
+      "context": "line 66: from ..utils.license_validator import LicenseValidator"
+    },
+    {
+      "source_id": "core.utils.email",
+      "target_id": "core.config.settings",
+      "edge_type": "depends_on",
+      "source_file": "src/utils/email.py",
+      "target_file": "src/config/settings.py",
+      "context": "line 10: from ..config.settings import settings \u2014 FRONTEND_URL for link building, ENVIRONMENT to decide log-only vs (unimplemented) send"
+    },
+    {
+      "source_id": "core.utils.security",
+      "target_id": "core.config.settings",
+      "edge_type": "depends_on",
+      "source_file": "src/utils/security.py",
+      "target_file": "src/config/settings.py",
+      "context": "line 14: from ..config.settings import settings \u2014 SECRET_KEY / algorithm / token lifetimes"
+    },
+    {
+      "source_id": "core.utils.security",
+      "target_id": "core.model.user",
+      "edge_type": "imports",
+      "source_file": "src/utils/security.py",
+      "target_file": "src/models/user.py",
+      "context": "line 15: from ..models.user import TokenPayload, UserRole"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "collection_verification_tokens",
+      "edge_type": "creates",
+      "source_file": "src/services/database.py",
+      "target_file": "src/services/database.py",
+      "context": "_create_indexes lines 79-86: unique tokenId, userId, email, tokenType, TTL on expiresAt"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "collection_installed_modules",
+      "edge_type": "creates",
+      "source_file": "src/services/database.py",
+      "target_file": "src/services/database.py",
+      "context": "_create_indexes lines 88-94: unique module_name, status, health, installed_by_user_id, installed_at, updated_at, container_id"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "collection_user_mfa",
+      "edge_type": "creates",
+      "source_file": "src/services/database.py",
+      "target_file": "src/services/database.py",
+      "context": "_create_indexes lines 118-122 \u2014 indexes built for a collection no service actually writes"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "collection_mfa_backup_codes",
+      "edge_type": "creates",
+      "source_file": "src/services/database.py",
+      "target_file": "src/services/database.py",
+      "context": "_create_indexes lines 127-138 \u2014 indexes built for a collection no service actually writes"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "collection_mfa_audit_log",
+      "edge_type": "creates",
+      "source_file": "src/services/database.py",
+      "target_file": "src/services/database.py",
+      "context": "_create_indexes line 140+ \u2014 indexes built for a collection no service actually writes"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "collection_ai_query_log",
+      "edge_type": "creates",
+      "source_file": "src/services/database.py",
+      "target_file": "src/services/database.py",
+      "context": "_create_indexes lines 108-110: user_id, timestamp desc, compound (user_id, timestamp)"
+    },
+    {
+      "source_id": "core.service.port_manager",
+      "target_id": "collection_port_registry",
+      "edge_type": "creates",
+      "source_file": "src/services/port_manager.py",
+      "target_file": "src/services/port_manager.py",
+      "context": "lines 49-58: PortManager builds its own indexes (unique port, module_name, status, compound) rather than MongoDBManager._create_indexes"
+    },
+    {
+      "source_id": "core.middleware.rate_limit",
+      "target_id": "core.config.settings",
+      "edge_type": "depends_on",
+      "source_file": "src/middleware/rate_limit.py",
+      "target_file": "src/config/settings.py",
+      "context": "line 19: from ..config.settings import settings \u2014 RATE_LIMIT_GUEST/_USER/... per-role budgets (replaces the dangling 'core.config.Settings' edge)"
+    },
+    {
+      "source_id": "genetics.service.database",
+      "target_id": "core.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/database.py",
+      "target_file": "src/services/database.py",
+      "context": "line 10: from src.services.database import mongodb \u2014 genetics reuses the core Motor client (replaces the dangling 'core.services.database' edge)"
+    }
+  ]
+}

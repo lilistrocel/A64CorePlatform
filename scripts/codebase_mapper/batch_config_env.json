@@ -1,0 +1,2822 @@
+{
+  "metadata": {
+    "generated_at": "2026-08-21",
+    "task_id": "map_config_env",
+    "scope": "src/config/, .env.example, docker-compose.yml (+ finance/prod/sslh overlays)",
+    "layer": "config",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "node_id_convention_summary": "Environment variables use env_<VAR_NAME> (existing de-facto convention, one node per variable name regardless of how many files declare it). Compose services use compose_<service_name> and compose overlay files use compose_overlay_<name> — a NEW namespace introduced by this task, flagged in the task report. Edge direction for config follows the map_core_middleware precedent already in the graph: consumer --[uses]--> env_VAR. Compose services inject variables as compose_<svc> --[exports]--> env_VAR. NO SECRET VALUES ARE RECORDED — only variable names, consumers, defaults that are non-sensitive placeholders, and whether the key is required."
+  },
+  "nodes": [
+    {
+      "node_id": "env_APP_NAME",
+      "node_type": "config",
+      "name": "APP_NAME",
+      "file_path": "src/config/settings.py",
+      "line_number": 23,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Application display name, default 'A64 Core Platform API Hub'. DECLARED BUT NEVER READ: src/main.py hardcodes title=\"A64 Core Platform API Hub\" in its FastAPI() constructor (line 38) rather than referencing settings.APP_NAME, so setting this env var changes nothing on any deployment. .env.example line 2 still advertises it."
+    },
+    {
+      "node_id": "env_ENVIRONMENT",
+      "node_type": "config",
+      "name": "ENVIRONMENT",
+      "file_path": "src/config/settings.py",
+      "line_number": 24,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Runtime environment string, default 'development'. Anything other than 'development' activates Settings.validate_production_settings, which refuses to boot when SECRET_KEY is still the dev default or DEBUG is true. Also branches src/utils/email.py (dev mode only logs the verification link) and src/core/logging_config.py's formatter choice. docker-compose.yml pins it to 'development' unconditionally; docker-compose.prod.yml overrides it to 'production'."
+    },
+    {
+      "node_id": "env_DEBUG",
+      "node_type": "config",
+      "name": "DEBUG",
+      "file_path": "src/config/settings.py",
+      "line_number": 25,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Debug flag, default True. Controls whether unhandled-exception handlers leak str(exc) to clients (src/main.py:99) and uvicorn --reload. validate_production_settings raises at boot if this is true while ENVIRONMENT != 'development'. Pinned True in docker-compose.yml:13, overridden False in docker-compose.prod.yml:12."
+    },
+    {
+      "node_id": "env_HOST",
+      "node_type": "config",
+      "name": "HOST",
+      "file_path": "src/config/settings.py",
+      "line_number": 28,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Uvicorn bind address, default 0.0.0.0. Only read by the __main__ block of src/main.py:437; the container CMD passes --host 0.0.0.0 explicitly, so this has no effect under Docker."
+    },
+    {
+      "node_id": "env_PORT",
+      "node_type": "config",
+      "name": "PORT",
+      "file_path": "src/config/settings.py",
+      "line_number": 29,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Uvicorn bind port, default 8000. Same caveat as HOST — only src/main.py:438's __main__ path uses it; the Dockerfile CMD hardcodes --port 8000. Host-side port mapping is API_PORT, not this."
+    },
+    {
+      "node_id": "env_ALLOWED_ORIGINS",
+      "node_type": "config",
+      "name": "ALLOWED_ORIGINS",
+      "file_path": "src/config/settings.py",
+      "line_number": 32,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "CORS allow-list (List[str]) consumed by the CORSMiddleware in src/main.py:51. Defaults to eight localhost/127.0.0.1 origins covering ports 3000, 5173, 8000 and the nginx proxy. main.py:363 logs a warning when ENVIRONMENT is production and a localhost origin is still present. NOTE: Settings.Config sets env_file=None deliberately, so a comma-separated .env value (as .env.example line 119 shows) is never parsed from a file — it must arrive as a real environment variable, and pydantic parses List[str] as JSON."
+    },
+    {
+      "node_id": "env_MONGODB_URL",
+      "node_type": "config",
+      "name": "MONGODB_URL",
+      "file_path": "src/config/settings.py",
+      "line_number": 44,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Primary MongoDB connection string, default 'mongodb://localhost:27017'. Read through settings by core.service.database and independently via os.getenv in ten module-level config/settings.py files (crm, finance, hr, logistics, mushroom_manager, farm_manager, ...) whose own default is 'mongodb://mongodb:27017'. docker-compose.yml:14 pins the value to 'mongodb://mongodb:27017/?replicaSet=rs0' — the replicaSet parameter is required for the multi-document transactions the finance-bridge outbox writer uses. docker-compose.prod.yml:14 rewrites it with MONGO_APP_USER/MONGO_APP_PASSWORD credentials and authSource."
+    },
+    {
+      "node_id": "env_MONGODB_DB_NAME",
+      "node_type": "config",
+      "name": "MONGODB_DB_NAME",
+      "file_path": "src/config/settings.py",
+      "line_number": 45,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB database name, default 'a64core_db'. Note the drift: the module-level config/settings.py files default it to 'a64core' (no _db suffix) instead, so a deployment that leaves it unset gets two different database names depending on which code path opens the connection. Compose supplies '${MONGODB_DB_NAME:-a64core_db}' to the api, cron, mongodb and finance_consumer services, which masks the drift in practice."
+    },
+    {
+      "node_id": "env_SECRET_KEY",
+      "node_type": "config",
+      "name": "SECRET_KEY",
+      "file_path": "src/config/settings.py",
+      "line_number": 48,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "HS256 signing key for all JWTs. Default is the literal dev placeholder; validate_production_settings refuses to boot with it when ENVIRONMENT != 'development', and src/main.py:344 logs a warning otherwise. Read via os.getenv by seven module-level config/settings.py files as well as through core settings. The finance microservice MUST receive the identical value (docker-compose.finance.yml:84) or it rejects every token minted by the ops API. Never log or echo this value."
+    },
+    {
+      "node_id": "env_API_KEY_PREFIX",
+      "node_type": "config",
+      "name": "API_KEY_PREFIX",
+      "file_path": "src/config/settings.py",
+      "line_number": 49,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Prefix for generated API keys, default 'dev_key'. DECLARED BUT NEVER READ anywhere in src/ — no consumer exists. Still advertised at .env.example line 134."
+    },
+    {
+      "node_id": "env_FROM_EMAIL",
+      "node_type": "config",
+      "name": "FROM_EMAIL",
+      "file_path": "src/config/settings.py",
+      "line_number": 53,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Sender address for outbound platform email, default 'noreply@a64core.com'. Deployment-specific hardcoding: the default names a64core.com, a domain this project has decommissioned, and nothing parameterises it — it appears in NO compose file and NO .env.example entry, so the only way to change it is an environment variable nobody is told about. It is also currently inert: its single reference, src/utils/email.py:58, is inside a commented-out provider call. (The BACKLOG describes this as 'FROM_EMAIL: noreply@a64core.com hardcoded in compose'; verified — it is hardcoded in src/config/settings.py, not in any compose file.) A separate farm_manager copy, EMAIL_FROM, carries the same dead default at src/modules/farm_manager/config/settings.py:45."
+    },
+    {
+      "node_id": "env_EMAIL_PROVIDER",
+      "node_type": "config",
+      "name": "EMAIL_PROVIDER",
+      "file_path": "src/config/settings.py",
+      "line_number": 64,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Name of the outbound email provider ('sendgrid', 'smtp', ...); default '' and, per the long comment above the field, empty is the honest value on every deployment today. src/utils/email.py formats the verification / password-reset link, logs it, and returns — no provider integration exists yet, so account recovery cannot complete unaided anywhere. Exposes the EMAIL_DELIVERY_CONFIGURED property (settings.py:67) so callers can stop claiming a message was sent. Passed through bare (no '=') at docker-compose.yml:62 so compose omits it entirely when undefined."
+    },
+    {
+      "node_id": "env_LOG_LEVEL",
+      "node_type": "config",
+      "name": "LOG_LEVEL",
+      "file_path": "src/config/settings.py",
+      "line_number": 116,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Root log level, default 'INFO', passed to setup_logging() at src/main.py:34 together with ENVIRONMENT. Also forwarded to the finance service and the outbox consumer (docker-compose.finance.yml:87 and :128) so all three processes agree."
+    },
+    {
+      "node_id": "env_ELEVENLABS_API_KEY",
+      "node_type": "config",
+      "name": "ELEVENLABS_API_KEY",
+      "file_path": "src/config/settings.py",
+      "line_number": 119,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "ElevenLabs text-to-speech key (default ''), the only gate on the TTS endpoint in src/modules/farm_manager/api/v1/ai_hub.py:331 — unset makes that route refuse rather than call out. Sent as the xi-api-key header at ai_hub.py:340. Secret: never log it. .env.example line 214 describes the voice feature as legacy/currently unused."
+    },
+    {
+      "node_id": "env_ELEVENLABS_VOICE_ID",
+      "node_type": "config",
+      "name": "ELEVENLABS_VOICE_ID",
+      "file_path": "src/config/settings.py",
+      "line_number": 120,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "ElevenLabs voice identifier, default 'JBFqnCBsd6RMkjVDRZzb' (the stock 'George' voice). Read only by farm_manager's ai_hub TTS route. Not plumbed through any compose file, so it can only be changed by editing settings.py or exporting the var directly."
+    },
+    {
+      "node_id": "env_ELEVENLABS_MODEL_ID",
+      "node_type": "config",
+      "name": "ELEVENLABS_MODEL_ID",
+      "file_path": "src/config/settings.py",
+      "line_number": 121,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "ElevenLabs model, default 'eleven_multilingual_v2'. Same reach as ELEVENLABS_VOICE_ID — read by the ai_hub TTS route only and absent from every compose file and from .env.example."
+    },
+    {
+      "node_id": "env_GOOGLE_CLOUD_PROJECT",
+      "node_type": "config",
+      "name": "GOOGLE_CLOUD_PROJECT",
+      "file_path": "src/config/settings.py",
+      "line_number": 124,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "GCP project id for Vertex AI / Gemini. Settings default is '' and every AI service treats empty as 'AI disabled' (e.g. farm_ai/service.py:99, ai_hub/service.py:193). CONFIRMED DEPLOYMENT-SPECIFIC HARDCODING: docker-compose.yml:68 sets 'GOOGLE_CLOUD_PROJECT=a64core' as a literal with no ${VAR:-} indirection and no .env.example entry, so every deployment built from this repo silently inherits one specific (rebranded, now-dead) GCP project name and has no supported way to override it short of editing the compose file. This is the same class of bug the PUBLIC_BASE_URL empty-default policy exists to prevent."
+    },
+    {
+      "node_id": "env_VERTEX_AI_LOCATION",
+      "node_type": "config",
+      "name": "VERTEX_AI_LOCATION",
+      "file_path": "src/config/settings.py",
+      "line_number": 125,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Vertex AI region, default 'us-central1'; passed to vertexai.init() by six farm_manager AI services (farm_ai, ai_hub, global_ai, farm_level_ai, ai_dashboard/report_generator, api/v1/ai_hub). Hardcoded to the same value at docker-compose.yml:70 without ${VAR:-} indirection, though unlike GOOGLE_CLOUD_PROJECT the value names nothing deployment-specific."
+    },
+    {
+      "node_id": "env_VERTEX_AI_MODEL",
+      "node_type": "config",
+      "name": "VERTEX_AI_MODEL",
+      "file_path": "src/config/settings.py",
+      "line_number": 126,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Gemini model id, default 'gemini-2.5-flash'. Hardcoded identically at docker-compose.yml:71 with no ${VAR:-} indirection — a model upgrade requires a compose edit, not an .env change."
+    },
+    {
+      "node_id": "env_VERTEX_AI_MAX_OUTPUT_TOKENS",
+      "node_type": "config",
+      "name": "VERTEX_AI_MAX_OUTPUT_TOKENS",
+      "file_path": "src/config/settings.py",
+      "line_number": 127,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Per-response output-token ceiling for Vertex AI generation, default 2048; hardcoded to the same value at docker-compose.yml:72."
+    },
+    {
+      "node_id": "env_VERTEX_AI_TEMPERATURE",
+      "node_type": "config",
+      "name": "VERTEX_AI_TEMPERATURE",
+      "file_path": "src/config/settings.py",
+      "line_number": 128,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Sampling temperature for Vertex AI generation, default 0.1 (deliberately near-deterministic for agronomy answers); hardcoded to the same value at docker-compose.yml:73."
+    },
+    {
+      "node_id": "env_FARM_AI_MAX_TOKENS",
+      "node_type": "config",
+      "name": "FARM_AI_MAX_TOKENS",
+      "file_path": "src/config/settings.py",
+      "line_number": 129,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Token budget for the farm AI chat services (farm_ai, global_ai, farm_level_ai, ai_hub), default 2048. Not present in any compose file or in .env.example."
+    },
+    {
+      "node_id": "env_FARM_AI_DAILY_LIMIT",
+      "node_type": "config",
+      "name": "FARM_AI_DAILY_LIMIT",
+      "file_path": "src/config/settings.py",
+      "line_number": 130,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Intended per-day farm-AI request cap, default 50. DECLARED BUT NEVER READ — no consumer exists anywhere in src/, so farm AI usage is currently unmetered by this setting."
+    },
+    {
+      "node_id": "env_ANTHROPIC_API_KEY",
+      "node_type": "config",
+      "name": "ANTHROPIC_API_KEY",
+      "file_path": "src/config/settings.py",
+      "line_number": 133,
+      "module": "ai_assistant",
+      "layer": "config",
+      "exports": [],
+      "description": "Claude API key (T-008), default ''. Read at src/modules/ai_assistant/services/claude_service.py:97; empty means the assistant is unavailable rather than erroring mid-conversation. Wired through docker-compose.yml:75 as ${ANTHROPIC_API_KEY:-} and declared blank at .env.example line 173. Secret: never log or echo it."
+    },
+    {
+      "node_id": "env_CLAUDE_MODEL",
+      "node_type": "config",
+      "name": "CLAUDE_MODEL",
+      "file_path": "src/config/settings.py",
+      "line_number": 134,
+      "module": "ai_assistant",
+      "layer": "config",
+      "exports": [],
+      "description": "Claude model id used by the AI assistant, default 'claude-sonnet-4-6'; read twice in claude_service.py (lines 206 and 357). NAME MISMATCH WORTH KNOWING: docker-compose.yml:76 and .env.example line 174 both set ANTHROPIC_MODEL, which no code reads — so the compose-supplied 'claude-sonnet-4-20250514' is dead and the effective model is always this default."
+    },
+    {
+      "node_id": "env_AI_ASSISTANT_MAX_TOKENS",
+      "node_type": "config",
+      "name": "AI_ASSISTANT_MAX_TOKENS",
+      "file_path": "src/config/settings.py",
+      "line_number": 135,
+      "module": "ai_assistant",
+      "layer": "config",
+      "exports": [],
+      "description": "Max tokens per Claude assistant response, default 4096. Consumed by claude_service.py; covered by tests/unit/test_ai_assistant/test_claude_service.py. Absent from compose and .env.example."
+    },
+    {
+      "node_id": "env_AI_ASSISTANT_MAX_TURNS",
+      "node_type": "config",
+      "name": "AI_ASSISTANT_MAX_TURNS",
+      "file_path": "src/config/settings.py",
+      "line_number": 136,
+      "module": "ai_assistant",
+      "layer": "config",
+      "exports": [],
+      "description": "Maximum agentic tool-use turns per assistant request, default 50 — the loop bound that stops a runaway tool chain. Absent from compose and .env.example."
+    },
+    {
+      "node_id": "env_AI_ASSISTANT_HISTORY_LIMIT",
+      "node_type": "config",
+      "name": "AI_ASSISTANT_HISTORY_LIMIT",
+      "file_path": "src/config/settings.py",
+      "line_number": 137,
+      "module": "ai_assistant",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of prior conversation turns replayed into each Claude request, default 3. Absent from compose and .env.example."
+    },
+    {
+      "node_id": "env_ATTACHMENT_STORAGE_ROOT",
+      "node_type": "config",
+      "name": "ATTACHMENT_STORAGE_ROOT",
+      "file_path": "src/config/settings.py",
+      "line_number": 140,
+      "module": "attachments",
+      "layer": "config",
+      "exports": [],
+      "description": "Filesystem root for document attachments (T-053), default '/app/data/attachments'. Consumed by src/modules/attachments/api/v1/attachments.py:168 when constructing LocalStorageBackend. The default only works because docker-compose.yml:105 bind-mounts ./data/attachments to that path — change one without the other and uploads land outside the volume and vanish on recreate."
+    },
+    {
+      "node_id": "env_ADMIN_EMAIL",
+      "node_type": "config",
+      "name": "ADMIN_EMAIL",
+      "file_path": "src/config/settings.py",
+      "line_number": 148,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Email of the super_admin auto-seeded on first startup when no admin exists (src/main.py:171), default 'admin@a64platform.com'. Supplied to both the api and cron services (docker-compose.yml:83 and :351) because the cron container logs into the API with it."
+    },
+    {
+      "node_id": "env_ADMIN_PASSWORD",
+      "node_type": "config",
+      "name": "ADMIN_PASSWORD",
+      "file_path": "src/config/settings.py",
+      "line_number": 149,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Password for the auto-seeded super_admin (src/main.py:172), default is a well-known committed placeholder. Compose keeps that placeholder as a :- fallback in dev (docker-compose.yml:84, :352); docker-compose.prod.yml:124 drops the fallback so production fails rather than seeding a publicly known password. Secret: never log or echo it."
+    },
+    {
+      "node_id": "env_RATE_LIMIT_GUEST",
+      "node_type": "config",
+      "name": "RATE_LIMIT_GUEST",
+      "file_path": "src/config/settings.py",
+      "line_number": 152,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Requests/minute for unauthenticated callers, default 30. Mapped to UserRole.GUEST in src/middleware/rate_limit.py:52; also the limit src/modules/genetics/api/v1/public.py:156 discusses for the public label-resolution route."
+    },
+    {
+      "node_id": "env_RATE_LIMIT_USER",
+      "node_type": "config",
+      "name": "RATE_LIMIT_USER",
+      "file_path": "src/config/settings.py",
+      "line_number": 153,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Requests/minute for UserRole.USER, default 300; consumed by the role->limit table in src/middleware/rate_limit.py."
+    },
+    {
+      "node_id": "env_RATE_LIMIT_MODERATOR",
+      "node_type": "config",
+      "name": "RATE_LIMIT_MODERATOR",
+      "file_path": "src/config/settings.py",
+      "line_number": 154,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Requests/minute for UserRole.MODERATOR, default 500; consumed by src/middleware/rate_limit.py."
+    },
+    {
+      "node_id": "env_RATE_LIMIT_ADMIN",
+      "node_type": "config",
+      "name": "RATE_LIMIT_ADMIN",
+      "file_path": "src/config/settings.py",
+      "line_number": 155,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Requests/minute for UserRole.ADMIN, default 1000; consumed by src/middleware/rate_limit.py."
+    },
+    {
+      "node_id": "env_RATE_LIMIT_SUPER_ADMIN",
+      "node_type": "config",
+      "name": "RATE_LIMIT_SUPER_ADMIN",
+      "file_path": "src/config/settings.py",
+      "line_number": 156,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Requests/minute for UserRole.SUPER_ADMIN, default 2000; consumed by src/middleware/rate_limit.py."
+    },
+    {
+      "node_id": "env_FINANCE_SERVICE_URL",
+      "node_type": "config",
+      "name": "FINANCE_SERVICE_URL",
+      "file_path": "src/config/settings.py",
+      "line_number": 162,
+      "module": "finance_bridge",
+      "layer": "config",
+      "exports": [],
+      "description": "Internal Docker-network URL of the finance microservice, default 'http://finance:8001'. Used by src/modules/finance_bridge/reachability.py:104 to probe /api/v1/system/health for the Wave 0 capability check, and re-read via os.getenv (same default) by core.finance.finance_ext_client, core.finance.company_resolver, sales.service.sales_order_service and sales.service.ar_invoice_service. Not exposed to clients and not set in any compose file — the default is what every deployment actually uses. A sibling variable FINANCE_INTERNAL_URL (default http://finance:8002, wrong port) is read by purchasing/services/approval_engine.py:32 and is undeclared everywhere else."
+    },
+    {
+      "node_id": "env_FINANCE_CAPABILITY_CACHE_TTL_S",
+      "node_type": "config",
+      "name": "FINANCE_CAPABILITY_CACHE_TTL_S",
+      "file_path": "src/config/settings.py",
+      "line_number": 166,
+      "module": "finance_bridge",
+      "layer": "config",
+      "exports": [],
+      "description": "TTL in seconds, default 60, for the cached finance-reachability probe (finance_bridge/reachability.py:48) and the per-tenant financeEnabled lookup (finance_bridge/tenant_flag.py:53). Raising it cuts DB and finance load; lowering it makes a Settings -> Tenant Modules toggle take effect sooner."
+    },
+    {
+      "node_id": "env_MYSQL_HOST",
+      "node_type": "config",
+      "name": "MYSQL_HOST",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 78,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL host for the finance service. Inside the finance container this is pinned to the literal 'mysql' service name (docker-compose.finance.yml:78). The MYSQL_HOST=localhost entry at .env.example line 126 is legacy from the pre-microservice layout and is consumed by nothing in the running stack (only services/finance/scripts/migrate_grir_reclassification.py reads it, for host-side runs)."
+    },
+    {
+      "node_id": "env_MYSQL_PORT",
+      "node_type": "config",
+      "name": "MYSQL_PORT",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 79,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL port as seen from inside the finance container, pinned to 3306 (docker-compose.finance.yml:79). The host-side mapping is FINANCE_MYSQL_PORT (3307 by default). .env.example line 127's MYSQL_PORT=3306 is legacy and unconsumed by the stack."
+    },
+    {
+      "node_id": "env_MYSQL_USER",
+      "node_type": "config",
+      "name": "MYSQL_USER",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 81,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL application user for the finance service, derived from ${FINANCE_MYSQL_USER:-finance_user} and injected into both the mysql container (line 34) and the finance container (line 81). .env.example line 128's MYSQL_USER=root is legacy and unconsumed."
+    },
+    {
+      "node_id": "env_MYSQL_PASSWORD",
+      "node_type": "config",
+      "name": "MYSQL_PASSWORD",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 82,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Password for MYSQL_USER, derived from ${FINANCE_MYSQL_PASSWORD} (dev-only :- fallback); set on the mysql container (line 35) and the finance container (line 82). .env.example line 129's placeholder is legacy and unconsumed. Secret: never log the value."
+    },
+    {
+      "node_id": "env_MYSQL_DATABASE",
+      "node_type": "config",
+      "name": "MYSQL_DATABASE",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 80,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Finance schema name, from ${FINANCE_MYSQL_DATABASE:-finance_db}; created by the mysql container (line 33) and connected to by the finance service (line 80)."
+    },
+    {
+      "node_id": "env_MYSQL_ROOT_PASSWORD",
+      "node_type": "config",
+      "name": "MYSQL_ROOT_PASSWORD",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 32,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Root password for the finance MySQL container, from ${FINANCE_MYSQL_ROOT_PASSWORD} (dev-only :- fallback). Also interpolated into the container healthcheck's mysqladmin ping (line 52). Secret: never log the value."
+    },
+    {
+      "node_id": "env_MYSQL_DB_NAME",
+      "node_type": "config",
+      "name": "MYSQL_DB_NAME",
+      "file_path": ".env.example",
+      "line_number": 130,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Declared in .env.example only and read by nothing. The finance stack uses MYSQL_DATABASE / FINANCE_MYSQL_DATABASE instead; this entry is a leftover from the abandoned MySQL-as-secondary-store design and should not be relied on."
+    },
+    {
+      "node_id": "env_MONGO_ROOT_USERNAME",
+      "node_type": "config",
+      "name": "MONGO_ROOT_USERNAME",
+      "file_path": "docker-compose.prod.yml",
+      "line_number": 32,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB root user created by the mongo image on first init, default 'admin'. Production only — docker-compose.prod.yml:32 maps it to MONGO_INITDB_ROOT_USERNAME alongside --auth (prod line 40). Absent from the dev compose, which runs Mongo unauthenticated."
+    },
+    {
+      "node_id": "env_MONGO_ROOT_PASSWORD",
+      "node_type": "config",
+      "name": "MONGO_ROOT_PASSWORD",
+      "file_path": "docker-compose.prod.yml",
+      "line_number": 33,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB root password, mapped to MONGO_INITDB_ROOT_PASSWORD at docker-compose.prod.yml:33 with NO :- fallback, so production refuses to start rather than seeding a guessable root account. Secret: never log the value."
+    },
+    {
+      "node_id": "env_MONGO_APP_USER",
+      "node_type": "config",
+      "name": "MONGO_APP_USER",
+      "file_path": "docker-compose.yml",
+      "line_number": 151,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Non-root MongoDB application user, default 'a64core_app'. Passed to the mongodb container (docker-compose.yml:151) for the mongo-init scripts, to the backup container as MONGO_USER (line 419), and woven into the production MONGODB_URL at docker-compose.prod.yml:14."
+    },
+    {
+      "node_id": "env_MONGO_APP_PASSWORD",
+      "node_type": "config",
+      "name": "MONGO_APP_PASSWORD",
+      "file_path": "docker-compose.yml",
+      "line_number": 152,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Password for MONGO_APP_USER. Dev compose supplies a placeholder :- fallback (docker-compose.yml:152, and again for the backup service at line 420); docker-compose.prod.yml:14 drops the fallback so production must supply it. Secret: never log the value."
+    },
+    {
+      "node_id": "env_REDIS_URL",
+      "node_type": "config",
+      "name": "REDIS_URL",
+      "file_path": "src/config/settings.py",
+      "line_number": null,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Redis connection string. Not a Settings field — read directly via os.getenv by src/core/cache/redis_cache.py:39 and twice in src/middleware/rate_limit.py (lines 41 and 407), each defaulting to 'redis://redis:6379' (no password). docker-compose.yml:16 supplies the authenticated form the authenticated form that folds ${REDIS_PASSWORD} into the URL, which is what makes rate limiting and caching actually reach the password-protected server; .env.example line 150 shows the /0 database variant. Contains a password — never log the raw value."
+    },
+    {
+      "node_id": "env_REDIS_PASSWORD",
+      "node_type": "config",
+      "name": "REDIS_PASSWORD",
+      "file_path": "docker-compose.yml",
+      "line_number": 194,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Password enforced by redis-server --requirepass (docker-compose.yml:197) and folded into REDIS_URL (line 16). The dev compose supplies a well-known committed fallback; docker-compose.prod.yml:55 drops it so production must set a real value. NOTE the dev healthcheck at docker-compose.yml:203 hardcodes the fallback password in its redis-cli -a argument instead of interpolating the variable, so overriding REDIS_PASSWORD without editing that line makes the container report unhealthy while serving fine. Secret: never log the value."
+    },
+    {
+      "node_id": "env_MODULE_REGISTRY_PATH",
+      "node_type": "config",
+      "name": "MODULE_REGISTRY_PATH",
+      "file_path": ".env.example",
+      "line_number": 154,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Declared at .env.example line 154 as 'config/modules.json'. DECLARED BUT NEVER READ — no consumer in src/; only the Modular-System implementation plan doc mentions it."
+    },
+    {
+      "node_id": "env_LICENSE_ENCRYPTION_KEY",
+      "node_type": "config",
+      "name": "LICENSE_ENCRYPTION_KEY",
+      "file_path": "docker-compose.yml",
+      "line_number": 64,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Key used by src/utils/encryption.py:47 to encrypt module licences; must be at least 32 characters. docker-compose.yml:64 hardcodes a literal committed dev key with no ${VAR:-} indirection, so the .env.example entry at line 155 has no effect on the containerised stack — every deployment shares the same dev key unless the compose line is edited. Secret in principle; treat the value as sensitive."
+    },
+    {
+      "node_id": "env_LICENSE_VALIDATION_MODE",
+      "node_type": "config",
+      "name": "LICENSE_VALIDATION_MODE",
+      "file_path": "docker-compose.yml",
+      "line_number": 63,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Licence check strictness read by src/utils/license_validator.py:70, whose own default is 'offline'. docker-compose.yml:63 hardcodes 'format' (format-only validation) with no ${VAR:-} indirection, overriding whatever .env.example line 167 says on every containerised deployment."
+    },
+    {
+      "node_id": "env_LICENSE_SERVER_URL",
+      "node_type": "config",
+      "name": "LICENSE_SERVER_URL",
+      "file_path": ".env.example",
+      "line_number": 168,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Optional online licence-validation endpoint, read by src/utils/license_validator.py. Present in .env.example only as a commented-out example (line 168), so it is unset unless an operator uncomments it."
+    },
+    {
+      "node_id": "env_LICENSE_SERVER_API_KEY",
+      "node_type": "config",
+      "name": "LICENSE_SERVER_API_KEY",
+      "file_path": ".env.example",
+      "line_number": 169,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Optional API key for LICENSE_SERVER_URL, read by src/utils/license_validator.py. Commented out at .env.example line 169. Secret: never log the value."
+    },
+    {
+      "node_id": "env_DOCKER_REGISTRY_URL",
+      "node_type": "config",
+      "name": "DOCKER_REGISTRY_URL",
+      "file_path": ".env.example",
+      "line_number": 156,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Declared at .env.example line 156. DECLARED BUT NEVER READ — src/services/module_manager.py validates registries through TRUSTED_REGISTRIES instead."
+    },
+    {
+      "node_id": "env_DOCKER_REGISTRY_USERNAME",
+      "node_type": "config",
+      "name": "DOCKER_REGISTRY_USERNAME",
+      "file_path": ".env.example",
+      "line_number": 157,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Declared blank at .env.example line 157. DECLARED BUT NEVER READ by src/; scripts/preflight.sh mentions it only when reporting what the box has set."
+    },
+    {
+      "node_id": "env_DOCKER_REGISTRY_PASSWORD",
+      "node_type": "config",
+      "name": "DOCKER_REGISTRY_PASSWORD",
+      "file_path": ".env.example",
+      "line_number": 158,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Declared blank at .env.example line 158. DECLARED BUT NEVER READ by src/. Secret by name — preflight.sh reports only whether it is set, never its value."
+    },
+    {
+      "node_id": "env_MAX_MODULES",
+      "node_type": "config",
+      "name": "MAX_MODULES",
+      "file_path": ".env.example",
+      "line_number": 159,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Platform-wide cap on installed modules, default 50, read at src/services/module_manager.py:117. Not plumbed through any compose file, so the .env value only applies if the operator injects it into the api container's environment."
+    },
+    {
+      "node_id": "env_MAX_MODULES_PER_USER",
+      "node_type": "config",
+      "name": "MAX_MODULES_PER_USER",
+      "file_path": ".env.example",
+      "line_number": 160,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Per-user module install cap, default 10, read by src/services/module_manager.py. Not present in any compose file."
+    },
+    {
+      "node_id": "env_MODULE_INSTALL_TIMEOUT",
+      "node_type": "config",
+      "name": "MODULE_INSTALL_TIMEOUT",
+      "file_path": ".env.example",
+      "line_number": 161,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Seconds before a module install is abandoned, default 300, read by src/services/module_manager.py. Not present in any compose file."
+    },
+    {
+      "node_id": "env_TRUSTED_REGISTRIES",
+      "node_type": "config",
+      "name": "TRUSTED_REGISTRIES",
+      "file_path": "docker-compose.yml",
+      "line_number": 65,
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Comma-separated allow-list of Docker registries a module image may come from — the actual supply-chain gate in src/services/module_manager.py:113 (its own default omits localhost). docker-compose.yml:65 hardcodes the list including 'localhost,localhost:5000' with no ${VAR:-} indirection, so .env.example line 164 does not reach the container."
+    },
+    {
+      "node_id": "env_ANTHROPIC_MODEL",
+      "node_type": "config",
+      "name": "ANTHROPIC_MODEL",
+      "file_path": "docker-compose.yml",
+      "line_number": 76,
+      "module": "ai_assistant",
+      "layer": "config",
+      "exports": [],
+      "description": "Set to ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514} at docker-compose.yml:76 and declared at .env.example line 174, but READ BY NOTHING: the assistant reads settings.CLAUDE_MODEL (src/config/settings.py:134, default 'claude-sonnet-4-6'). Dead wiring — changing it has no effect."
+    },
+    {
+      "node_id": "env_NGINX_CONF",
+      "node_type": "config",
+      "name": "NGINX_CONF",
+      "file_path": "docker-compose.yml",
+      "line_number": 230,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Selects which nginx config file is bind-mounted to /etc/nginx/nginx.conf. Defaults to ./nginx/nginx.dev.conf in docker-compose.yml:230 and ./nginx/nginx.prod.conf in docker-compose.prod.yml:92; .env.example line 196 documents overriding it for a third profile. Unrelated to NGINX_CONFIG_PATH, which is an in-container path read by src/services/module_manager.py:109."
+    },
+    {
+      "node_id": "env_UVICORN_WORKERS",
+      "node_type": "config",
+      "name": "UVICORN_WORKERS",
+      "file_path": "docker-compose.yml",
+      "line_number": 86,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Uvicorn worker count, consumed by the Dockerfile CMD (line 50, '--workers ${UVICORN_WORKERS:-1}'), not by Settings. docker-compose.yml:86 supplies 4; docker-compose.prod.yml:16 raises it to 9. Rule of thumb in .env.example line 200 is 2 * cores + 1. Note the api container has no --reload regardless, so any Python change still needs a container restart."
+    },
+    {
+      "node_id": "env_PYTHONPATH",
+      "node_type": "config",
+      "name": "PYTHONPATH",
+      "file_path": "docker-compose.yml",
+      "line_number": 66,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Set to '/app/src:/app' for the api service (docker-compose.yml:66) and the cron service (line 362) so that both 'src.'-rooted and top-level imports resolve, and so the cron sweeper can import OutboxWriter and the contracts payload builders without duplicating them."
+    },
+    {
+      "node_id": "env_GOOGLE_APPLICATION_CREDENTIALS",
+      "node_type": "config",
+      "name": "GOOGLE_APPLICATION_CREDENTIALS",
+      "file_path": "docker-compose.yml",
+      "line_number": 69,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Path to the Vertex AI service-account JSON inside the api container, hardcoded to '/app/.credentials/vertex-ai-service-account.json' (docker-compose.yml:69) and satisfied by the ./.credentials bind mount at line 103. Read by the Google auth library, not by application code. The file itself is a credential and is never committed."
+    },
+    {
+      "node_id": "env_MONGO_INITDB_DATABASE",
+      "node_type": "config",
+      "name": "MONGO_INITDB_DATABASE",
+      "file_path": "docker-compose.yml",
+      "line_number": 150,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Database the mongo image creates on first initialisation, from ${MONGODB_DB_NAME:-a64core_db}. Only takes effect on an empty data directory — ./data/mongodb is bind-mounted (line 162), so on any existing deployment this value is inert."
+    },
+    {
+      "node_id": "env_MONGO_INITDB_ROOT_USERNAME",
+      "node_type": "config",
+      "name": "MONGO_INITDB_ROOT_USERNAME",
+      "file_path": "docker-compose.prod.yml",
+      "line_number": 32,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Production-only. Seeds the Mongo root account from MONGO_ROOT_USERNAME on first init, paired with 'mongod --auth' at docker-compose.prod.yml:40. Absent from the dev compose."
+    },
+    {
+      "node_id": "env_MONGO_INITDB_ROOT_PASSWORD",
+      "node_type": "config",
+      "name": "MONGO_INITDB_ROOT_PASSWORD",
+      "file_path": "docker-compose.prod.yml",
+      "line_number": 33,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Production-only root password, from ${MONGO_ROOT_PASSWORD} with no fallback (docker-compose.prod.yml:33). Secret: never log the value."
+    },
+    {
+      "node_id": "env_REGISTRY_STORAGE_DELETE_ENABLED",
+      "node_type": "config",
+      "name": "REGISTRY_STORAGE_DELETE_ENABLED",
+      "file_path": "docker-compose.yml",
+      "line_number": 282,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Enables blob deletion in the local Docker registry container (docker-compose.yml:282), so module images can be garbage-collected rather than accumulating in the registry_data volume. Hardcoded true."
+    },
+    {
+      "node_id": "env_TZ",
+      "node_type": "config",
+      "name": "TZ",
+      "file_path": "docker-compose.yml",
+      "line_number": 349,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Container timezone, hardcoded to UTC for the cron service (docker-compose.yml:349) and the backup service (line 429) so scheduled jobs and retention windows are unambiguous across hosts."
+    },
+    {
+      "node_id": "env_API_HOST",
+      "node_type": "config",
+      "name": "API_HOST",
+      "file_path": "docker-compose.yml",
+      "line_number": 350,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "host:port the cron container uses to reach the API over the Docker network, hardcoded 'api:8000' (docker-compose.yml:350, repeated in docker-compose.prod.yml:122). The cron jobs authenticate with ADMIN_EMAIL / ADMIN_PASSWORD against this host."
+    },
+    {
+      "node_id": "env_MONGO_HOST",
+      "node_type": "config",
+      "name": "MONGO_HOST",
+      "file_path": "docker-compose.yml",
+      "line_number": 416,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Mongo hostname used by the backup container's mongodump (docker-compose.yml:416), hardcoded to the 'mongodb' service name."
+    },
+    {
+      "node_id": "env_MONGO_PORT",
+      "node_type": "config",
+      "name": "MONGO_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 417,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Mongo port for the backup container, hardcoded 27017 (docker-compose.yml:417) — the in-network port, not the host-mapped MONGODB_PORT."
+    },
+    {
+      "node_id": "env_MONGO_DB",
+      "node_type": "config",
+      "name": "MONGO_DB",
+      "file_path": "docker-compose.yml",
+      "line_number": 418,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Database the backup container dumps, from ${MONGODB_DB_NAME:-a64core_db} (docker-compose.yml:418)."
+    },
+    {
+      "node_id": "env_MONGO_USER",
+      "node_type": "config",
+      "name": "MONGO_USER",
+      "file_path": "docker-compose.yml",
+      "line_number": 419,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Mongo user the backup container authenticates as, from ${MONGO_APP_USER:-a64core_app} (docker-compose.yml:419)."
+    },
+    {
+      "node_id": "env_MONGO_PASSWORD",
+      "node_type": "config",
+      "name": "MONGO_PASSWORD",
+      "file_path": "docker-compose.yml",
+      "line_number": 420,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Password for MONGO_USER in the backup container, from ${MONGO_APP_PASSWORD} with a placeholder :- fallback (docker-compose.yml:420). Secret: never log the value."
+    },
+    {
+      "node_id": "env_MONGO_AUTH_DB",
+      "node_type": "config",
+      "name": "MONGO_AUTH_DB",
+      "file_path": "docker-compose.yml",
+      "line_number": 421,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "authSource database for the backup container's mongodump, hardcoded 'admin' (docker-compose.yml:421)."
+    },
+    {
+      "node_id": "env_BACKUP_DIR",
+      "node_type": "config",
+      "name": "BACKUP_DIR",
+      "file_path": "docker-compose.yml",
+      "line_number": 422,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "In-container destination for dumps, '/backups/mongodb' (docker-compose.yml:422), backed by the backup_data named volume mounted at /backups (line 431)."
+    },
+    {
+      "node_id": "env_LOG_FILE",
+      "node_type": "config",
+      "name": "LOG_FILE",
+      "file_path": "docker-compose.yml",
+      "line_number": 423,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Backup log path inside the container, '/var/log/backup/mongodb_backup.log' (docker-compose.yml:423), bind-mounted out to ./logs/backup (line 433)."
+    },
+    {
+      "node_id": "env_BACKUP_RETENTION_DAILY",
+      "node_type": "config",
+      "name": "BACKUP_RETENTION_DAILY",
+      "file_path": "docker-compose.yml",
+      "line_number": 424,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of daily mongodump archives kept by scripts/backup/mongodb_backup.sh, default 7 (docker-compose.yml:424; .env.example line 221)."
+    },
+    {
+      "node_id": "env_BACKUP_RETENTION_WEEKLY",
+      "node_type": "config",
+      "name": "BACKUP_RETENTION_WEEKLY",
+      "file_path": "docker-compose.yml",
+      "line_number": 425,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of weekly archives retained, default 4 (docker-compose.yml:425; .env.example line 222)."
+    },
+    {
+      "node_id": "env_BACKUP_RETENTION_MONTHLY",
+      "node_type": "config",
+      "name": "BACKUP_RETENTION_MONTHLY",
+      "file_path": "docker-compose.yml",
+      "line_number": 426,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of monthly archives retained, default 3 (docker-compose.yml:426; .env.example line 223)."
+    },
+    {
+      "node_id": "env_ENCRYPT_BACKUPS",
+      "node_type": "config",
+      "name": "ENCRYPT_BACKUPS",
+      "file_path": "docker-compose.yml",
+      "line_number": 427,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Toggles AES-256 at-rest encryption in scripts/backup/mongodb_backup.sh. Dev default false (docker-compose.yml:427); docker-compose.prod.yml:130 hardcodes true, which makes BACKUP_ENCRYPTION_KEY mandatory in production."
+    },
+    {
+      "node_id": "env_BACKUP_ENCRYPTION_KEY",
+      "node_type": "config",
+      "name": "BACKUP_ENCRYPTION_KEY",
+      "file_path": "docker-compose.yml",
+      "line_number": 428,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "32-byte AES-256 key for encrypted backups, consumed by scripts/backup/mongodb_backup.sh and mongodb_restore.sh. Dev compose allows it empty (docker-compose.yml:428); docker-compose.prod.yml:131 drops the fallback so production fails fast. Lose this key and every encrypted archive is unrecoverable. Secret: never log the value."
+    },
+    {
+      "node_id": "env_FINANCE_OUTBOX_ENABLED",
+      "node_type": "config",
+      "name": "FINANCE_OUTBOX_ENABLED",
+      "file_path": "docker-compose.yml",
+      "line_number": 88,
+      "module": "finance_bridge",
+      "layer": "config",
+      "exports": [],
+      "description": "Master switch for the transactional outbox bridge, read via os.getenv at src/modules/finance_bridge/feature_flag.py:25 (default 'false'). Must be set identically on the api service (docker-compose.yml:88) and the cron service (line 360) — the cron sweeper exits cleanly as a no-op when false, so a mismatch silently strands events in the outbox. Distinct from the per-tenant organizations.modules.financeEnabled flag, which gates OutboxWriter.publish() per organisation."
+    },
+    {
+      "node_id": "env_FINANCE_INGESTION_SECRET",
+      "node_type": "config",
+      "name": "FINANCE_INGESTION_SECRET",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 86,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Shared secret authenticating the outbox consumer to the finance service's ingest endpoint. Injected into both finance (docker-compose.finance.yml:86) and finance_consumer (line 123) from ${FINANCE_INGESTION_SECRET} with a committed dev-only :- fallback; the header comment tells operators to generate one with secrets.token_hex(32). Secret: never log the value."
+    },
+    {
+      "node_id": "env_FINANCE_URL",
+      "node_type": "config",
+      "name": "FINANCE_URL",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 122,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Base URL the outbox consumer posts events to, hardcoded 'http://finance:8001' (docker-compose.finance.yml:122). Distinct from FINANCE_SERVICE_URL (ops API -> finance health probe) and from FINANCE_INTERNAL_URL (purchasing approval engine, wrong port 8002)."
+    },
+    {
+      "node_id": "env_FINANCE_MYSQL_PORT",
+      "node_type": "config",
+      "name": "FINANCE_MYSQL_PORT",
+      "file_path": ".env.example",
+      "line_number": 237,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host-side port mapped to the finance MySQL container's 3306, default 3307 (docker-compose.finance.yml:37) — deliberately not 3306, so it does not collide with a MySQL already on the host."
+    },
+    {
+      "node_id": "env_FINANCE_MYSQL_DATABASE",
+      "node_type": "config",
+      "name": "FINANCE_MYSQL_DATABASE",
+      "file_path": ".env.example",
+      "line_number": 238,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Finance schema name, default 'finance_db'; feeds MYSQL_DATABASE on both the mysql container (docker-compose.finance.yml:33) and the finance service (line 80)."
+    },
+    {
+      "node_id": "env_FINANCE_MYSQL_ROOT_PASSWORD",
+      "node_type": "config",
+      "name": "FINANCE_MYSQL_ROOT_PASSWORD",
+      "file_path": ".env.example",
+      "line_number": 239,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Root password for the finance MySQL container, with a committed dev-only :- fallback; also interpolated into its healthcheck (docker-compose.finance.yml:52). Secret: never log the value."
+    },
+    {
+      "node_id": "env_FINANCE_MYSQL_USER",
+      "node_type": "config",
+      "name": "FINANCE_MYSQL_USER",
+      "file_path": ".env.example",
+      "line_number": 240,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Application user for the finance schema, default 'finance_user' (docker-compose.finance.yml:34, :81)."
+    },
+    {
+      "node_id": "env_FINANCE_MYSQL_PASSWORD",
+      "node_type": "config",
+      "name": "FINANCE_MYSQL_PASSWORD",
+      "file_path": ".env.example",
+      "line_number": 241,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Password for FINANCE_MYSQL_USER, supplied with a dev-only :- fallback (docker-compose.finance.yml:35, :82). Secret: never log the value."
+    },
+    {
+      "node_id": "env_CONSUMER_POLL_INTERVAL_SECONDS",
+      "node_type": "config",
+      "name": "CONSUMER_POLL_INTERVAL_SECONDS",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 124,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Seconds the outbox consumer sleeps between polls of the finance_outbox collection. NOTE the drift: .env.example line 244 documents 2, docker-compose.finance.yml:124 defaults to 5 — the compose default wins when the var is unset."
+    },
+    {
+      "node_id": "env_CONSUMER_BATCH_SIZE",
+      "node_type": "config",
+      "name": "CONSUMER_BATCH_SIZE",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 125,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Outbox events claimed per poll by the consumer, default 50 (docker-compose.finance.yml:125; .env.example line 245)."
+    },
+    {
+      "node_id": "env_CONSUMER_MAX_ATTEMPTS",
+      "node_type": "config",
+      "name": "CONSUMER_MAX_ATTEMPTS",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 126,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Delivery attempts before an outbox event is parked as failed, default 5 (docker-compose.finance.yml:126; .env.example line 246)."
+    },
+    {
+      "node_id": "env_CONSUMER_STALE_CLAIM_SECONDS",
+      "node_type": "config",
+      "name": "CONSUMER_STALE_CLAIM_SECONDS",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 127,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Seconds after which a claimed-but-undelivered outbox event is considered abandoned and re-claimable, default 300 (docker-compose.finance.yml:127; .env.example line 247). This is what lets a crashed consumer's in-flight events recover."
+    },
+    {
+      "node_id": "env_CLOUDFLARE_DOMAIN",
+      "node_type": "config",
+      "name": "CLOUDFLARE_DOMAIN",
+      "file_path": ".env.example",
+      "line_number": 68,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Apex domain the box's Cloudflare tunnel serves subdomains under; instance subdomains are created as '<instance-name>.<CLOUDFLARE_DOMAIN>'. Read only by instances/instance-manager.sh (create/destroy) and reported by scripts/preflight.sh — never by the API. Deliberately blank in .env.example: a hardcoded value here once named one specific deployment's real tunnel, and every other deployment running the same script inherited it."
+    },
+    {
+      "node_id": "env_CLOUDFLARED_TUNNEL_NAME",
+      "node_type": "config",
+      "name": "CLOUDFLARED_TUNNEL_NAME",
+      "file_path": ".env.example",
+      "line_number": 72,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Name passed to `cloudflared tunnel run <name>` for THIS box's tunnel. Blank by default on purpose — attaching a second connector to a tunnel it does not own gets Cloudflare-HA-balanced against the owner, so hostnames only one connector has an ingress rule for intermittently 404. Guarded by tests/unit/test_deployment_identity_guard.py."
+    },
+    {
+      "node_id": "env_CLOUDFLARED_TUNNEL_ID",
+      "node_type": "config",
+      "name": "CLOUDFLARED_TUNNEL_ID",
+      "file_path": ".env.example",
+      "line_number": 76,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "UUID of this box's tunnel, used for informational DNS-record guidance when cloudflared is not on PATH. Blank by default; consumed by instances/instance-manager.sh and reported by scripts/preflight.sh."
+    },
+    {
+      "node_id": "env_CLOUDFLARED_SERVICE_USER",
+      "node_type": "config",
+      "name": "CLOUDFLARED_SERVICE_USER",
+      "file_path": ".env.example",
+      "line_number": 80,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Linux user that runs the tunnel's systemd unit; fills the User= placeholder in instances/_template/cloudflared.service. Blank by default."
+    },
+    {
+      "node_id": "env_CLOUDFLARED_SERVICE_HOME",
+      "node_type": "config",
+      "name": "CLOUDFLARED_SERVICE_HOME",
+      "file_path": ".env.example",
+      "line_number": 81,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "$HOME of CLOUDFLARED_SERVICE_USER; fills the HOME= placeholder in instances/_template/cloudflared.service so cloudflared finds its credentials file. Blank by default."
+    },
+    {
+      "node_id": "env_API_PORT",
+      "node_type": "config",
+      "name": "API_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 10,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port published for the api service, default 8000 (docker-compose.yml:10). Override only when running multiple instances on one box; the in-container port is always 8000."
+    },
+    {
+      "node_id": "env_USER_PORTAL_PORT",
+      "node_type": "config",
+      "name": "USER_PORTAL_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 309,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for the Vite dev server, default 5173 (docker-compose.yml:309)."
+    },
+    {
+      "node_id": "env_USER_PORTAL_PROD_PORT",
+      "node_type": "config",
+      "name": "USER_PORTAL_PROD_PORT",
+      "file_path": "docker-compose.prod.yml",
+      "line_number": 71,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for the production (static nginx) user-portal build, default 8081 (docker-compose.prod.yml:71); the container listens on 80 there, not 5173."
+    },
+    {
+      "node_id": "env_MONGODB_PORT",
+      "node_type": "config",
+      "name": "MONGODB_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 148,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for MongoDB, default 27017 (docker-compose.yml:148). docker-compose.prod.yml:29 removes the mapping entirely with 'ports: !override []' so Mongo is unreachable from outside the Docker network in production."
+    },
+    {
+      "node_id": "env_REDIS_PORT",
+      "node_type": "config",
+      "name": "REDIS_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 192,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for Redis, default 6379 (docker-compose.yml:192); likewise removed in production by 'ports: !override []' at docker-compose.prod.yml:53."
+    },
+    {
+      "node_id": "env_NGINX_HTTP_PORT",
+      "node_type": "config",
+      "name": "NGINX_HTTP_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 227,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port mapped to nginx :80, default 80 (docker-compose.yml:227)."
+    },
+    {
+      "node_id": "env_NGINX_HTTPS_PORT",
+      "node_type": "config",
+      "name": "NGINX_HTTPS_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 228,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port mapped to nginx :443, default 443 (docker-compose.yml:228). Replaced by a localhost-only :8443 binding when the sslh overlay is layered on."
+    },
+    {
+      "node_id": "env_ADMINER_PORT",
+      "node_type": "config",
+      "name": "ADMINER_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 263,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for the Adminer DB UI, default 8080 (docker-compose.yml:263). The service is disabled in production via the 'donotstart' profile."
+    },
+    {
+      "node_id": "env_REGISTRY_PORT",
+      "node_type": "config",
+      "name": "REGISTRY_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 280,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for the local Docker registry, default 5050 mapped to the container's 5000 (docker-compose.yml:280). docker-compose.prod.yml:115 rebinds it to 127.0.0.1 only and its own default there is 5000, not 5050 — the two files disagree."
+    },
+    {
+      "node_id": "env_IOT_SIM_PORT",
+      "node_type": "config",
+      "name": "IOT_SIM_PORT",
+      "file_path": "docker-compose.yml",
+      "line_number": 394,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for the greenhouse IoT simulator, default 8090 (docker-compose.yml:394)."
+    },
+    {
+      "node_id": "env_FINANCE_PORT",
+      "node_type": "config",
+      "name": "FINANCE_PORT",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 74,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Host port for the finance FastAPI service, default 8001 (docker-compose.finance.yml:74)."
+    },
+    {
+      "node_id": "env_WEATHERBIT_API_KEY",
+      "node_type": "config",
+      "name": "WEATHERBIT_API_KEY",
+      "file_path": "docker-compose.yml",
+      "line_number": 78,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "WeatherBit API key for agricultural weather data. Read through src/modules/farm_manager/config/settings.py:56 (os.getenv, default ''), consumed by farm_manager.service.WeatherAPIClient. Supplied as ${WEATHERBIT_API_KEY:-} at docker-compose.yml:78 and declared blank at .env.example line 210 (free key at weatherbit.io). Secret: never log the value."
+    },
+    {
+      "node_id": "env_WEATHERBIT_ENABLED",
+      "node_type": "config",
+      "name": "WEATHERBIT_ENABLED",
+      "file_path": "docker-compose.yml",
+      "line_number": 79,
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Enable/disable the WeatherBit integration. Read at src/modules/farm_manager/config/settings.py:58 with default 'true'; docker-compose.yml:79 hardcodes true with no ${VAR:-} indirection and it has no .env.example entry, so the integration is on for every containerised deployment whether or not WEATHERBIT_API_KEY is set."
+    },
+    {
+      "node_id": "env_NODE_ENV",
+      "node_type": "config",
+      "name": "NODE_ENV",
+      "file_path": "docker-compose.yml",
+      "line_number": 311,
+      "module": "frontend",
+      "layer": "config",
+      "exports": [],
+      "description": "Node.js environment for the user-portal frontend. Hardcoded 'development' at docker-compose.yml:311 and overridden to 'production' at docker-compose.prod.yml:73, which pairs with the compose build target switching from the dev (Vite) stage to the static-nginx production stage."
+    },
+    {
+      "node_id": "env_VITE_API_URL",
+      "node_type": "config",
+      "name": "VITE_API_URL",
+      "file_path": "docker-compose.yml",
+      "line_number": 312,
+      "module": "frontend",
+      "layer": "config",
+      "exports": [],
+      "description": "Vite build-time and runtime API base URL for the frontend, default '/api' so requests go through the nginx proxy. Passed TWICE on purpose — as a build arg at docker-compose.yml:307 (Vite inlines import.meta.env at build time) and as a runtime env var at line 312. Setting only one of the two produces a bundle and a container that disagree. Declared empty at .env.example line 204."
+    },
+    {
+      "node_id": "env_VITE_API_TARGET",
+      "node_type": "config",
+      "name": "VITE_API_TARGET",
+      "file_path": "docker-compose.yml",
+      "line_number": 313,
+      "module": "frontend",
+      "layer": "config",
+      "exports": [],
+      "description": "Proxy target the Vite dev server forwards /api to, hardcoded 'http://api:8000' (docker-compose.yml:313) — the Docker-network service name, so it only resolves inside the compose network. Dev-mode only; the production build serves static files through nginx and never runs the Vite proxy."
+    },
+    {
+      "node_id": "compose_api",
+      "node_type": "config",
+      "name": "api (FastAPI)",
+      "file_path": "docker-compose.yml",
+      "line_number": 5,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "ENVIRONMENT",
+        "DEBUG",
+        "MONGODB_URL",
+        "MONGODB_DB_NAME",
+        "REDIS_URL",
+        "PUBLIC_BASE_URL",
+        "FRONTEND_URL",
+        "CF_ACCESS_*",
+        "EMAIL_PROVIDER",
+        "LICENSE_VALIDATION_MODE",
+        "LICENSE_ENCRYPTION_KEY",
+        "TRUSTED_REGISTRIES",
+        "PYTHONPATH",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "VERTEX_AI_*",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_MODEL",
+        "WEATHERBIT_*",
+        "ELEVENLABS_API_KEY",
+        "ADMIN_EMAIL",
+        "ADMIN_PASSWORD",
+        "UVICORN_WORKERS",
+        "FINANCE_OUTBOX_ENABLED"
+      ],
+      "description": "Main FastAPI application, built from the repo-root Dockerfile and published on ${API_PORT:-8000}. Runs as user 0:0 so it can reach the mounted /var/run/docker.sock for module management. src/, contracts/, public/, modules/, config/, logs/, .credentials/ and the attachment + sensehub data dirs are bind-mounted, and scripts/ is mounted read-only specifically so `docker compose exec api python scripts/migrations/...` works (the Dockerfile only COPYs src/ and public/). There is no --reload, so every Python change needs a container restart. Healthcheck uses python urllib against 127.0.0.1:8000/api/health — not curl, which is absent from the image, and not 'localhost', which resolves to ::1 while uvicorn binds IPv4 only. depends_on mongodb and redis with condition: service_healthy."
+    },
+    {
+      "node_id": "compose_mongodb",
+      "node_type": "config",
+      "name": "mongodb (MongoDB 7.0)",
+      "file_path": "docker-compose.yml",
+      "line_number": 145,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "MONGO_INITDB_DATABASE",
+        "MONGO_APP_USER",
+        "MONGO_APP_PASSWORD"
+      ],
+      "description": "MongoDB 7.0, started as a single-node replica set ('--replSet rs0 --bind_ip_all') because the finance-bridge transactional outbox needs multi-document transactions; rs.initiate must be run once by hand. wiredTiger cache pinned to 1.5GB. Data lives in the ./data/mongodb BIND MOUNT (migrated from the mongodb_data named volume on 2026-05-19 so it survives a compose project rename — the old volume is still declared for rollback). Host port ${MONGODB_PORT:-27017} is removed entirely in production. Healthcheck pipes a ping through mongosh, which exists only inside this container — never on the host."
+    },
+    {
+      "node_id": "compose_redis",
+      "node_type": "config",
+      "name": "redis (Redis 7)",
+      "file_path": "docker-compose.yml",
+      "line_number": 189,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "REDIS_PASSWORD"
+      ],
+      "description": "Redis 7 alpine backing the cache, rate limiter and sessions. Started with --requirepass ${REDIS_PASSWORD}, maxmemory 256mb and allkeys-lru eviction (1gb + appendonly in production). Its healthcheck hardcodes the fallback password in its redis-cli -a argument rather than interpolating the variable, so changing REDIS_PASSWORD without editing that line makes the container report unhealthy while working normally. Host port removed in production."
+    },
+    {
+      "node_id": "compose_nginx",
+      "node_type": "config",
+      "name": "nginx (reverse proxy)",
+      "file_path": "docker-compose.yml",
+      "line_number": 224,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "NGINX_CONF",
+        "NGINX_HTTP_PORT",
+        "NGINX_HTTPS_PORT"
+      ],
+      "description": "nginx 1.25-alpine terminating ${NGINX_HTTP_PORT:-80} and ${NGINX_HTTPS_PORT:-443} in front of the api and user-portal. The config file is chosen by ${NGINX_CONF:-./nginx/nginx.dev.conf}; docker-compose.prod.yml swaps in nginx.prod.conf and mounts /etc/letsencrypt read-only. ./nginx/conf.d is bind-mounted so module proxy configs written by module_manager appear without a rebuild. DEPLOYMENT-SPECIFIC HARDCODING CONFIRMED: the mounted configs name a decommissioned domain — 'server_name a64core.com www.a64core.com' at nginx/nginx.prod.conf:80/98/114 and nginx/nginx.dev.conf:79, with matching /etc/letsencrypt/live/a64core.com certificate paths in nginx.prod.sslh.conf. Nothing parameterises the hostname."
+    },
+    {
+      "node_id": "compose_adminer",
+      "node_type": "config",
+      "name": "adminer (DB UI)",
+      "file_path": "docker-compose.yml",
+      "line_number": 260,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Adminer database UI on ${ADMINER_PORT:-8080}, depends_on mongodb. Disabled in production by docker-compose.prod.yml:109 assigning it the 'donotstart' profile rather than deleting it."
+    },
+    {
+      "node_id": "compose_registry",
+      "node_type": "config",
+      "name": "registry (local Docker registry)",
+      "file_path": "docker-compose.yml",
+      "line_number": 277,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "REGISTRY_STORAGE_DELETE_ENABLED"
+      ],
+      "description": "registry:2 holding module images, published on ${REGISTRY_PORT:-5050} -> 5000 and backed by the registry_data volume; blob deletion is enabled. In production docker-compose.prod.yml:114 rebinds it to 127.0.0.1 only — note that override's own default port is 5000, disagreeing with the base file's 5050. 'localhost:5000' is in the api service's TRUSTED_REGISTRIES list so module images can be pulled from here."
+    },
+    {
+      "node_id": "compose_user_portal",
+      "node_type": "config",
+      "name": "user-portal (React/Vite)",
+      "file_path": "docker-compose.yml",
+      "line_number": 301,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "NODE_ENV",
+        "VITE_API_URL",
+        "VITE_API_TARGET"
+      ],
+      "description": "React 18 + Vite frontend built from frontend/user-portal/Dockerfile, dev stage, on ${USER_PORTAL_PORT:-5173}. VITE_API_URL is passed twice — as a build arg (line 307) and as a runtime env var (line 312) — because Vite inlines it at build time. Source dirs are bind-mounted for hot reload while node_modules paths are shadowed by anonymous volumes so the container's own installs win. The production overlay switches to the 'production' build target, drops all volumes, publishes ${USER_PORTAL_PROD_PORT:-8081} -> 80 and replaces the healthcheck, because the prod stage serves static files through nginx and never runs Vite."
+    },
+    {
+      "node_id": "compose_cron",
+      "node_type": "config",
+      "name": "cron (scheduled tasks)",
+      "file_path": "docker-compose.yml",
+      "line_number": 344,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "TZ",
+        "API_HOST",
+        "ADMIN_EMAIL",
+        "ADMIN_PASSWORD",
+        "MONGODB_URL",
+        "MONGODB_DB_NAME",
+        "FINANCE_OUTBOX_ENABLED",
+        "PYTHONPATH"
+      ],
+      "description": "Alpine cron container built from ./cron. Logs into the API as ADMIN_EMAIL/ADMIN_PASSWORD over API_HOST, and additionally connects straight to MongoDB so the finance outbox reconciler sweeper can run without going through HTTP. Mounts ./src and ./contracts so that sweeper can import OutboxWriter and the payload builders rather than duplicating them. FINANCE_OUTBOX_ENABLED must match the api service or events are stranded; when false the sweeper is a clean no-op."
+    },
+    {
+      "node_id": "compose_iot_simulator",
+      "node_type": "config",
+      "name": "iot-simulator",
+      "file_path": "docker-compose.yml",
+      "line_number": 389,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Greenhouse sensor/relay simulator built from ./services/iot-simulator, published on ${IOT_SIM_PORT:-8090}. Test scaffolding for the farm_manager sensor integrations; carries no environment block and no persistent state."
+    },
+    {
+      "node_id": "compose_backup",
+      "node_type": "config",
+      "name": "backup (mongodump + retention)",
+      "file_path": "docker-compose.yml",
+      "line_number": 411,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "MONGO_HOST",
+        "MONGO_PORT",
+        "MONGO_DB",
+        "MONGO_USER",
+        "MONGO_PASSWORD",
+        "MONGO_AUTH_DB",
+        "BACKUP_DIR",
+        "LOG_FILE",
+        "BACKUP_RETENTION_DAILY",
+        "BACKUP_RETENTION_WEEKLY",
+        "BACKUP_RETENTION_MONTHLY",
+        "ENCRYPT_BACKUPS",
+        "BACKUP_ENCRYPTION_KEY",
+        "TZ"
+      ],
+      "description": "Automated MongoDB backup container built from docker/backup/Dockerfile, gated behind the 'backup' compose profile so it does NOT start with a plain `docker compose up`. Runs scripts/backup/*.sh (bind-mounted read-only) against the mongodb service, writing to the backup_data volume with daily/weekly/monthly retention. Production turns ENCRYPT_BACKUPS on and requires BACKUP_ENCRYPTION_KEY with no fallback."
+    },
+    {
+      "node_id": "compose_mysql",
+      "node_type": "config",
+      "name": "mysql (finance store)",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 28,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "MYSQL_ROOT_PASSWORD",
+        "MYSQL_DATABASE",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD"
+      ],
+      "description": "MySQL 8.0 backing the statutory finance microservice, container_name a64-mysql, published on ${FINANCE_MYSQL_PORT:-3307} -> 3306 so it cannot collide with a host MySQL. Behind the 'finance' profile, so it starts only with `-f docker-compose.finance.yml --profile finance`. Its healthcheck interpolates the root password into a mysqladmin ping."
+    },
+    {
+      "node_id": "compose_finance",
+      "node_type": "config",
+      "name": "finance (FastAPI, port 8001)",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 68,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "ENVIRONMENT",
+        "DEBUG",
+        "MYSQL_HOST",
+        "MYSQL_PORT",
+        "MYSQL_DATABASE",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
+        "SECRET_KEY",
+        "FINANCE_INGESTION_SECRET",
+        "LOG_LEVEL"
+      ],
+      "description": "The statutory finance microservice (services/finance/), container_name a64-finance, on ${FINANCE_PORT:-8001}, behind the 'finance' profile. Must receive the SAME SECRET_KEY as the ops api or every JWT it is handed is rejected. Alembic migrations are run once after first start. Deliberately decoupled from the ops backend: scripts/ci/check_finance_imports.sh blocks `from services.finance` imports inside src/. Its healthcheck does use curl, which exists in that image."
+    },
+    {
+      "node_id": "compose_finance_consumer",
+      "node_type": "config",
+      "name": "finance_consumer (outbox worker)",
+      "file_path": "docker-compose.finance.yml",
+      "line_number": 111,
+      "module": "infra",
+      "layer": "config",
+      "exports": [
+        "MONGODB_URL",
+        "MONGODB_DB_NAME",
+        "FINANCE_URL",
+        "FINANCE_INGESTION_SECRET",
+        "CONSUMER_POLL_INTERVAL_SECONDS",
+        "CONSUMER_BATCH_SIZE",
+        "CONSUMER_MAX_ATTEMPTS",
+        "CONSUMER_STALE_CLAIM_SECONDS",
+        "LOG_LEVEL"
+      ],
+      "description": "Background worker (services/finance_consumer/) that polls the MongoDB finance_outbox collection and delivers events to the finance ingest endpoint; no exposed port, 'finance' profile, depends on both finance and mongodb being healthy. Pins MONGODB_URL to 'mongodb://mongodb:27017/?replicaSet=rs0' rather than inheriting the generic .env value, whose credentials or database name may belong to a different instance. Tuned by the four CONSUMER_* vars."
+    },
+    {
+      "node_id": "compose_overlay_prod",
+      "node_type": "config",
+      "name": "docker-compose.prod.yml",
+      "file_path": "docker-compose.prod.yml",
+      "line_number": 1,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Production overlay layered as `-f docker-compose.yml -f docker-compose.prod.yml`. Flips ENVIRONMENT/DEBUG, requires SECRET_KEY, MONGO_ROOT_PASSWORD, MONGO_APP_PASSWORD, ADMIN_PASSWORD and BACKUP_ENCRYPTION_KEY with no :- fallbacks, enables mongod --auth plus the mongo-init scripts, removes the mongodb and redis host port mappings with 'ports: !override []', binds the registry to 127.0.0.1, disables adminer via the 'donotstart' profile, switches user-portal to the static production build, mounts /etc/letsencrypt into nginx and raises UVICORN_WORKERS to 9."
+    },
+    {
+      "node_id": "compose_overlay_sslh",
+      "node_type": "config",
+      "name": "docker-compose.sslh.yml",
+      "file_path": "docker-compose.sslh.yml",
+      "line_number": 1,
+      "module": "infra",
+      "layer": "config",
+      "exports": [],
+      "description": "Third overlay for boxes multiplexing SSH and HTTPS on 443 through sslh. Replaces the nginx ports with 80:80 plus a localhost-only 127.0.0.1:8443, and mounts nginx/nginx.prod.sslh.conf instead of nginx.prod.conf. Layered after the prod overlay."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "compose_api",
+      "target_id": "env_ENVIRONMENT",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_DEBUG",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_MONGODB_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_MONGODB_DB_NAME",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_REDIS_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_EMAIL_PROVIDER",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_LICENSE_VALIDATION_MODE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_LICENSE_ENCRYPTION_KEY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_TRUSTED_REGISTRIES",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_PYTHONPATH",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_GOOGLE_CLOUD_PROJECT",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_GOOGLE_APPLICATION_CREDENTIALS",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_VERTEX_AI_LOCATION",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_VERTEX_AI_MODEL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_VERTEX_AI_MAX_OUTPUT_TOKENS",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_VERTEX_AI_TEMPERATURE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_ANTHROPIC_API_KEY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_ANTHROPIC_MODEL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_WEATHERBIT_API_KEY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_WEATHERBIT_ENABLED",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_ELEVENLABS_API_KEY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_ADMIN_EMAIL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_ADMIN_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_UVICORN_WORKERS",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_FINANCE_OUTBOX_ENABLED",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block (docker-compose.yml lines 11-88)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_PUBLIC_BASE_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_FRONTEND_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_CF_ACCESS_ENABLED",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_CF_ACCESS_TEAM_DOMAIN",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_CF_ACCESS_AUD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_CF_ACCESS_EXCLUSIVE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_CF_ACCESS_JIT_PROVISION",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "env_CF_ACCESS_DEFAULT_ROLE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "src/config/settings.py",
+      "context": "api service environment block — deployment-identity / Cloudflare Access keys; the CF_ACCESS_* entries are bare names (no '='), so compose omits them unless actually defined and the env layer of deployment_settings_service can engage without pinning the key read-only."
+    },
+    {
+      "source_id": "compose_mongodb",
+      "target_id": "env_MONGO_INITDB_DATABASE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "mongodb service environment block (docker-compose.yml lines 149-152)"
+    },
+    {
+      "source_id": "compose_mongodb",
+      "target_id": "env_MONGO_APP_USER",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "mongodb service environment block (docker-compose.yml lines 149-152)"
+    },
+    {
+      "source_id": "compose_mongodb",
+      "target_id": "env_MONGO_APP_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "mongodb service environment block (docker-compose.yml lines 149-152)"
+    },
+    {
+      "source_id": "compose_redis",
+      "target_id": "env_REDIS_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "redis service environment block, docker-compose.yml:194; also interpolated into the --requirepass command at line 197"
+    },
+    {
+      "source_id": "compose_registry",
+      "target_id": "env_REGISTRY_STORAGE_DELETE_ENABLED",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "registry service environment block, docker-compose.yml:282"
+    },
+    {
+      "source_id": "compose_user_portal",
+      "target_id": "env_NODE_ENV",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "user-portal service environment block (docker-compose.yml lines 310-313); VITE_API_URL is additionally a build arg at line 307"
+    },
+    {
+      "source_id": "compose_user_portal",
+      "target_id": "env_VITE_API_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "user-portal service environment block (docker-compose.yml lines 310-313); VITE_API_URL is additionally a build arg at line 307"
+    },
+    {
+      "source_id": "compose_user_portal",
+      "target_id": "env_VITE_API_TARGET",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "user-portal service environment block (docker-compose.yml lines 310-313); VITE_API_URL is additionally a build arg at line 307"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_TZ",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_API_HOST",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_ADMIN_EMAIL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_ADMIN_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_MONGODB_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_MONGODB_DB_NAME",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_FINANCE_OUTBOX_ENABLED",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "env_PYTHONPATH",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "cron service environment block (docker-compose.yml lines 348-362)"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_MONGO_HOST",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_MONGO_PORT",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_MONGO_DB",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_MONGO_USER",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_MONGO_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_MONGO_AUTH_DB",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_BACKUP_DIR",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_LOG_FILE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_BACKUP_RETENTION_DAILY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_BACKUP_RETENTION_WEEKLY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_BACKUP_RETENTION_MONTHLY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_ENCRYPT_BACKUPS",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_BACKUP_ENCRYPTION_KEY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "env_TZ",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "backup service environment block (docker-compose.yml lines 415-429); the service is behind the 'backup' profile"
+    },
+    {
+      "source_id": "compose_mysql",
+      "target_id": "env_MYSQL_ROOT_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "mysql service environment block (docker-compose.finance.yml lines 31-35), values derived from FINANCE_MYSQL_*"
+    },
+    {
+      "source_id": "compose_mysql",
+      "target_id": "env_MYSQL_DATABASE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "mysql service environment block (docker-compose.finance.yml lines 31-35), values derived from FINANCE_MYSQL_*"
+    },
+    {
+      "source_id": "compose_mysql",
+      "target_id": "env_MYSQL_USER",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "mysql service environment block (docker-compose.finance.yml lines 31-35), values derived from FINANCE_MYSQL_*"
+    },
+    {
+      "source_id": "compose_mysql",
+      "target_id": "env_MYSQL_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "mysql service environment block (docker-compose.finance.yml lines 31-35), values derived from FINANCE_MYSQL_*"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_ENVIRONMENT",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_DEBUG",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_MYSQL_HOST",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_MYSQL_PORT",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_MYSQL_DATABASE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_MYSQL_USER",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_MYSQL_PASSWORD",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_SECRET_KEY",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_FINANCE_INGESTION_SECRET",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "env_LOG_LEVEL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance service environment block (docker-compose.finance.yml lines 75-87)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_MONGODB_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_MONGODB_DB_NAME",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_FINANCE_URL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_FINANCE_INGESTION_SECRET",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_CONSUMER_POLL_INTERVAL_SECONDS",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_CONSUMER_BATCH_SIZE",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_CONSUMER_MAX_ATTEMPTS",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_CONSUMER_STALE_CLAIM_SECONDS",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "env_LOG_LEVEL",
+      "edge_type": "exports",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "finance_consumer environment block (docker-compose.finance.yml lines 116-128)"
+    },
+    {
+      "source_id": "compose_nginx",
+      "target_id": "env_NGINX_CONF",
+      "edge_type": "exports",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "nginx volume mount ${NGINX_CONF:-./nginx/nginx.dev.conf}:/etc/nginx/nginx.conf:ro (docker-compose.yml:230)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "compose_mongodb",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on with condition: service_healthy (docker-compose.yml:110)"
+    },
+    {
+      "source_id": "compose_api",
+      "target_id": "compose_redis",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on with condition: service_healthy (docker-compose.yml:112)"
+    },
+    {
+      "source_id": "compose_nginx",
+      "target_id": "compose_api",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on: api (docker-compose.yml:237)"
+    },
+    {
+      "source_id": "compose_adminer",
+      "target_id": "compose_mongodb",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on: mongodb (docker-compose.yml:274)"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "compose_api",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on: api (docker-compose.yml:373); the cron jobs authenticate over API_HOST"
+    },
+    {
+      "source_id": "compose_cron",
+      "target_id": "compose_mongodb",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on: mongodb (docker-compose.yml:374); the outbox sweeper connects to Mongo directly"
+    },
+    {
+      "source_id": "compose_backup",
+      "target_id": "compose_mongodb",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on with condition: service_healthy (docker-compose.yml:437)"
+    },
+    {
+      "source_id": "compose_finance",
+      "target_id": "compose_mysql",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "depends_on with condition: service_healthy (docker-compose.finance.yml:89)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "compose_finance",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.finance.yml",
+      "context": "depends_on with condition: service_healthy (docker-compose.finance.yml:130)"
+    },
+    {
+      "source_id": "compose_finance_consumer",
+      "target_id": "compose_mongodb",
+      "edge_type": "depends_on",
+      "source_file": "docker-compose.finance.yml",
+      "target_file": "docker-compose.yml",
+      "context": "depends_on with condition: service_healthy (docker-compose.finance.yml:132) — reads the finance_outbox collection"
+    },
+    {
+      "source_id": "compose_overlay_prod",
+      "target_id": "compose_api",
+      "edge_type": "uses",
+      "source_file": "docker-compose.prod.yml",
+      "target_file": "docker-compose.yml",
+      "context": "overrides the api service: ENVIRONMENT=production, DEBUG=False, required SECRET_KEY, authenticated MONGODB_URL, UVICORN_WORKERS=9"
+    },
+    {
+      "source_id": "compose_overlay_sslh",
+      "target_id": "compose_nginx",
+      "edge_type": "uses",
+      "source_file": "docker-compose.sslh.yml",
+      "target_file": "docker-compose.yml",
+      "context": "overrides only the nginx service: ports 80:80 + 127.0.0.1:8443, mounts nginx.prod.sslh.conf"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_ENVIRONMENT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:34 setup_logging(environment=...); :340 boot log; :348 prod/debug guard; :363 CORS localhost warning"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_DEBUG",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:99 leaks str(exc) when true; :341 boot log; :439 uvicorn reload"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_ALLOWED_ORIGINS",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:51 CORSMiddleware allow_origins; :364 production localhost-origin warning"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_SECRET_KEY",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:344 warns when the dev default is still in use"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_LOG_LEVEL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:34 setup_logging(log_level=settings.LOG_LEVEL, ...)"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_ADMIN_EMAIL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:171 admin_email = settings.ADMIN_EMAIL (first-boot super_admin seed)"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_ADMIN_PASSWORD",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:172 admin_password = settings.ADMIN_PASSWORD (first-boot super_admin seed)"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_HOST",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:437 — only on the __main__ path; the container CMD passes --host explicitly"
+    },
+    {
+      "source_id": "core.api.main",
+      "target_id": "env_PORT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/main.py:438 — only on the __main__ path; the container CMD passes --port explicitly"
+    },
+    {
+      "source_id": "core.infrastructure.logging_config",
+      "target_id": "env_LOG_LEVEL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "setup_logging() consumes it together with ENVIRONMENT to pick the JSON vs console formatter"
+    },
+    {
+      "source_id": "core.infrastructure.logging_config",
+      "target_id": "env_ENVIRONMENT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "selects structured JSON logging outside development"
+    },
+    {
+      "source_id": "core.middleware.rate_limit",
+      "target_id": "env_RATE_LIMIT_GUEST",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/middleware/rate_limit.py:52 UserRole.GUEST -> settings.RATE_LIMIT_GUEST"
+    },
+    {
+      "source_id": "core.middleware.rate_limit",
+      "target_id": "env_RATE_LIMIT_USER",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "role -> requests/minute table in src/middleware/rate_limit.py"
+    },
+    {
+      "source_id": "core.middleware.rate_limit",
+      "target_id": "env_RATE_LIMIT_MODERATOR",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "role -> requests/minute table in src/middleware/rate_limit.py"
+    },
+    {
+      "source_id": "core.middleware.rate_limit",
+      "target_id": "env_RATE_LIMIT_ADMIN",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "role -> requests/minute table in src/middleware/rate_limit.py"
+    },
+    {
+      "source_id": "core.middleware.rate_limit",
+      "target_id": "env_RATE_LIMIT_SUPER_ADMIN",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "role -> requests/minute table in src/middleware/rate_limit.py"
+    },
+    {
+      "source_id": "core.middleware.rate_limit",
+      "target_id": "env_REDIS_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/middleware/rate_limit.py:41 and :407 os.getenv('REDIS_URL', 'redis://redis:6379') — the in-memory fallback engages if this is wrong"
+    },
+    {
+      "source_id": "core.cache.redis_cache",
+      "target_id": "env_REDIS_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/core/cache/redis_cache.py:39 os.getenv('REDIS_URL', 'redis://redis:6379') for the ConnectionPool"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "env_MONGODB_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "primary Motor client connection string"
+    },
+    {
+      "source_id": "core.service.database",
+      "target_id": "env_MONGODB_DB_NAME",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "selects the database the core collections live in"
+    },
+    {
+      "source_id": "core.utils.email",
+      "target_id": "env_ENVIRONMENT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/utils/email.py:34 and :93 — development only logs the link instead of sending"
+    },
+    {
+      "source_id": "core.utils.email",
+      "target_id": "env_EMAIL_PROVIDER",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "the switch a real provider implementation should branch on; empty today, so nothing is sent"
+    },
+    {
+      "source_id": "core.utils.email",
+      "target_id": "env_FROM_EMAIL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/utils/email.py:58 — inside a commented-out provider call, so currently inert"
+    },
+    {
+      "source_id": "core.utils.encryption",
+      "target_id": "env_LICENSE_ENCRYPTION_KEY",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/utils/encryption.py:47 ENCRYPTION_KEY = os.getenv('LICENSE_ENCRYPTION_KEY', '')"
+    },
+    {
+      "source_id": "core.utils.license_validator",
+      "target_id": "env_LICENSE_VALIDATION_MODE",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/utils/license_validator.py:70, own default 'offline' but compose forces 'format'"
+    },
+    {
+      "source_id": "core.utils.license_validator",
+      "target_id": "env_LICENSE_SERVER_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "optional online-validation endpoint"
+    },
+    {
+      "source_id": "core.utils.license_validator",
+      "target_id": "env_LICENSE_SERVER_API_KEY",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "optional credential for the online validation endpoint"
+    },
+    {
+      "source_id": "core.service.module_manager",
+      "target_id": "env_TRUSTED_REGISTRIES",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/services/module_manager.py:113 — the registry allow-list enforced on module install"
+    },
+    {
+      "source_id": "core.service.module_manager",
+      "target_id": "env_MAX_MODULES",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/services/module_manager.py:117 int(os.getenv('MAX_MODULES', '50'))"
+    },
+    {
+      "source_id": "core.service.module_manager",
+      "target_id": "env_MAX_MODULES_PER_USER",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "per-user install cap read in src/services/module_manager.py"
+    },
+    {
+      "source_id": "core.service.module_manager",
+      "target_id": "env_MODULE_INSTALL_TIMEOUT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "install timeout in seconds read in src/services/module_manager.py"
+    },
+    {
+      "source_id": "ai_assistant.service.claude_service",
+      "target_id": "env_ANTHROPIC_API_KEY",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/modules/ai_assistant/services/claude_service.py:97"
+    },
+    {
+      "source_id": "ai_assistant.service.claude_service",
+      "target_id": "env_CLAUDE_MODEL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "claude_service.py:206 and :357 — note compose sets the unread ANTHROPIC_MODEL instead"
+    },
+    {
+      "source_id": "ai_assistant.service.claude_service",
+      "target_id": "env_AI_ASSISTANT_MAX_TOKENS",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "max_tokens on each Claude request"
+    },
+    {
+      "source_id": "ai_assistant.service.claude_service",
+      "target_id": "env_AI_ASSISTANT_MAX_TURNS",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "agentic tool-use loop bound"
+    },
+    {
+      "source_id": "ai_assistant.service.claude_service",
+      "target_id": "env_AI_ASSISTANT_HISTORY_LIMIT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "number of prior turns replayed into the request"
+    },
+    {
+      "source_id": "farm_manager.api.ai_hub",
+      "target_id": "env_GOOGLE_CLOUD_PROJECT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/modules/farm_manager/api/v1/ai_hub.py:217 vertexai.init(project=...)"
+    },
+    {
+      "source_id": "farm_manager.api.ai_hub",
+      "target_id": "env_VERTEX_AI_LOCATION",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "ai_hub.py:218 vertexai.init(location=...)"
+    },
+    {
+      "source_id": "farm_manager.api.ai_hub",
+      "target_id": "env_ELEVENLABS_API_KEY",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "ai_hub.py:331 gates the TTS route; :340 sends it as the xi-api-key header"
+    },
+    {
+      "source_id": "farm_manager.api.ai_hub",
+      "target_id": "env_ELEVENLABS_VOICE_ID",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "voice selection for the TTS route"
+    },
+    {
+      "source_id": "farm_manager.api.ai_hub",
+      "target_id": "env_ELEVENLABS_MODEL_ID",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "model selection for the TTS route"
+    },
+    {
+      "source_id": "farm_manager.service.WeatherAPIClient",
+      "target_id": "env_WEATHERBIT_API_KEY",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "WeatherBit key, read through farm_manager's own config/settings.py:56"
+    },
+    {
+      "source_id": "farm_manager.service.WeatherService",
+      "target_id": "env_WEATHERBIT_ENABLED",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "farm_manager/config/settings.py:58 — false disables the weather integration entirely"
+    },
+    {
+      "source_id": "finance_bridge.feature_flag",
+      "target_id": "env_FINANCE_OUTBOX_ENABLED",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/modules/finance_bridge/feature_flag.py:25 os.getenv('FINANCE_OUTBOX_ENABLED', 'false')"
+    },
+    {
+      "source_id": "finance_bridge.reachability",
+      "target_id": "env_FINANCE_SERVICE_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "src/modules/finance_bridge/reachability.py:104 probes {url}/api/v1/system/health"
+    },
+    {
+      "source_id": "finance_bridge.reachability",
+      "target_id": "env_FINANCE_CAPABILITY_CACHE_TTL_S",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "reachability.py:48 TTL for the cached probe result"
+    },
+    {
+      "source_id": "finance_bridge.tenant_flag",
+      "target_id": "env_FINANCE_CAPABILITY_CACHE_TTL_S",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "tenant_flag.py:53 TTL for the cached per-tenant financeEnabled lookup"
+    },
+    {
+      "source_id": "core.finance.finance_ext_client",
+      "target_id": "env_FINANCE_SERVICE_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "os.getenv('FINANCE_SERVICE_URL', 'http://finance:8001') at src/core/finance/finance_ext_client.py:44"
+    },
+    {
+      "source_id": "core.finance.company_resolver",
+      "target_id": "env_FINANCE_SERVICE_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "os.getenv('FINANCE_SERVICE_URL', 'http://finance:8001') at src/core/finance/company_resolver.py:51"
+    },
+    {
+      "source_id": "sales.service.sales_order_service",
+      "target_id": "env_FINANCE_SERVICE_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "os.getenv('FINANCE_SERVICE_URL', 'http://finance:8001') at src/modules/sales/services/sales_order_service.py:108"
+    },
+    {
+      "source_id": "sales.service.ar_invoice_service",
+      "target_id": "env_FINANCE_SERVICE_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "os.getenv('FINANCE_SERVICE_URL', 'http://finance:8001') at src/modules/sales/services/ar_invoice_service.py:118"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "env_PUBLIC_BASE_URL",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "_require_public_base_url (labels.py:414) rejects an empty or loopback value at print time rather than at boot"
+    },
+    {
+      "source_id": "core.config.settings",
+      "target_id": "env_SECRET_KEY",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "validate_production_settings refuses to boot on the dev default outside development (settings.py:185)"
+    },
+    {
+      "source_id": "core.config.settings",
+      "target_id": "env_DEBUG",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "validate_production_settings refuses to boot with DEBUG true outside development (settings.py:190)"
+    },
+    {
+      "source_id": "core.config.settings",
+      "target_id": "env_ENVIRONMENT",
+      "edge_type": "uses",
+      "source_file": "",
+      "target_file": "src/config/settings.py",
+      "context": "gate for both production validators (settings.py:184)"
+    }
+  ]
+}

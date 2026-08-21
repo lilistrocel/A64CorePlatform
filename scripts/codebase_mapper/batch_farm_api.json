@@ -1,0 +1,1465 @@
+{
+  "meta": {
+    "generated_at": "2026-08-21T00:00:00Z",
+    "generator": "codebase_mapper/batch_farm_api",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "node_id_convention_summary": "farm_manager is the legacy module: file-level api_endpoint nodes (farm_manager.api.<file>) for most routers, with per-endpoint nodes (farm_manager.api.blocks.<fn>, farm_manager.api.farms.<fn>, farm_manager.api.v1.tasks.<fn>) retained for blocks.py/farms.py/tasks.py because they already exist. Services are PascalCase class nodes (farm_manager.service.<Class>), models are per-file PascalCase nodes (farm_manager.model.<MainClass>), collections are collection_<snake>. No new granularity introduced.",
+    "task": "map_farm_api \u2014 src/modules/farm_manager/api/ (all v1 routers + the api_router mount table), including the Plant Library harvest-routing changes",
+    "scope": [
+      "src/modules/farm_manager/api/"
+    ]
+  },
+  "nodes": [
+    {
+      "node_id": "farm_manager.api.blocks.create_block",
+      "description": "Create a new block within a farm with crop, area, and row configuration.",
+      "exports": [
+        "create_block"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 31,
+      "module": "farm_manager",
+      "name": "POST /farms/{farm_id}/blocks",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.list_blocks",
+      "description": "List blocks for a farm with optional status/crop filtering.",
+      "exports": [
+        "list_blocks"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 58,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/blocks",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.get_block",
+      "description": "Get full block details including KPI, IoT, and status history.",
+      "exports": [
+        "get_block"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 110,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.update_block",
+      "description": "Update block fields (farm.manage permission). Validates the block belongs to the specified farm and that block name stays unique within the farm.",
+      "exports": [
+        "update_block"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 170,
+      "module": "farm_manager",
+      "name": "PATCH /farms/{farm_id}/blocks/{block_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.delete_block",
+      "description": "Delete a block with CASCADE deletion via CascadeDeletionService \u2014 archives and harvests are moved to deleted_* collections rather than hard-deleted. Requires farm.manage; accepts an optional deletion reason.",
+      "exports": [
+        "delete_block"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 202,
+      "module": "farm_manager",
+      "name": "DELETE /farms/{farm_id}/blocks/{block_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.get_block_kpi",
+      "description": "Comprehensive KPI dashboard for a block: current status/on-track flag, days since planting/until harvest, predicted-vs-actual yield efficiency, harvest summary, and active alert count.",
+      "exports": [
+        "get_block_kpi"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 248,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}/kpi",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.change_block_status",
+      "description": "Transition block between lifecycle states (e.g. planted -> growing -> harvesting).",
+      "exports": [
+        "change_block_status"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 284,
+      "module": "farm_manager",
+      "name": "PATCH /farms/{farm_id}/blocks/{block_id}/status",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.get_valid_status_transitions",
+      "description": "Dynamically computes valid next-states for a block from its current state and its plant's growth cycle (e.g. skips fruiting if fruitingDays=0) \u2014 powers UI action availability.",
+      "exports": [
+        "get_valid_status_transitions"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 348,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}/valid-transitions",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.get_block_analytics",
+      "description": "Get block-level analytics: yield trends, timeline, performance metrics.",
+      "exports": [
+        "get_block_analytics"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 389,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}/analytics",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.add_virtual_crop",
+      "description": "Add a virtual crop sub-block to a multi-crop parent block.",
+      "exports": [
+        "add_virtual_crop"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 490,
+      "module": "farm_manager",
+      "name": "POST /farms/{farm_id}/blocks/{block_id}/virtual-crops",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.get_block_children",
+      "description": "Lists active virtual child blocks of a physical block (multi-crop area allocation within one physical space); empty list for virtual or childless blocks.",
+      "exports": [
+        "get_block_children"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 551,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}/children",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.empty_virtual_block",
+      "description": "Empties and hard-deletes a virtual block via VirtualBlockService: archives the current cycle, transfers completed/in-progress tasks and harvest records to the parent (tagged with sourceBlockCode), deletes pending tasks, returns allocated area to the parent's budget, and updates parent status if needed. Requires farm.operate.",
+      "exports": [
+        "empty_virtual_block"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 589,
+      "module": "farm_manager",
+      "name": "POST /farms/{farm_id}/blocks/{block_id}/empty-virtual",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.preview_empty_virtual_block",
+      "description": "Dry-run preview of what empty_virtual_block would transfer/delete, without mutating anything.",
+      "exports": [
+        "preview_empty_virtual_block"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 659,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}/empty-virtual/preview",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.refresh_plant_data",
+      "description": "Re-snapshots the plant-library record onto the block (rewrites plantDataVersion/plantDataSnapshot) and recomputes waste-aware predicted yield, yield-efficiency percent, and expected harvest/status-change dates. Only allowed pre-harvest (planned/growing/fruiting states); 409 otherwise. Requires farm.operate.",
+      "exports": [
+        "refresh_plant_data"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 767,
+      "module": "farm_manager",
+      "name": "POST /farms/{farm_id}/blocks/{block_id}/refresh-plant-data",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.update_iot_controller",
+      "description": "Update IoT controller configuration (address, port, credentials) for a block.",
+      "exports": [
+        "update_iot_controller"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 928,
+      "module": "farm_manager",
+      "name": "PATCH /farms/{farm_id}/blocks/{block_id}/iot-controller",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.blocks.update_iot_controller_extra",
+      "description": "GET returns the block's IoT controller config (address/port/enabled/apiKey/relayLabels/lastConnected) or 404 if unconfigured. DELETE removes the controller config (farm.manage) without touching any other block data \u2014 a decommission/switch-to-manual operation.",
+      "exports": [
+        "get_iot_controller",
+        "delete_iot_controller"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "layer": "api",
+      "line_number": 998,
+      "module": "farm_manager",
+      "name": "GET+DELETE /farms/{farm_id}/blocks/{block_id}/iot-controller",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.create_farm",
+      "description": "Create a new farm with name, location, boundary, and farm type.",
+      "exports": [
+        "create_farm"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 29,
+      "module": "farm_manager",
+      "name": "POST /farms",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farms",
+      "description": "List all farms with optional pagination and filtering.",
+      "exports": [
+        "get_farms"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 57,
+      "module": "farm_manager",
+      "name": "GET /farms",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm",
+      "description": "Get details for a specific farm by ID.",
+      "exports": [
+        "get_farm"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 104,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.update_farm",
+      "description": "Partially update a farm's name, location, boundary, or metadata.",
+      "exports": [
+        "update_farm"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 134,
+      "module": "farm_manager",
+      "name": "PATCH /farms/{farm_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.delete_farm",
+      "description": "Delete farm with cascade deletion of blocks, harvests, alerts, archives.",
+      "exports": [
+        "delete_farm"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 163,
+      "module": "farm_manager",
+      "name": "DELETE /farms/{farm_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm_summary",
+      "description": "Get a summary of a farm including block counts and status distribution.",
+      "exports": [
+        "get_farm_summary"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 214,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/summary",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm_analytics",
+      "description": "Get farm-level analytics: yield metrics, state breakdown, block comparison.",
+      "exports": [
+        "get_farm_analytics"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 395,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/analytics",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_global_analytics",
+      "description": "Cross-farm analytics aggregation covering all farms.",
+      "exports": [
+        "get_global_analytics"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 452,
+      "module": "farm_manager",
+      "name": "GET /farms/analytics/global",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm_farming_years",
+      "description": "Get farming year configuration for a specific farm.",
+      "exports": [
+        "get_farm_farming_years"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "layer": "api",
+      "line_number": 518,
+      "module": "farm_manager",
+      "name": "GET /farms/{farm_id}/farming-years",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.router",
+      "description": "Operations Task Manager endpoints under /tasks. v1.11.0: list/detail endpoints now return FarmTaskWithDetails (block + farm + crop context).",
+      "exports": [
+        "router"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 28,
+      "module": "farm_manager",
+      "name": "tasks router",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.get_my_tasks",
+      "description": "Returns current user's tasks as List[FarmTaskWithDetails] (v1.11.0: enriched with blockCode/blockName/farmCode/farmName/targetCrop/targetCropName/actualPlantCount/expectedYieldKg).",
+      "exports": [
+        "get_my_tasks"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 31,
+      "module": "farm_manager",
+      "name": "GET /tasks/my-tasks",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.get_pending_task_count",
+      "description": "Returns count of pending tasks for current user (menu badge).",
+      "exports": [
+        "get_pending_task_count"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 62,
+      "module": "farm_manager",
+      "name": "GET /tasks/pending-count",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.list_farm_tasks",
+      "description": "Paginated tasks for a farm. v1.11.0: returns PaginatedResponse[FarmTaskWithDetails]. Supports farmingYear filter.",
+      "exports": [
+        "list_farm_tasks"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 82,
+      "module": "farm_manager",
+      "name": "GET /tasks/farms/{farm_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.list_block_tasks",
+      "description": "Paginated tasks for a block. v1.11.0: returns PaginatedResponse[FarmTaskWithDetails].",
+      "exports": [
+        "list_block_tasks"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 123,
+      "module": "farm_manager",
+      "name": "GET /tasks/blocks/{block_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.get_task",
+      "description": "Task detail. v1.11.0: returns SuccessResponse[FarmTaskWithDetails].",
+      "exports": [
+        "get_task"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 162,
+      "module": "farm_manager",
+      "name": "GET /tasks/{task_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.create_custom_task",
+      "description": "Create custom task (requires farm.manage).",
+      "exports": [
+        "create_custom_task"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 182,
+      "module": "farm_manager",
+      "name": "POST /tasks",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.update_task",
+      "description": "Update task scheduling/status/priority (requires farm.manage).",
+      "exports": [
+        "update_task"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 218,
+      "module": "farm_manager",
+      "name": "PUT /tasks/{task_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.complete_task",
+      "description": "Complete a non-harvest task. Supports optional block state transition via triggerTransition.",
+      "exports": [
+        "complete_task"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 249,
+      "module": "farm_manager",
+      "name": "POST /tasks/{task_id}/complete",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.add_harvest_entry",
+      "description": "Append harvest entry to a daily_harvest task.",
+      "exports": [
+        "add_harvest_entry"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 288,
+      "module": "farm_manager",
+      "name": "POST /tasks/{task_id}/harvest",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.end_daily_harvest",
+      "description": "Manager aggregates and completes a daily_harvest task early.",
+      "exports": [
+        "end_daily_harvest"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 331,
+      "module": "farm_manager",
+      "name": "POST /tasks/{task_id}/end-harvest",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.cancel_task",
+      "description": "Cancel a task (requires farm.manage).",
+      "exports": [
+        "cancel_task"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 368,
+      "module": "farm_manager",
+      "name": "POST /tasks/{task_id}/cancel",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.delete_task",
+      "description": "Delete task (admin). Destructive.",
+      "exports": [
+        "delete_task"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 399,
+      "module": "farm_manager",
+      "name": "DELETE /tasks/{task_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.admin_aggregate_harvest",
+      "description": "Admin manual trigger for a specific harvest task aggregation.",
+      "exports": [
+        "admin_aggregate_harvest"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 431,
+      "module": "farm_manager",
+      "name": "POST /tasks/admin/aggregate-harvest/{task_id}",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.admin_run_daily_aggregation",
+      "description": "Cron endpoint: run daily aggregation for all in-progress tasks.",
+      "exports": [
+        "admin_run_daily_aggregation"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 461,
+      "module": "farm_manager",
+      "name": "POST /tasks/admin/run-daily-aggregation",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.v1.tasks.admin_get_pending_aggregations",
+      "description": "List daily_harvest tasks still needing aggregation.",
+      "exports": [
+        "admin_get_pending_aggregations"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "layer": "api",
+      "line_number": 500,
+      "module": "farm_manager",
+      "name": "GET /tasks/admin/pending-aggregations",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.ai_dashboard",
+      "description": "Automated farm inspection reports backed by AIDashboardService (multi-step data collection + AI summary pass). GET /latest (most recent report, 404 if none), GET /reports (paginated history), POST /generate (synchronous 30-60s manual trigger, admin/super_admin only).",
+      "exports": [
+        "router",
+        "get_latest_report",
+        "list_reports",
+        "generate_report"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/ai_dashboard.py",
+      "layer": "api",
+      "line_number": 25,
+      "module": "farm_manager",
+      "name": "CRUD /ai-dashboard",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.ai_hub",
+      "description": "Unified AI Hub interface, super_admin only for all 6 endpoints. POST /chat (message to a Hub section assistant \u2014 Control/Monitor/Report/Advise; Control can produce pending write actions for relay control/automation), POST /confirm (confirm/deny a pending write action), POST /transcribe (audio transcription via Vertex AI), GET /history/{section}, POST /tts (ElevenLabs text-to-speech), POST /export-report (PDF/Excel export).",
+      "exports": [
+        "router",
+        "require_super_admin",
+        "chat",
+        "confirm_action",
+        "transcribe_audio",
+        "get_history",
+        "text_to_speech",
+        "export_report"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/ai_hub.py",
+      "layer": "api",
+      "line_number": 40,
+      "module": "farm_manager",
+      "name": "CRUD /ai-hub",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.cameras",
+      "description": "Camera integration for a block's SenseHub. list_cameras (live MCP call, cache fallback on unreachable hub), capture_snapshot, list_snapshots/latest_snapshots (cached snapshot browsing), serve_snapshot_image (serves image files from local storage).",
+      "exports": [
+        "router",
+        "list_cameras",
+        "capture_snapshot",
+        "list_snapshots",
+        "latest_snapshots",
+        "serve_snapshot_image"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/cameras.py",
+      "layer": "api",
+      "line_number": 23,
+      "module": "farm_manager",
+      "name": "CRUD /farms/{farm_id}/blocks/{block_id}/cameras",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.farm_level_ai_chat",
+      "description": "Farm-scoped (not per-block) Gemini AI assistant for monitoring all blocks on one farm and controlling SenseHub-connected equipment. POST / (chat) and POST /confirm (confirm a pending write action), mirroring the ai_hub Control-section confirm flow but scoped to a single farm rather than the whole platform.",
+      "exports": [
+        "router",
+        "chat",
+        "confirm_action"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/farm_level_ai_chat.py",
+      "layer": "api",
+      "line_number": 27,
+      "module": "farm_manager",
+      "name": "POST /farms/{farm_id}/ai-chat",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.global_ai_chat",
+      "description": "Single read-only global farm-monitoring AI assistant endpoint (any authenticated user). Read-only access to live sensor readings/alerts across all farms/blocks; no write tools, so no confirmation flow exists (unlike ai_hub/farm_level_ai_chat).",
+      "exports": [
+        "router",
+        "chat"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/global_ai_chat.py",
+      "layer": "api",
+      "line_number": 19,
+      "module": "farm_manager",
+      "name": "POST /ai-monitor/chat",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.iot_proxy",
+      "description": "CORS-avoidance proxy gateway for direct IoT controller (Raspberry Pi/ESP32) HTTP communication. Both GET and PUT accept a URL-encoded target `url` query param plus an optional forwarded apiKey/X-API-Key header, with a 5-second timeout. Requires authentication only (any logged-in user).",
+      "exports": [
+        "router",
+        "proxy_get_request",
+        "proxy_put_request"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/iot_proxy.py",
+      "layer": "api",
+      "line_number": 18,
+      "module": "farm_manager",
+      "name": "GET+PUT /iot-proxy",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.sensehub_cache",
+      "description": "Query layer over cached SenseHub data (equipment, lab readings, alerts) plus sync-service management: GET /status, GET /sync-history (implied), POST to trigger a manual sync, and cached-data getters that serve reads without hitting the live SenseHub MCP connection every time.",
+      "exports": [
+        "router",
+        "get_sync_status",
+        "get_sync_history",
+        "trigger_manual_sync",
+        "get_cached_equipment",
+        "get_cached_lab_latest",
+        "get_cached_lab_readings",
+        "get_cached_alerts"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/sensehub_cache.py",
+      "layer": "api",
+      "line_number": 18,
+      "module": "farm_manager",
+      "name": "CRUD /sensehub-cache",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.watchdog",
+      "description": "Telegram-based watchdog alerting configuration and control, all endpoints admin+ only (_require_admin checks role in ('admin','super_admin')). GET/PATCH config (bot token masked in responses), POST test-notification (send a test Telegram message), GET status, POST trigger-check (manual watchdog run), GET history (past notification log).",
+      "exports": [
+        "router",
+        "get_watchdog_config",
+        "update_watchdog_config",
+        "test_watchdog_notification",
+        "get_watchdog_status",
+        "trigger_watchdog_check",
+        "get_watchdog_history"
+      ],
+      "file_path": "src/modules/farm_manager/api/v1/watchdog.py",
+      "layer": "api",
+      "line_number": 18,
+      "module": "farm_manager",
+      "name": "CRUD /config/watchdog",
+      "node_type": "api_endpoint"
+    },
+    {
+      "node_id": "farm_manager.api.api_router",
+      "node_type": "api_endpoint",
+      "name": "farm_manager api_router (v1 mount table)",
+      "file_path": "src/modules/farm_manager/api/v1/__init__.py",
+      "line_number": 42,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "api_router"
+      ],
+      "description": "Aggregator that mounts every farm_manager v1 router onto one APIRouter (served under /api/v1/farm). Only farms_router gets a prefix here (/farms); all other routers carry their own prefix. Also mounts two shared tool routers from src/api/v1/tools (chemicals, fertilizer_cost) under /tools. Re-exports both block_harvests routers (router + farm_router) and both block_alerts routers."
+    },
+    {
+      "node_id": "farm_manager.api.block_alerts",
+      "node_type": "api_endpoint",
+      "name": "CRUD /farms/{farm_id}/blocks/{block_id}/alerts",
+      "file_path": "src/modules/farm_manager/api/v1/block_alerts.py",
+      "line_number": 16,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "farm_router",
+        "create_alert",
+        "list_block_alerts",
+        "get_active_alerts",
+        "get_alert_summary",
+        "get_alert",
+        "resolve_alert",
+        "dismiss_alert",
+        "delete_alert",
+        "list_farm_alerts"
+      ],
+      "description": "Block alert lifecycle via AlertService: POST '' (create), GET '' (list, filterable by status/severity), GET /active, GET /summary, GET /{alert_id}, POST /{alert_id}/resolve, POST /{alert_id}/dismiss, DELETE /{alert_id}. A second farm_router adds GET /farms/{farm_id}/alerts for the farm-level rollup. Models come from models/alert.py (Alert/AlertCreate/AlertResolve/AlertStatus/AlertSeverity), NOT models/block_alert.py."
+    },
+    {
+      "node_id": "farm_manager.api.block_archives",
+      "node_type": "api_endpoint",
+      "name": "GET /archives",
+      "file_path": "src/modules/farm_manager/api/v1/block_archives.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "list_block_archives",
+        "get_block_cycle_history",
+        "list_farm_archives",
+        "get_farm_performance_analytics",
+        "compare_crop_performance",
+        "get_top_performing_blocks",
+        "export_farm_performance_report",
+        "list_crop_archives",
+        "get_crop_performance_analytics",
+        "get_archive",
+        "delete_archive",
+        "get_system_wide_analytics",
+        "compare_crop_performance_system_wide"
+      ],
+      "description": "Read-mostly analytics over archived block cycles (ArchiveService). Block scope: list archives, cycle history. Farm scope: list archives, performance analytics, crop comparison, top-performing blocks, exportable performance report. Crop scope: list crop archives, crop performance analytics. System scope: system-wide analytics and cross-crop comparison. Plus GET /{archive_id} and DELETE /{archive_id}."
+    },
+    {
+      "node_id": "farm_manager.api.block_harvests",
+      "node_type": "api_endpoint",
+      "name": "CRUD /farms/{farm_id}/blocks/{block_id}/harvests",
+      "file_path": "src/modules/farm_manager/api/v1/block_harvests.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "farm_router",
+        "record_harvest",
+        "list_block_harvests",
+        "get_block_harvest_summary",
+        "submit_harvest_batch",
+        "get_harvest_batch_lookup",
+        "get_harvest",
+        "update_harvest",
+        "delete_harvest",
+        "list_farm_harvests"
+      ],
+      "description": "Harvest recording for a block plus a farm-level rollup, all through HarvestService. Single-line surface: POST '' (record_harvest, updates the block's actualYieldKg/totalHarvests/yieldEfficiencyPercent), GET '' (list), GET /summary, GET/PATCH/DELETE /{harvest_id}; farm_router adds GET /farms/{farm_id}/harvests. Plant Library harvest routing (2026-08) added POST /batch (submit_harvest_batch, farm.operate): a multi-line submission for one block+date where each line names a productId resolved from the block's mother (block.productMotherId -> plant_mothers.products[]) and is routed by that product's category \u2014 sellable -> block_harvests row -> inventory_harvest FIFO batch, process -> processing_inventory row, waste -> inventory_waste \u2014 with every line sharing one server-generated harvestBatchId (never client-supplied). qualityGrade is required for sellable/process lines and REJECTED (400) on waste lines. Companion GET /batch-lookup?harvestDate= (get_harvest_batch_lookup) unions all three destinations for that block+date grouped by harvestBatchId so a mixed batch can be reviewed/edited as a unit; the plain GET '' list is unchanged and stays block_harvests-only. Static routes (/batch, /batch-lookup, /summary) are declared before the dynamic /{harvest_id} route."
+    },
+    {
+      "node_id": "farm_manager.api.config",
+      "node_type": "api_endpoint",
+      "name": "CRUD /config",
+      "file_path": "src/modules/farm_manager/api/v1/config.py",
+      "line_number": 32,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "get_spacing_standards",
+        "update_spacing_standards",
+        "reset_spacing_standards",
+        "calculate_plants",
+        "get_spacing_categories",
+        "get_farming_year_config",
+        "update_farming_year_config",
+        "get_current_farming_year",
+        "get_farming_years_list"
+      ],
+      "description": "System configuration under /config. Spacing standards: GET/PUT/POST-reset plus GET /spacing-categories and a GET plant-count calculator (ConfigService). Farming year: GET/PUT config, GET current farming year, GET farming-years list (FarmingYearService). Auth is get_current_user (any authenticated caller)."
+    },
+    {
+      "node_id": "farm_manager.api.dashboard",
+      "node_type": "api_endpoint",
+      "name": "GET /dashboard",
+      "file_path": "src/modules/farm_manager/api/v1/dashboard.py",
+      "line_number": 49,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "get_dashboard_summary",
+        "get_filter_crops",
+        "get_farm_dashboard",
+        "quick_transition",
+        "quick_harvest",
+        "recalculate_kpi",
+        "get_recent_activity",
+        "get_upcoming_events"
+      ],
+      "description": "Farm dashboard aggregation. Talks to repositories directly (FarmRepository, BlockRepository, AlertRepository) plus utils/dashboard_calculator rather than to a service class, and caches responses with src.core.cache.cache_response. GET /dashboard (global summary), GET /filter-crops, GET /farms/{farm_id} (per-farm dashboard), PATCH quick-transition (fast block state change), POST quick-harvest (fast harvest entry), POST recalculate-kpi. get_recent_activity/get_upcoming_events are internal helpers, not routes."
+    },
+    {
+      "node_id": "farm_manager.api.farm_ai_chat",
+      "node_type": "api_endpoint",
+      "name": "POST /farms/{farm_id}/blocks/{block_id}/ai/chat",
+      "file_path": "src/modules/farm_manager/api/v1/farm_ai_chat.py",
+      "line_number": 23,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "chat",
+        "confirm_action"
+      ],
+      "description": "Block-scoped Gemini AI assistant (FarmAIChatService) with SenseHub tool execution: POST '' (chat) and POST /confirm (confirm a pending write action) \u2014 the same two-step confirmation flow used by ai_hub and farm_level_ai_chat, scoped to a single block."
+    },
+    {
+      "node_id": "farm_manager.api.inventory",
+      "node_type": "api_endpoint",
+      "name": "CRUD /inventory",
+      "file_path": "src/modules/farm_manager/api/v1/inventory.py",
+      "line_number": 87,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "get_inventory_summary",
+        "list_harvest_inventory",
+        "export_harvest_inventory_csv",
+        "create_harvest_inventory",
+        "get_harvest_inventory",
+        "update_harvest_inventory",
+        "delete_harvest_inventory",
+        "list_processing_inventory",
+        "list_input_inventory",
+        "export_input_inventory_csv",
+        "create_input_inventory",
+        "get_input_inventory",
+        "update_input_inventory",
+        "delete_input_inventory",
+        "use_input_inventory",
+        "deduct_input_base_units",
+        "get_units_for_category",
+        "list_asset_inventory",
+        "export_asset_inventory_csv",
+        "create_asset_inventory",
+        "get_asset_inventory",
+        "update_asset_inventory",
+        "delete_asset_inventory",
+        "transfer_inventory",
+        "list_products",
+        "create_product",
+        "get_product",
+        "update_product",
+        "delete_product",
+        "list_inventory_movements",
+        "get_input_categories",
+        "get_asset_categories",
+        "get_asset_statuses",
+        "get_quality_grades",
+        "list_waste_inventory",
+        "export_waste_inventory_csv",
+        "create_waste_inventory",
+        "get_waste_summary",
+        "move_harvest_to_waste",
+        "get_waste_inventory",
+        "update_waste_inventory",
+        "delete_waste_inventory",
+        "admin_process_expired_inventory",
+        "expire_harvest_inventory",
+        "revive_harvest_inventory",
+        "list_returned_inventory",
+        "create_returned_inventory",
+        "get_returned_inventory",
+        "update_returned_inventory",
+        "delete_returned_inventory",
+        "mark_returned_as_waste",
+        "record_movement",
+        "compute_inventory_scope",
+        "validate_scope_rules",
+        "get_organization_id"
+      ],
+      "description": "Farm inventory: the module's largest router (~3200 lines, ~50 endpoints) and the only farm_manager router that talks to MongoDB directly through motor (get_database/farm_db) instead of a service class. Covers harvest, input and asset inventory CRUD with CSV export, products CRUD, the inventory_movements ledger (record_movement), transfers, waste (list/create/summary/{id} CRUD plus POST /waste/from-harvest), expiry (POST /admin/process-expired, POST expire, POST revive), returned inventory over the inventory_returned collection plus mark-returned-as-waste, unit conversion helpers and category/status/grade enum getters. Everything is organization-scoped via get_organization_id, with farm-vs-organization scope enforced by compute_inventory_scope/validate_scope_rules. Plant Library harvest routing (2026-08) added GET /inventory/processing (list_processing_inventory) \u2014 a paginated, org-scoped read over the new processing_inventory collection filterable by farm_id/block_id/product_id, which is the read side of harvest lines routed to the 'process' product category by POST .../harvests/batch."
+    },
+    {
+      "node_id": "farm_manager.api.managers",
+      "node_type": "api_endpoint",
+      "name": "GET /managers",
+      "file_path": "src/modules/farm_manager/api/v1/managers.py",
+      "line_number": 18,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "get_managers"
+      ],
+      "description": "Single endpoint listing users eligible for farm assignment. Queries the users collection directly via farm_db for active users whose role carries farm.manage (manager/admin/super_admin); used to populate farm-manager pickers."
+    },
+    {
+      "node_id": "farm_manager.api.plant_data",
+      "node_type": "api_endpoint",
+      "name": "CRUD /plant-data",
+      "file_path": "src/modules/farm_manager/api/v1/plant_data.py",
+      "line_number": 18,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "create_plant_data",
+        "list_plant_data",
+        "get_plant_data",
+        "update_plant_data",
+        "delete_plant_data",
+        "import_plant_data_csv",
+        "download_csv_template"
+      ],
+      "description": "Legacy simple plant catalogue (PlantDataService): POST/GET/GET{id}/PATCH{id}/DELETE{id} plus POST /import-csv and GET /csv-template. Superseded by plant_data_enhanced + plant_mothers but still mounted; list reads are cached with src.core.cache.cache_response."
+    },
+    {
+      "node_id": "farm_manager.api.plant_data_enhanced",
+      "node_type": "api_endpoint",
+      "name": "CRUD /plant-data-enhanced",
+      "file_path": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "create_plant_data",
+        "search_plant_data",
+        "get_filter_options",
+        "get_active_plants",
+        "get_plant_data",
+        "update_plant_data",
+        "delete_plant_data",
+        "clone_plant_data",
+        "download_csv_template",
+        "export_plant_data_csv",
+        "import_plant_data_csv",
+        "get_by_farm_type",
+        "get_by_tags"
+      ],
+      "description": "Variety-level plant library (PlantDataEnhancedService): create, search, filter-options, active plants, get/update/delete, clone, get-by-farm-type, get-by-tags, plus CSV template/export/import. Plant Library restructure moved the CSV path onto the mother/variety model: template and POST /import-csv rows collapse onto one find-or-created MOTHER (product) keyed by motherName (via PlantMotherService), with varietyName unique within its mother; plantType/scientificName are only honoured when the mother is newly created (rename an existing mother with PATCH /plant-mothers/{id} instead), and a variety that duplicates one already under its mother is recorded and skipped rather than aborting the import. Import returns mothersCreated / mothersReused / varietiesCreated counts."
+    },
+    {
+      "node_id": "farm_manager.api.plant_mothers",
+      "node_type": "api_endpoint",
+      "name": "CRUD /farm/plant-mothers",
+      "file_path": "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "line_number": 36,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "create_mother",
+        "list_mothers",
+        "get_mother",
+        "update_mother",
+        "delete_mother",
+        "list_varieties",
+        "create_variety",
+        "add_product",
+        "list_products",
+        "update_product",
+        "delete_product"
+      ],
+      "description": "Plant Library mother (product/folder) CRUD plus variety and product management, all via PlantMotherService. Mothers: POST/GET/GET{id}/PATCH{id}/DELETE{id} /plant-mothers. Varieties: GET+POST /plant-mothers/{id}/varieties. Harvest-routing product picklist (2026-08): POST+GET /plant-mothers/{id}/products and PATCH+DELETE /plant-mothers/{id}/products/{product_id} \u2014 a product's category (sellable / process / waste) is what POST /farms/{farm_id}/blocks/{block_id}/harvests/batch routes each harvest line on. Product names are unique case-insensitively within a mother, `unit` is not editable after creation, and DELETE is deactivation only (isActive=False, never removed from the list) so historical productId references need no migration. Product mutations require the 'agronomist' permission; reads require any authenticated user."
+    },
+    {
+      "node_id": "farm_manager.api.plantings",
+      "node_type": "api_endpoint",
+      "name": "CRUD /plantings",
+      "file_path": "src/modules/farm_manager/api/v1/plantings.py",
+      "line_number": 16,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "create_planting_plan",
+        "mark_as_planted",
+        "get_planting",
+        "list_plantings"
+      ],
+      "description": "Planting plan management (PlantingService): POST '' (create plan), POST /{planting_id}/plant (mark as planted), GET /{planting_id}, GET '' (list). Models from models/planting.py."
+    },
+    {
+      "node_id": "farm_manager.api.sensehub",
+      "node_type": "api_endpoint",
+      "name": "CRUD /sensehub",
+      "file_path": "src/modules/farm_manager/api/v1/sensehub.py",
+      "line_number": 28,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "connect_sensehub",
+        "disconnect_sensehub",
+        "get_sensehub_status",
+        "get_sensehub_dashboard",
+        "get_sensehub_equipment",
+        "get_sensehub_equipment_history",
+        "control_sensehub_relay",
+        "control_sensehub_relay_all",
+        "get_sensehub_automations",
+        "create_sensehub_automation",
+        "update_sensehub_automation",
+        "delete_sensehub_automation",
+        "toggle_sensehub_automation",
+        "trigger_sensehub_automation",
+        "get_sensehub_alerts",
+        "get_sensehub_lab_nutrients",
+        "get_sensehub_lab_latest",
+        "get_sensehub_lab_readings",
+        "get_sensehub_lab_stats",
+        "acknowledge_sensehub_alert"
+      ],
+      "description": "Live proxy to a block's SenseHub edge hub (SenseHubConnectionService, with SenseHubCacheQueryService as the read fallback). Connection: connect/disconnect/status. Reads: dashboard, equipment + equipment history, alerts, lab nutrients/latest/readings/stats. Writes: relay control (single + all), automation CRUD plus toggle/trigger, alert acknowledge. _is_connection_error/_handle_sensehub_error translate an unreachable hub into a clean HTTP error instead of a 500."
+    },
+    {
+      "node_id": "farm_manager.api.tasks",
+      "node_type": "api_endpoint",
+      "name": "CRUD /tasks",
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "line_number": 28,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Operations Task Manager router file (/tasks) \u2014 TaskService + TaskGeneratorService + HarvestAggregatorService. Individual endpoints are mapped separately as farm_manager.api.v1.tasks.* nodes; this file-level node is the router container only. v1.11.0: list/detail endpoints return FarmTaskWithDetails (block + farm + crop context)."
+    },
+    {
+      "node_id": "farm_manager.api.weather",
+      "node_type": "api_endpoint",
+      "name": "GET /weather",
+      "file_path": "src/modules/farm_manager/api/v1/weather.py",
+      "line_number": 26,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "verify_farm_access",
+        "get_current_weather",
+        "get_weather_forecast",
+        "get_agri_data",
+        "get_cache_stats",
+        "trigger_cache_refresh",
+        "invalidate_farm_cache"
+      ],
+      "description": "Agricultural weather for a farm from WeatherBit (WeatherService + WeatherCacheService): GET current, GET forecast, GET agri-data, plus cache management \u2014 GET cache stats, POST refresh, DELETE per-farm cache invalidation. verify_farm_access resolves the farm through FarmService and gates every route on farm access."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "farm_manager.api.block_harvests",
+      "target_id": "farm_manager.service.HarvestService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/block_harvests.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "context": "HarvestService.submit_harvest_batch / get_batch_lookup / record_harvest / list / summary / update / delete"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "farm_manager.service.ReturnedInventoryRepository",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/inventory/returned_repository.py",
+      "context": "line 25: from ...services.inventory.returned_repository import ReturnedInventoryRepository"
+    },
+    {
+      "source_id": "farm_manager.api.plant_data_enhanced",
+      "target_id": "farm_manager.service.PlantMotherService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "context": "CSV import find-or-creates the MOTHER via PlantMotherService.create_mother"
+    },
+    {
+      "source_id": "farm_manager.api.dashboard",
+      "target_id": "farm_manager.service.FarmRepository",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/dashboard.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "context": "line 37: from ...services.farm.farm_repository import FarmRepository"
+    },
+    {
+      "source_id": "farm_manager.api.dashboard",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/dashboard.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "line 38: from ...services.block.block_repository_new import BlockRepository"
+    },
+    {
+      "source_id": "farm_manager.api.dashboard",
+      "target_id": "farm_manager.service.AlertRepository",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/dashboard.py",
+      "target_file": "src/modules/farm_manager/services/block/alert_repository.py",
+      "context": "line 39: from ...services.block.alert_repository import AlertRepository"
+    },
+    {
+      "source_id": "farm_manager.api.weather",
+      "target_id": "farm_manager.service.FarmService",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/weather.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_service.py",
+      "context": "verify_farm_access() resolves the farm via FarmService before every weather route"
+    },
+    {
+      "source_id": "farm_manager.api.managers",
+      "target_id": "farm_manager.service.FarmDatabase",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/managers.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 73: db = farm_db.get_database() \u2014 queries the users collection directly"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "farm_manager.service.FarmDatabase",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 19/95: get_database() returns farm_db.get_database(); this router has no service layer"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.list_blocks",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "BlockService.list_blocks"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.get_block",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "BlockService.get_block"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.update_block",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "BlockService.get_block + update_block"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.get_block_kpi",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "BlockService.get_block_kpi"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.change_block_status",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "BlockService.change_status"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.get_valid_status_transitions",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "BlockService.get_valid_transitions"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.update_iot_controller",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "BlockService.get_block + update_block"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.update_iot_controller_extra",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "get_iot_controller/delete_iot_controller both go through BlockService"
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_farms",
+      "target_id": "farm_manager.service.FarmService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_service.py",
+      "context": "service: FarmService = Depends()"
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_farm",
+      "target_id": "farm_manager.service.FarmService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_service.py",
+      "context": "service: FarmService = Depends()"
+    },
+    {
+      "source_id": "farm_manager.api.farms.update_farm",
+      "target_id": "farm_manager.service.FarmService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_service.py",
+      "context": "service: FarmService = Depends()"
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_farm_summary",
+      "target_id": "farm_manager.service.FarmService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_service.py",
+      "context": "service: FarmService = Depends()"
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_farm_summary",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "line 258: local import of BlockRepository for physical/virtual block counts"
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_farm_farming_years",
+      "target_id": "farm_manager.service.FarmingYearService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/farming_year_service.py",
+      "context": "get_farming_year_service()"
+    },
+    {
+      "source_id": "farm_manager.api.block_harvests",
+      "target_id": "farm_manager.model.BlockHarvest",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/block_harvests.py",
+      "target_file": "src/modules/farm_manager/models/block_harvest.py",
+      "context": "line 12: BlockHarvest, BlockHarvestCreate/Update/Summary + HarvestBatchLookupResponse, HarvestBatchSubmitRequest, HarvestBatchSubmitResponse"
+    },
+    {
+      "source_id": "farm_manager.api.block_archives",
+      "target_id": "farm_manager.model.BlockArchive",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/block_archives.py",
+      "target_file": "src/modules/farm_manager/models/block_archive.py",
+      "context": "line 13: block archive models"
+    },
+    {
+      "source_id": "farm_manager.api.blocks.create_block",
+      "target_id": "farm_manager.model.Block",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/models/block.py",
+      "context": "line 11: Block, BlockCreate, BlockUpdate, BlockStatus, ..."
+    },
+    {
+      "source_id": "farm_manager.api.farms.create_farm",
+      "target_id": "farm_manager.model.Farm",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/models/farm.py",
+      "context": "line 12: Farm, FarmCreate, FarmUpdate"
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_farm_analytics",
+      "target_id": "farm_manager.model.FarmAnalyticsResponse",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/models/farm_analytics.py",
+      "context": "line 13: FarmAnalyticsResponse"
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_global_analytics",
+      "target_id": "farm_manager.model.GlobalAnalyticsResponse",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/models/global_analytics.py",
+      "context": "line 14: GlobalAnalyticsResponse"
+    },
+    {
+      "source_id": "farm_manager.api.dashboard",
+      "target_id": "farm_manager.model.DashboardSummary",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/dashboard.py",
+      "target_file": "src/modules/farm_manager/models/dashboard.py",
+      "context": "line 13: dashboard response models"
+    },
+    {
+      "source_id": "farm_manager.api.dashboard",
+      "target_id": "farm_manager.model.Block",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/dashboard.py",
+      "target_file": "src/modules/farm_manager/models/block.py",
+      "context": "line 36: from ...models.block import Block, BlockStatus"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "farm_manager.model.Inventory",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/models/inventory.py",
+      "context": "line 27: whole inventory model surface (enums, Product, Harvest/Input/Asset/Waste/Returned, transfers, unit conversion helpers)"
+    },
+    {
+      "source_id": "farm_manager.api.plant_data",
+      "target_id": "farm_manager.model.PlantData",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/plant_data.py",
+      "target_file": "src/modules/farm_manager/models/plant_data.py",
+      "context": "line 12: PlantData, PlantDataCreate, PlantDataUpdate"
+    },
+    {
+      "source_id": "farm_manager.api.plant_data_enhanced",
+      "target_id": "farm_manager.model.PlantDataEnhanced",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+      "context": "line 12: enhanced plant data models"
+    },
+    {
+      "source_id": "farm_manager.api.plant_mothers",
+      "target_id": "farm_manager.model.PlantMother",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "target_file": "src/modules/farm_manager/models/plant_mother.py",
+      "context": "line 19: PlantMother* plus PlantProduct / PlantProductCreate / PlantProductUpdate"
+    },
+    {
+      "source_id": "farm_manager.api.plant_mothers",
+      "target_id": "farm_manager.model.PlantDataEnhanced",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+      "context": "line 31: from ...models.plant_data_enhanced import PlantDataEnhanced (variety payloads)"
+    },
+    {
+      "source_id": "farm_manager.api.weather",
+      "target_id": "farm_manager.model.Weather",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/weather.py",
+      "target_file": "src/modules/farm_manager/models/weather.py",
+      "context": "line 13: weather response models"
+    },
+    {
+      "source_id": "farm_manager.api.tasks",
+      "target_id": "farm_manager.model.FarmTask",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "target_file": "src/modules/farm_manager/models/farm_task.py",
+      "context": "line 11: farm task models"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_inventory_harvest",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "db.inventory_harvest CRUD + FIFO batches (18 call sites)"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_inventory_input",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "db.inventory_input CRUD + use/deduct-base (22 call sites)"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_inventory_asset",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "db.inventory_asset CRUD (10 call sites)"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_inventory_movements",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "record_movement() appends to db.inventory_movements"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_products",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "db.products CRUD under /inventory/products"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_inventory_waste",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "db.inventory_waste CRUD, /waste/from-harvest, /waste/summary, mark-returned-as-waste (17 call sites)"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_processing_inventory",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "GET /inventory/processing reads db.processing_inventory (written by the harvest batch endpoint)"
+    },
+    {
+      "source_id": "farm_manager.api.inventory",
+      "target_id": "collection_inventory_returned",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "returned-inventory endpoints via ReturnedInventoryRepository / db.inventory_returned"
+    },
+    {
+      "source_id": "farm_manager.api.api_router",
+      "target_id": "farm_manager.api.block_harvests",
+      "edge_type": "imports",
+      "source_file": "src/modules/farm_manager/api/v1/__init__.py",
+      "target_file": "src/modules/farm_manager/api/v1/block_harvests.py",
+      "context": "line 13: from .block_harvests import router as block_harvests_router, farm_router as farm_harvests_router"
+    },
+    {
+      "source_id": "farm_manager.api.api_router",
+      "target_id": "farm_manager.api.inventory",
+      "edge_type": "imports",
+      "source_file": "src/modules/farm_manager/api/v1/__init__.py",
+      "target_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "context": "line 26: from .inventory import router as inventory_router"
+    },
+    {
+      "source_id": "farm_manager.api.api_router",
+      "target_id": "farm_manager.api.plant_mothers",
+      "edge_type": "imports",
+      "source_file": "src/modules/farm_manager/api/v1/__init__.py",
+      "target_file": "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "context": "line 10: from .plant_mothers import router as plant_mothers_router"
+    },
+    {
+      "source_id": "farm_manager.api.api_router",
+      "target_id": "farm_manager.api.plant_data_enhanced",
+      "edge_type": "imports",
+      "source_file": "src/modules/farm_manager/api/v1/__init__.py",
+      "target_file": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "context": "line 9: from .plant_data_enhanced import router as plant_data_enhanced_router"
+    }
+  ]
+}

@@ -1,0 +1,623 @@
+{
+  "metadata": {
+    "task_id": "map_database_collections",
+    "generated": "2026-08-21",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "note": "Sweep-up pass. Only nodes NOT already present in mapper_nodes are emitted; every field was read live from a64core_db on 2026-08-21. Do not re-run blindly - regenerate from live Mongo instead."
+  },
+  "nodes": [
+    {
+      "node_id": "collection_sales_quotes",
+      "node_type": "db_model",
+      "name": "sales_quotes",
+      "file_path": "src/modules/sales/services/quote_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: sales_quotes - Wave 3 Sales Quotation header+embedded-lines document (docType QUOTE). Fields: docEntry, docNumber, docType, organizationId, companyCode, customerId/customerName, bpRefNo, currency/exchangeRate, docDate, validUntilDate, paymentTermsId, salesEmployeeId, ownerUserId, status, lines[], totals, journalMemo, baseDocRef, targetDocRefs, created/updated audit stamps. Owned by sales.service.quote_service. LIVE: 1 doc, NO indexes beyond _id - the module declares none."
+    },
+    {
+      "node_id": "collection_sales_quotes_audit",
+      "node_type": "db_model",
+      "name": "sales_quotes_audit",
+      "file_path": "src/modules/sales/services/quote_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: sales_quotes_audit - append-only audit trail for Sales Quotations, written by quote_service._write_audit (_AUDIT_COL). Fields: docEntry, action, detail, userId, timestamp. LIVE: 5 docs, no indexes. WARNING: sales/api/v1/audit.py maps docType QUOTE to 'quotes_v2_audit', a collection that does not exist - quote audit history reads an empty collection."
+    },
+    {
+      "node_id": "collection_sales_orders_v2",
+      "node_type": "db_model",
+      "name": "sales_orders_v2",
+      "file_path": "src/modules/sales/services/sales_order_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: sales_orders_v2 - Wave 3 Sales Order document (docType SALES_ORDER), the hub every AR Invoice traces back to. Fields: docEntry, docNumber, organizationId, companyCode, customerId/customerName, bpRefNo, currency/exchangeRate, docDate, deliveryDate, paymentTermsId, salesEmployeeId, ownerUserId, creditCheck, status, lines[] (with open/closed quantity), totals, journalMemo, baseDocRef (source quote), targetDocRefs. Owned by sales.service.sales_order_service; also read by delivery_service (_SO_COL). LIVE: 5 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_sales_orders_v2_audit",
+      "node_type": "db_model",
+      "name": "sales_orders_v2_audit",
+      "file_path": "src/modules/sales/services/sales_order_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: sales_orders_v2_audit - append-only audit trail for Wave 3 Sales Orders. Fields: docEntry, action, detail, userId, timestamp. Read by GET /api/v1/sales/audit?docType=SALES_ORDER. LIVE: 13 docs, no indexes."
+    },
+    {
+      "node_id": "collection_deliveries_v2",
+      "node_type": "db_model",
+      "name": "deliveries_v2",
+      "file_path": "src/modules/sales/services/delivery_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: deliveries_v2 - Wave 3 Delivery Note (docType DELIVERY); consumes SO open quantity and books COGS. Fields: docEntry, docNumber, organizationId, companyCode, customerId/customerName, docDate, actualDeliveryDate, deliveredByUserId, status, lines[], totalCogs, baseDocRef (SO), targetDocRefs, outboxEventId/outboxEventEmittedAt (finance_bridge handoff). Owned by sales.service.delivery_service. LIVE: 4 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_deliveries_v2_audit",
+      "node_type": "db_model",
+      "name": "deliveries_v2_audit",
+      "file_path": "src/modules/sales/services/delivery_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: deliveries_v2_audit - append-only audit trail for Delivery Notes. Fields: docEntry, action, detail, userId, timestamp. LIVE: 11 docs, no indexes."
+    },
+    {
+      "node_id": "collection_ar_invoices_v2",
+      "node_type": "db_model",
+      "name": "ar_invoices_v2",
+      "file_path": "src/modules/sales/services/ar_invoice_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: ar_invoices_v2 - Wave 3 AR Invoice (docType AR_INVOICE). Fields: docEntry, docNumber, organizationId, companyCode, customerId/customerName, bpRefNo, currency/exchangeRate, docDate, invoiceDate, dueDate, taxDate, dateOfSupply, paymentTermsId, isCashSale, isReserveInvoice, status, lines[] (taxCodeId FK to the finance service's tax_codes, not a Mongo collection), totals, journalMemo, baseDocRef, targetDocRefs, outboxEventId/outboxEventEmittedAt. Owned by sales.service.ar_invoice_service; read by ar_credit_note_service, customer_receipt_service, reports_service. LIVE: 5 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_ar_invoices_v2_audit",
+      "node_type": "db_model",
+      "name": "ar_invoices_v2_audit",
+      "file_path": "src/modules/sales/services/ar_invoice_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: ar_invoices_v2_audit - append-only audit trail for AR Invoices. Fields: docEntry, action, detail, userId, timestamp. LIVE: 15 docs, no indexes."
+    },
+    {
+      "node_id": "collection_ar_credit_notes_v2",
+      "node_type": "db_model",
+      "name": "ar_credit_notes_v2",
+      "file_path": "src/modules/sales/services/ar_credit_note_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: ar_credit_notes_v2 - Wave 3 AR Credit Note (docType AR_CREDIT_NOTE), issued against an AR Invoice and optionally a Return. Fields: docEntry, docNumber, creditReason/creditReasonText, allocations[] (against invoices), baseReturnDocRef, customerId/customerName, currency/exchangeRate, docDate/invoiceDate/taxDate/dateOfSupply, lines[], totals, journalMemo, targetDocRefs, outboxEventId/outboxEventEmittedAt. Owned by sales.service.ar_credit_note_service. LIVE: 1 doc, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_ar_credit_notes_v2_audit",
+      "node_type": "db_model",
+      "name": "ar_credit_notes_v2_audit",
+      "file_path": "src/modules/sales/services/ar_credit_note_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: ar_credit_notes_v2_audit - append-only audit trail for AR Credit Notes. Fields: docEntry, action, detail, userId, timestamp. LIVE: 2 docs, no indexes."
+    },
+    {
+      "node_id": "collection_customer_receipts_v2",
+      "node_type": "db_model",
+      "name": "customer_receipts_v2",
+      "file_path": "src/modules/sales/services/customer_receipt_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: customer_receipts_v2 - Wave 3 Customer Receipt / incoming payment (docType CUSTOMER_RECEIPT). Fields: docEntry, docNumber, customerId/customerName, amountReceived, unallocatedAmount, allocations[] (per AR invoice), bankAccountId, paymentMethod, paymentRef, currency/exchangeRate, baseDocRefs[], targetDocRefs, journalMemo, outboxEventId/outboxEventEmittedAt. Owned by sales.service.customer_receipt_service. LIVE: 4 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_customer_receipts_v2_audit",
+      "node_type": "db_model",
+      "name": "customer_receipts_v2_audit",
+      "file_path": "src/modules/sales/services/customer_receipt_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: customer_receipts_v2_audit - append-only audit trail for Customer Receipts. Fields: docEntry, action, detail, userId, timestamp. LIVE: 7 docs, no indexes."
+    },
+    {
+      "node_id": "collection_returns_v2",
+      "node_type": "db_model",
+      "name": "returns_v2",
+      "file_path": "src/modules/sales/services/rtn_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: returns_v2 - Wave 3 Return / goods-back document (docType RETURN), reverses a Delivery and feeds an AR Credit Note. Fields: docEntry, docNumber, customerId/customerName, docDate, actualReturnDate, receivedByUserId, lines[], totals, baseDocRef (delivery or return request), targetDocRefs, outboxEventId/outboxEventEmittedAt. Owned by sales.service.rtn_service. LIVE: 1 doc, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_returns_v2_audit",
+      "node_type": "db_model",
+      "name": "returns_v2_audit",
+      "file_path": "src/modules/sales/services/rtn_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: returns_v2_audit - append-only audit trail for Returns. Fields: docEntry, action, detail, userId, timestamp. LIVE: 2 docs, no indexes."
+    },
+    {
+      "node_id": "collection_return_requests_v2",
+      "node_type": "db_model",
+      "name": "return_requests_v2",
+      "file_path": "src/modules/sales/services/return_request_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: return_requests_v2 - Wave 3 Return Request (docType RETURN_REQUEST), the customer-facing precursor to a Return. Fields: docEntry, docNumber, customerId/customerName, docDate, validUntilDate, reason/reasonText, lines[], totals, baseDocRef (delivery), targetDocRefs, status. Owned by sales.service.return_request_service; read by rtn_service (_RR_COL). LIVE: 4 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_return_requests_v2_audit",
+      "node_type": "db_model",
+      "name": "return_requests_v2_audit",
+      "file_path": "src/modules/sales/services/return_request_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: return_requests_v2_audit - append-only audit trail for Return Requests. Fields: docEntry, action, detail, userId, timestamp. LIVE: 6 docs, no indexes."
+    },
+    {
+      "node_id": "collection_sales_orders",
+      "node_type": "db_model",
+      "name": "sales_orders",
+      "file_path": "src/modules/sales/services/sales/order_repository.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: sales_orders - LEGACY (pre-Wave-3) sales order with embedded items[], the farm-facing order used by logistics shipments and the ops P&L. Fields: orderId, orderCode/orderNumber, customerId/customerName, farmId/farmName, divisionId, organizationId, farmingYear/viewingYear, items[], subtotal/tax/discount/total, status, paymentStatus, receiver, driverEmail/packerEmail, vehicleId/vehicleName, startDate/packedDate/finishedDate, metadata.legacyRef. LIVE: 4,649 docs (the real historical sales data) and 15 indexes incl. a sales_order_search_text full-text index; indexes declared in sales/services/database.py. Read by finance.pnl_service, logistics.shipment_service and core.api.dashboard."
+    },
+    {
+      "node_id": "collection_return_orders",
+      "node_type": "db_model",
+      "name": "return_orders",
+      "file_path": "src/modules/sales/services/sales/return_service.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: return_orders - LEGACY return document for the pre-Wave-3 sales_orders chain (ReturnService.collection_name). LIVE: 0 docs, only divisionId and organizationId indexes - superseded by returns_v2 / return_requests_v2."
+    },
+    {
+      "node_id": "collection_sales_unmatched",
+      "node_type": "db_model",
+      "name": "sales_unmatched",
+      "file_path": "scripts/data_import/2026_04_07/stage5_sales_excel.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: sales_unmatched - import-staging quarantine for Excel sales rows that could not be matched to a farm/crop/customer during the 2026-04-07 data migration (stage5_sales_excel.py, RESET_COLLECTIONS). Fields: unmatchedId, date/normalizedDate/collectionDate, customerName, cropName, grade, qtyCarton/qtyKgs/kgConversion, actualPrice, totalActualValue, vatAmount, totalAmountAfterTax, paidAmount/unpaidAmount, paymentStatus/invoiceStatus, deliveryCode, inventorySource, reason, metadata.legacyRef. LIVE: 3,328 docs. No application code reads it - it is a migration artefact reviewed by hand."
+    },
+    {
+      "node_id": "collection_purchase_orders",
+      "node_type": "db_model",
+      "name": "purchase_orders",
+      "file_path": "src/modules/sales/services/sales/purchase_order_repository.py",
+      "module": "sales",
+      "layer": "model",
+      "description": "MongoDB collection: purchase_orders - LEGACY purchase order living in the sales module (sales.model.legacy.purchase_order), predating the Wave 0 document_headers/document_lines chain. Indexes declared in sales/services/database.py: purchaseOrderId (unique), poCode (unique), supplierId, supplierName, status, orderDate, expectedDeliveryDate, createdBy, createdAt desc, organizationId, divisionId and a purchase_order_search_text full-text index. LIVE: 0 docs - the collection is index-only; real purchasing now writes document_headers/document_lines."
+    },
+    {
+      "node_id": "collection_purchase_items",
+      "node_type": "db_model",
+      "name": "purchase_items",
+      "file_path": "src/modules/purchasing/services/purchase_item_service.py",
+      "module": "purchasing",
+      "layer": "model",
+      "description": "MongoDB collection: purchase_items - the purchasing item master (_COLLECTION in purchase_item_service.py). Fields: itemId, itemCode, name, description, itemType, uom, barcode, manufacturer, defaultUnitCost, defaultWarehouseId, organizationId, isActive, deletedAt (soft delete), created/updated stamps. Resolved by purchasing.document_service when building document_lines. LIVE: 6 docs, NO indexes beyond _id - itemCode uniqueness is enforced in application code only."
+    },
+    {
+      "node_id": "collection_vendors",
+      "node_type": "db_model",
+      "name": "vendors",
+      "file_path": "src/modules/purchasing/services/vendor_service.py",
+      "module": "purchasing",
+      "layer": "model",
+      "description": "MongoDB collection: vendors - business-partner master for purchasing (_COLLECTION in vendor_service.py). Fields: vendorId, vendorCode, name, contactName/contactEmail/contactPhone, addressLine1/2, city, country, trn (tax registration number), currencyCode, paymentTermsCode, creditLimit, bankDetails, isActive, isBlocked, notes, organizationId, deletedAt. Denormalised onto document_headers as vendorId/vendorCode/vendorName. LIVE: 4 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_payment_terms",
+      "node_type": "db_model",
+      "name": "payment_terms",
+      "file_path": "src/modules/purchasing/services/payment_terms_service.py",
+      "module": "purchasing",
+      "layer": "model",
+      "description": "MongoDB collection: payment_terms - shared payment-terms master (_COLLECTION in purchasing/services/payment_terms_service.py). Fields: termsId, termsCode, description, netDays, isActive, organizationId, createdBy, created/updated stamps. Cross-module: sales.ar_invoice_service reads it as _PAYMENT_TERMS_COL to compute AR invoice dueDate, and document_headers stores paymentTermsCode. LIVE: 9 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_document_headers",
+      "node_type": "db_model",
+      "name": "document_headers",
+      "file_path": "src/core/documents/doc_number.py",
+      "module": "core",
+      "layer": "model",
+      "description": "MongoDB collection: document_headers - the Wave 0 generic purchasing/procurement document header shared by PR, PO, GR and AP invoice (default headers_collection in core.documents.doc_number; _HEADERS_COL in purchasing.document_service, purchasing_chain_reconciler and attachments.attachment_service). Fields: docId, docType, docNumber, organizationId, companyCode, vendorId/vendorCode/vendorName, currencyCode, paymentTermsCode, docDate, postingDate, dueDate, expectedDeliveryDate, requestedBy/requestedDate, issuedBy/issuedDate, department, urgency, approvalState + approvalRequestedFrom/At + approvalDecidedBy/At + approvalComment, status, subtotalNet/totalTax/totalGross, notes, baseDocId, deletedAt. finance_bridge.outbox_writer stamps outbox metadata onto it in the same transaction as the outbox insert. LIVE: 3 docs, NO indexes beyond _id - no module declares any."
+    },
+    {
+      "node_id": "collection_document_lines",
+      "node_type": "db_model",
+      "name": "document_lines",
+      "file_path": "src/core/documents/open_quantity.py",
+      "module": "core",
+      "layer": "model",
+      "description": "MongoDB collection: document_lines - Wave 0 generic document line rows, one document_headers.docId to many lines (_LINES_COL in purchasing.document_service / purchasing_chain_reconciler; lines_collection argument to core.documents.open_quantity and document_links). Fields: lineId, docId, lineNumber, itemId/itemCode/itemName, description, quantity, openQuantity, closedQuantity, uom, unitPrice, discountPercent, taxCode/taxRate, lineNet/lineTax/lineGross, warehouseId, costCenterId, requestedVendorId, baseLineId (copy-from chain), notes, organizationId. The open/closed quantity pair is what core.documents.open_quantity mutates when a target document is issued. LIVE: 4 docs, NO indexes beyond _id."
+    },
+    {
+      "node_id": "collection_document_counters",
+      "node_type": "db_model",
+      "name": "document_counters",
+      "file_path": "src/core/documents/doc_number.py",
+      "module": "core",
+      "layer": "model",
+      "description": "MongoDB collection: document_counters - atomic per-series sequence counters backing core.documents.doc_number.next_doc_number (_COUNTERS_COLLECTION; also _COUNTERS_COL in purchasing.document_service). Shape: {_id: <series key, e.g. docType+org+year>, counter: <int>} incremented with find_one_and_update($inc). LIVE: 16 counter docs. Only the _id index - which is exactly the uniqueness guarantee the pattern needs."
+    },
+    {
+      "node_id": "collection_counters",
+      "node_type": "db_model",
+      "name": "counters",
+      "file_path": "src/modules/crm/services/customer/customer_repository.py",
+      "module": "core",
+      "layer": "model",
+      "description": "MongoDB collection: counters - the older, cross-module code-sequence counter used by the non-document modules. Shape: {_id: <sequence name, e.g. 'vehicle_sequence'>, value: <int>} bumped via find_one_and_update($inc). Written by crm.customer_repository, hr.employee_repository, logistics.vehicle_repository and logistics.shipment_repository to mint customerCode / employeeCode / vehicleCode / shipmentCode. LIVE: 3 sequences. Distinct from document_counters, which serves the Wave 0 document chain."
+    },
+    {
+      "node_id": "collection_protocols",
+      "node_type": "db_model",
+      "name": "protocols",
+      "file_path": "src/modules/protocols/services/database.py",
+      "module": "protocols",
+      "layer": "model",
+      "description": "MongoDB collection: protocols - SOP/protocol library (PROTOCOLS in protocols/services/database.py). Fields: protocolId, code, title, version, category, scope, status, purpose, steps[], materials[], equipment[], ppe[], safetyNotes, references, referenceImages, appliesTo[], tags[], approvedBy/approvedByName/approvedAt, divisionId, organizationId, notes. LIVE: 12 docs with all 9 declared indexes applied: protocolId (unique), code (unique), category, status, tags, appliesTo, (appliesTo,status), createdAt desc. Cross-module readers: genetics.protocol_link and genetics.api.v1.public (_PROTOCOLS), mushroom_manager.harvest_service."
+    },
+    {
+      "node_id": "collection_finance_outbox",
+      "node_type": "db_model",
+      "name": "finance_outbox",
+      "file_path": "src/modules/finance_bridge/outbox_repository.py",
+      "module": "finance_bridge",
+      "layer": "model",
+      "description": "MongoDB collection: finance_outbox - transactional outbox queuing ops-side events for the statutory finance microservice (_COLLECTION in both outbox_repository.py and outbox_writer.py). Fields: eventId, eventType, status, payload, organizationId, companyCode, sourceDocumentId, sourceUserId, occurredAt, createdAt, attempts, lastAttemptAt, lastError, processedAt. Writes are gated by organizations.modules.financeEnabled and env_FINANCE_OUTBOX_ENABLED; the event type must be in EVENT_TYPE_REGISTRY or publish() raises. LIVE: 27 docs, with both declared indexes applied: ix_outbox_status_created (status, createdAt) and ix_outbox_eventId_unique (eventId)."
+    },
+    {
+      "node_id": "collection_sales_order_lines",
+      "node_type": "db_model",
+      "name": "sales_order_lines",
+      "file_path": "src/modules/finance/services/database.py",
+      "module": "finance",
+      "layer": "model",
+      "description": "MongoDB collection: sales_order_lines - flattened, per-line revenue fact table backing the ops P&L (indexes declared in finance/services/database.py; populated by the 2026-04-07 Excel import and its stage5b price-imputation pass). Fields: lineId, orderId/orderRef, customerId/customerName, farmId/farmName, blockId, divisionId, organizationId, farmingYear, cropName, grade, packageType/packageSize, quantity, totalKg, avgPrice, totalPrice, excel_data, metadata.priceSource, metadata.legacyRef. LIVE: 13,281 docs with 5 declared indexes: (farmId,farmingYear), metadata.priceSource, orderRef, (createdAt,farmId), metadata.legacyRef. Note this is the FINANCE module's fact table, unrelated to the embedded lines[] on sales_orders_v2."
+    },
+    {
+      "node_id": "collection_purchase_register",
+      "node_type": "db_model",
+      "name": "purchase_register",
+      "file_path": "src/modules/finance/services/database.py",
+      "module": "finance",
+      "layer": "model",
+      "description": "MongoDB collection: purchase_register - flattened cost/voucher fact table for the ops P&L (indexes declared in finance/services/database.py). Fields: voucherId, vchNo, vchType, date, supplier, buyerEntity, items[] (with mappedCropName), purchasesSubtotal, vatAmount, totalAmount, source, divisionId, organizationId, metadata.legacyRef. LIVE: 130 docs with 4 declared indexes: metadata.legacyRef, date, (buyerEntity,date), items.mappedCropName. Aggregated in four places by finance.pnl_service."
+    },
+    {
+      "node_id": "collection_financial_summary",
+      "node_type": "db_model",
+      "name": "financial_summary",
+      "file_path": "scripts/data_import/2026_04_07/stage7_finalize.py",
+      "module": "finance",
+      "layer": "model",
+      "description": "MongoDB collection: financial_summary - pre-aggregated farm x crop x month P&L rollup produced by the 2026-04-07 import finaliser (stage7_finalize.py). Fields: summaryId, farmId, cropName, yearMonth, revenueAED, costAllocatedAED, grossMarginAED, divisionId, organizationId, generatedAt, metadata.migratedFrom. LIVE: 543 docs, indexed on (farmId, cropName, yearMonth). Written only by the migration script - no runtime service reads or refreshes it, so it is stale-by-design snapshot data."
+    },
+    {
+      "node_id": "collection_ai_hub_chat_log",
+      "node_type": "db_model",
+      "name": "ai_hub_chat_log",
+      "file_path": "src/modules/farm_manager/services/ai_hub/service.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "description": "MongoDB collection: ai_hub_chat_log - conversation log for the AI Hub assistant (farm_manager/services/ai_hub/service.py writes on every turn and replays history from it). Fields: section, userId, userMessage, assistantMessage, toolsUsed, hasPendingAction, timestamp. LIVE: 43 docs, indexed on (section, userId, timestamp)."
+    },
+    {
+      "node_id": "collection_farm_ai_chat_log",
+      "node_type": "db_model",
+      "name": "farm_ai_chat_log",
+      "file_path": "src/modules/farm_manager/services/farm_ai/service.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "description": "MongoDB collection: farm_ai_chat_log - shared conversation log for the three scoped farm assistants: farm_ai (block-level), farm_level_ai and global_ai all insert into it. Fields: farmId, blockId, userId, userMessage, assistantMessage, toolsUsed, hasPendingAction, timestamp. LIVE: 74 docs, NO indexes beyond _id despite always being queried by farmId/blockId + timestamp."
+    },
+    {
+      "node_id": "collection_payroll_runs",
+      "node_type": "db_model",
+      "name": "payroll_runs",
+      "file_path": "scripts/data_import/2026_04_07/stage8_hr_payroll.py",
+      "module": "hr",
+      "layer": "model",
+      "description": "MongoDB collection: payroll_runs - one document per payroll period, created by the 2026-04-07 HR payroll import (stage8_hr_payroll.py). Fields: runId, runDate, period{year,month,label}, totalAmount, totalEmployees, byFarm, byCompany, byPaymentType, status, createdBy, divisionId, organizationId, metadata{migratedFrom, legacyRef, sourceSheets[]}. LIVE: 0 docs but the collection exists with its unique metadata.legacyRef index - the import created indexes then rolled back or was never run to completion. No src/ module reads or writes it: the HR module has no payroll service."
+    },
+    {
+      "node_id": "collection_payroll_entries",
+      "node_type": "db_model",
+      "name": "payroll_entries",
+      "file_path": "scripts/data_import/2026_04_07/stage8_hr_payroll.py",
+      "module": "hr",
+      "layer": "model",
+      "description": "MongoDB collection: payroll_entries - per-employee payroll line for a payroll_runs.runId, created by the 2026-04-07 HR payroll import (stage8_hr_payroll.py). Fields: entryId, runId, employeeId, employeeName, grossSalary, deductions, netSalary, totalSalary, farmId/farmName, paymentType, paymentCompany, status, createdBy, divisionId, organizationId, metadata{migratedFrom, legacyRef, sourceSheet}. LIVE: 0 docs with a non-unique metadata.legacyRef index. No src/ module reads or writes it."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "sales.service.quote_service",
+      "target_id": "collection_sales_quotes",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/quote_service.py",
+      "context": "line 65: _QUOTES_COL = \"sales_quotes\""
+    },
+    {
+      "source_id": "sales.service.quote_service",
+      "target_id": "collection_sales_quotes_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/quote_service.py",
+      "context": "line 66: _AUDIT_COL = \"sales_quotes_audit\""
+    },
+    {
+      "source_id": "sales.service.sales_order_service",
+      "target_id": "collection_sales_orders_v2",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/sales_order_service.py",
+      "context": "line 96: _SO_COL = \"sales_orders_v2\""
+    },
+    {
+      "source_id": "sales.service.sales_order_service",
+      "target_id": "collection_sales_orders_v2_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/sales_order_service.py",
+      "context": "audit trail writes for SALES_ORDER"
+    },
+    {
+      "source_id": "sales.service.sales_order_service",
+      "target_id": "collection_sales_quotes",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/sales_order_service.py",
+      "context": "line 98: _QUOTES_COL = \"sales_quotes\" (copy-from quote)"
+    },
+    {
+      "source_id": "sales.service.delivery_service",
+      "target_id": "collection_deliveries_v2",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/delivery_service.py",
+      "context": "delivery document persistence"
+    },
+    {
+      "source_id": "sales.service.delivery_service",
+      "target_id": "collection_deliveries_v2_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/delivery_service.py",
+      "context": "audit trail writes for DELIVERY"
+    },
+    {
+      "source_id": "sales.service.delivery_service",
+      "target_id": "collection_sales_orders_v2",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/delivery_service.py",
+      "context": "line 91: _SO_COL = \"sales_orders_v2\" (base document + open quantity)"
+    },
+    {
+      "source_id": "sales.service.ar_invoice_service",
+      "target_id": "collection_ar_invoices_v2",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/ar_invoice_service.py",
+      "context": "line 105: _ARI_COL = \"ar_invoices_v2\""
+    },
+    {
+      "source_id": "sales.service.ar_invoice_service",
+      "target_id": "collection_ar_invoices_v2_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/ar_invoice_service.py",
+      "context": "audit trail writes for AR_INVOICE"
+    },
+    {
+      "source_id": "sales.service.ar_invoice_service",
+      "target_id": "collection_payment_terms",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/ar_invoice_service.py",
+      "context": "line 111: _PAYMENT_TERMS_COL = \"payment_terms\" (dueDate calculation)"
+    },
+    {
+      "source_id": "sales.service.ar_credit_note_service",
+      "target_id": "collection_ar_credit_notes_v2",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/ar_credit_note_service.py",
+      "context": "line 90: _ARC_COL = \"ar_credit_notes_v2\""
+    },
+    {
+      "source_id": "sales.service.ar_credit_note_service",
+      "target_id": "collection_ar_credit_notes_v2_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/ar_credit_note_service.py",
+      "context": "audit trail writes for AR_CREDIT_NOTE"
+    },
+    {
+      "source_id": "sales.service.ar_credit_note_service",
+      "target_id": "collection_ar_invoices_v2",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/ar_credit_note_service.py",
+      "context": "line 92: _ARI_COL = \"ar_invoices_v2\""
+    },
+    {
+      "source_id": "sales.service.ar_credit_note_service",
+      "target_id": "collection_returns_v2",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/ar_credit_note_service.py",
+      "context": "line 93: _RTN_COL = \"returns_v2\""
+    },
+    {
+      "source_id": "sales.service.customer_receipt_service",
+      "target_id": "collection_customer_receipts_v2",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/customer_receipt_service.py",
+      "context": "line 66: _CR_COL = \"customer_receipts_v2\""
+    },
+    {
+      "source_id": "sales.service.customer_receipt_service",
+      "target_id": "collection_customer_receipts_v2_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/customer_receipt_service.py",
+      "context": "audit trail writes for CUSTOMER_RECEIPT"
+    },
+    {
+      "source_id": "sales.service.customer_receipt_service",
+      "target_id": "collection_ar_invoices_v2",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/customer_receipt_service.py",
+      "context": "line 68: _ARI_COL = \"ar_invoices_v2\" (allocation targets)"
+    },
+    {
+      "source_id": "sales.service.rtn_service",
+      "target_id": "collection_returns_v2",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/rtn_service.py",
+      "context": "line 75: _RTN_COL = \"returns_v2\""
+    },
+    {
+      "source_id": "sales.service.rtn_service",
+      "target_id": "collection_returns_v2_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/rtn_service.py",
+      "context": "audit trail writes for RETURN"
+    },
+    {
+      "source_id": "sales.service.rtn_service",
+      "target_id": "collection_return_requests_v2",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/rtn_service.py",
+      "context": "line 77: _RR_COL = \"return_requests_v2\""
+    },
+    {
+      "source_id": "sales.service.rtn_service",
+      "target_id": "collection_deliveries_v2",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/rtn_service.py",
+      "context": "line 78: _DN_COL = \"deliveries_v2\""
+    },
+    {
+      "source_id": "sales.service.return_request_service",
+      "target_id": "collection_return_requests_v2",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/return_request_service.py",
+      "context": "line 57: _RR_COL = \"return_requests_v2\""
+    },
+    {
+      "source_id": "sales.service.return_request_service",
+      "target_id": "collection_return_requests_v2_audit",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/return_request_service.py",
+      "context": "audit trail writes for RETURN_REQUEST"
+    },
+    {
+      "source_id": "sales.service.legacy.order_repository",
+      "target_id": "collection_sales_orders",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/sales/order_repository.py",
+      "context": "line 38: self.collection_name = \"sales_orders\""
+    },
+    {
+      "source_id": "sales.service.legacy.order_service",
+      "target_id": "collection_return_orders",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/sales/order_service.py",
+      "context": "line 1753: await sales_db_inst.return_orders.insert_one(return_order_doc)"
+    },
+    {
+      "source_id": "sales.service.legacy.return_service",
+      "target_id": "collection_return_orders",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/sales/return_service.py",
+      "context": "line 40: self.collection_name = \"return_orders\""
+    },
+    {
+      "source_id": "sales.service.legacy.purchase_order_repository",
+      "target_id": "collection_purchase_orders",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/sales/purchase_order_repository.py",
+      "context": "legacy purchase order persistence"
+    },
+    {
+      "source_id": "sales.service.database",
+      "target_id": "collection_sales_orders",
+      "edge_type": "uses",
+      "source_file": "src/modules/sales/services/database.py",
+      "context": "lines 59-77: declares 13 sales_orders indexes incl. sales_order_search_text"
+    },
+    {
+      "source_id": "sales.service.database",
+      "target_id": "collection_purchase_orders",
+      "edge_type": "uses",
+      "source_file": "src/modules/sales/services/database.py",
+      "context": "lines 80-95: declares 11 purchase_orders indexes"
+    },
+    {
+      "source_id": "core.documents.doc_number",
+      "target_id": "collection_document_counters",
+      "edge_type": "stores_in",
+      "source_file": "src/core/documents/doc_number.py",
+      "context": "line 84: _COUNTERS_COLLECTION = \"document_counters\" (find_one_and_update $inc)"
+    },
+    {
+      "source_id": "core.documents.doc_number",
+      "target_id": "collection_document_headers",
+      "edge_type": "reads_from",
+      "source_file": "src/core/documents/doc_number.py",
+      "context": "line 179: headers_collection: str = \"document_headers\""
+    },
+    {
+      "source_id": "core.documents.open_quantity",
+      "target_id": "collection_document_lines",
+      "edge_type": "stores_in",
+      "source_file": "src/core/documents/open_quantity.py",
+      "context": "mutates openQuantity/closedQuantity on document_lines"
+    },
+    {
+      "source_id": "core.documents.document_links",
+      "target_id": "collection_document_lines",
+      "edge_type": "stores_in",
+      "source_file": "src/core/documents/document_links.py",
+      "context": "appends targetDocRefs to document_lines"
+    },
+    {
+      "source_id": "core.documents.chain_reconciler",
+      "target_id": "collection_document_headers",
+      "edge_type": "reads_from",
+      "source_file": "src/core/documents/chain_reconciler.py",
+      "context": "reconciles header status against downstream documents"
+    },
+    {
+      "source_id": "core.documents.chain_reconciler",
+      "target_id": "collection_document_lines",
+      "edge_type": "reads_from",
+      "source_file": "src/core/documents/chain_reconciler.py",
+      "context": "recomputes open quantity from line rows"
+    },
+    {
+      "source_id": "finance_bridge.outbox_repository",
+      "target_id": "collection_finance_outbox",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/finance_bridge/outbox_repository.py",
+      "context": "line 34: _COLLECTION = \"finance_outbox\"; lines 70-77 create both indexes"
+    },
+    {
+      "source_id": "finance_bridge.outbox_writer",
+      "target_id": "collection_finance_outbox",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/finance_bridge/outbox_writer.py",
+      "context": "line 56: _COLLECTION = \"finance_outbox\""
+    },
+    {
+      "source_id": "finance_bridge.outbox_writer",
+      "target_id": "collection_document_headers",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/finance_bridge/outbox_writer.py",
+      "context": "line 27: stamps outbox metadata on document_headers inside the same session"
+    },
+    {
+      "source_id": "finance_bridge.outbox_writer",
+      "target_id": "collection_organizations",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/finance_bridge/outbox_writer.py",
+      "context": "checks organizations.modules.financeEnabled before publishing"
+    },
+    {
+      "source_id": "core.api.dashboard",
+      "target_id": "collection_sales_orders",
+      "edge_type": "reads_from",
+      "source_file": "src/api/v1/dashboard.py",
+      "context": "line 147: await db.sales_orders.count_documents({})"
+    }
+  ]
+}

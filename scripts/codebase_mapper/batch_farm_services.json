@@ -1,0 +1,1994 @@
+{
+  "meta": {
+    "generated_at": "2026-08-21T00:00:00Z",
+    "generator": "codebase_mapper/batch_farm_services",
+    "task": "map_farm_services",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "node_id_convention_summary": "farm_manager is the legacy module: service/repository nodes are class-level PascalCase (farm_manager.service.<ClassName>) with layer=service|repository|infrastructure and node_type=class, matching the 31 pre-existing farm service nodes. Function-only service modules (no class to name) use the dotted file subpath under services/ (farm_manager.service.<subpkg>.<module>) with node_type=function \u2014 documented divergence, see task report. Collections are collection_<snake> db_model nodes with layer=model. Repository->collection edges use the FULL node_id on the source side (farm_manager.service.HarvestRepository), NOT the bare class name used by ~20 pre-existing edges, because map_generator.get_edges_for_node matches node_id exactly and the bare-name edges never resolve.",
+    "scope": [
+      "src/modules/farm_manager/services/"
+    ]
+  },
+  "nodes": [
+    {
+      "node_id": "farm_manager.service.HarvestService",
+      "node_type": "class",
+      "name": "HarvestService",
+      "file_path": "src/modules/farm_manager/services/block/harvest_service.py",
+      "line_number": 53,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "record_harvest",
+        "get_harvest",
+        "list_harvests_by_block",
+        "list_harvests_by_farm",
+        "update_harvest",
+        "delete_harvest",
+        "get_harvest_summary",
+        "submit_harvest_batch",
+        "get_batch_lookup"
+      ],
+      "description": "Block harvest business logic. Plant Library harvest routing (Stage 3): submit_harvest_batch() validates a multi-line submission against the block's productMotherId -> plant_mothers.products[] (unknown/inactive product = 400; qualityGrade required for sellable/process and REJECTED on waste), validates ALL lines before writing anything, then routes each line by ProductCategory under one server-generated harvestBatchId: SELLABLE -> _route_sellable_line -> block_harvests + inventory_harvest FIFO batch; PROCESS -> _route_process_line -> processing_inventory; WASTE -> _route_waste_line -> inventory_waste directly (sourceType=HARVEST, originalGrade null). get_batch_lookup(block, date) fans out across all three destinations and groups by harvestBatchId (ungrouped legacy rows become singleton groups); the plain harvest list stays block_harvests-only."
+    },
+    {
+      "node_id": "farm_manager.service.HarvestRepository",
+      "node_type": "class",
+      "name": "HarvestRepository",
+      "file_path": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "line_number": 58,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "create",
+        "get_by_id",
+        "get_by_block",
+        "get_by_farm",
+        "update",
+        "delete",
+        "get_block_summary",
+        "get_total_quantity_for_block",
+        "get_harvest_count_for_block",
+        "get_harvests_for_multiple_blocks",
+        "get_summary_for_multiple_blocks"
+      ],
+      "description": "Data access for block_harvests. create() now takes keyword-only product_id / product_name / harvest_batch_id (all Optional, None for every legacy caller): product_name is a FROZEN snapshot never re-derived, harvest_batch_id groups the row with its sibling process/waste lines. Also stamps farmingYear from system_config and recomputes block KPI rollups."
+    },
+    {
+      "node_id": "farm_manager.service.ArchiveRepository",
+      "node_type": "class",
+      "name": "ArchiveRepository",
+      "file_path": "src/modules/farm_manager/services/block/archive_repository.py",
+      "line_number": 26,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "create",
+        "get_by_id",
+        "get_by_block",
+        "get_by_farm",
+        "get_by_crop",
+        "delete",
+        "get_performance_analytics",
+        "get_crop_performance_comparison",
+        "get_top_performing_blocks",
+        "count_cycles_for_block",
+        "archive_block_cycle"
+      ],
+      "description": "Data access for block_archives plus cycle archiving and performance aggregations. archive_block_cycle() now copies productMotherId/productName off the block into the archive - BlockArchive has carried those fields since Plant Library Phase 1 but the constructor never populated them, so every archive written since then got nulls."
+    },
+    {
+      "node_id": "farm_manager.service.PlantDataEnhancedService",
+      "node_type": "class",
+      "name": "PlantDataEnhancedService",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "create_plant_data",
+        "get_plant_data",
+        "search_plant_data",
+        "get_active_plants",
+        "get_filter_options",
+        "update_plant_data",
+        "delete_plant_data",
+        "clone_plant_data",
+        "generate_csv_template",
+        "get_by_farm_type",
+        "get_by_tags",
+        "export_to_csv",
+        "import_from_csv"
+      ],
+      "description": "Variety-level plant library CRUD (growth cycles, fertigation, spacing, search, clone, CSV import/export). Mother/variety-aware: CSV import resolves or creates the PlantMother row and stamps motherPlantId/varietyName on each variety; variety-create under an existing mother is delegated in from PlantMotherService."
+    },
+    {
+      "node_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "node_type": "class",
+      "name": "PlantDataEnhancedRepository",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "line_number": 23,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "create",
+        "get_by_id",
+        "get_by_name",
+        "get_by_mother_and_variety_name",
+        "get_by_mother",
+        "search",
+        "update",
+        "soft_delete",
+        "get_active_plants",
+        "hard_delete",
+        "clone",
+        "bulk_create",
+        "get_total_count",
+        "get_by_farm_type",
+        "get_by_tags",
+        "get_by_growth_cycle_range",
+        "get_filter_options"
+      ],
+      "description": "Data access for plant_data_enhanced (COLLECTION constant, also read by PlantMotherRepository). Mother-aware lookups get_by_mother() and get_by_mother_and_variety_name() back the variety-under-mother uniqueness rule; soft_delete via deletedAt."
+    },
+    {
+      "node_id": "farm_manager.service.PlantMotherService",
+      "node_type": "class",
+      "name": "PlantMotherService",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "line_number": 38,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "create_mother",
+        "list_mothers",
+        "get_mother",
+        "update_mother",
+        "delete_mother",
+        "list_varieties",
+        "create_variety_for_mother",
+        "add_product",
+        "list_products",
+        "update_product",
+        "deactivate_product"
+      ],
+      "description": "Plant Library mother (product/folder) orchestration. Beyond mother/variety CRUD it now owns the embedded products[] catalog that harvest routing depends on: add_product / list_products / update_product / deactivate_product, name-uniqueness checks, _ensure_active_sellable_default (a mother always keeps one active SELLABLE product) and _assert_keeps_active_sellable_product guarding update/deactivate. Variety creation is delegated to PlantDataEnhancedService."
+    },
+    {
+      "node_id": "farm_manager.service.PlantMotherRepository",
+      "node_type": "class",
+      "name": "PlantMotherRepository",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "line_number": 34,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "create",
+        "get_by_id",
+        "get_by_name",
+        "get_active_mothers",
+        "list_mothers",
+        "update",
+        "soft_delete",
+        "cascade_rename",
+        "set_products"
+      ],
+      "description": "Data access for plant_mothers. set_products() persists the embedded products[] array (indexed on products.productId) that HarvestService reads to resolve a harvest line's category; cascade_rename() propagates a mother rename into plant_data_enhanced via the motherPlantId index; list_mothers() joins variety counts from PlantDataEnhancedRepository.COLLECTION."
+    },
+    {
+      "node_id": "farm_manager.service.FarmDatabaseManager",
+      "node_type": "class",
+      "name": "FarmDatabaseManager",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "line_number": 17,
+      "module": "farm_manager",
+      "layer": "infrastructure",
+      "exports": [
+        "connect",
+        "disconnect",
+        "health_check",
+        "get_database",
+        "get_collection",
+        "farm_db"
+      ],
+      "description": "Farm module MongoDB facade (delegates the connection to core src.services.database) and the single owner of _create_indexes() for every farm collection. Plant Library harvest routing added indexes for two NEW collections - processing_inventory (inventoryId unique, organizationId/farmId/blockId/productId/harvestBatchId/harvestDate) and inventory_waste (harvestBatchId, sourceBlockId) - plus block_harvests.productId and block_harvests.harvestBatchId. Exposes the module-level `farm_db` singleton every repository imports."
+    },
+    {
+      "node_id": "farm_manager.service.AIDashboardService",
+      "node_type": "class",
+      "name": "AIDashboardService",
+      "file_path": "src/modules/farm_manager/services/ai_dashboard/service.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "run_inspection",
+        "get_latest",
+        "get_reports",
+        "get_by_id"
+      ],
+      "description": "Orchestrates AI Dashboard inspections (DataCollector -> ReportGenerator) and persists reports to the ai_dashboard_reports collection."
+    },
+    {
+      "node_id": "farm_manager.service.DataCollector",
+      "node_type": "class",
+      "name": "DataCollector",
+      "file_path": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "line_number": 66,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "collect_all"
+      ],
+      "description": "Runs 9 AI Dashboard inspection tasks in parallel via asyncio.gather across farm/block/harvest/alert repositories and SenseHub cache; each task is isolated so one failure sets its raw-data field to None instead of aborting the inspection."
+    },
+    {
+      "node_id": "farm_manager.service.ReportGenerator",
+      "node_type": "class",
+      "name": "ReportGenerator",
+      "file_path": "src/modules/farm_manager/services/ai_dashboard/report_generator.py",
+      "line_number": 103,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "generate_summary"
+      ],
+      "description": "Passes raw AI Dashboard inspection data to Vertex AI Gemini and parses the structured JSON response into an AISummary."
+    },
+    {
+      "node_id": "farm_manager.service.AIDashboardScheduler",
+      "node_type": "class",
+      "name": "AIDashboardScheduler",
+      "file_path": "src/modules/farm_manager/services/ai_dashboard/scheduler.py",
+      "line_number": 17,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "get_instance",
+        "initialize",
+        "start",
+        "stop"
+      ],
+      "description": "Singleton asyncio background scheduler: waits 60s after startup, runs an initial AI Dashboard inspection, then repeats every 4 hours."
+    },
+    {
+      "node_id": "farm_manager.service.AIHubService",
+      "node_type": "class",
+      "name": "AIHubService",
+      "file_path": "src/modules/farm_manager/services/ai_hub/service.py",
+      "line_number": 149,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "chat",
+        "confirm_action",
+        "get_history"
+      ],
+      "description": "Platform-wide (no farm scoping) Vertex AI Gemini orchestration for the unified AI Hub. Four sections - Control (read+write), Monitor, Report, Advise - share one Gemini pipeline but get different system prompts and tool sets; write tools route through the same Redis pending-action confirmation flow as the farm-level AI services."
+    },
+    {
+      "node_id": "farm_manager.service.ReportExporter",
+      "node_type": "class",
+      "name": "ReportExporter",
+      "file_path": "src/modules/farm_manager/services/ai_hub/report_exporter.py",
+      "line_number": 68,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "markdown_to_pdf",
+        "markdown_to_excel"
+      ],
+      "description": "Pure synchronous converter from AI-generated markdown report text to PDF (reportlab) or Excel (openpyxl) bytes; touches no DB or external service."
+    },
+    {
+      "node_id": "farm_manager.service.FarmLevelAIChatService",
+      "node_type": "class",
+      "name": "FarmLevelAIChatService",
+      "file_path": "src/modules/farm_manager/services/farm_level_ai/service.py",
+      "line_number": 72,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "chat",
+        "confirm_action"
+      ],
+      "description": "Farm-scoped Vertex AI Gemini chat: builds context over ALL blocks on a farm, resolves block_code -> SenseHub client per tool call, and gates write actions behind the pending-action confirmation flow."
+    },
+    {
+      "node_id": "farm_manager.service.GlobalAIChatService",
+      "node_type": "class",
+      "name": "GlobalAIChatService",
+      "file_path": "src/modules/farm_manager/services/global_ai/service.py",
+      "line_number": 53,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "chat"
+      ],
+      "description": "Strictly read-only cross-farm Vertex AI Gemini monitoring assistant. Stateless static methods; no write tools and no pending-action flow. Farms/blocks are resolved by name, not UUID."
+    },
+    {
+      "node_id": "farm_manager.service.SenseHubCacheQueryService",
+      "node_type": "class",
+      "name": "SenseHubCacheQueryService",
+      "file_path": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "line_number": 17,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "get_equipment",
+        "get_equipment_as_list",
+        "get_alerts",
+        "get_alerts_as_list",
+        "get_lab_latest",
+        "get_lab_readings",
+        "get_snapshots",
+        "get_snapshot_by_id",
+        "get_latest_snapshots",
+        "get_sync_history",
+        "get_cache_stats"
+      ],
+      "description": "Stateless read layer over the sensehub_*_cache collections (equipment, alerts, lab, snapshots, sync log). Used by API endpoints and as the AI tool fallback when live SenseHub is unreachable."
+    },
+    {
+      "node_id": "farm_manager.service.SenseHubCropSync",
+      "node_type": "class",
+      "name": "SenseHubCropSync",
+      "file_path": "src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py",
+      "line_number": 301,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "from_block",
+        "set_crop_data",
+        "update_growth_stage",
+        "complete_crop",
+        "get_crop_data"
+      ],
+      "description": "Crop-specific MCP layer wrapping SenseHubMCPClient, one instance per block MCP session (from_block). Builds the set_crop_data payload from PlantDataEnhanced optimal ranges and stage durations. Fire-and-log: never raises, returns None on failure."
+    },
+    {
+      "node_id": "farm_manager.service.SenseHubSyncService",
+      "node_type": "class",
+      "name": "SenseHubSyncService",
+      "file_path": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "line_number": 163,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "get_instance",
+        "initialize",
+        "start_background_sync",
+        "stop_background_sync",
+        "run_sync",
+        "get_status"
+      ],
+      "description": "Singleton once-per-day background sync pulling equipment, alerts, lab data and snapshots from every IoT-connected SenseHub instance into MongoDB so dashboards and AI tools can fall back to cache when SenseHub is offline. Also re-pushes crop data via SenseHubCropSync."
+    },
+    {
+      "node_id": "farm_manager.service.BlockHistoryRepository",
+      "node_type": "class",
+      "name": "BlockHistoryRepository",
+      "file_path": "src/modules/farm_manager/services/block_history/block_history_repository.py",
+      "line_number": 18,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "create",
+        "get_by_id",
+        "get_by_block_id",
+        "get_by_farm_id",
+        "get_by_crop",
+        "get_performance_statistics"
+      ],
+      "description": "Data access for the block_history archive collection, including per-crop performance statistics aggregations."
+    },
+    {
+      "node_id": "farm_manager.service.ReturnedInventoryRepository",
+      "node_type": "class",
+      "name": "ReturnedInventoryRepository",
+      "file_path": "src/modules/farm_manager/services/inventory/returned_repository.py",
+      "line_number": 48,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "get_by_id",
+        "list_paginated",
+        "create",
+        "update",
+        "soft_delete",
+        "mark_as_waste"
+      ],
+      "description": "Data access for inventory_returned. Takes an injected Motor db (FastAPI dependency) rather than the farm_db singleton, matching the inventory API. mark_as_waste() moves a returned row into inventory_waste."
+    },
+    {
+      "node_id": "farm_manager.service.CalculationListsRepository",
+      "node_type": "class",
+      "name": "CalculationListsRepository",
+      "file_path": "src/modules/farm_manager/services/tools/calculation_lists_repository.py",
+      "line_number": 26,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "create",
+        "list_paginated",
+        "get_by_id",
+        "update",
+        "delete"
+      ],
+      "description": "CRUD for fertilizer_calculation_lists (saved fertilizer-cost calculations), scoped by organizationId."
+    },
+    {
+      "node_id": "farm_manager.service.ChemicalsRepository",
+      "node_type": "class",
+      "name": "ChemicalsRepository",
+      "file_path": "src/modules/farm_manager/services/tools/chemicals_repository.py",
+      "line_number": 27,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "create",
+        "list_all",
+        "get_by_id",
+        "get_by_name",
+        "find_by_name_or_alias",
+        "update",
+        "check_dependents",
+        "archive",
+        "bulk_insert"
+      ],
+      "description": "CRUD for fertilizer_chemicals, org-scoped and archived-excluded by default. Soft-delete via archivedAt with check_dependents() validating against plant_data_enhanced fertigation schedules; name matching is case-insensitive (en/strength 2 collation)."
+    },
+    {
+      "node_id": "farm_manager.service.ChemicalsService",
+      "node_type": "class",
+      "name": "ChemicalsService",
+      "file_path": "src/modules/farm_manager/services/tools/chemicals_service.py",
+      "line_number": 51,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "discover_from_plant_library",
+        "build_chemical_lookup",
+        "ArchivedChemicalMatch"
+      ],
+      "description": "Chemical catalog business logic. discover_from_plant_library() walks every plant_data_enhanced fertigation schedule and auto-creates FertilizerChemical rows for unknown ingredient names; archive-aware - a name matching an archived chemical returns the ArchivedChemicalMatch sentinel instead of resurrecting the record."
+    },
+    {
+      "node_id": "farm_manager.service.PriceBook",
+      "node_type": "class",
+      "name": "PriceBook",
+      "file_path": "src/modules/farm_manager/services/tools/price_book.py",
+      "line_number": 27,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "resolve_prices"
+      ],
+      "description": "Resolves a per-org price per chemical in order: fertilizer_price_overrides (manual AED override) -> inventory_input where category='fertilizer' matched on chemical name or alias -> source='none' (unknown)."
+    },
+    {
+      "node_id": "farm_manager.service.WatchdogService",
+      "node_type": "class",
+      "name": "WatchdogService",
+      "file_path": "src/modules/farm_manager/services/watchdog/service.py",
+      "line_number": 39,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "create_indexes",
+        "run_check",
+        "get_history"
+      ],
+      "description": "Watchdog orchestrator: runs the five checkers, filters issues through a per-issue cooldown, sends Telegram notifications and records them in watchdog_notifications."
+    },
+    {
+      "node_id": "farm_manager.service.WatchdogConfigService",
+      "node_type": "class",
+      "name": "WatchdogConfigService",
+      "file_path": "src/modules/farm_manager/services/watchdog/config_service.py",
+      "line_number": 18,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "get_config",
+        "update_config",
+        "get_decrypted_bot_token",
+        "mask_token"
+      ],
+      "description": "CRUD for watchdog configuration stored in the system_config collection, including encrypted Telegram bot-token storage and masking."
+    },
+    {
+      "node_id": "farm_manager.service.WatchdogScheduler",
+      "node_type": "class",
+      "name": "WatchdogScheduler",
+      "file_path": "src/modules/farm_manager/services/watchdog/scheduler.py",
+      "line_number": 23,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "get_instance",
+        "initialize",
+        "start",
+        "stop",
+        "get_status"
+      ],
+      "description": "Singleton asyncio background loop that re-reads checkIntervalMinutes from DB each cycle (admin changes apply without restart) and takes a Redis distributed lock so only ONE Uvicorn worker runs the check per cycle."
+    },
+    {
+      "node_id": "farm_manager.service.TelegramService",
+      "node_type": "class",
+      "name": "TelegramService",
+      "file_path": "src/modules/farm_manager/services/watchdog/telegram_service.py",
+      "line_number": 17,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "send_message",
+        "test_connection"
+      ],
+      "description": "httpx-based Telegram Bot API client using only sendMessage and getMe; no external Telegram library."
+    },
+    {
+      "node_id": "farm_manager.service.AlertChecker",
+      "node_type": "class",
+      "name": "AlertChecker",
+      "file_path": "src/modules/farm_manager/services/watchdog/checkers/alert_checker.py",
+      "line_number": 14,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "run"
+      ],
+      "description": "Watchdog checker: finds active alerts at or above the configured HIGH/CRITICAL severity threshold."
+    },
+    {
+      "node_id": "farm_manager.service.BlockHealthChecker",
+      "node_type": "class",
+      "name": "BlockHealthChecker",
+      "file_path": "src/modules/farm_manager/services/watchdog/checkers/block_health_checker.py",
+      "line_number": 16,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "run"
+      ],
+      "description": "Watchdog checker: blocks sitting in ALERT status or with a stale IoT sync timestamp."
+    },
+    {
+      "node_id": "farm_manager.service.LateItemsChecker",
+      "node_type": "class",
+      "name": "LateItemsChecker",
+      "file_path": "src/modules/farm_manager/services/watchdog/checkers/late_items_checker.py",
+      "line_number": 14,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "run"
+      ],
+      "description": "Watchdog checker: block_cycles past their estimated harvest date with no actual harvest recorded."
+    },
+    {
+      "node_id": "farm_manager.service.MCPChecker",
+      "node_type": "class",
+      "name": "MCPChecker",
+      "file_path": "src/modules/farm_manager/services/watchdog/checkers/mcp_checker.py",
+      "line_number": 19,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "run"
+      ],
+      "description": "Watchdog checker: probes MCP endpoint reachability for every IoT-connected block."
+    },
+    {
+      "node_id": "farm_manager.service.SystemHealthChecker",
+      "node_type": "class",
+      "name": "SystemHealthChecker",
+      "file_path": "src/modules/farm_manager/services/watchdog/checkers/system_health_checker.py",
+      "line_number": 17,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "run"
+      ],
+      "description": "Watchdog checker: internal health probe of API, MongoDB and Redis."
+    },
+    {
+      "node_id": "farm_manager.service.block.expiry_cron",
+      "node_type": "function",
+      "name": "process_expired_harvest_inventory",
+      "file_path": "src/modules/farm_manager/services/block/expiry_cron.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "process_expired_harvest_inventory"
+      ],
+      "description": "Daily job scanning inventory_harvest for rows past expiryDate with availableQuantity > 0: writes an inventory_waste record (sourceType=EXPIRED), zeroes availableQuantity and appends an inventory_movements entry."
+    },
+    {
+      "node_id": "farm_manager.service.block.sensehub_block_service_triggers",
+      "node_type": "function",
+      "name": "sensehub_block_service_triggers",
+      "file_path": "src/modules/farm_manager/services/block/sensehub_block_service_triggers.py",
+      "line_number": 34,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "_sensehub_update_growth_stage_task",
+        "_sensehub_complete_crop_task"
+      ],
+      "description": "Fire-and-forget SenseHub triggers for BlockService.change_status, extracted to keep block_service_new.py readable. Called via asyncio.create_task and must never raise - all exceptions are caught and logged at ERROR."
+    },
+    {
+      "node_id": "farm_manager.service.farm_ai.context_builder",
+      "node_type": "function",
+      "name": "build_system_prompt",
+      "file_path": "src/modules/farm_manager/services/farm_ai/context_builder.py",
+      "line_number": 120,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "build_system_prompt"
+      ],
+      "description": "Builds the block-scoped Farm AI system prompt from MongoDB block, crop and growth-stage data, including a formatted fertigation context."
+    },
+    {
+      "node_id": "farm_manager.service.farm_ai.tool_executor",
+      "node_type": "function",
+      "name": "farm_ai tool_executor",
+      "file_path": "src/modules/farm_manager/services/farm_ai/tool_executor.py",
+      "line_number": 73,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "execute_read_tool",
+        "execute_write_tool",
+        "describe_write_action",
+        "execute_web_search"
+      ],
+      "description": "Maps Gemini tool_use calls to SenseHubClient methods and web search for the block-level Farm AI. Read tools execute immediately (falling back to SenseHubCacheQueryService when SenseHub is unreachable); write tools return a description for the pending-action confirmation flow."
+    },
+    {
+      "node_id": "farm_manager.service.farm_ai.pending_actions",
+      "node_type": "function",
+      "name": "farm_ai pending_actions",
+      "file_path": "src/modules/farm_manager/services/farm_ai/pending_actions.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "store_pending_action",
+        "load_pending_action",
+        "delete_pending_action"
+      ],
+      "description": "Redis-backed store for AI write actions awaiting user confirmation (300s TTL). Shared by the farm-level, farm-scoped and AI Hub chat services."
+    },
+    {
+      "node_id": "farm_manager.service.farm_level_ai.context_builder",
+      "node_type": "function",
+      "name": "build_farm_system_prompt",
+      "file_path": "src/modules/farm_manager/services/farm_level_ai/context_builder.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "build_farm_system_prompt"
+      ],
+      "description": "Builds the farm-level AI system prompt by loading the farm and ALL of its active blocks, so the assistant can coordinate multi-block operations."
+    },
+    {
+      "node_id": "farm_manager.service.farm_level_ai.tool_executor",
+      "node_type": "function",
+      "name": "farm_level_ai tool_executor",
+      "file_path": "src/modules/farm_manager/services/farm_level_ai/tool_executor.py",
+      "line_number": 127,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "resolve_block",
+        "get_sensehub_client",
+        "execute_read_tool",
+        "execute_write_tool",
+        "describe_write_action"
+      ],
+      "description": "Farm-scoped Gemini tool executor: resolves each tool call's block_code to a block document and its SenseHub connection before delegating to SenseHubClient. Also reused by AIHubService for the Hub's block-level tools."
+    },
+    {
+      "node_id": "farm_manager.service.global_ai.context_builder",
+      "node_type": "function",
+      "name": "build_global_system_prompt",
+      "file_path": "src/modules/farm_manager/services/global_ai/context_builder.py",
+      "line_number": 16,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "build_global_system_prompt"
+      ],
+      "description": "Builds the cross-farm monitoring system prompt from a summary of all farms and their connected block counts."
+    },
+    {
+      "node_id": "farm_manager.service.global_ai.tool_executor",
+      "node_type": "function",
+      "name": "global_ai tool_executor",
+      "file_path": "src/modules/farm_manager/services/global_ai/tool_executor.py",
+      "line_number": 179,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "execute_tool",
+        "resolve_farm_by_name",
+        "resolve_block"
+      ],
+      "description": "Read-only cross-farm Gemini tool executor over MongoDB and SenseHub HTTP clients. Farms and blocks are resolved by case-insensitive name because that is how users refer to them. Also reused by AIHubService for the Hub's global tools."
+    },
+    {
+      "node_id": "farm_manager.service.ai_hub.context_builder",
+      "node_type": "function",
+      "name": "build_hub_system_prompt",
+      "file_path": "src/modules/farm_manager/services/ai_hub/context_builder.py",
+      "line_number": 83,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "build_hub_system_prompt"
+      ],
+      "description": "Builds the section-specific AI Hub system prompt (Control / Monitor / Report / Advise) over a platform-wide farm summary."
+    },
+    {
+      "node_id": "farm_manager.service.sensehub.sensehub_stage_mapper",
+      "node_type": "function",
+      "name": "compute_stage",
+      "file_path": "src/modules/farm_manager/services/sensehub/sensehub_stage_mapper.py",
+      "line_number": 52,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "compute_stage",
+        "SenseHubStage"
+      ],
+      "description": "Pure deterministic mapper from A64 block state + days-since-planting to SenseHub's stage enum, using the variety's GrowthCycleDuration (germination -> vegetative -> flowering -> fruiting). No IO."
+    },
+    {
+      "node_id": "farm_manager.service.tools.fertilizer_calculator",
+      "node_type": "function",
+      "name": "calculate_for_crops",
+      "file_path": "src/modules/farm_manager/services/tools/fertilizer_calculator.py",
+      "line_number": 53,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "calculate_for_crops"
+      ],
+      "description": "Pure calculation engine for the Fertilizer Cost Calculator: loads plant_data_enhanced documents, walks each fertigation schedule (interval and custom rules) to sum per-point ingredient quantities, normalises units, then prices them through PriceBook."
+    },
+    {
+      "node_id": "farm_manager.service.tools.excel_handler",
+      "node_type": "function",
+      "name": "excel_handler",
+      "file_path": "src/modules/farm_manager/services/tools/excel_handler.py",
+      "line_number": 71,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "build_import_template",
+        "export_calculation",
+        "import_crops"
+      ],
+      "description": "openpyxl export/import for the Fertilizer Cost Calculator: .xlsx export with per-crop Calculation and Warnings sheets, plus a template builder and crop-list importer."
+    },
+    {
+      "node_id": "collection_processing_inventory",
+      "node_type": "db_model",
+      "name": "processing_inventory",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "line_number": 309,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: processing_inventory - NEW destination for `process`-category harvest lines, deliberately separate from inventory_harvest (which holds sellable stock only). Written by HarvestService._route_process_line; carries organizationId, farmId, blockId, productId, productName, quantity/unit, qualityGrade, harvestDate and harvestBatchId. Indexed on inventoryId (unique), organizationId, farmId, blockId, productId, harvestBatchId, harvestDate, createdAt."
+    },
+    {
+      "node_id": "collection_inventory_waste",
+      "node_type": "db_model",
+      "name": "inventory_waste",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "line_number": 322,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: inventory_waste - waste stock. Now also the DIRECT destination for `waste`-category harvest lines (HarvestService._route_waste_line writes sourceType=HARVEST, sourceBlockId, productId, plantName from the product name, originalGrade null - harvest waste is never graded), alongside expiry (expiry_cron, sourceType=EXPIRED) and returned-stock write-offs. New indexes on harvestBatchId and sourceBlockId back the batch-lookup endpoint."
+    },
+    {
+      "node_id": "collection_inventory_returned",
+      "node_type": "db_model",
+      "name": "inventory_returned",
+      "file_path": "src/modules/farm_manager/services/inventory/returned_repository.py",
+      "line_number": 48,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: inventory_returned - returned harvest stock awaiting disposition; rows can be written off into inventory_waste via ReturnedInventoryRepository.mark_as_waste()."
+    },
+    {
+      "node_id": "collection_block_history",
+      "node_type": "db_model",
+      "name": "block_history",
+      "file_path": "src/modules/farm_manager/services/block_history/block_history_repository.py",
+      "line_number": 18,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: block_history - archived block history records with per-crop performance statistics."
+    },
+    {
+      "node_id": "collection_ai_dashboard_reports",
+      "node_type": "db_model",
+      "name": "ai_dashboard_reports",
+      "file_path": "src/modules/farm_manager/services/ai_dashboard/service.py",
+      "line_number": 19,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: ai_dashboard_reports - persisted AI Dashboard inspection reports (raw inspection data + Gemini-generated AISummary), written every 4 hours by AIDashboardScheduler."
+    },
+    {
+      "node_id": "collection_watchdog_notifications",
+      "node_type": "db_model",
+      "name": "watchdog_notifications",
+      "file_path": "src/modules/farm_manager/services/watchdog/service.py",
+      "line_number": 39,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: watchdog_notifications - history of watchdog issues that passed the cooldown filter and were sent to Telegram; also backs the per-issue cooldown check."
+    },
+    {
+      "node_id": "collection_fertilizer_chemicals",
+      "node_type": "db_model",
+      "name": "fertilizer_chemicals",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "line_number": 349,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: fertilizer_chemicals - per-org master chemical catalog for the Fertilizer Cost Calculator. Soft-deleted via archivedAt; unique-ish name index uses a case-insensitive collation (en, strength 2)."
+    },
+    {
+      "node_id": "collection_fertilizer_price_overrides",
+      "node_type": "db_model",
+      "name": "fertilizer_price_overrides",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "line_number": 362,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: fertilizer_price_overrides - manual per-org AED price per chemical; first lookup step in PriceBook before falling back to inventory_input."
+    },
+    {
+      "node_id": "collection_fertilizer_calculation_lists",
+      "node_type": "db_model",
+      "name": "fertilizer_calculation_lists",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "line_number": 370,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: fertilizer_calculation_lists - saved fertilizer-cost calculation lists, scoped by organizationId and creator."
+    },
+    {
+      "node_id": "collection_sensehub_equipment_cache",
+      "node_type": "db_model",
+      "name": "sensehub_equipment_cache",
+      "file_path": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "line_number": 207,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: sensehub_equipment_cache - daily snapshot of SenseHub equipment per block, read by SenseHubCacheQueryService when live SenseHub is unreachable."
+    },
+    {
+      "node_id": "collection_sensehub_alerts_cache",
+      "node_type": "db_model",
+      "name": "sensehub_alerts_cache",
+      "file_path": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "line_number": 243,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: sensehub_alerts_cache - cached SenseHub alerts per block for offline fallback."
+    },
+    {
+      "node_id": "collection_sensehub_lab_cache",
+      "node_type": "db_model",
+      "name": "sensehub_lab_cache",
+      "file_path": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "line_number": 225,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: sensehub_lab_cache - cached SenseHub lab readings; queried latest-per-metric and paginated by SenseHubCacheQueryService."
+    },
+    {
+      "node_id": "collection_sensehub_snapshots_cache",
+      "node_type": "db_model",
+      "name": "sensehub_snapshots_cache",
+      "file_path": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "line_number": 261,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: sensehub_snapshots_cache - cached SenseHub camera snapshot metadata per block."
+    },
+    {
+      "node_id": "collection_sensehub_sync_log",
+      "node_type": "db_model",
+      "name": "sensehub_sync_log",
+      "file_path": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "line_number": 279,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: sensehub_sync_log - per-run SenseHub sync history (counts, errors, duration) surfaced by get_sync_history/get_status."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.service.HarvestRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "context": "record_harvest/update_harvest/get_harvest_summary delegate to HarvestRepository"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "submit_harvest_batch loads the block to resolve productMotherId and validate farm ownership"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.service.PlantMotherRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "context": "line 48 + submit_harvest_batch: PlantMotherRepository.get_by_id(block.productMotherId) -> mother.products[] drives per-line category routing"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.model.BlockHarvest",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/models/block_harvest.py",
+      "context": "HarvestBatchSubmitRequest/Response, HarvestBatchLineResult, HarvestBatchLookup* live in models/block_harvest.py"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.model.Inventory",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/models/inventory.py",
+      "context": "line 28: ProcessingInventory, WasteInventory, WasteSourceType, DisposalMethod, QualityGrade"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.model.PlantMother",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/models/plant_mother.py",
+      "context": "line 40: ProductCategory (SELLABLE/PROCESS/WASTE) selects the routing branch"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "collection_processing_inventory",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_route_process_line: db.processing_inventory.insert_one(ProcessingInventory)"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "collection_inventory_waste",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_route_waste_line: db.inventory_waste.insert_one(WasteInventory, sourceType=HARVEST)"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "collection_inventory_harvest",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_add_to_inventory creates the FIFO batch for sellable harvests"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "collection_block_harvests",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "get_batch_lookup fans out over block_harvests + processing_inventory + inventory_waste for one block/date"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 47: from ..database import farm_db"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestRepository",
+      "target_id": "collection_block_harvests",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "create/update/delete; now also stamps productId, productName and harvestBatchId"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestRepository",
+      "target_id": "farm_manager.model.BlockHarvest",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "target_file": "src/modules/farm_manager/models/block_harvest.py",
+      "context": "BlockHarvest, BlockHarvestCreate, BlockHarvestSummary"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestRepository",
+      "target_id": "collection_blocks",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "create() resolves farmId from the block and recomputes block KPI rollups"
+    },
+    {
+      "source_id": "farm_manager.service.HarvestRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 23: from ..database import farm_db"
+    },
+    {
+      "source_id": "farm_manager.service.ArchiveRepository",
+      "target_id": "collection_block_archives",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "create/delete/count_cycles_for_block/archive_block_cycle"
+    },
+    {
+      "source_id": "farm_manager.service.ArchiveRepository",
+      "target_id": "farm_manager.model.BlockArchive",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "target_file": "src/modules/farm_manager/models/block_archive.py",
+      "context": "archive_block_cycle constructs BlockArchive, now including productMotherId/productName"
+    },
+    {
+      "source_id": "farm_manager.service.ArchiveRepository",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "line 444 (deferred import): archive_block_cycle loads the block being archived"
+    },
+    {
+      "source_id": "farm_manager.service.ArchiveRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 21: from ..database import farm_db"
+    },
+    {
+      "source_id": "farm_manager.service.ArchiveService",
+      "target_id": "farm_manager.service.ArchiveRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/archive_service.py",
+      "target_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "context": "archive CRUD + analytics delegate"
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedService",
+      "target_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "context": "all variety CRUD delegates"
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedService",
+      "target_id": "farm_manager.service.PlantMotherRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "context": "line 934 (deferred import): CSV import resolves or creates the mother row"
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedService",
+      "target_id": "farm_manager.service.PlantMotherService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "context": "line 935 (deferred import): mother creation during CSV import"
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedService",
+      "target_id": "farm_manager.model.PlantDataEnhanced",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedService",
+      "target_id": "farm_manager.model.PlantMother",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "target_file": "src/modules/farm_manager/models/plant_mother.py",
+      "context": "line 927: PlantMotherCreate, VarietyCreateForMother"
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "target_id": "collection_plant_data_enhanced",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "COLLECTION = 'plant_data_enhanced'"
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "target_id": "farm_manager.model.PlantDataEnhanced",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 18: from ..database import farm_db"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherService",
+      "target_id": "farm_manager.service.PlantMotherRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "context": "mother CRUD + set_products for the embedded product catalog"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherService",
+      "target_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "context": "line 32: variety listing/uniqueness checks under a mother"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherService",
+      "target_id": "farm_manager.service.PlantDataEnhancedService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "context": "line 33: create_variety_for_mother delegates the variety row"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherService",
+      "target_id": "farm_manager.model.PlantMother",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "target_file": "src/modules/farm_manager/models/plant_mother.py",
+      "context": "PlantProduct/ProductCategory drive add_product/update_product/deactivate_product invariants"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherRepository",
+      "target_id": "collection_plant_mothers",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "COLLECTION = 'plant_mothers'; set_products persists products[]"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherRepository",
+      "target_id": "collection_plant_data_enhanced",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "cascade_rename update_many over motherPlantId; list_mothers joins variety counts"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherRepository",
+      "target_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "context": "line 29: reuses PlantDataEnhancedRepository.COLLECTION"
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherRepository",
+      "target_id": "farm_manager.model.PlantMother",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "target_file": "src/modules/farm_manager/models/plant_mother.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 28: from ..database import farm_db"
+    },
+    {
+      "source_id": "farm_manager.service.FarmDatabaseManager",
+      "target_id": "collection_processing_inventory",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/database.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_create_indexes: inventoryId unique + organizationId/farmId/blockId/productId/harvestBatchId/harvestDate"
+    },
+    {
+      "source_id": "farm_manager.service.FarmDatabaseManager",
+      "target_id": "collection_inventory_waste",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/database.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_create_indexes: harvestBatchId + sourceBlockId (harvest-sourced waste lookup)"
+    },
+    {
+      "source_id": "farm_manager.service.FarmDatabaseManager",
+      "target_id": "collection_block_harvests",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/database.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_create_indexes: added productId + harvestBatchId"
+    },
+    {
+      "source_id": "farm_manager.service.FarmDatabaseManager",
+      "target_id": "collection_fertilizer_chemicals",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/database.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_create_indexes"
+    },
+    {
+      "source_id": "farm_manager.service.FarmDatabaseManager",
+      "target_id": "collection_fertilizer_price_overrides",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/database.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_create_indexes"
+    },
+    {
+      "source_id": "farm_manager.service.FarmDatabaseManager",
+      "target_id": "collection_fertilizer_calculation_lists",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/database.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "_create_indexes"
+    },
+    {
+      "source_id": "farm_manager.service.AIDashboardService",
+      "target_id": "farm_manager.service.DataCollector",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/service.py",
+      "target_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "context": "run_inspection collects raw data first"
+    },
+    {
+      "source_id": "farm_manager.service.AIDashboardService",
+      "target_id": "farm_manager.service.ReportGenerator",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/service.py",
+      "target_file": "src/modules/farm_manager/services/ai_dashboard/report_generator.py",
+      "context": "run_inspection then asks Gemini for the AISummary"
+    },
+    {
+      "source_id": "farm_manager.service.AIDashboardService",
+      "target_id": "collection_ai_dashboard_reports",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/service.py",
+      "target_file": "src/modules/farm_manager/services/ai_dashboard/service.py",
+      "context": "COLLECTION_NAME = 'ai_dashboard_reports'"
+    },
+    {
+      "source_id": "farm_manager.service.AIDashboardScheduler",
+      "target_id": "farm_manager.service.AIDashboardService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/scheduler.py",
+      "target_file": "src/modules/farm_manager/services/ai_dashboard/service.py",
+      "context": "every 4h background loop"
+    },
+    {
+      "source_id": "farm_manager.service.DataCollector",
+      "target_id": "farm_manager.service.FarmRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "context": "one of the 9 parallel inspection tasks"
+    },
+    {
+      "source_id": "farm_manager.service.DataCollector",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "one of the 9 parallel inspection tasks"
+    },
+    {
+      "source_id": "farm_manager.service.DataCollector",
+      "target_id": "farm_manager.service.HarvestRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "context": "one of the 9 parallel inspection tasks"
+    },
+    {
+      "source_id": "farm_manager.service.DataCollector",
+      "target_id": "farm_manager.service.AlertRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "target_file": "src/modules/farm_manager/services/block/alert_repository.py",
+      "context": "one of the 9 parallel inspection tasks"
+    },
+    {
+      "source_id": "farm_manager.service.DataCollector",
+      "target_id": "farm_manager.service.FarmAnalyticsService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_analytics_service.py",
+      "context": "one of the 9 parallel inspection tasks"
+    },
+    {
+      "source_id": "farm_manager.service.DataCollector",
+      "target_id": "farm_manager.service.SenseHubConnectionService",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "context": "one of the 9 parallel inspection tasks"
+    },
+    {
+      "source_id": "farm_manager.service.DataCollector",
+      "target_id": "farm_manager.service.SenseHubCacheQueryService",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/ai_dashboard/data_collector.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "context": "one of the 9 parallel inspection tasks"
+    },
+    {
+      "source_id": "farm_manager.service.AIHubService",
+      "target_id": "farm_manager.service.ai_hub.context_builder",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/ai_hub/service.py",
+      "target_file": "src/modules/farm_manager/services/ai_hub/context_builder.py",
+      "context": "line 54: build_hub_system_prompt(section)"
+    },
+    {
+      "source_id": "farm_manager.service.AIHubService",
+      "target_id": "farm_manager.service.farm_level_ai.tool_executor",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/ai_hub/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_level_ai/tool_executor.py",
+      "context": "lines 41/51: block-scoped read + write tools"
+    },
+    {
+      "source_id": "farm_manager.service.AIHubService",
+      "target_id": "farm_manager.service.global_ai.tool_executor",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/ai_hub/service.py",
+      "target_file": "src/modules/farm_manager/services/global_ai/tool_executor.py",
+      "context": "line 46: platform-wide read tools"
+    },
+    {
+      "source_id": "farm_manager.service.AIHubService",
+      "target_id": "farm_manager.service.farm_ai.pending_actions",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/ai_hub/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_ai/pending_actions.py",
+      "context": "line 35: Redis-backed write confirmation flow"
+    },
+    {
+      "source_id": "farm_manager.service.AIHubService",
+      "target_id": "farm_manager.service.SenseHubConnectionService",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/ai_hub/service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "context": "line 34"
+    },
+    {
+      "source_id": "farm_manager.service.FarmAIChatService",
+      "target_id": "farm_manager.service.farm_ai.context_builder",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/farm_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_ai/context_builder.py",
+      "context": "line 24: build_system_prompt"
+    },
+    {
+      "source_id": "farm_manager.service.FarmAIChatService",
+      "target_id": "farm_manager.service.farm_ai.tool_executor",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/farm_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_ai/tool_executor.py",
+      "context": "line 26: execute_read_tool/execute_write_tool/describe_write_action"
+    },
+    {
+      "source_id": "farm_manager.service.FarmAIChatService",
+      "target_id": "farm_manager.service.farm_ai.pending_actions",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/farm_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_ai/pending_actions.py",
+      "context": "line 27"
+    },
+    {
+      "source_id": "farm_manager.service.FarmLevelAIChatService",
+      "target_id": "farm_manager.service.farm_level_ai.context_builder",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/farm_level_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_level_ai/context_builder.py",
+      "context": "build_farm_system_prompt over all blocks on the farm"
+    },
+    {
+      "source_id": "farm_manager.service.FarmLevelAIChatService",
+      "target_id": "farm_manager.service.farm_level_ai.tool_executor",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/farm_level_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_level_ai/tool_executor.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.FarmLevelAIChatService",
+      "target_id": "farm_manager.service.farm_ai.pending_actions",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/farm_level_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/farm_ai/pending_actions.py",
+      "context": "shared Redis pending-action store"
+    },
+    {
+      "source_id": "farm_manager.service.GlobalAIChatService",
+      "target_id": "farm_manager.service.global_ai.context_builder",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/global_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/global_ai/context_builder.py",
+      "context": "build_global_system_prompt"
+    },
+    {
+      "source_id": "farm_manager.service.GlobalAIChatService",
+      "target_id": "farm_manager.service.global_ai.tool_executor",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/global_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/global_ai/tool_executor.py",
+      "context": "read-only tools; no pending-action flow"
+    },
+    {
+      "source_id": "farm_manager.service.farm_ai.tool_executor",
+      "target_id": "farm_manager.service.SenseHubClient",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/farm_ai/tool_executor.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_client.py",
+      "context": "line 15"
+    },
+    {
+      "source_id": "farm_manager.service.farm_ai.tool_executor",
+      "target_id": "farm_manager.service.SenseHubCacheQueryService",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/farm_ai/tool_executor.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "context": "line 16: cache fallback when SenseHub is unreachable"
+    },
+    {
+      "source_id": "farm_manager.service.farm_level_ai.tool_executor",
+      "target_id": "farm_manager.service.SenseHubClient",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/farm_level_ai/tool_executor.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_client.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.farm_level_ai.tool_executor",
+      "target_id": "collection_blocks",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/farm_level_ai/tool_executor.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "resolve_block(block_code) -> block document + iotController credentials"
+    },
+    {
+      "source_id": "farm_manager.service.global_ai.tool_executor",
+      "target_id": "farm_manager.service.SenseHubClient",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/global_ai/tool_executor.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_client.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.global_ai.tool_executor",
+      "target_id": "collection_farms",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/global_ai/tool_executor.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "resolve_farm_by_name (case-insensitive)"
+    },
+    {
+      "source_id": "farm_manager.service.global_ai.tool_executor",
+      "target_id": "collection_blocks",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/global_ai/tool_executor.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "resolve_block by blockCode"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCacheQueryService",
+      "target_id": "collection_sensehub_equipment_cache",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "stateless cache reads for API + AI tool fallback"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "collection_sensehub_equipment_cache",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "daily background sync writes the cache"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCacheQueryService",
+      "target_id": "collection_sensehub_alerts_cache",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "stateless cache reads for API + AI tool fallback"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "collection_sensehub_alerts_cache",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "daily background sync writes the cache"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCacheQueryService",
+      "target_id": "collection_sensehub_lab_cache",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "stateless cache reads for API + AI tool fallback"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "collection_sensehub_lab_cache",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "daily background sync writes the cache"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCacheQueryService",
+      "target_id": "collection_sensehub_snapshots_cache",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "stateless cache reads for API + AI tool fallback"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "collection_sensehub_snapshots_cache",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "daily background sync writes the cache"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCacheQueryService",
+      "target_id": "collection_sensehub_sync_log",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/sensehub/cache_query_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "stateless cache reads for API + AI tool fallback"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "collection_sensehub_sync_log",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "context": "daily background sync writes the cache"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "farm_manager.service.SenseHubConnectionService",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "context": "line 28"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "farm_manager.service.SenseHubCropSync",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py",
+      "context": "line 937 (deferred import): re-pushes crop data per block"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubSyncService",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/sensehub/sync_service.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "line 932 (deferred import)"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCropSync",
+      "target_id": "farm_manager.service.SenseHubMCPClient",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_mcp_client.py",
+      "context": "line 28: one MCP session per block"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCropSync",
+      "target_id": "farm_manager.service.sensehub.sensehub_stage_mapper",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_stage_mapper.py",
+      "context": "line 29: SenseHubStage enum + compute_stage"
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubCropSync",
+      "target_id": "farm_manager.model.PlantDataEnhanced",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py",
+      "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+      "context": "builds optimal ranges + stage durations from the variety"
+    },
+    {
+      "source_id": "farm_manager.service.block.sensehub_block_service_triggers",
+      "target_id": "farm_manager.service.SenseHubCropSync",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/sensehub_block_service_triggers.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py",
+      "context": "lines 57/180"
+    },
+    {
+      "source_id": "farm_manager.service.block.sensehub_block_service_triggers",
+      "target_id": "farm_manager.service.sensehub.sensehub_stage_mapper",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/sensehub_block_service_triggers.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_stage_mapper.py",
+      "context": "line 58: compute_stage"
+    },
+    {
+      "source_id": "farm_manager.service.block.sensehub_block_service_triggers",
+      "target_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/sensehub_block_service_triggers.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "context": "line 60"
+    },
+    {
+      "source_id": "farm_manager.service.block.sensehub_block_service_triggers",
+      "target_id": "farm_manager.service.HarvestRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/sensehub_block_service_triggers.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "context": "line 181: harvest totals for complete_crop"
+    },
+    {
+      "source_id": "farm_manager.service.BlockService",
+      "target_id": "farm_manager.service.block.sensehub_block_service_triggers",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "target_file": "src/modules/farm_manager/services/block/sensehub_block_service_triggers.py",
+      "context": "block_service_new.py lines 937/969: change_status fires the growth-stage / complete-crop triggers"
+    },
+    {
+      "source_id": "farm_manager.service.block.expiry_cron",
+      "target_id": "collection_inventory_harvest",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/expiry_cron.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "scans for expiryDate past with availableQuantity > 0"
+    },
+    {
+      "source_id": "farm_manager.service.block.expiry_cron",
+      "target_id": "collection_inventory_waste",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/expiry_cron.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "writes WasteInventory with sourceType=EXPIRED"
+    },
+    {
+      "source_id": "farm_manager.service.block.expiry_cron",
+      "target_id": "collection_inventory_movements",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/expiry_cron.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "appends the write-off movement"
+    },
+    {
+      "source_id": "farm_manager.service.block.expiry_cron",
+      "target_id": "farm_manager.model.Inventory",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/expiry_cron.py",
+      "target_file": "src/modules/farm_manager/models/inventory.py",
+      "context": "line 20: WasteSourceType, DisposalMethod"
+    },
+    {
+      "source_id": "farm_manager.service.ReturnedInventoryRepository",
+      "target_id": "collection_inventory_returned",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/inventory/returned_repository.py",
+      "target_file": "src/modules/farm_manager/services/inventory/returned_repository.py",
+      "context": "CRUD + soft delete"
+    },
+    {
+      "source_id": "farm_manager.service.ReturnedInventoryRepository",
+      "target_id": "collection_inventory_waste",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/inventory/returned_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "mark_as_waste writes off a returned row"
+    },
+    {
+      "source_id": "farm_manager.service.ReturnedInventoryRepository",
+      "target_id": "farm_manager.model.Inventory",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/inventory/returned_repository.py",
+      "target_file": "src/modules/farm_manager/models/inventory.py",
+      "context": "line 16"
+    },
+    {
+      "source_id": "farm_manager.service.BlockHistoryRepository",
+      "target_id": "collection_block_history",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block_history/block_history_repository.py",
+      "target_file": "src/modules/farm_manager/services/block_history/block_history_repository.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.BlockHistoryRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block_history/block_history_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 13: from ..database import farm_db"
+    },
+    {
+      "source_id": "farm_manager.service.ChemicalsService",
+      "target_id": "farm_manager.service.ChemicalsRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/tools/chemicals_service.py",
+      "target_file": "src/modules/farm_manager/services/tools/chemicals_repository.py",
+      "context": "line 23"
+    },
+    {
+      "source_id": "farm_manager.service.ChemicalsService",
+      "target_id": "collection_plant_data_enhanced",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/tools/chemicals_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "discover_from_plant_library walks every fertigation schedule"
+    },
+    {
+      "source_id": "farm_manager.service.ChemicalsRepository",
+      "target_id": "collection_fertilizer_chemicals",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/tools/chemicals_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.ChemicalsRepository",
+      "target_id": "collection_plant_data_enhanced",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/tools/chemicals_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "check_dependents before archiving a chemical"
+    },
+    {
+      "source_id": "farm_manager.service.CalculationListsRepository",
+      "target_id": "collection_fertilizer_calculation_lists",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/tools/calculation_lists_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.PriceBook",
+      "target_id": "farm_manager.service.ChemicalsRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/tools/price_book.py",
+      "target_file": "src/modules/farm_manager/services/tools/chemicals_repository.py",
+      "context": "line 19"
+    },
+    {
+      "source_id": "farm_manager.service.PriceBook",
+      "target_id": "collection_fertilizer_price_overrides",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/tools/price_book.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "step 1 of price resolution"
+    },
+    {
+      "source_id": "farm_manager.service.PriceBook",
+      "target_id": "collection_inventory_input",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/tools/price_book.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "step 2: category='fertilizer' matched on name or alias"
+    },
+    {
+      "source_id": "farm_manager.service.tools.fertilizer_calculator",
+      "target_id": "farm_manager.service.ChemicalsRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/tools/fertilizer_calculator.py",
+      "target_file": "src/modules/farm_manager/services/tools/chemicals_repository.py",
+      "context": "line 38"
+    },
+    {
+      "source_id": "farm_manager.service.tools.fertilizer_calculator",
+      "target_id": "farm_manager.service.ChemicalsService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/tools/fertilizer_calculator.py",
+      "target_file": "src/modules/farm_manager/services/tools/chemicals_service.py",
+      "context": "line 39: ArchivedChemicalMatch sentinel handling"
+    },
+    {
+      "source_id": "farm_manager.service.tools.fertilizer_calculator",
+      "target_id": "farm_manager.service.PriceBook",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/tools/fertilizer_calculator.py",
+      "target_file": "src/modules/farm_manager/services/tools/price_book.py",
+      "context": "line 40"
+    },
+    {
+      "source_id": "farm_manager.service.tools.fertilizer_calculator",
+      "target_id": "collection_plant_data_enhanced",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/tools/fertilizer_calculator.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "loads each crop's fertigationSchedule"
+    },
+    {
+      "source_id": "farm_manager.service.tools.excel_handler",
+      "target_id": "collection_plant_data_enhanced",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/tools/excel_handler.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "import_crops resolves crop names case-insensitively"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "farm_manager.service.WatchdogConfigService",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/config_service.py",
+      "context": "service.py lines 17-23"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "farm_manager.service.TelegramService",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/telegram_service.py",
+      "context": "service.py lines 17-23"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "farm_manager.service.MCPChecker",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/checkers/mcp_checker.py",
+      "context": "service.py lines 17-23"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "farm_manager.service.LateItemsChecker",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/checkers/late_items_checker.py",
+      "context": "service.py lines 17-23"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "farm_manager.service.AlertChecker",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/checkers/alert_checker.py",
+      "context": "service.py lines 17-23"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "farm_manager.service.BlockHealthChecker",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/checkers/block_health_checker.py",
+      "context": "service.py lines 17-23"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "farm_manager.service.SystemHealthChecker",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/checkers/system_health_checker.py",
+      "context": "service.py lines 17-23"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogService",
+      "target_id": "collection_watchdog_notifications",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "context": "cooldown filter + notification history"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogScheduler",
+      "target_id": "farm_manager.service.WatchdogService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/watchdog/scheduler.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/service.py",
+      "context": "line 15; Redis lock so only one Uvicorn worker runs the cycle"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogScheduler",
+      "target_id": "farm_manager.service.WatchdogConfigService",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/watchdog/scheduler.py",
+      "target_file": "src/modules/farm_manager/services/watchdog/config_service.py",
+      "context": "line 14: re-reads checkIntervalMinutes each cycle"
+    },
+    {
+      "source_id": "farm_manager.service.WatchdogConfigService",
+      "target_id": "collection_system_config",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/watchdog/config_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "COLLECTION = 'system_config'"
+    },
+    {
+      "source_id": "farm_manager.service.AlertChecker",
+      "target_id": "collection_alerts",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/watchdog/checkers/alert_checker.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.BlockHealthChecker",
+      "target_id": "collection_blocks",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/watchdog/checkers/block_health_checker.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.LateItemsChecker",
+      "target_id": "collection_block_cycles",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/watchdog/checkers/late_items_checker.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": ""
+    },
+    {
+      "source_id": "farm_manager.service.MCPChecker",
+      "target_id": "collection_blocks",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/watchdog/checkers/mcp_checker.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "IoT-connected blocks only"
+    }
+  ]
+}

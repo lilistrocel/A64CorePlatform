@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "task": "gap-fill: src/modules/farm_manager/middleware/ (no dedicated task id)",
+    "generated": "2026-08-21",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "note": "Resolves 11 pre-existing dangling edges that targeted farm_manager.middleware.auth."
+  },
+  "nodes": [
+    {
+      "node_id": "farm_manager.middleware.auth",
+      "node_type": "middleware",
+      "name": "farm auth + authorization",
+      "file_path": "src/modules/farm_manager/middleware/auth.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "middleware",
+      "exports": [
+        "security",
+        "CurrentUser",
+        "get_current_user",
+        "get_current_active_user",
+        "require_farm_access",
+        "require_permission"
+      ],
+      "description": "The de-facto shared auth dependency for the whole ops backend, not just farm_manager: mushroom_manager's 8 routers, genetics, protocols, purchasing, attachments and src/api/v1/tools/* all authenticate through it. Parallel implementation to core.middleware.auth (it does NOT import it) - HTTPBearer + jose jwt.decode against core_settings.SECRET_KEY with farm settings.ALGORITHM, reads the userId claim, loads the user from the users collection via farm_db, and 403s on isActive=false. CurrentUser is a plain class (not Pydantic) carrying userId/email/firstName/lastName/role/isActive/isEmailVerified/organizationId - note userId, not id. get_current_active_user re-checks isActive; despite the docstring it does NOT check isEmailVerified. require_farm_access(farm_id) short-circuits for super_admin/admin, otherwise requires an active farm_assignments row for (userId, farmId). require_permission(perm) is a dependency factory doing role-list checks over four hard-coded permission strings ('farm.manage' and 'agronomist' -> admin/super_admin/moderator; 'farm.operate' -> those plus user; 'admin' -> admin/super_admin) with a 'TODO: Implement proper permission system'. FAILS OPEN: any permission string not in that if/elif chain (e.g. a mushroom.* or typo'd string) falls through and authorises every authenticated user - genetics.middleware.auth was forked specifically to fail closed instead. Also depends on farm_manager.config.settings (ALGORITHM), which has no node in the graph yet. The package __init__.py re-exports only get_current_user/get_current_active_user/require_farm_access, so consumers import require_permission and CurrentUser from .auth directly.",
+      "_layer_note": "layer 'middleware' matches the sibling module-scoped middleware nodes sales.middleware.auth and genetics.middleware.auth; core.middleware.* uses layer 'core' because those nodes are module 'core'."
+    },
+    {
+      "node_id": "farm_manager.middleware.__init__",
+      "node_type": "file",
+      "name": "farm_manager middleware package",
+      "file_path": "src/modules/farm_manager/middleware/__init__.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "middleware",
+      "exports": [
+        "get_current_user",
+        "get_current_active_user",
+        "require_farm_access"
+      ],
+      "description": "Re-export barrel for the farm_manager middleware package. Deliberately narrow __all__ - it omits CurrentUser, security and require_permission, which is why every consumer (mushroom_manager, genetics, protocols, purchasing, attachments, core tools routers) imports from src.modules.farm_manager.middleware.auth directly rather than from the package."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "farm_manager.middleware.__init__",
+      "target_id": "farm_manager.middleware.auth",
+      "edge_type": "exports",
+      "source_file": "src/modules/farm_manager/middleware/__init__.py",
+      "target_file": "src/modules/farm_manager/middleware/auth.py",
+      "context": "line 5: from .auth import get_current_user, get_current_active_user, require_farm_access"
+    },
+    {
+      "source_id": "farm_manager.middleware.auth",
+      "target_id": "core.config.settings",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/middleware/auth.py",
+      "target_file": "src/config/settings.py",
+      "context": "line 18: from src.config.settings import settings as core_settings - JWT is verified with the CORE SECRET_KEY so farm tokens and core tokens are interchangeable"
+    },
+    {
+      "source_id": "farm_manager.middleware.auth",
+      "target_id": "env_SECRET_KEY",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/middleware/auth.py",
+      "target_file": "src/config/settings.py",
+      "context": "line 77: jwt.decode(token, core_settings.SECRET_KEY, algorithms=[settings.ALGORITHM]) - a SECRET_KEY mismatch between core and this module would 401 every farm/mushroom/genetics request"
+    },
+    {
+      "source_id": "farm_manager.middleware.auth",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/middleware/auth.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 15: from ..services.database import farm_db; farm_db.get_database() on every authenticated request (lines 94, 167)"
+    },
+    {
+      "source_id": "farm_manager.middleware.auth",
+      "target_id": "collection_users",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/middleware/auth.py",
+      "target_file": "src/services/database.py",
+      "context": "line 95: db.users.find_one({'userId': user_id}) - user lookup on every request, no cache"
+    },
+    {
+      "source_id": "farm_manager.middleware.auth",
+      "target_id": "collection_farm_assignments",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/middleware/auth.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "line 168: require_farm_access checks db.farm_assignments.find_one({userId, farmId, isActive: True}); admins bypass"
+    }
+  ]
+}
