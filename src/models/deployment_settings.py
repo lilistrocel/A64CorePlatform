@@ -16,10 +16,14 @@ class DeploymentSettingItem(BaseModel):
     """
     One resolved managed key.
 
-    `value` is populated for every key except the two Cloudflare Access
-    secrets. `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` instead populate
-    `isSet` + `maskedHint` (last 4 characters only, e.g. "...ab12") — there
-    is deliberately no way to retrieve their full value through this API.
+    `value` is populated for every key except the secret ones. Originally
+    that meant only the two Cloudflare Access secrets; T-925 added a third,
+    `LABEL_PRINTER_API_KEY` (the Brother QL-800 print API's key), which
+    joins the same treatment. All three instead populate `isSet` +
+    `maskedHint` (last 4 characters only, e.g. "...ab12") — there is
+    deliberately no way to retrieve any of their full values through this
+    API. See `_SECRET_DEPLOYMENT_KEYS` in `api/v1/admin.py` and
+    `_SECRET_KEYS` in `services/deployment_settings_service.py`.
     """
 
     source: str = Field(..., description="'env' | 'db' | 'unset'")
@@ -28,15 +32,24 @@ class DeploymentSettingItem(BaseModel):
     )
     value: Optional[Union[str, bool]] = Field(
         None,
-        description="Effective value. Omitted for CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD.",
+        description=(
+            "Effective value. Omitted for CF_ACCESS_TEAM_DOMAIN / "
+            "CF_ACCESS_AUD / LABEL_PRINTER_API_KEY."
+        ),
     )
     isSet: Optional[bool] = Field(
         None,
-        description="Only present for CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD — whether a value is configured",
+        description=(
+            "Only present for CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD / "
+            "LABEL_PRINTER_API_KEY — whether a value is configured"
+        ),
     )
     maskedHint: Optional[str] = Field(
         None,
-        description="Only present for CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD when isSet — last 4 chars only",
+        description=(
+            "Only present for CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD / "
+            "LABEL_PRINTER_API_KEY when isSet — last 4 chars only"
+        ),
     )
 
 

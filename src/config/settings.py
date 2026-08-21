@@ -87,6 +87,31 @@ class Settings(BaseSettings):
     # validates this at boot.
     PUBLIC_BASE_URL: str = ""
 
+    # Genetics module — Brother QL-800 network label printing (T-925).
+    # Configurable per deployment through deployment_settings_service.py's
+    # env -> db -> unset resolution, exactly like PUBLIC_BASE_URL above.
+    # Declared here (not in the genetics module's own config/settings.py)
+    # for the same reason PUBLIC_BASE_URL is: the service requires the env
+    # attr name and the Mongo field name to be identical, and
+    # deployment_settings_service resolves every managed key through this
+    # Settings class.
+    #
+    # Disabled by default — an unset/false LABEL_PRINTER_ENABLED means
+    # src.services.label_printer_service refuses to print rather than
+    # attempting a request against an empty base URL.
+    LABEL_PRINTER_ENABLED: bool = False
+    # Full http(s) URL including port, e.g. "http://<printer-host>:8765".
+    # No default: a wrong default here would silently point every
+    # deployment's print jobs (and the API key below) at somebody else's
+    # printer — see deployment_settings_service._validate_label_printer_base_url.
+    LABEL_PRINTER_BASE_URL: str = ""
+    # Sent as the X-API-Key header on every request to LABEL_PRINTER_BASE_URL
+    # only — never logged, never echoed back in any API response (masked in
+    # both the deployment-settings GET response and the audit log; see
+    # _SECRET_KEYS in deployment_settings_service.py). There is deliberately
+    # no reveal endpoint.
+    LABEL_PRINTER_API_KEY: str = ""
+
     # Logging
     LOG_LEVEL: str = "INFO"
 

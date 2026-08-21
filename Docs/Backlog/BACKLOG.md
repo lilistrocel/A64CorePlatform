@@ -2244,6 +2244,89 @@
   - Still open on T-804 (unaffected by this pass): `PrintLabelsModal` 62xN
     gap, testing-backend-specialist leakage/coverage pass, physical-scan
     verification step.
+- **Follow-up — "Send to printer" action + per-deployment printer config —
+  frontend half DONE 2026-08-21 (`frontend-dev-expert`):** Adds a
+  direct-to-Brother-QL-800 print path to `PrintLabelsModal` (previously
+  only a blob PDF download) plus a Settings → Deployment Settings "Label
+  Printer" section (`LABEL_PRINTER_ENABLED`/`LABEL_PRINTER_BASE_URL`/
+  `LABEL_PRINTER_API_KEY`). Built against a contract from a
+  `backend-dev-expert` working `GET /api/v1/genetics/printer/health` +
+  `POST /api/v1/genetics/accessions/{accessionId}/labels/print` + the three
+  deployment-settings keys concurrently (their `src/modules/genetics/api/v1/
+  printer.py`, `src/services/label_printer_service.py`,
+  `src/services/deployment_settings_service.py`,
+  `src/models/deployment_settings.py`, `src/config/settings.py`,
+  `src/api/v1/admin.py` were mid-flight in the working tree during this
+  session, not authored here) — not verified against a live backend, no
+  Playwright run per this task's own instructions.
+  - **`frontend/user-portal/src/components/genetics/PrintLabelsModal.tsx`:**
+    added `usePrinterHealth()`/`usePrintLabels()`. Printer button renders
+    only when `configured: true`; disabled with a `status`-reasons warning
+    banner when `configured && !ok`; shows the page/label count on the
+    button itself (`Send to printer — N labels`) before any click; an
+    inline (no new modal) "Print N labels? ... cannot be undone" confirm
+    step gates any request over 10 labels; success shows `jobId` +
+    `pagesPrinted`; failure shows `err.response.data.detail` verbatim,
+    matching the `(error as any)?.response?.data?.detail ?? error.message`
+    pattern already used by every sibling genetics modal (SplitAccessionModal
+    et al.) — deliberately NOT the blob-unwrap trick `getLabelsPdf` uses,
+    since this is a plain JSON error response, not a blob one. Both
+    download and print buttons disable while EITHER mutation is pending
+    (both bump `labelledVesselCount` server-side, so overlapping requests
+    would race the same high-water mark). The one gold/"primary" CTA
+    budget (spec §4) shifts to whichever action is actually usable —
+    printer when ready, download otherwise — rather than both being gold
+    at once; the download path's behavior is otherwise untouched, exactly
+    per instructions.
+  - **Tape default — already satisfied the ask, not modified:** the task
+    brief said the modal's current default was `29x90` and asked for
+    `62x15` "when the printer is available." Reading the file first showed
+    the default is already `continuous`/`62x15` unconditionally (T-804's
+    2026-07-31 follow-up already changed this) — the brief's premise was
+    stale. No code change was needed here; flagging so it isn't
+    re-attempted.
+  - **`frontend/user-portal/src/services/geneticsApi.ts` /
+    `hooks/genetics/useGenetics.ts` / `types/genetics.ts`:** added
+    `PrinterHealth`/`PrintLabelsParams`/`PrintLabelsResult` types,
+    `getPrinterHealth()`/`printLabels()` API calls, `usePrinterHealth()`
+    (query, `staleTime: 15_000`) / `usePrintLabels()` (mutation, never a
+    query — printing is a physical side effect) hooks — placed beside the
+    existing `getLabelsPdf`/`useGetLabelsPdf` labels code, same envelope
+    convention (`return data.data`) as every other genetics call in the
+    file. **Assumption flagged:** the task's contract description didn't
+    state whether `printer/health` and `labels/print` responses are
+    wrapped in the app's usual `{data: {...}}` envelope; assumed yes,
+    matching every other endpoint in this service file — unverified
+    against a live backend.
+  - **`frontend/user-portal/src/components/settings/DeploymentSettingsCard.tsx`:**
+    added `LABEL_PRINTER_ENABLED`/`LABEL_PRINTER_BASE_URL`/
+    `LABEL_PRINTER_API_KEY` to the existing `BOOL_KEYS`/`SECRET_KEYS`
+    sets and `FIELD_LABELS` map (no parallel mechanism — same
+    env-lock/masked-secret/password-confirm flow every other key already
+    goes through) plus a new "Label Printer" `<Card>`. `renderStringField`
+    gained an optional third `hint` param (rendering the existing
+    `FieldHint` style, mirroring what `renderRoleField` already does
+    inline) so the base-URL field could carry
+    `http://<printer-host>:8765` example + the "this deployment's own
+    printer" note without misusing the warning-styled prop for
+    non-warning helper text.
+  - **Verification:** `npx tsc -b --force` (NOT `--noEmit`, per the
+    documented no-op) — 234 errors before AND after (baseline captured by
+    `git stash push` on just these 5 files, re-run, `git stash pop`); zero
+    new errors, zero in any touched file. `npm run build --workspace
+    user-portal` from `frontend/` succeeded.
+  - **Not done here (explicitly out of scope per task instructions):** no
+    Playwright/browser verification — user tests UI changes themselves.
+    Backend endpoints/settings keys are a separate agent's concurrent work,
+    not verified live from this side. `LineDetailPage.tsx`/
+    `AccessionDetailPage.tsx`'s existing `<PrintLabelsModal accession=...
+    onClose=.../>` call sites needed no changes — the modal's external
+    props are unchanged, so the already-existing "opens automatically
+    after a propagation" / `?print=1` behavior is untouched by construction,
+    not re-verified live.
+  - **CodeMaps:** not regenerated — flag for whoever runs the next
+    `map_generator.py all` pass (new hooks/types/component surface here,
+    plus the backend's new `printer.py`/`label_printer_service.py`).
 
 ---
 

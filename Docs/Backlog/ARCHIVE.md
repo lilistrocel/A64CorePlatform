@@ -1,8 +1,109 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 117 tasks
+> **Total completed:** 118 tasks
 
 ## 2026-08
+
+### T-925 | Brother QL-800 network label printing — configurable per deployment
+- **Category:** Backend · **Priority:** P2
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-804 ✅ (label PDF generator this reuses), T-905 ✅
+  (deployment-settings env-lock pattern this follows) · **Blocks:** —
+- **Summary:** Adds direct network printing of genetics labels to a real
+  Brother QL-800 (contract published at that printer's own `/agent.md`,
+  fetched and read before implementation), fully per-deployment-configurable,
+  alongside the existing PDF-download route which is untouched in
+  behaviour.
+  - **Part 1 — config (`src/config/settings.py`, `src/services/deployment_settings_service.py`,
+    `src/models/deployment_settings.py`, `src/api/v1/admin.py`):** three new
+    managed keys following the exact env→db→unset pattern —
+    `LABEL_PRINTER_ENABLED` (bool), `LABEL_PRINTER_BASE_URL` (str),
+    `LABEL_PRINTER_API_KEY` (str, joins `_SECRET_KEYS` — masked in the
+    admin API response as `isSet`+`maskedHint` and in the audit log, never
+    returned in full, no reveal endpoint). Two new guardrails in
+    `deployment_settings_service.update()`: (e) `LABEL_PRINTER_BASE_URL`
+    must parse as an http/https URL with a host (422 otherwise); (f)
+    `LABEL_PRINTER_ENABLED` cannot flip to `True` unless a base URL + API
+    key are already resolved, in the same PATCH or previously saved (409
+    otherwise) — prevents a confusing runtime failure the first time
+    anyone tries to print.
+  - **Part 2 — `src/services/label_printer_service.py` (new):** async httpx
+    client mirroring the `sales_order_service.py`/`deployment_settings_service.py`
+    HTTP-call pattern. `is_configured()`; `health()` (5s timeout, never
+    raises — collapses every failure mode to a structured
+    `PrinterHealthResult`); `print_pdf()` (30s timeout, preflights health
+    and refuses with 502 if not `["ready"]`, maps the printer's own
+    401→502 [config problem, key never leaked], 422→422 [error passed
+    through], 502→502 after exactly one retry per the printer's own
+    `/agent.md` instruction not to retry more than once).
+  - **Part 3 — `src/modules/genetics/api/v1/labels.py`:** extracted the
+    PDF-building body of `get_labels()` into `_build_labels_pdf()` (pure —
+    no DB write) and `_bump_labelled_vessel_count()` (the one side effect,
+    now callable independently) — `GET /{accession_id}/labels` is
+    behaviourally unchanged (regression-verified: all pre-existing
+    `test_label_pdf.py` cases still pass unmodified). New
+    `POST /{accession_id}/labels/print` reuses `_build_labels_pdf()`
+    verbatim, defaults `size=62x15` (the loaded roll — NOT the GET route's
+    `29x90` default), maps `62xN`→printer `label="62"`
+    (`29x90`/`17x87` pass through via `_printer_label_for_size`), caps
+    `copies` at the printer's own 50, gates on `genetics.edit` (stricter
+    than the GET route's `genetics.view` — printing is a physical,
+    irreversible action), and bumps `labelledVesselCount` only AFTER a
+    confirmed successful print, never before or on failure.
+  - **Part 3b — `src/modules/genetics/api/v1/printer.py` (new),
+    wired into `api/v1/__init__.py` at `/printer`:** `GET /printer/health`,
+    always HTTP 200 (unconfigured/unreachable/not-ready are data for the
+    UI, never a 500), gated on `genetics.view`.
+  - **Part 4 — `tests/unit/test_genetics/test_label_printing.py`:** 30 new
+    tests (httpx mocked throughout — the real printer was never contacted
+    during development, per instruction). Covers unconfigured→
+    `configured:false` not 500, refusal when not ready, 401/422/502
+    mapping, exactly-one-502-retry (and recovery on that retry),
+    `labelledVesselCount` bumped only on success, the `62xN`→`label=62`
+    mapping, the `copies` cap, and that the configured API key never
+    appears in any raised exception detail or log record (asserted via
+    `caplog`). Full suite run in-container after an api restart:
+    `tests/unit/test_genetics` 327/327 passed (297 pre-existing + 30 new,
+    zero regressions), `tests/unit/test_deployment_settings` 34/34 passed,
+    full `tests/unit` 913 passed / 2 failed (the 2 are the pre-existing,
+    unrelated `test_finance_bridge/test_outbox_reconciler.py` failures
+    already tracked in this file's "Known Open Items").
+- **Concurrent frontend work reconciled:** a `frontend-dev-expert` built
+  `PrintLabelsModal`'s printer path + the Deployment Settings "Label
+  Printer" card against this contract while it was mid-flight, and
+  flagged one assumption as unverified: both new responses wrapped in the
+  `{"data": ...}` envelope every other `geneticsApi.ts` call unwraps via
+  `return data.data`. Checked against this module's actual convention
+  (`utils/responses.py`'s `SuccessResponse`, used by every existing
+  genetics route) — the frontend's assumption was RIGHT and this
+  backend's first draft was wrong (both new routes initially returned
+  bare objects). Fixed: `GET /printer/health` now returns
+  `response_model=SuccessResponse[PrinterHealthResponse]`; `POST
+  .../labels/print` returns `{"data": {...}}` as a plain dict (not
+  `SuccessResponse[...]` — its payload's `from` key is a Python reserved
+  word, so a manual envelope is clearer than an aliased Pydantic model).
+  Re-verified live post-fix: both routes correctly 401 (not 404) against
+  the running api container. One remaining minor mismatch flagged, not
+  fixed here (cosmetic, does not block functionality): the frontend's
+  `PrintLabelsResult.jobId` is typed `string`, this backend returns the
+  printer's own `job_id` as a number (`int | None`) — JS does not enforce
+  the TS type at runtime, but the type annotation itself should be
+  corrected to `number` on a follow-up pass.
+- **Not done in this pass (explicitly out of scope):** a live printer-health
+  polling indicator elsewhere in the UI beyond what the frontend pass
+  above already added is a natural follow-on if wanted. **The one
+  supervised LIVE print test against the real hardware is deliberately
+  NOT done here** — implementation instructions were explicit that
+  development/testing must never print physically; that single
+  verification is the parent session's job.
+- **CodeMaps:** flagged stale — 2 new endpoints
+  (`POST /genetics/accessions/{id}/labels/print`,
+  `GET /genetics/printer/health`) + 1 new service
+  (`label_printer_service.py`) need `bash scripts/codebase_mapper/rerun.sh`
+  + `map_generator.py all`, blocked on the same Mongo-credentials issue
+  already logged in "Known Open Items" above.
+
+---
 
 ### T-923 | Plant Library product extension Stage 3+4 — harvest batch routing (backend) + multi-line harvest modal (frontend)
 - **Category:** Backend + Frontend · **Priority:** P2

@@ -43,6 +43,27 @@ The four guardrails enforced by ``update()``:
      — a hijacked session alone must not be able to repoint authentication.
   d. Every changed key is written to ``admin_audit_log`` with masked
      before/after values.
+
+Security note (read before changing ``LABEL_PRINTER_BASE_URL`` /
+``LABEL_PRINTER_API_KEY`` handling, T-925): a super_admin setting an
+arbitrary ``LABEL_PRINTER_BASE_URL`` means this backend will POST print
+jobs — and send the configured API key — to that host. That is a limited
+SSRF surface, accepted here because the same role already controls
+deployment identity (``PUBLIC_BASE_URL``, the Cloudflare Access team
+domain, etc.) and can already redirect plenty else. Two guardrails keep it
+bounded:
+  e. ``LABEL_PRINTER_BASE_URL`` must parse as an http/https URL with a host
+     before it is persisted (422 otherwise) — see
+     ``_validate_label_printer_base_url``.
+  f. ``LABEL_PRINTER_ENABLED`` cannot be set ``True`` unless a base URL AND
+     an API key are already resolved — either supplied in this same PATCH
+     or already saved — so enabling it can never produce a runtime 500 the
+     first time someone tries to print.
+The API key itself follows the exact same never-in-full rule as
+``CF_ACCESS_TEAM_DOMAIN``/``CF_ACCESS_AUD`` (see ``_SECRET_KEYS`` below):
+never logged, never returned in full by the API, never written in clear to
+the audit log, and — per ``label_printer_service.py`` — only ever sent to
+the exact host configured in ``LABEL_PRINTER_BASE_URL``.
 """
 
 import logging
@@ -51,6 +72,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import HTTPException, status
@@ -72,16 +94,25 @@ _STRING_KEYS = frozenset(
         "CF_ACCESS_TEAM_DOMAIN",
         "CF_ACCESS_AUD",
         "CF_ACCESS_DEFAULT_ROLE",
+        "LABEL_PRINTER_BASE_URL",
+        "LABEL_PRINTER_API_KEY",
     }
 )
 _BOOL_KEYS = frozenset(
-    {"CF_ACCESS_ENABLED", "CF_ACCESS_EXCLUSIVE", "CF_ACCESS_JIT_PROVISION"}
+    {
+        "CF_ACCESS_ENABLED",
+        "CF_ACCESS_EXCLUSIVE",
+        "CF_ACCESS_JIT_PROVISION",
+        "LABEL_PRINTER_ENABLED",
+    }
 )
 MANAGED_KEYS = _STRING_KEYS | _BOOL_KEYS
 
 # Never returned in full — see module docstring. Masked with `_mask_value`
 # wherever they would otherwise appear (API response, audit log).
-_SECRET_KEYS = frozenset({"CF_ACCESS_TEAM_DOMAIN", "CF_ACCESS_AUD"})
+_SECRET_KEYS = frozenset(
+    {"CF_ACCESS_TEAM_DOMAIN", "CF_ACCESS_AUD", "LABEL_PRINTER_API_KEY"}
+)
 
 _SINGLETON_ID = "deployment"
 
@@ -255,6 +286,34 @@ async def _validate_team_domain(team_domain: str) -> None:
         )
 
 
+def _validate_label_printer_base_url(base_url: str) -> None:
+    """
+    Guardrail (e): reject a ``LABEL_PRINTER_BASE_URL`` that cannot possibly
+    be a printer endpoint before it is persisted.
+
+    No network call here (unlike guardrail (a)'s JWKS check) — there is no
+    equivalent well-known endpoint to probe, and the printer can be
+    legitimately offline at configuration time. This only rejects values
+    that are structurally wrong: no scheme, or no host.
+
+    Args:
+        base_url: e.g. "http://<printer-host>:8765".
+
+    Raises:
+        HTTPException: 422 if `base_url` is not a parseable http/https URL
+            with a host.
+    """
+    parsed = urlparse(base_url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"LABEL_PRINTER_BASE_URL {base_url!r} must be a full http(s) "
+                "URL with a host, e.g. 'http://<printer-host>:8765'."
+            ),
+        )
+
+
 async def record_cf_access_login() -> None:
     """
     Record that a Cloudflare Access sign-in has completed successfully.
@@ -387,6 +446,33 @@ async def update(
                     "Cannot enable exclusive mode: no successful Cloudflare Access "
                     "sign-in has been recorded yet for this deployment. Sign in once "
                     "via Cloudflare Access, then retry."
+                ),
+            )
+
+    # Guardrail (e): LABEL_PRINTER_BASE_URL must be a structurally valid
+    # http/https URL with a host before it is persisted (T-925).
+    new_label_printer_base_url = changes.get("LABEL_PRINTER_BASE_URL")
+    if new_label_printer_base_url:
+        _validate_label_printer_base_url(new_label_printer_base_url)
+
+    # Guardrail (f): LABEL_PRINTER_ENABLED cannot flip to True unless a base
+    # URL and API key are already resolved — either supplied in this same
+    # PATCH or already saved. Enabling it otherwise would leave printing
+    # broken with a confusing runtime error the first time anyone tries it.
+    if changes.get("LABEL_PRINTER_ENABLED") is True:
+        effective_base_url = changes.get(
+            "LABEL_PRINTER_BASE_URL", resolved_before["LABEL_PRINTER_BASE_URL"].value
+        )
+        effective_api_key = changes.get(
+            "LABEL_PRINTER_API_KEY", resolved_before["LABEL_PRINTER_API_KEY"].value
+        )
+        if not effective_base_url or not effective_api_key:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Cannot enable LABEL_PRINTER_ENABLED: LABEL_PRINTER_BASE_URL "
+                    "and LABEL_PRINTER_API_KEY must both be set first (in this "
+                    "same request, or already saved)."
                 ),
             )
 

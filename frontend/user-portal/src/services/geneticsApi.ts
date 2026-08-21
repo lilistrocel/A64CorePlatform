@@ -30,6 +30,9 @@ import type {
   OrphanRecords,
   Paginated,
   PlainPurgeResult,
+  PrinterHealth,
+  PrintLabelsParams,
+  PrintLabelsResult,
   PromoteTraitPayload,
   PromotionResult,
   PropagationAmendPayload,
@@ -267,6 +270,45 @@ export async function getLabelsPdf(
     }
     throw err;
   }
+}
+
+// ============================================================================
+// PRINTER — direct-to-printer alternative to the PDF download above. Health
+// is a plain read; print is a true mutation with a physical, irreversible
+// side effect (never a query). See PrintLabelsModal.tsx.
+// ============================================================================
+
+/**
+ * `GET .../printer/health`. Always resolves 200 — a missing/offline
+ * printer is expressed via `configured`/`ok`/`status`, never an HTTP error.
+ */
+export async function getPrinterHealth(): Promise<PrinterHealth> {
+  const { data } = await apiClient.get(`${BASE}/printer/health`);
+  return data.data;
+}
+
+/**
+ * `POST .../accessions/{id}/labels/print` — renders the same label PDF as
+ * `getLabelsPdf` but sends it straight to this deployment's configured
+ * printer instead of returning a blob. Same `labelledVesselCount`
+ * high-water-mark side effect as the PDF path (spec §5.1).
+ *
+ * Unlike `getLabelsPdf`, this is a normal (non-blob) JSON request/response,
+ * so errors surface as ordinary AxiosErrors — callers read
+ * `err.response?.data?.detail` themselves (matching every other genetics
+ * mutation in this codebase, e.g. SplitAccessionModal/PropagateModal), no
+ * blob-unwrapping needed.
+ */
+export async function printLabels(
+  accessionId: string,
+  params: PrintLabelsParams = {}
+): Promise<PrintLabelsResult> {
+  const { data } = await apiClient.post(
+    `${BASE}/accessions/${accessionId}/labels/print`,
+    null,
+    { params }
+  );
+  return data.data;
 }
 
 // ============================================================================

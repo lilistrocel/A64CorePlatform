@@ -33,6 +33,16 @@
  *   validation failure on the team domain, and the exclusive-mode block
  *   when no CF Access sign-in has been recorded yet) get actionable inline
  *   messages next to the relevant field, not a generic toast.
+ *
+ * Label Printer (T-804 follow-up): three more managed keys —
+ * `LABEL_PRINTER_ENABLED` / `LABEL_PRINTER_BASE_URL` /
+ * `LABEL_PRINTER_API_KEY` — configuring the Brother QL-800 this
+ * deployment's genetics "Send to printer" action (PrintLabelsModal.tsx)
+ * talks to. `LABEL_PRINTER_API_KEY` is a secret, rendered through the exact
+ * same masked/write-only pattern as `CF_ACCESS_TEAM_DOMAIN`/`CF_ACCESS_AUD`
+ * above — added to `SECRET_KEYS`, not a parallel mechanism. This is
+ * per-deployment configuration: each install points at its own printer,
+ * there is no shared/global printer URL.
  */
 
 import { useEffect, useState } from 'react';
@@ -51,8 +61,13 @@ import {
 } from '../../services/systemService';
 
 // Keys that never return their value — see module docstring.
-const SECRET_KEYS = new Set(['CF_ACCESS_TEAM_DOMAIN', 'CF_ACCESS_AUD']);
-const BOOL_KEYS = new Set(['CF_ACCESS_ENABLED', 'CF_ACCESS_EXCLUSIVE', 'CF_ACCESS_JIT_PROVISION']);
+const SECRET_KEYS = new Set(['CF_ACCESS_TEAM_DOMAIN', 'CF_ACCESS_AUD', 'LABEL_PRINTER_API_KEY']);
+const BOOL_KEYS = new Set([
+  'CF_ACCESS_ENABLED',
+  'CF_ACCESS_EXCLUSIVE',
+  'CF_ACCESS_JIT_PROVISION',
+  'LABEL_PRINTER_ENABLED',
+]);
 
 // Mirrors UserRole (src/models/user.py) — CF_ACCESS_DEFAULT_ROLE is
 // validated server-side against exactly this set.
@@ -67,6 +82,9 @@ const FIELD_LABELS: Record<string, string> = {
   CF_ACCESS_EXCLUSIVE: 'Exclusive mode (disable password login)',
   CF_ACCESS_JIT_PROVISION: 'Just-in-time provisioning',
   CF_ACCESS_DEFAULT_ROLE: 'Default role for JIT-provisioned users',
+  LABEL_PRINTER_ENABLED: 'Enable label printer',
+  LABEL_PRINTER_BASE_URL: 'Printer base URL',
+  LABEL_PRINTER_API_KEY: 'Printer API key',
 };
 
 /** Human-readable value for the password-confirmation modal's change list —
@@ -223,7 +241,7 @@ export function DeploymentSettingsCard() {
   }
   const hasChanges = Object.keys(changes).length > 0;
 
-  function renderStringField(key: string, warning?: string) {
+  function renderStringField(key: string, warning?: string, hint?: string) {
     const item = settings[key];
     const editable = item?.editable ?? true;
 
@@ -255,6 +273,7 @@ export function DeploymentSettingsCard() {
           onChange={(e) => stageEdit(key, e.target.value)}
           disabled={mutation.isPending}
         />
+        {hint && <FieldHint>{hint}</FieldHint>}
         {warning && <FieldWarning role="note">{warning}</FieldWarning>}
       </FieldRow>
     );
@@ -434,6 +453,31 @@ export function DeploymentSettingsCard() {
               {renderBoolField('CF_ACCESS_EXCLUSIVE')}
               {renderBoolField('CF_ACCESS_JIT_PROVISION')}
               {renderRoleField('CF_ACCESS_DEFAULT_ROLE')}
+            </>
+          )}
+        </Content>
+      </Card>
+
+      <Card title="Label Printer">
+        <Content>
+          <Intro>
+            Configure the Brother QL-800 this deployment&apos;s genetics module prints vessel
+            labels to directly from the &quot;Send to printer&quot; action, instead of only
+            downloading a PDF. This is <strong>this deployment&apos;s own printer</strong> —
+            every deployment points at whatever printer sits on its own network; there is no
+            shared or global printer URL.
+          </Intro>
+          {query.isLoading ? (
+            <Muted>Loading…</Muted>
+          ) : (
+            <>
+              {renderBoolField('LABEL_PRINTER_ENABLED')}
+              {renderStringField(
+                'LABEL_PRINTER_BASE_URL',
+                undefined,
+                'This deployment’s own printer, e.g. http://<printer-host>:8765 — other deployments configure their own separately.'
+              )}
+              {renderSecretField('LABEL_PRINTER_API_KEY', null)}
             </>
           )}
         </Content>

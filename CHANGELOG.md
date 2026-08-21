@@ -5,6 +5,52 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Genetics: network label printing to a Brother QL-800 (T-925)
+
+**Scope:** T-925. Genetics vessel labels can now be spooled straight to a
+networked Brother QL-800 instead of only downloading a PDF for manual
+printing. The label artwork itself is unchanged — this reuses T-804's
+existing PDF generator verbatim; only the delivery path is new.
+**Classification: MINOR** (additive only — two new endpoints, one new
+service, three new optional settings keys; the existing
+`GET .../labels` download route is byte-for-byte behaviour-preserving).
+Version number TBD — same open drift as every other pending entry in this
+file (see `Versioning.md`'s "Known drift" note). (Viet Anh)
+
+### Added
+
+- **`POST /api/v1/genetics/accessions/{accessionId}/labels/print`** — renders
+  the same PDF as the existing GET route and spools it to the configured
+  printer. Defaults to tape `62x15` (the continuous roll) rather than the GET
+  route's `29x90`, and maps a `62xN` spec to the printer's `62` media id.
+  Requires `genetics.edit`, not merely view: printing is a physical,
+  irreversible act. `labelledVesselCount` is raised **only after a successful
+  print**, so a refused or failed job can never mark vessels as labelled that
+  were never produced.
+- **`GET /api/v1/genetics/printer/health`** — reports configured/reachable
+  state plus the spooler queue. Always HTTP 200, including when the printer
+  is unconfigured or unreachable, so the UI renders state instead of an error.
+- **`src/services/label_printer_service.py`** — the printer client. Preflights
+  `/health` before every job (a disconnected QL-800 accepts jobs into the
+  spooler and silently discards them), sends the key as `X-API-Key`, maps the
+  printer's 401/422/502 to actionable API errors, and retries a 502 at most
+  once.
+- **Per-deployment printer configuration** — `LABEL_PRINTER_ENABLED`,
+  `LABEL_PRINTER_BASE_URL` and `LABEL_PRINTER_API_KEY` join the existing
+  deployment-settings mechanism, so each deployment points at its own printer
+  from **Settings → Deployment Settings → Label Printer** with no code change.
+  Env vars still act as a lock for hardened deployments. The API key is a
+  secret key: masked in the settings response and in the audit log, never
+  logged, and with no reveal endpoint — deliberately, as with the CF Access
+  secrets.
+- **"Send to printer" in `PrintLabelsModal`** — beside the existing download,
+  which remains the fallback. Hidden when no printer is configured, disabled
+  with the reason when one is configured but not ready, shows the label count
+  before the click, gates prints above 10 labels behind an inline confirm, and
+  reports the printer's job id on success.
+- 30 unit tests (`tests/unit/test_genetics/test_label_printing.py`), httpx
+  fully mocked — the suite never contacts a physical printer.
+
 ## [Unreleased] — Plant Library: harvest batch routing + multi-line harvest modal (Stage 3+4 — product extension reachable end to end)
 
 **Scope:** T-923 Stages 3 (backend, commits `450629f`/`dbccb1f`/`fd9211a`) and
