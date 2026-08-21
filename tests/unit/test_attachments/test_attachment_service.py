@@ -114,7 +114,7 @@ def _make_mock_db(
         insert_result: Mock insert_one result.
         update_result: Mock update_one result.
         sales_v2_doc: Document returned by find_one on a sales v2 collection
-                      (e.g. ar_invoices_v2, quotes_v2).  Used when testing
+                      (e.g. ar_invoices_v2, sales_quotes).  Used when testing
                       upload/delete against Wave 3 sales doc types.
         sales_v2_collection: The specific v2 collection name to return
                              sales_v2_doc for.  Other collection names that are
@@ -478,9 +478,7 @@ async def test_list_attachments_returns_non_deleted():
 async def test_download_returns_bytes_and_metadata():
     """Download should return the raw bytes and matching metadata."""
     doc = _make_db_doc()
-    service, _, storage = _make_service(
-        attachment_docs=[doc], read_data=SMALL_PDF
-    )
+    service, _, storage = _make_service(attachment_docs=[doc], read_data=SMALL_PDF)
 
     data, metadata = await service.download(
         organization_id=ORG_ID,
@@ -673,6 +671,7 @@ def test_sanitize_filename_windows_path():
 def test_sanitize_filename_unicode_normalization():
     """Unicode should be NFC-normalized."""
     import unicodedata
+
     # NFD-form filename (decomposed é = e + combining accent)
     nfd_name = "résumé.pdf"
     result = _sanitize_filename(nfd_name, "application/pdf")
@@ -826,16 +825,25 @@ async def test_upload_customer_receipt_draft_succeeds():
 
 
 # ---------------------------------------------------------------------------
-# 21. Upload to QUOTE (draft) → routes to quotes_v2
+# 21. Upload to QUOTE (draft) → routes to sales_quotes
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_upload_quote_draft_succeeds():
-    """Upload to a Draft Quote routes to quotes_v2."""
+    """Upload to a Draft Quote routes to sales_quotes.
+
+    T-928: this previously asserted routing to "quotes_v2", a collection
+    that has never existed — quote_service.py has always written Quotes to
+    "sales_quotes". That mismatch is exactly what made every Quote
+    attachment upload fail with a misleading "document not found"
+    (LookupError) in production; the test encoded the bug instead of
+    catching it. Updated to assert the collection _SALES_V2_COLLECTIONS
+    actually resolves QUOTE to now that it is fixed.
+    """
     service, db, _ = _make_service(
         sales_v2_doc=_make_sales_v2_doc(status="draft"),
-        sales_v2_collection="quotes_v2",
+        sales_v2_collection="sales_quotes",
     )
 
     result = await service.upload(
@@ -849,7 +857,7 @@ async def test_upload_quote_draft_succeeds():
     )
 
     db["document_headers"].find_one.assert_not_called()
-    db["quotes_v2"].find_one.assert_called_once()
+    db["sales_quotes"].find_one.assert_called_once()
     assert result.docType == "QUOTE"
 
 

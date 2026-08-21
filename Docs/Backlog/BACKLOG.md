@@ -144,23 +144,13 @@ remaining 112 dangling edges belong to them.
 
 ### Defects found while mapping (none fixed — all need a decision)
 
-- **T-927 — `require_permission` fails open in farm_manager. SECURITY.**
-  `src/modules/farm_manager/middleware/auth.py` resolves permissions with a
-  bare `if/elif` chain over four strings and **no `else`**, so any
-  unrecognised string returns `current_user` unchecked. Live impact:
-  `require_permission("admin.manage")` guards three admin-only weather-cache
-  endpoints — `weather.py:217` (cache stats), `:252` (trigger refresh),
-  `:291` (invalidate farm cache) — all reachable by any authenticated active
-  user. Bounded (cache manipulation + WeatherBit quota burn, not data
-  exposure) but a real authorisation bypass. Fix: `else: raise 403`.
-  Note `protocols` and `genetics` already fork this correctly with a
-  fail-closed `PERMISSION_ROLES` lookup resolved at import time — copy that.
-- **T-928 — Quote audit history always returns empty.**
-  `sales/api/v1/audit.py:93` maps `"QUOTE" → "quotes_v2_audit"`, which does
-  not exist; `sales/services/quote_service.py:66` writes to
-  `sales_quotes_audit`, which holds 5 real entries. The Audit History button
-  on the Quote detail page has never worked. The other 7 doc types map
-  correctly.
+- **T-927 — FIXED, see ARCHIVE.md (2026-08-21).** `require_permission`
+  failed open in farm_manager (SECURITY) — converted to a fail-closed
+  `PERMISSION_ROLES` dict, `admin.manage` registered.
+- **T-928 — FIXED, see ARCHIVE.md (2026-08-21).** Quote audit history /
+  Quote attachments both pointed at `quotes_v2*`, a collection that has
+  never existed — corrected to `sales_quotes`/`sales_quotes_audit` in both
+  dispatch tables.
 - **T-929 — Verification/reset emails silently never send outside
   development.** `src/utils/email.py` logs and returns `True` when
   `ENVIRONMENT == "development"`, otherwise falls past commented-out
@@ -211,8 +201,10 @@ remaining 112 dangling edges belong to them.
 - **T-937 — `mushroom_manager` declares permissions it never uses.** Its
   `manifest.json` declares `mushroom.*` and marks the module
   `industry_mode: "exclusive"`, but every route authorises against
-  farm_manager's `farm.manage`/`farm.operate`. Given T-927, note that any
-  route that DID pass a `mushroom.*` string would fail open.
+  farm_manager's `farm.manage`/`farm.operate`. T-927 (fixed 2026-08-21) made
+  farm_manager's `require_permission` fail closed, so a route that DID pass
+  an unregistered `mushroom.*` string would now correctly 500 rather than
+  fail open — still worth registering properly rather than relying on that.
 - **Collections that exist live with no code reference** (migration
   artefacts, safe to leave but worth knowing): `sales_unmatched` (3,328
   docs), `financial_summary` (543, written only by `stage7_finalize.py` and

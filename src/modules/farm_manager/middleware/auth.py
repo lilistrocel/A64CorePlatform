@@ -2,11 +2,18 @@
 Farm Management Module - Authentication Middleware
 
 Integrates with A64Core authentication system.
+
+This module is also the identity provider several other modules re-export
+from (genetics, protocols, purchasing, mushroom_manager, attachments) — see
+each of those modules' own ``middleware/auth.py`` for the pattern. Only
+``farm.*``/``agronomist``/``admin``/``admin.manage`` are resolved here;
+``genetics.*`` and ``protocols.*`` own their own permission-to-role mappings
+in their own modules.
 """
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional
+from typing import Dict, FrozenSet, Optional
 from uuid import UUID
 from jose import jwt, JWTError
 import logging
@@ -121,7 +128,11 @@ async def get_current_active_user(
     """
     Get current active user
 
-    Ensures user account is active and verified.
+    Ensures the user account is active. Does NOT check ``isEmailVerified`` —
+    despite this docstring previously claiming otherwise, no verification
+    check has ever been enforced here (T-927 audit, 2026-08-21). Correcting
+    the claim rather than starting to enforce verification, since that would
+    be a behaviour change nobody asked for.
 
     Args:
         current_user: User from get_current_user dependency
@@ -130,7 +141,7 @@ async def get_current_active_user(
         CurrentUser
 
     Raises:
-        HTTPException: 403 if user not active or verified
+        HTTPException: 403 if user not active
     """
     if not current_user.isActive:
         raise HTTPException(
@@ -178,48 +189,98 @@ async def require_farm_access(
     return current_user
 
 
-def require_permission(permission: str):
-    """
-    Decorator to require specific permission
+# --- Role tiers -------------------------------------------------------------
+
+_ADMIN: FrozenSet[str] = frozenset({"admin", "super_admin"})
+_MANAGE: FrozenSet[str] = _ADMIN | {"moderator"}
+_OPERATE: FrozenSet[str] = _MANAGE | {"user"}
+
+
+# --- Permission -> allowed roles --------------------------------------------
+#
+# T-927: this used to be a bare if/elif chain with no ``else`` — any string
+# not equal to one of these four fell through and returned the caller
+# unchecked, authorising every authenticated active user. Fixed to a
+# fail-closed dict lookup, matching the pattern genetics/protocols already
+# use (see those modules' ``middleware/auth.py``).
+#
+# Role sets below are UNCHANGED from the old if/elif chain — this is a
+# structural fix only, not a policy change.
+PERMISSION_ROLES: Dict[str, FrozenSet[str]] = {
+    "farm.manage": _MANAGE,
+    "farm.operate": _OPERATE,
+    "agronomist": _MANAGE,
+    "admin": _ADMIN,
+    # T-927: registered because it is already in live use (three weather
+    # cache-admin endpoints, src/modules/farm_manager/api/v1/weather.py)
+    # despite never having been an explicit branch in the old chain — it was
+    # one of the strings silently falling through to "authorise everyone."
+    "admin.manage": _ADMIN,
+}
+
+
+def _resolve(permission: str) -> FrozenSet[str]:
+    """Look up the roles allowed to exercise a permission.
+
+    Fails closed: an unregistered permission string denies rather than
+    authorising every caller. Before T-927 this module's ``require_permission``
+    was an if/elif chain with no ``else`` — any unrecognised string fell
+    through and returned the caller unchecked. That was not merely latent:
+    ``admin.manage`` was in live use by three weather-cache-admin endpoints
+    and was never one of the four branches, so those endpoints were reachable
+    by any authenticated active user until this fix.
 
     Args:
-        permission: Required permission (e.g., "farm.manage", "farm.operate")
+        permission: One of the keys in :data:`PERMISSION_ROLES`.
 
     Returns:
-        Dependency function
+        The frozenset of roles allowed to exercise this permission.
+
+    Raises:
+        HTTPException: 500 when the permission string is not registered.
     """
+    roles = PERMISSION_ROLES.get(permission)
+    if roles is None:
+        logger.error(
+            "[Farm Manager Module] Unknown permission '%s' — denying. "
+            "Add it to PERMISSION_ROLES.",
+            permission,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authorization misconfigured for this endpoint",
+        )
+    return roles
+
+
+def require_permission(permission: str):
+    """
+    FastAPI dependency enforcing a farm_manager permission.
+
+    Args:
+        permission: One of the keys in :data:`PERMISSION_ROLES` (e.g.
+            "farm.manage", "farm.operate").
+
+    Returns:
+        A dependency yielding the :class:`CurrentUser` when authorised.
+
+    Raises:
+        HTTPException: 403 when the user's role is not permitted, 500 when
+        the permission string is not registered.
+    """
+    # Resolve once at import/route-definition time so a bad string surfaces
+    # when the app boots rather than on the first request to that route.
+    allowed = _resolve(permission)
 
     async def permission_checker(
         current_user: CurrentUser = Depends(get_current_active_user),
     ) -> CurrentUser:
-        # For now, simple role-based checks
-        # TODO: Implement proper permission system
-
-        if permission == "farm.manage":
-            if current_user.role not in ["admin", "super_admin", "moderator"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}",
-                )
-        elif permission == "farm.operate":
-            if current_user.role not in ["admin", "super_admin", "moderator", "user"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: Missing {permission}",
-                )
-        elif permission == "agronomist":
-            if current_user.role not in ["admin", "super_admin", "moderator"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: Agronomist role required",
-                )
-        elif permission == "admin":
-            if current_user.role not in ["admin", "super_admin"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: Admin access required",
-                )
-
+        if current_user.role not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permission denied: {permission} requires one of "
+                f"{sorted(allowed)}",
+            )
         return current_user
 
     return permission_checker

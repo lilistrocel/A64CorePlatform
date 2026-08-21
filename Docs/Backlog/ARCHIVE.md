@@ -1,8 +1,113 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 118 tasks
+> **Total completed:** 120 tasks
 
 ## 2026-08
+
+### T-927 | `require_permission` fails open in farm_manager — fail-closed fix. SECURITY.
+- **Category:** Backend (security) · **Priority:** P0
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** —
+- **Description:** `src/modules/farm_manager/middleware/auth.py`'s
+  `require_permission` resolved permissions via a bare `if/elif` chain over
+  exactly four strings (`farm.manage`, `farm.operate`, `agronomist`,
+  `admin`) with **no `else`** — any other string fell through and returned
+  `current_user` unchecked, authorising every authenticated active user.
+  This was live, not theoretical:
+  `require_permission("admin.manage")` gated three admin-only endpoints in
+  `src/modules/farm_manager/api/v1/weather.py` (`get_cache_stats:217`,
+  `trigger_cache_refresh:252`, `invalidate_farm_cache:291`), and
+  `admin.manage` was never one of the four handled branches — all three
+  were reachable by any authenticated active user in production.
+- **Result:** Converted `require_permission` to a fail-closed
+  `PERMISSION_ROLES: Dict[str, FrozenSet[str]]` lookup + `_resolve()`,
+  mirroring the pattern already used in
+  `src/modules/genetics/middleware/auth.py` and
+  `src/modules/protocols/middleware/auth.py`. Role sets for the four
+  pre-existing strings are byte-for-byte unchanged from the old if/elif
+  chain (`farm.manage`→admin/super_admin/moderator, `farm.operate`→+user,
+  `agronomist`→admin/super_admin/moderator, `admin`→admin/super_admin).
+  Registered `admin.manage`→admin/super_admin (the fix for the live hole).
+  An unregistered string now raises `HTTPException(500)` and logs an error
+  naming the string, resolved at `require_permission()` construction time
+  (route-definition/import time) rather than on first request, so a typo
+  surfaces at boot. `get_current_user`, `get_current_active_user`,
+  `require_farm_access`, `CurrentUser`, `security` — the public surface
+  other modules (genetics, protocols, purchasing, mushroom_manager,
+  attachments) import from this file — are unchanged. Corrected
+  `get_current_active_user`'s docstring, which claimed it "ensures user
+  account is active and verified" — it has never checked
+  `isEmailVerified`; the docstring was wrong, not the behaviour, so the
+  docstring was fixed rather than starting to enforce verification (would
+  have been an unrequested behaviour change). Updated
+  `genetics/middleware/auth.py`'s `_resolve` docstring, which claimed the
+  fail-open risk was "latent rather than active today" — `admin.manage`
+  made that demonstrably false, so the docstring now records what was
+  found instead of the earlier (incorrect) reassurance.
+  **Audit of the other 9 `require_permission` implementations**
+  (`finance`, `hr`, `logistics`, `crm`, `sales`, `marketing`, plus
+  `purchasing` and `mushroom_manager`, which re-export farm_manager's and
+  are covered by this fix): `finance`, `hr`, `logistics`, `crm`, `sales`,
+  and `marketing` all have the identical if/elif-with-no-`else` structural
+  pattern (fail-open on an unregistered string) — but cross-checked
+  against every call site in each module, **none currently has a live
+  hole**: every permission string actually passed to `require_permission`
+  in each of those six modules is handled by an existing branch. Not fixed
+  in this task — reported for the parent to decide scope; each is a
+  quick, low-risk follow-up (register-and-fail-closed like this one) if it
+  wants to close the latent bypass class before it becomes live like
+  `admin.manage` did.
+- **Tests:** `tests/unit/test_farm_manager/test_require_permission_auth.py`
+  (24 cases) — exact role-set preservation for the four pre-existing
+  permissions, `admin.manage` registration + admits admin/super_admin +
+  denies user/moderator, unregistered strings fail closed (`_resolve` and
+  `require_permission` both), definition-time failure, and the three
+  weather.py endpoints wired to `admin.manage` authorise an admin caller.
+  952 passed / 2 pre-existing unrelated failures (`test_outbox_reconciler.py`,
+  confirmed not caused by this change) / 1 skipped, full in-container suite
+  (`tests/unit`, includes T-928's tests too).
+- **Deploy:** api restart.
+
+### T-928 | Quote audit history / Quote attachments both pointed at a collection that has never existed
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** —
+- **Description:** Quotes are stored in `sales_quotes` (audit trail in
+  `sales_quotes_audit`) — `sales/services/quote_service.py:65-66` is the
+  writer and was always correct. Two consumers had the wrong name:
+  `sales/api/v1/audit.py`'s `_SALES_AUDIT_COLLECTIONS["QUOTE"]` mapped to
+  `"quotes_v2_audit"` (`GET /api/v1/sales/audit?docType=QUOTE` always
+  returned empty — the Quote detail page's Audit History button never
+  worked), and `attachments/services/attachment_service.py`'s
+  `_SALES_V2_COLLECTIONS[QUOTE]` mapped to `"quotes_v2"`
+  (`_assert_sales_v2_document_is_draft` always raised `LookupError` →
+  "document not found", so attaching or deleting a file on any Quote
+  always failed). Verified live: `quotes_v2`/`quotes_v2_audit` do not
+  exist; `sales_quotes` (1 doc)/`sales_quotes_audit` (5 docs) do, and the
+  live document carries `docEntry`/`organizationId`/`status` — the
+  existing query shape works unchanged once the name is right.
+- **Result:** Both dicts corrected to `sales_quotes`/`sales_quotes_audit`.
+  Verified the other 7 doc types in both dicts against the collection
+  constant each writer service in `sales/services/*.py` actually defines
+  (`_ARI_COL`, `_CR_COL`, `_SO_COL`, `_DN_COL`, `_RR_COL`, `_RTN_COL`,
+  `_ARC_COL` + each module's `_AUDIT_COL`) — all 7 were already correct;
+  only QUOTE was wrong, in both dicts. The comment above
+  `_SALES_AUDIT_COLLECTIONS` claimed it "mirrors `_SALES_V2_COLLECTIONS`
+  plus the `_audit` suffix" — that stated mechanical invariant is exactly
+  what propagated the bug (both tables independently had `quotes_v2*`).
+  Replaced with an explicit doc-type → writer-service → audit-collection
+  table in the comment and corrected the module docstrings in both files
+  that still named `quotes_v2*` as an example. Also updated a pre-existing
+  test, `test_attachments/test_attachment_service.py::
+  test_upload_quote_draft_succeeds`, which had asserted routing to
+  `quotes_v2` — it was encoding the bug rather than catching it.
+- **Tests:** `tests/unit/test_sales/test_audit_collection_mapping.py` (new,
+  20 cases) — QUOTE resolves correctly in both dicts, plus a
+  parametrized guard test per doc type asserting every value in both
+  dispatch tables matches the collection constant its writer service
+  actually defines (the regression test that would have caught the
+  original typo, for all 8 doc types going forward, not just QUOTE).
+- **Deploy:** api restart.
 
 ### T-925 | Brother QL-800 network label printing — configurable per deployment
 - **Category:** Backend · **Priority:** P2

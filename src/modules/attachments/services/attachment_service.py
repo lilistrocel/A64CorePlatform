@@ -80,8 +80,17 @@ _HEADERS_COL = "document_headers"
 # Map from Wave 3 sales AttachmentDocType values to their owning MongoDB
 # collection names.  These collections use camelCase field names and store
 # the primary key as docEntry (not docId) plus organizationId (camelCase).
+#
+# T-928: each value here must independently match the collection the
+# corresponding service in sales/services/*.py actually writes to — do not
+# assume a mechanical "<doctype>_v2" naming rule; QUOTE is the one doc type
+# that breaks it (quote_service.py writes `sales_quotes`, no `_v2` at all).
+# Getting this wrong here previously made every add/delete attachment call
+# against a Quote fail with a misleading "document not found" (LookupError
+# from _assert_sales_v2_document_is_draft), because the lookup queried a
+# collection ("quotes_v2") that has never existed.
 _SALES_V2_COLLECTIONS: dict[str, str] = {
-    AttachmentDocType.QUOTE.value: "quotes_v2",
+    AttachmentDocType.QUOTE.value: "sales_quotes",
     AttachmentDocType.SALES_ORDER.value: "sales_orders_v2",
     AttachmentDocType.DELIVERY.value: "deliveries_v2",
     AttachmentDocType.AR_INVOICE.value: "ar_invoices_v2",

@@ -1,8 +1,10 @@
 """
 Sales Module — Audit History Endpoint (T-200.x)
 
-Exposes the per-document audit trails maintained in the Wave 3 sales v2 audit
-collections (ar_invoices_v2_audit, quotes_v2_audit, etc.).
+Exposes the per-document audit trails maintained in the Wave 3 sales audit
+collections (ar_invoices_v2_audit, sales_quotes_audit, etc. — see the
+doc-type -> collection table below; QUOTE is the one exception to the
+"_v2_audit" naming the rest follow).
 
 Each sales document, on every state transition or write, appends a row to its
 corresponding _audit collection.  The canonical row shape is::
@@ -34,7 +36,9 @@ The same 8 Wave 3 sales doc types as the attachment service (T-200.x):
 
     AR_INVOICE      → ar_invoices_v2_audit
     CUSTOMER_RECEIPT → customer_receipts_v2_audit
-    QUOTE           → quotes_v2_audit
+    QUOTE           → sales_quotes_audit  (T-928: was "quotes_v2_audit",
+                       a collection that has never existed — see
+                       _SALES_AUDIT_COLLECTIONS below)
     SALES_ORDER     → sales_orders_v2_audit
     DELIVERY        → deliveries_v2_audit
     RETURN_REQUEST  → return_requests_v2_audit
@@ -85,12 +89,34 @@ _RESPONSE_CONFIG = ConfigDict(
 # Doc-type → audit collection dispatch table
 # ---------------------------------------------------------------------------
 
-# Mapping mirrors _SALES_V2_COLLECTIONS in attachment_service.py plus the
-# _audit suffix.  All 8 Wave 3 sales doc types are covered.
+# T-928: this table used to be described as "mirrors _SALES_V2_COLLECTIONS in
+# attachment_service.py plus the _audit suffix" — that stated invariant was
+# itself what propagated the QUOTE bug: _SALES_V2_COLLECTIONS had QUOTE ->
+# "quotes_v2" (also wrong, fixed separately), and this table mechanically
+# appended "_audit" to get "quotes_v2_audit", a collection that has never
+# existed. The relationship is NOT a mechanical suffix rule; each entry here
+# must independently match the `_AUDIT_COL` constant the corresponding
+# service in sales/services/*.py actually writes to (verified against the
+# source below). All 8 Wave 3 sales doc types are covered.
+#
+#   doc type          | writer service              | audit collection
+#   AR_INVOICE         ar_invoice_service.py          ar_invoices_v2_audit
+#   CUSTOMER_RECEIPT    customer_receipt_service.py    customer_receipts_v2_audit
+#   QUOTE               quote_service.py               sales_quotes_audit
+#   SALES_ORDER         sales_order_service.py         sales_orders_v2_audit
+#   DELIVERY             delivery_service.py            deliveries_v2_audit
+#   RETURN_REQUEST       return_request_service.py      return_requests_v2_audit
+#   RETURN               rtn_service.py                 returns_v2_audit
+#   AR_CREDIT_NOTE       ar_credit_note_service.py      ar_credit_notes_v2_audit
 _SALES_AUDIT_COLLECTIONS: dict[str, str] = {
     "AR_INVOICE": "ar_invoices_v2_audit",
     "CUSTOMER_RECEIPT": "customer_receipts_v2_audit",
-    "QUOTE": "quotes_v2_audit",
+    # T-928: QUOTE is the one doc type that does NOT follow the
+    # "<plural>_v2" naming the other seven use — quote_service.py writes to
+    # `sales_quotes` / `sales_quotes_audit` (no `_v2` in either name). This
+    # was previously "quotes_v2_audit", a collection that has never existed,
+    # so `GET /api/v1/sales/audit?docType=QUOTE` always returned empty.
+    "QUOTE": "sales_quotes_audit",
     "SALES_ORDER": "sales_orders_v2_audit",
     "DELIVERY": "deliveries_v2_audit",
     "RETURN_REQUEST": "return_requests_v2_audit",
