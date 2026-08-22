@@ -1,20 +1,42 @@
 /**
  * Block Harvest Entry Modal
  *
- * Modal for recording block-level quick harvest entries.
- * Used for quick harvest actions from CompactBlockCard and BlockHarvestsTab.
+ * Modal for recording a block-level multi-line harvest submission (Plant
+ * Library product extension Stage 4, design doc §5). One submission -> N
+ * product lines, each resolved LIVE from the block's mother
+ * (`block.productMotherId` -> `plant_mothers.products[]`, filtered to
+ * `isActive`) and routed server-side by its product's category:
  *
- * Grades A/B/C → writes to block_harvests (counted in KPI/yield).
- * Grade Waste   → writes to inventory_waste only (excluded from KPI/yield).
+ *   sellable -> block_harvests (counted in KPI/yield)
+ *   process  -> processing_inventory
+ *   waste    -> inventory_waste directly (excluded from KPI/yield)
+ *
+ * All lines share one server-generated harvestBatchId. One bad line rejects
+ * the WHOLE submission — nothing is written partially (design doc §3/§5).
+ *
+ * Retires the old single-grade "Waste" pseudo-grade toggle and its direct
+ * `POST /v1/farm/inventory/waste` write path — waste is now just a product
+ * line whose category happens to be `waste`.
  */
 
-import { useState, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { MapPin, Sprout, X } from 'lucide-react';
+import { CheckCircle2, MapPin, Package, Plus, Sprout, Trash2, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { glassPanel, glassControl, monoLabel, hexToRgba } from '@a64core/shared';
 import type { Theme } from '@a64core/shared';
-import { recordBlockHarvest, recordBlockWaste } from '../../services/farmApi';
+import { useBlock } from '../../hooks/queries/useBlocks';
+import { useProductsForMother } from '../../hooks/queries/usePlantMothers';
+import { useSubmitHarvestBatch } from '../../hooks/queries/useHarvestBatch';
+import type {
+  HarvestBatchLineCreate,
+  HarvestBatchLineResult,
+  HarvestBatchSubmitResponse,
+  ProductCategory,
+  QualityGrade,
+} from '../../types/farm';
 import { positiveNumberInputProps } from '../../utils';
+import { CATEGORY_LABELS, DESTINATION_LABELS, getCategoryColor } from '../../utils/harvestCategory';
 
 interface BlockHarvestEntryModalProps {
   isOpen: boolean;
@@ -22,7 +44,7 @@ interface BlockHarvestEntryModalProps {
   blockId: string;
   blockCode: string;
   blockName?: string | null;
-  /** Crop planted in this block (omit if unknown). */
+  /** Crop (variety) planted in this block (omit if unknown). */
   targetCropName?: string | null;
   /** Plant count currently on the block. */
   actualPlantCount?: number | null;
@@ -36,37 +58,33 @@ interface BlockHarvestEntryModalProps {
   onComplete: () => void;
 }
 
-// Local-only type — Waste intentionally excluded from the global QualityGrade
-// used by block_harvests to avoid polluting KPI/yield metrics.
-type QualityGrade = 'A' | 'B' | 'C' | 'Waste';
-
-const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C', 'Waste'];
-
-// Quality grade extrapolates the phase vocabulary (spec §5.2) — gold/warning
-// stays reserved for the literal Harvesting action (the submit button below),
-// not an ordinary grade chip (spec §3).
-function getGradeColor(theme: Theme, grade: QualityGrade): string {
-  const map: Record<QualityGrade, string> = {
-    A: theme.colors.phase.fruiting,
-    B: theme.colors.phase.inoculated,
-    C: theme.colors.phase.fruitingInit,
-    Waste: theme.colors.phase.quarantined,
-  };
-  return map[grade];
-}
+const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C'];
 
 const GRADE_LABELS: Record<QualityGrade, string> = {
   A: 'Premium',
   B: 'Good',
   C: 'Standard',
-  Waste: 'Waste',
 };
 
-/** Build the one-time auto-fill text for the waste reason field. */
-function buildWasteAutoFill(cropName: string | null | undefined, code: string, blockId: string): string {
-  const crop = cropName ?? 'Unknown crop';
-  const displayCode = code || blockId.slice(0, 6);
-  return `Recorded as waste from harvest of ${crop} on ${displayCode}`;
+function getGradeColor(theme: Theme, grade: QualityGrade): string {
+  const map: Record<QualityGrade, string> = {
+    A: theme.colors.phase.fruiting,
+    B: theme.colors.phase.inoculated,
+    C: theme.colors.phase.fruitingInit,
+  };
+  return map[grade];
+}
+
+/** One draft line in the form, before submission. */
+interface LineDraft {
+  key: string;
+  productId: string;
+  quantityKg: string;
+  qualityGrade: QualityGrade | '';
+}
+
+function emptyLine(key: string): LineDraft {
+  return { key, productId: '', quantityKg: '', qualityGrade: '' };
 }
 
 export function BlockHarvestEntryModal({
@@ -84,47 +102,86 @@ export function BlockHarvestEntryModal({
   onComplete,
 }: BlockHarvestEntryModalProps) {
   const theme = useTheme();
-  const [quantityKg, setQuantityKg] = useState('');
-  const [qualityGrade, setQualityGrade] = useState<QualityGrade>('A');
-  const [notes, setNotes] = useState('');
-  const [wasteReason, setWasteReason] = useState('');
-  // Track whether we have already auto-filled the waste reason this session,
-  // so we don't clobber a user-typed value if they toggle away and back.
-  const wasteAutoFilledRef = useRef(false);
-  const [submitting, setSubmitting] = useState(false);
-  const submittingRef = useRef(false);
+  const lineKeyCounter = useRef(0);
+  const nextLineKey = () => `line-${lineKeyCounter.current++}`;
+
+  const [lines, setLines] = useState<LineDraft[]>([emptyLine(nextLineKey())]);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<HarvestBatchSubmitResponse | null>(null);
+  const submittingRef = useRef(false);
+
+  // Live product picklist, resolved from the block's mother (design doc §5:
+  // "read LIVE from the mother, not snapshotted"). Filtered to isActive.
+  const { data: block, isLoading: blockLoading } = useBlock(farmId, blockId);
+  const motherId = block?.productMotherId ?? undefined;
+  const {
+    data: products = [],
+    isLoading: productsLoading,
+  } = useProductsForMother(motherId, true);
+  const submitBatch = useSubmitHarvestBatch();
+
+  const productsById = useMemo(() => new Map(products.map((p) => [p.productId, p])), [products]);
 
   if (!isOpen) return null;
 
-  const isWaste = qualityGrade === 'Waste';
+  const hasMother = !!motherId;
+  const loadingPicklist = blockLoading || (hasMother && productsLoading);
+  const noActiveProducts = hasMother && !productsLoading && products.length === 0;
 
-  const handleGradeChange = (grade: QualityGrade) => {
-    setQualityGrade(grade);
+  const handleAddLine = () => {
+    setLines((prev) => [...prev, emptyLine(nextLineKey())]);
     setError(null);
-
-    // Auto-fill waste reason on first selection of Waste.
-    // Never overwrite if the user has already typed something.
-    if (grade === 'Waste' && !wasteAutoFilledRef.current) {
-      const autoText = buildWasteAutoFill(targetCropName, blockCode, blockId);
-      setWasteReason(autoText);
-      wasteAutoFilledRef.current = true;
-    }
   };
+
+  const handleRemoveLine = (key: string) => {
+    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.key !== key) : prev));
+  };
+
+  const updateLine = (key: string, patch: Partial<LineDraft>) => {
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.key !== key) return l;
+        const next = { ...l, ...patch };
+        // Switching to a waste product clears any grade already chosen —
+        // the server rejects a waste line that supplies one.
+        if (patch.productId !== undefined) {
+          const category = productsById.get(patch.productId)?.category;
+          if (category === 'waste') next.qualityGrade = '';
+        }
+        return next;
+      })
+    );
+    setError(null);
+  };
+
+  const buildPayloadLines = (): HarvestBatchLineCreate[] | null => {
+    for (const line of lines) {
+      if (!line.productId) return null;
+      const qty = parseFloat(line.quantityKg);
+      if (isNaN(qty) || qty <= 0) return null;
+      const category = productsById.get(line.productId)?.category;
+      if (category !== 'waste' && !line.qualityGrade) return null;
+    }
+    return lines.map((line) => {
+      const category = productsById.get(line.productId)?.category;
+      const payloadLine: HarvestBatchLineCreate = {
+        productId: line.productId,
+        quantity: parseFloat(line.quantityKg),
+      };
+      if (category !== 'waste' && line.qualityGrade) {
+        payloadLine.qualityGrade = line.qualityGrade;
+      }
+      return payloadLine;
+    });
+  };
+
+  const payloadLines = buildPayloadLines();
+  const isFormValid = payloadLines !== null && !loadingPicklist && !noActiveProducts;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Quantity validation — applies to both sellable grades and waste.
-    const quantity = parseFloat(quantityKg);
-    if (isNaN(quantity) || quantity <= 0) {
-      setError('Please enter a valid quantity (kg)');
-      return;
-    }
-
-    // Waste reason is required when grade is Waste.
-    if (isWaste && !wasteReason.trim()) {
-      setError('Please enter a reason for the waste');
+    if (!payloadLines) {
+      setError('Fill in every line: product, quantity, and grade (where required).');
       return;
     }
 
@@ -133,53 +190,34 @@ export function BlockHarvestEntryModal({
     submittingRef.current = true;
 
     try {
-      setSubmitting(true);
       setError(null);
-
-      if (isWaste) {
-        // Waste path: writes to inventory_waste only — does not affect KPI/yield.
-        await recordBlockWaste(farmId, blockId, {
-          quantityKg: quantity,
-          wasteReason: wasteReason.trim(),
-          wasteDate: new Date().toISOString(),
-          plantName: targetCropName ?? 'Unknown crop',
-        });
-      } else {
-        // Sellable path: writes to block_harvests and auto-aggregates into inventory_harvest.
-        await recordBlockHarvest(farmId, blockId, {
-          blockId: blockId,
+      const response = await submitBatch.mutateAsync({
+        farmId,
+        blockId,
+        data: {
           harvestDate: new Date().toISOString(),
-          quantityKg: quantity,
-          qualityGrade: qualityGrade,
-          notes: notes.trim() || undefined,
-        });
-      }
-
-      // Reset form state.
-      setQuantityKg('');
-      setQualityGrade('A');
-      setNotes('');
-      setWasteReason('');
-      wasteAutoFilledRef.current = false;
-
-      onComplete();
+          lines: payloadLines,
+        },
+      });
+      // Swap to a results view showing what landed where, rather than
+      // closing immediately — a mixed submission's destinations are exactly
+      // what the user needs confirmed (design doc §5).
+      setResult(response);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; detail?: string } } };
       const errorMessage =
-        axiosErr?.response?.data?.message ||
         axiosErr?.response?.data?.detail ||
-        (isWaste ? 'Failed to record waste. Please try again.' : 'Failed to record harvest. Please try again.');
+        axiosErr?.response?.data?.message ||
+        'Failed to record harvest. Nothing was saved — please try again.';
       setError(errorMessage);
     } finally {
       submittingRef.current = false;
-      setSubmitting(false);
     }
   };
 
-  // Submit is disabled if quantity is invalid OR if waste grade and reason is empty.
-  const parsedQty = parseFloat(quantityKg);
-  const quantityInvalid = isNaN(parsedQty) || parsedQty <= 0 || quantityKg === '';
-  const isSubmitDisabled = submitting || quantityInvalid || (isWaste && !wasteReason.trim());
+  const handleDone = () => {
+    onComplete();
+  };
 
   return (
     // Overlay intentionally has NO onClick — data-entry modal must close only
@@ -193,7 +231,7 @@ export function BlockHarvestEntryModal({
         onMouseLeave={(e) => e.stopPropagation()}
       >
         <Header>
-          <Title>Quick Harvest Entry</Title>
+          <Title>{result ? 'Harvest Recorded' : 'Harvest Entry'}</Title>
           <CloseButton type="button" onClick={onClose} aria-label="Close modal">
             <X size={20} strokeWidth={1.8} />
           </CloseButton>
@@ -228,8 +266,7 @@ export function BlockHarvestEntryModal({
               </ChipRow>
             )}
 
-            {/* Yield progress chips — hidden when grade is Waste (they'd be misleading) */}
-            {!isWaste && !!totalHarvests && totalHarvests > 0 && (
+            {!!totalHarvests && totalHarvests > 0 && (
               <ChipRow>
                 <Chip $variant="progress">
                   {totalHarvests.toLocaleString('en-US')} harvest{totalHarvests === 1 ? '' : 's'} so far
@@ -243,100 +280,189 @@ export function BlockHarvestEntryModal({
             )}
           </BlockInfo>
 
-          <Form onSubmit={handleSubmit}>
-            <FormGroup>
-              <Label htmlFor="harvest-quantity">Quantity (kg) *</Label>
-              <Input
-                id="harvest-quantity"
-                {...positiveNumberInputProps}
-                step="0.01"
-                min="0.01"
-                value={quantityKg}
-                onChange={(e) => setQuantityKg(e.target.value)}
-                placeholder="Enter quantity in kg"
-                required
-                autoFocus
-              />
-            </FormGroup>
-
-            <FormGroup>
-              <Label>Quality Grade *</Label>
-              <GradeGrid>
-                {GRADE_OPTIONS.map((grade) => (
-                  <GradeButton
-                    key={grade}
-                    type="button"
-                    $selected={qualityGrade === grade}
-                    $color={getGradeColor(theme, grade)}
-                    $isWaste={grade === 'Waste'}
-                    onClick={() => handleGradeChange(grade)}
-                    aria-pressed={qualityGrade === grade}
-                  >
-                    <GradeIcon $color={grade === 'Waste' && qualityGrade !== 'Waste' ? getGradeColor(theme, 'Waste') : undefined}>
-                      {grade}
-                    </GradeIcon>
-                    <GradeLabel>{GRADE_LABELS[grade]}</GradeLabel>
-                  </GradeButton>
-                ))}
-              </GradeGrid>
-              {/* Note only shown when A/B/C is selected — Waste has its own indicator below */}
-              {!isWaste && (
-                <GradeNote>A, B, C grades are recorded to block harvest history</GradeNote>
+          {result ? (
+            <ResultView result={result} onDone={handleDone} theme={theme} />
+          ) : (
+            <Form onSubmit={handleSubmit}>
+              {!blockLoading && !hasMother && (
+                <ErrorMessage role="alert">
+                  This block has no linked product — an admin needs to assign it a mother
+                  plant before harvests can be recorded here.
+                </ErrorMessage>
               )}
-              {isWaste && (
-                <GradeNote $warn>Waste is excluded from yield KPIs and harvest history</GradeNote>
+
+              {noActiveProducts && (
+                <ErrorMessage role="alert">
+                  This block's mother plant has no active products to harvest. Add or
+                  reactivate a product in the Plant Library first.
+                </ErrorMessage>
               )}
-            </FormGroup>
 
-            {/* Waste reason — conditional, required when grade=Waste */}
-            {isWaste && (
-              <FormGroup>
-                <Label htmlFor="waste-reason">Reason *</Label>
-                <Textarea
-                  id="waste-reason"
-                  value={wasteReason}
-                  onChange={(e) => setWasteReason(e.target.value)}
-                  placeholder="Enter reason for waste..."
-                  rows={3}
-                  maxLength={500}
-                  required
-                />
-                <CharCount $over={wasteReason.length > 450}>
-                  {wasteReason.length} / 500
-                </CharCount>
-              </FormGroup>
-            )}
+              {loadingPicklist && <LoadingNote>Loading product list…</LoadingNote>}
 
-            {/* Notes — only for sellable grades */}
-            {!isWaste && (
-              <FormGroup>
-                <Label htmlFor="harvest-notes">Notes (Optional)</Label>
-                <Textarea
-                  id="harvest-notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any notes about this harvest..."
-                  rows={3}
-                />
-              </FormGroup>
-            )}
+              {hasMother && !noActiveProducts && (
+                <>
+                  <LinesList>
+                    {lines.map((line, index) => {
+                      const product = line.productId ? productsById.get(line.productId) : undefined;
+                      return (
+                        <LineRow key={line.key}>
+                          <LineRowHeader>
+                            <LineIndex>Line {index + 1}</LineIndex>
+                            <RemoveLineButton
+                              type="button"
+                              onClick={() => handleRemoveLine(line.key)}
+                              disabled={lines.length === 1}
+                              aria-label={`Remove line ${index + 1}`}
+                            >
+                              <Trash2 size={14} strokeWidth={1.8} />
+                            </RemoveLineButton>
+                          </LineRowHeader>
 
-            {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
+                          <FormGroup>
+                            <Label htmlFor={`product-${line.key}`}>Product *</Label>
+                            <Select
+                              id={`product-${line.key}`}
+                              value={line.productId}
+                              onChange={(e) => updateLine(line.key, { productId: e.target.value })}
+                              disabled={loadingPicklist}
+                              required
+                            >
+                              <option value="">Select product…</option>
+                              {products.map((p) => (
+                                <option key={p.productId} value={p.productId}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </Select>
+                            {product && (
+                              <CategoryNote $color={getCategoryColor(theme, product.category)}>
+                                {CATEGORY_LABELS[product.category]} — {DESTINATION_LABELS[product.category]}
+                              </CategoryNote>
+                            )}
+                          </FormGroup>
 
-            <ButtonGroup>
-              <CancelButton type="button" onClick={onClose} disabled={submitting}>
-                Cancel
-              </CancelButton>
-              <SubmitButton type="submit" disabled={isSubmitDisabled} $isWaste={isWaste}>
-                {submitting
-                  ? isWaste ? 'Recording waste...' : 'Recording...'
-                  : isWaste ? 'Record Waste' : 'Record Harvest'}
-              </SubmitButton>
-            </ButtonGroup>
-          </Form>
+                          <FormGroup>
+                            <Label htmlFor={`quantity-${line.key}`}>Quantity (kg) *</Label>
+                            <Input
+                              id={`quantity-${line.key}`}
+                              {...positiveNumberInputProps}
+                              step="0.01"
+                              min="0.01"
+                              value={line.quantityKg}
+                              onChange={(e) => updateLine(line.key, { quantityKg: e.target.value })}
+                              placeholder="Enter quantity in kg"
+                              required
+                            />
+                          </FormGroup>
+
+                          {product && product.category !== 'waste' && (
+                            <FormGroup>
+                              <Label>Quality Grade *</Label>
+                              <GradeGrid>
+                                {GRADE_OPTIONS.map((grade) => (
+                                  <GradeButton
+                                    key={grade}
+                                    type="button"
+                                    $selected={line.qualityGrade === grade}
+                                    $color={getGradeColor(theme, grade)}
+                                    onClick={() => updateLine(line.key, { qualityGrade: grade })}
+                                    aria-pressed={line.qualityGrade === grade}
+                                  >
+                                    <GradeIcon>{grade}</GradeIcon>
+                                    <GradeLabel>{GRADE_LABELS[grade]}</GradeLabel>
+                                  </GradeButton>
+                                ))}
+                              </GradeGrid>
+                            </FormGroup>
+                          )}
+
+                          {product && product.category === 'waste' && (
+                            <GradeNote $warn>Waste lines are not graded</GradeNote>
+                          )}
+                        </LineRow>
+                      );
+                    })}
+                  </LinesList>
+
+                  <AddLineButton type="button" onClick={handleAddLine}>
+                    <Plus size={16} strokeWidth={2} />
+                    Add product line
+                  </AddLineButton>
+                </>
+              )}
+
+              {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
+
+              <ButtonGroup>
+                <CancelButton type="button" onClick={onClose} disabled={submitBatch.isPending}>
+                  Cancel
+                </CancelButton>
+                <SubmitButton type="submit" disabled={!isFormValid || submitBatch.isPending}>
+                  {submitBatch.isPending ? 'Recording…' : 'Record Harvest'}
+                </SubmitButton>
+              </ButtonGroup>
+            </Form>
+          )}
         </Content>
       </Modal>
     </Overlay>
+  );
+}
+
+// ============================================================================
+// RESULT VIEW — reports what landed where, per line, using the server
+// response's `destination` (design doc §5: "surface that clearly")
+// ============================================================================
+
+const DESTINATION_ICONS: Record<ProductCategory, LucideIcon> = {
+  sellable: CheckCircle2,
+  process: Package,
+  waste: Trash2,
+};
+
+function ResultView({
+  result,
+  onDone,
+  theme,
+}: {
+  result: HarvestBatchSubmitResponse;
+  onDone: () => void;
+  theme: Theme;
+}) {
+  return (
+    <ResultContainer>
+      <ResultLead>
+        {result.lines.length} line{result.lines.length === 1 ? '' : 's'} recorded from this submission.
+      </ResultLead>
+      <ResultList>
+        {result.lines.map((line: HarvestBatchLineResult) => {
+          const Icon = DESTINATION_ICONS[line.category];
+          const color = getCategoryColor(theme, line.category);
+          return (
+            <ResultRow key={line.recordId}>
+              <ResultIcon $color={color}>
+                <Icon size={16} strokeWidth={1.8} />
+              </ResultIcon>
+              <ResultInfo>
+                <ResultProductName>{line.productName}</ResultProductName>
+                <ResultDestination $color={color}>
+                  {line.quantity.toLocaleString('en-US', { maximumFractionDigits: 2 })} kg
+                  {line.qualityGrade ? ` · Grade ${line.qualityGrade}` : ''} → {CATEGORY_LABELS[line.category]}
+                  {' · '}
+                  {DESTINATION_LABELS[line.category]}
+                </ResultDestination>
+              </ResultInfo>
+            </ResultRow>
+          );
+        })}
+      </ResultList>
+      <ButtonGroup>
+        <SubmitButton type="button" onClick={onDone}>
+          Done
+        </SubmitButton>
+      </ButtonGroup>
+    </ResultContainer>
   );
 }
 
@@ -363,7 +489,7 @@ const Modal = styled.div`
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   width: 100%;
-  max-width: 500px;
+  max-width: 560px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
@@ -481,6 +607,84 @@ const Form = styled.form`
   gap: ${({ theme }) => theme.spacing.lg};
 `;
 
+const LoadingNote = styled.div`
+  ${monoLabel}
+  font-size: 0.7rem;
+  color: ${({ theme }) => theme.colors.muted};
+  text-align: center;
+  padding: ${({ theme }) => theme.spacing.md} 0;
+`;
+
+const LinesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
+const LineRow = styled.div`
+  ${glassPanel}
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.md};
+`;
+
+const LineRowHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const LineIndex = styled.span`
+  ${monoLabel}
+  font-size: 0.6rem;
+  color: ${({ theme }) => theme.colors.muted};
+`;
+
+const RemoveLineButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.bright.coral};
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  transition: background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(240, 138, 112, 0.14);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+`;
+
+const AddLineButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+  padding: ${({ theme }) => theme.spacing.sm};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.celeste};
+  border: 1px dashed ${({ theme }) => theme.colors.glass.border};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(180, 200, 220, 0.07);
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+  }
+`;
+
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
@@ -512,19 +716,50 @@ const Input = styled.input`
   }
 `;
 
-/** 4-column grid to accommodate A / B / C / Waste chips in a single row. */
+const Select = styled.select`
+  ${glassControl}
+  padding: ${({ theme }) => theme.spacing.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-family: inherit;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  transition: border-color 0.2s ease;
+
+  option {
+    background-color: ${({ theme }) => theme.colors.cosmosHi};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.secondary[500]};
+    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const CategoryNote = styled.div<{ $color: string }>`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ $color }) => $color};
+  font-weight: 600;
+`;
+
+/** 3-column grid to accommodate A / B / C grade chips in a single row. */
 const GradeGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
-const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste: boolean }>`
+const GradeButton = styled.button<{ $selected: boolean; $color: string }>`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.sm};
   border: 2px solid
     ${({ $selected, $color, theme }) => ($selected ? $color : theme.colors.glass.border)};
   border-radius: ${({ theme }) => theme.borderRadius.md};
@@ -539,15 +774,15 @@ const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste
 `;
 
 const GradeIcon = styled.div<{ $color?: string }>`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-size: ${({ theme }) => theme.typography.fontSize.lg};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  margin-bottom: 2px;
   color: ${({ $color, theme }) => $color ?? theme.colors.textPrimary};
 `;
 
 const GradeLabel = styled.div`
   ${monoLabel}
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   color: ${({ theme }) => theme.colors.muted};
 `;
 
@@ -555,33 +790,6 @@ const GradeNote = styled.div<{ $warn?: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   color: ${({ $warn, theme }) => ($warn ? theme.colors.bright.coral : theme.colors.muted)};
   font-style: italic;
-  text-align: center;
-`;
-
-const Textarea = styled.textarea`
-  ${glassControl}
-  padding: ${({ theme }) => theme.spacing.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-family: inherit;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  resize: vertical;
-  transition: border-color 0.2s ease;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.secondary[500]};
-    box-shadow: 0 0 0 3px rgba(220, 185, 79, 0.15);
-  }
-
-  &::placeholder {
-    color: ${({ theme }) => theme.colors.muted};
-  }
-`;
-
-const CharCount = styled.div<{ $over: boolean }>`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ $over, theme }) => ($over ? theme.colors.bright.coral : theme.colors.muted)};
-  text-align: right;
 `;
 
 const ErrorMessage = styled.div`
@@ -623,24 +831,19 @@ const CancelButton = styled.button`
 `;
 
 // The literal "record harvest" action IS the Harvesting phase, so gold is
-// spec-sanctioned here (spec §3/§5.1) — unlike the grade chips above, this is
-// not an ordinary status colour. Waste (excluded from KPIs) drops to a plain
-// glass/coral treatment instead of gold.
-const SubmitButton = styled.button<{ $isWaste: boolean }>`
+// spec-sanctioned here (spec §3/§5.1).
+const SubmitButton = styled.button`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ $isWaste, theme }) =>
-    $isWaste
-      ? 'rgba(240, 138, 112, 0.16)'
-      : `linear-gradient(145deg, ${theme.colors.secondary[500]}, ${theme.colors.secondary[600]})`};
-  color: ${({ $isWaste, theme }) => ($isWaste ? theme.colors.bright.coral : theme.colors.onAccent)};
-  border: 1px solid ${({ $isWaste }) => ($isWaste ? 'rgba(240, 138, 112, 0.45)' : 'transparent')};
+  background: linear-gradient(145deg, ${({ theme }) => theme.colors.secondary[500]}, ${({ theme }) => theme.colors.secondary[600]});
+  color: ${({ theme }) => theme.colors.onAccent};
+  border: 1px solid transparent;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: ${({ $isWaste }) => ($isWaste ? 'none' : '0 4px 14px rgba(4, 6, 18, 0.35)')};
+  box-shadow: 0 4px 14px rgba(4, 6, 18, 0.35);
 
   &:hover:not(:disabled) {
     filter: brightness(1.05);
@@ -650,4 +853,58 @@ const SubmitButton = styled.button<{ $isWaste: boolean }>`
     opacity: 0.6;
     cursor: not-allowed;
   }
+`;
+
+const ResultContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.lg};
+`;
+
+const ResultLead = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+`;
+
+const ResultList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const ResultRow = styled.div`
+  ${glassPanel}
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.md};
+`;
+
+const ResultIcon = styled.div<{ $color: string }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: ${({ $color }) => hexToRgba($color, 0.16)};
+  color: ${({ $color }) => $color};
+`;
+
+const ResultInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const ResultProductName = styled.div`
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const ResultDestination = styled.div<{ $color: string }>`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ $color }) => $color};
 `;

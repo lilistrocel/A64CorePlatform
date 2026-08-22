@@ -21,6 +21,7 @@ import {
   TrendingUp,
   BarChart3,
   Trash2,
+  CalendarClock,
 } from 'lucide-react';
 import { glassPanelHover, monoLabel, phaseBadge } from '@a64core/shared';
 import type { PhaseKey } from '@a64core/shared';
@@ -321,10 +322,27 @@ export function PhysicalBlockCard({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showActions, setShowActions] = useState(false);
 
-  // Include 'cleaning' so a virtual block stays in the active list (and reachable
-  // via "View Active Plantings") until it is explicitly emptied.
+  // Cross-year physical occupancy. Include 'cleaning' so a virtual block stays
+  // counted until it is explicitly emptied. This drives the empty/add logic
+  // below — a block physically holding a planting from ANY farming year is not
+  // available, so it must NOT be year-scoped.
   const activePlantings = virtualBlocks.filter(
     (vb) => vb.state !== 'empty'
+  );
+
+  // Year-scoped plantings — the exact set the plantings modal renders (filtered
+  // to the selected farming year upstream via useDashboardData). Drives the
+  // count badge, section title, and "View Active Plantings" button so they can
+  // never contradict the modal. Falls back to the cross-year list only if the
+  // richer dashboard data was not supplied.
+  const plantingsThisYear = virtualDashboardBlocks ?? activePlantings;
+
+  // Plantings occupying this block but belonging to a DIFFERENT farming year
+  // than the one selected (present cross-year, absent this year) — surfaced as a
+  // hint so an occupied-but-empty-this-year block reads clearly.
+  const otherYearPlantingCount = Math.max(
+    activePlantings.length - plantingsThisYear.length,
+    0
   );
 
   // Check if the physical block itself has an active planting (not just virtual children)
@@ -403,9 +421,9 @@ export function PhysicalBlockCard({
           <BlockType>{physicalBlock.metadata?.blockType || 'Physical Block'}</BlockType>
         </LeftSection>
 
-        <PlantingCountBadge $count={activePlantings.length + (physicalBlockHasPlanting ? 1 : 0)}>
-          {activePlantings.length + (physicalBlockHasPlanting ? 1 : 0)} Active{' '}
-          {activePlantings.length + (physicalBlockHasPlanting ? 1 : 0) === 1 ? 'Planting' : 'Plantings'}
+        <PlantingCountBadge $count={plantingsThisYear.length + (physicalBlockHasPlanting ? 1 : 0)}>
+          {plantingsThisYear.length + (physicalBlockHasPlanting ? 1 : 0)} Active{' '}
+          {plantingsThisYear.length + (physicalBlockHasPlanting ? 1 : 0) === 1 ? 'Planting' : 'Plantings'}
         </PlantingCountBadge>
       </Header>
 
@@ -417,7 +435,7 @@ export function PhysicalBlockCard({
 
       <PlantingsSection>
         <PlantingsSectionTitle>
-          {activePlantings.length > 0 || physicalBlockHasPlanting
+          {plantingsThisYear.length > 0 || physicalBlockHasPlanting
             ? 'Active Plantings'
             : 'No Active Plantings'}
         </PlantingsSectionTitle>
@@ -445,13 +463,25 @@ export function PhysicalBlockCard({
           </PhysicalBlockPlantingInfo>
         )}
 
-        {/* Button to open the plantings modal for virtual block children */}
-        {activePlantings.length > 0 && (
+        {/* Button to open the plantings modal for virtual block children (year-scoped) */}
+        {plantingsThisYear.length > 0 && (
           <ViewPlantingsButton onClick={() => setShowPlantingsModal(true)}>
             <Sprout size={13} strokeWidth={1.6} />
-            <span>View Active Plantings ({activePlantings.length})</span>
+            <span>View Active Plantings ({plantingsThisYear.length})</span>
             <ArrowRight size={13} strokeWidth={1.6} />
           </ViewPlantingsButton>
+        )}
+
+        {/* Physically occupied, but by plantings in OTHER farming years (none in
+            the selected year). Explains why the area bar shows used with no
+            plantings listed here. */}
+        {plantingsThisYear.length === 0 && otherYearPlantingCount > 0 && (
+          <EmptyPlantingsMessage>
+            <CalendarClock size={13} strokeWidth={1.6} />
+            <span>
+              {otherYearPlantingCount} planting{otherYearPlantingCount === 1 ? '' : 's'} in other farming years
+            </span>
+          </EmptyPlantingsMessage>
         )}
 
         {/* Show cleaning state message or empty-state CTA */}

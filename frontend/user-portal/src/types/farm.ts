@@ -186,6 +186,13 @@ export interface Block {
   plantDataIsStale?: boolean;
   plantDataSnapshot?: PlantDataSnapshot | null;
 
+  // Product reference (Plant Library product extension). The MOTHER
+  // (product/SKU) this block's harvest picklist resolves live from —
+  // distinct from targetCrop/targetCropName above, which stay the VARIETY.
+  // Optional/denormalized; populated on all blocks by the Phase 1 migration.
+  productMotherId?: string | null;
+  productName?: string | null;
+
   // Additional fields from backend
   blockCode?: string;
   legacyBlockCode?: string;
@@ -344,6 +351,14 @@ export interface BlockHarvest {
     crop?: string;
     season?: number;
   };
+
+  // Plant Library product extension Stage 3/4. Optional — null on all
+  // 13,947 legacy rows and never backfilled. `productName` is a FROZEN
+  // snapshot at harvest time, not synced to later product renames.
+  productId?: string | null;
+  productName?: string | null;
+  /** Groups every line (sellable/process/waste) from one multi-line submission. */
+  harvestBatchId?: string | null;
 }
 
 export interface BlockHarvestCreate {
@@ -366,6 +381,87 @@ export interface BlockHarvestSummary {
   averageQuality: string;
   firstHarvestDate?: string;
   lastHarvestDate?: string;
+}
+
+// ============================================================================
+// HARVEST BATCH TYPES (Plant Library product extension Stage 3/4 — design
+// doc §5/§7). One multi-line submission -> N product lines, each routed by
+// its product's category (`ProductCategory`, declared further down in this
+// file with the plant-mother/product types) to one of three destinations,
+// all sharing a server-generated harvestBatchId.
+// ============================================================================
+
+/** One product line submitted in POST .../harvests/batch. */
+export interface HarvestBatchLineCreate {
+  productId: string;
+  /** Quantity in the product's unit (kg). */
+  quantity: number;
+  /** Required for sellable/process lines; MUST be omitted for waste lines
+   *  — the server rejects (400) a waste line that supplies one. */
+  qualityGrade?: QualityGrade;
+  notes?: string;
+}
+
+/** Request body for POST /farms/{farmId}/blocks/{blockId}/harvests/batch. */
+export interface HarvestBatchSubmitRequest {
+  harvestDate: string;
+  /** At least one line required. */
+  lines: HarvestBatchLineCreate[];
+  farmingYear?: number;
+}
+
+/** Where a submitted line actually got written. */
+export type HarvestLineDestination = 'block_harvests' | 'processing_inventory' | 'inventory_waste';
+
+/** Per-line result from a completed batch submission. */
+export interface HarvestBatchLineResult {
+  productId: string;
+  productName: string;
+  category: ProductCategory;
+  destination: HarvestLineDestination;
+  /** harvestId / processingInventoryId / wasteId, depending on destination. */
+  recordId: string;
+  quantity: number;
+  qualityGrade?: QualityGrade | string | null;
+}
+
+export interface HarvestBatchSubmitResponse {
+  harvestBatchId: string;
+  blockId: string;
+  harvestDate: string;
+  lines: HarvestBatchLineResult[];
+}
+
+/**
+ * One line from any of the three destinations, normalized for display by
+ * GET .../harvests/batch-lookup (design doc §7). productId/productName are
+ * null on legacy rows that predate this feature.
+ */
+export interface HarvestBatchLookupLine {
+  destination: HarvestLineDestination;
+  category: ProductCategory;
+  recordId: string;
+  productId?: string | null;
+  productName?: string | null;
+  quantity: number;
+  unit: string;
+  qualityGrade?: QualityGrade | string | null;
+  harvestBatchId?: string | null;
+}
+
+/** Lines sharing one harvestBatchId (or, for legacy rows, one recordId). */
+export interface HarvestBatchGroup {
+  harvestBatchId?: string | null;
+  lines: HarvestBatchLookupLine[];
+}
+
+/** Response for GET .../harvests/batch-lookup. A block can have more than
+ *  one submission on the same date — that's why `batches` is an array of
+ *  groups rather than a flat line list. */
+export interface HarvestBatchLookupResponse {
+  blockId: string;
+  harvestDate: string;
+  batches: HarvestBatchGroup[];
 }
 
 // ============================================================================
@@ -762,6 +858,14 @@ export interface PlantDataEnhanced {
   contributor?: string;   // Name of agronomist/contributor who provided this data
   targetRegion?: string;  // Geographic region where data was tested (e.g., 'UAE')
 
+  // Mother/Variety hierarchy (Plant Library Phase 1/2). This record IS a
+  // "variety" (cultivation recipe) — motherPlantId links it up to its
+  // "mother" (product/SKU, plant_mothers collection); varietyName is its
+  // display name within that mother's variety list (e.g. 'Standard').
+  // Optional so pre-migration records still type-check.
+  motherPlantId?: string;
+  varietyName?: string;
+
   // Audit fields
   createdByUserId: string;
   createdByEmail: string;
@@ -828,6 +932,12 @@ export interface PlantDataEnhancedUpdate {
   // 13. Fertigation Schedule (editor modal uses this field)
   fertigationSchedule?: FertigationSchedule;
   // Note: isActive is NOT updatable - only set at creation
+
+  // Variety's own display name within its mother (editable). plantName/
+  // scientificName/motherPlantId are inherited from the mother and are
+  // REJECTED (422) by the backend if sent here for a variety — do not add
+  // them to this DTO's usage for a variety update.
+  varietyName?: string;
 }
 
 // Search Parameters
@@ -846,6 +956,140 @@ export interface PlantDataEnhancedSearchParams {
 // Clone Request
 export interface PlantDataCloneRequest {
   newPlantName: string;
+}
+
+// ============================================================================
+// PLANT MOTHER TYPES (Plant Library Phase 1/2 — mother/variety hierarchy)
+//
+// mother (plant_mothers)      = the product/SKU. Harvest, inventory, and
+//   sales roll up here — one "Cabbage" product rather than one per variety.
+// variety (plant_data_enhanced, i.e. PlantDataEnhanced above) = the
+//   cultivation recipe. UNCHANGED in meaning — see its motherPlantId/
+//   varietyName fields for the link back to its mother.
+// ============================================================================
+
+/**
+ * Unit a product is measured in. `kg` is deliberately the only member today —
+ * a real enum so a future animal-husbandry module adds a member instead of
+ * backfilling every harvest row. Create-only: PlantProductUpdate cannot
+ * change an existing product's unit.
+ */
+export type ProductUnit = 'kg';
+
+/**
+ * Fixed, backend-enforced vocabulary — users cannot create categories.
+ * Routing (see design doc §3): sellable -> block_harvests, process ->
+ * processing_inventory, waste -> inventory_waste directly.
+ */
+export type ProductCategory = 'sellable' | 'process' | 'waste';
+
+/** A concrete product a mother can yield (e.g. "Green Capsicum" off "Capsicum"). */
+export interface PlantProduct {
+  productId: string;
+  name: string;
+  unit: ProductUnit;
+  category: ProductCategory;
+  isActive: boolean;
+}
+
+/** Request body for POST /plant-mothers/{motherId}/products. */
+export interface PlantProductCreate {
+  name: string;
+  unit: ProductUnit;
+  category: ProductCategory;
+}
+
+/**
+ * Request body for PATCH /plant-mothers/{motherId}/products/{productId}.
+ * `unit` is intentionally absent — not editable on an existing product.
+ */
+export interface PlantProductUpdate {
+  name?: string;
+  category?: ProductCategory;
+  isActive?: boolean;
+}
+
+export interface PlantMother {
+  plantMotherId: string;
+  plantName: string;
+  scientificName?: string;
+  plantType: PlantTypeEnum;
+  isActive: boolean;
+  divisionId?: string;
+  organizationId?: string;
+  createdBy?: string;
+  createdByEmail?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+  products?: PlantProduct[];
+}
+
+/** Shape returned by GET /plant-mothers (list) — each row annotated with its active variety count. */
+export interface PlantMotherWithVarietyCount extends PlantMother {
+  varietyCount: number;
+}
+
+/** Lightweight variety reference embedded in GET /plant-mothers/{id} (mother detail). */
+export interface VarietySummary {
+  plantDataId: string;
+  varietyName?: string;
+  isActive: boolean;
+}
+
+/** Shape returned by GET /plant-mothers/{id} (mother detail) — active varieties embedded. */
+export interface PlantMotherWithVarieties extends PlantMother {
+  varieties: VarietySummary[];
+}
+
+export interface PlantMotherCreate {
+  plantName: string;
+  scientificName?: string;
+  plantType: PlantTypeEnum;
+}
+
+export interface PlantMotherUpdate {
+  plantName?: string;
+  scientificName?: string;
+  plantType?: PlantTypeEnum;
+  isActive?: boolean;
+}
+
+/**
+ * Request body for POST /plant-mothers/{motherId}/varieties.
+ *
+ * Same detailed cultivation fields as PlantDataEnhancedCreate EXCEPT the
+ * basic info (plantName/scientificName/plantType) — those are inherited
+ * from the mother identified by the URL path and must not be sent here.
+ * varietyName is the one new required field.
+ */
+export interface VarietyCreateForMother {
+  varietyName: string;
+  farmTypeCompatibility: FarmTypeCompatibility[];
+  tags?: string[];
+  spacingCategory?: SpacingCategory;
+  customPlantsPer100m2?: number | null;
+
+  growthCycle: GrowthCycleInfo;
+  yieldInfo: YieldWasteInfo;
+
+  environmentalRequirements?: EnvironmentalRequirements;
+  wateringRequirements?: WateringRequirements;
+  soilRequirements?: SoilRequirements;
+  diseasesAndPests?: DiseaseOrPest[];
+  lightRequirements?: LightRequirements;
+  qualityGrades?: QualityGradeSpec[];
+  economicsAndLabor?: EconomicsAndLabor;
+  additionalInfo?: AdditionalInformation;
+
+  contributor?: string;
+  targetRegion?: string;
+}
+
+export interface PlantMotherSearchParams {
+  page?: number;
+  perPage?: number;
+  search?: string;
 }
 
 // ============================================================================

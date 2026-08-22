@@ -508,6 +508,9 @@ PATCH /api/v1/admin/users/{userId}/role
 - Users cannot modify their own role
 - Only super admins can modify other super admin roles
 - Admins cannot create other admins or super admins
+- Every role change is written to `admin_audit_log` (actor userId/email,
+  target userId/email, before/after role, UTC timestamp) — added 2026-08-14
+  security-hardening pass; previously unaudited.
 
 ---
 
@@ -549,6 +552,15 @@ PATCH /api/v1/admin/users/{userId}/status
 **Security:**
 - Users cannot modify their own status
 - Only super admins can modify other super admin accounts
+- Every activate/deactivate is written to `admin_audit_log` (actor, target,
+  before/after `isActive`, UTC timestamp) — added 2026-08-14 security
+  -hardening pass; previously unaudited.
+- The related endpoints `POST /api/v1/users/{userId}/activate` and
+  `POST /api/v1/users/{userId}/deactivate` now enforce this same
+  super-admin-target rule (`guard_target_not_super_admin` in
+  `src/middleware/permissions.py`) — until 2026-08-14 they lacked it, so a
+  plain `admin` could activate/deactivate a `super_admin` account through
+  that pair of routes even though this endpoint already blocked it.
 
 ---
 

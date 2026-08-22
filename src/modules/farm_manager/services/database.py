@@ -22,6 +22,7 @@ class FarmDatabaseManager:
     - farms
     - blocks
     - plant_data
+    - plant_mothers
     - plantings
     - daily_harvests
     - harvests
@@ -87,6 +88,26 @@ class FarmDatabaseManager:
             await db.plant_data.create_index("plantType")
             await db.plant_data.create_index("tags")
             await db.plant_data.create_index([("createdAt", -1)])
+
+            # Plant mothers collection (Plant Library Phase 1 - product/SKU level,
+            # groups plant_data_enhanced varieties for harvest/inventory/sales rollup)
+            await db.plant_mothers.create_index("plantMotherId", unique=True)
+            await db.plant_mothers.create_index("organizationId")
+            await db.plant_mothers.create_index("plantName")
+            await db.plant_mothers.create_index("isActive")
+            await db.plant_mothers.create_index([("createdAt", -1)])
+            # Plant Library product extension Stage 1 (see
+            # Docs/2-Working-Progress/plant-library-product-extension-design.md
+            # §4.5) — supports looking up a mother by an embedded product id.
+            await db.plant_mothers.create_index("products.productId")
+
+            # plant_data_enhanced.motherPlantId and blocks.productMotherId are
+            # missing today, making every mother->variety lookup and the whole
+            # cascade_rename (plant_mother_repository.py) a collection scan.
+            # Pure additive performance fixes, no behaviour change — added
+            # here regardless of the product extension itself (design §4.5).
+            await db.plant_data_enhanced.create_index("motherPlantId")
+            await db.blocks.create_index("productMotherId")
 
             # Plantings collection
             await db.plantings.create_index("plantingId", unique=True)
@@ -273,6 +294,33 @@ class FarmDatabaseManager:
             # Compound indexes for farming year queries (Feature #376)
             await db.block_harvests.create_index([("blockId", 1), ("farmingYear", 1)])
             await db.block_harvests.create_index([("farmId", 1), ("farmingYear", 1)])
+            # Plant Library product extension Stage 3 (design doc §4.5) —
+            # productId/harvestBatchId are optional (null on 13,947 legacy
+            # rows) but indexed regardless: the batch-lookup endpoint filters
+            # on harvestBatchId, and productId backs future per-product yield
+            # queries.
+            await db.block_harvests.create_index("productId")
+            await db.block_harvests.create_index("harvestBatchId")
+
+            # Processing inventory collection (Plant Library product
+            # extension Stage 3, design doc §4.4) — destination for
+            # `process`-category harvest lines, deliberately separate from
+            # inventory_harvest (sellable stock only, see §3.1).
+            await db.processing_inventory.create_index("inventoryId", unique=True)
+            await db.processing_inventory.create_index("organizationId")
+            await db.processing_inventory.create_index("farmId")
+            await db.processing_inventory.create_index("blockId")
+            await db.processing_inventory.create_index("productId")
+            await db.processing_inventory.create_index("harvestBatchId")
+            await db.processing_inventory.create_index([("harvestDate", -1)])
+            await db.processing_inventory.create_index([("createdAt", -1)])
+
+            # Waste inventory collection — new indexes for the Plant Library
+            # product extension Stage 3 routing (design doc §4.5): the
+            # batch-lookup endpoint filters harvest-sourced waste by block +
+            # date and groups by harvestBatchId.
+            await db.inventory_waste.create_index("harvestBatchId")
+            await db.inventory_waste.create_index("sourceBlockId")
 
             # Block archives collection (Feature #378)
             await db.block_archives.create_index("archiveId", unique=True)

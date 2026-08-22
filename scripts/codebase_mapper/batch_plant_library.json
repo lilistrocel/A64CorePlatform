@@ -1,0 +1,292 @@
+{
+  "meta": {
+    "generated_at": "2026-08-07T00:00:00Z",
+    "generator": "codebase_mapper/batch_plant_library",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "node_id_convention_summary": "farm_manager is the legacy module: per-file/CRUD api_endpoint nodes (farm_manager.api.plant_mothers), PascalCase class service/repository nodes (farm_manager.service.PlantMotherService), PascalCase pydantic_model nodes (farm_manager.model.PlantMother), collection_<snake> db_model nodes. Repository->collection reads_from edges use the bare PascalCase class name to match sibling plant_data/plant_data_enhanced edges. Frontend: component::/hook:: with layer=frontend, service:: as node_type function (matching plantDataEnhancedApi).",
+    "task": "Plant Library mother/variety restructure — add PlantMother product/folder + variety-aware plant_data_enhanced",
+    "scope": [
+      "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "src/modules/farm_manager/models/plant_mother.py",
+      "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "frontend/user-portal/src/components/farm/PlantMotherCard.tsx",
+      "frontend/user-portal/src/components/farm/PlantMotherFormModal.tsx",
+      "frontend/user-portal/src/components/farm/PlantMotherDetailModal.tsx",
+      "frontend/user-portal/src/hooks/queries/usePlantMothers.ts",
+      "frontend/user-portal/src/services/plantMotherApi.ts"
+    ]
+  },
+  "nodes": [
+    {
+      "node_id": "farm_manager.api.plant_mothers",
+      "node_type": "api_endpoint",
+      "name": "CRUD /farm/plant-mothers",
+      "file_path": "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "line_number": 32,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": ["router"],
+      "description": "Plant Library mother (product/folder) CRUD plus variety listing/creation: POST/GET/GET{id}/PATCH{id}/DELETE{id} /plant-mothers, GET+POST /plant-mothers/{id}/varieties."
+    },
+    {
+      "node_id": "farm_manager.model.PlantMother",
+      "node_type": "pydantic_model",
+      "name": "PlantMother",
+      "file_path": "src/modules/farm_manager/models/plant_mother.py",
+      "line_number": 72,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": ["PlantMother", "PlantMotherBase", "PlantMotherCreate", "PlantMotherUpdate", "PlantMotherWithVarietyCount", "PlantMotherWithVarieties", "VarietySummary", "VarietyCreateForMother"],
+      "description": "Plant Library product/folder: plantName, scientificName, plantType. Groups variety rows (PlantDataEnhanced) under one mother; varieties reference it via motherPlantId."
+    },
+    {
+      "node_id": "collection_plant_mothers",
+      "node_type": "db_model",
+      "name": "plant_mothers",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: plant_mothers - Plant Library product/folder catalog (plantName, scientificName, plantType); each doc groups variety rows stored in plant_data_enhanced."
+    },
+    {
+      "node_id": "farm_manager.service.PlantMotherService",
+      "node_type": "class",
+      "name": "PlantMotherService",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "line_number": 33,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": ["PlantMotherService"],
+      "description": "Plant Library mother CRUD and variety orchestration: create/list/get/update/delete mothers, list varieties, create variety for mother (delegates variety-create to PlantDataEnhancedService)."
+    },
+    {
+      "node_id": "farm_manager.service.PlantMotherRepository",
+      "node_type": "class",
+      "name": "PlantMotherRepository",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "line_number": 29,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": ["PlantMotherRepository"],
+      "description": "MongoDB data access for 'plant_mothers' collection; counts child varieties via plant_data_enhanced."
+    },
+    {
+      "node_id": "farm_manager.model.PlantDataEnhanced",
+      "node_type": "pydantic_model",
+      "name": "PlantDataEnhanced",
+      "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+      "line_number": 441,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": ["PlantDataEnhanced", "PlantDataEnhancedCreate", "GrowthCycleDuration", "FertigationSchedule"],
+      "description": "Enhanced plant library with growth cycles, fertigation, environmental requirements. Now variety-aware: carries motherPlantId + varietyName linking each row to its PlantMother."
+    },
+    {
+      "node_id": "farm_manager.model.Block",
+      "node_type": "pydantic_model",
+      "name": "Block",
+      "file_path": "src/modules/farm_manager/models/block.py",
+      "line_number": 244,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": ["Block", "BlockCreate", "BlockUpdate", "BlockStatus", "BlockKPI", "IoTController"],
+      "description": "Block model with status lifecycle, KPI, IoT controller, virtual crop support. Stamps productMotherId + productName from the planted variety's PlantMother at planting."
+    },
+    {
+      "node_id": "farm_manager.model.BlockArchive",
+      "node_type": "pydantic_model",
+      "name": "BlockArchive",
+      "file_path": "src/modules/farm_manager/models/block_archive.py",
+      "line_number": 28,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": ["BlockArchive", "BlockArchiveAnalytics"],
+      "description": "Archive record for completed block cycles with yield and alert summaries. Carries productMotherId + productName copied from the block at archive time."
+    },
+    {
+      "node_id": "farm_manager.service.PlantDataEnhancedService",
+      "node_type": "class",
+      "name": "PlantDataEnhancedService",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": ["PlantDataEnhancedService"],
+      "description": "Enhanced plant data CRUD with growth cycles, fertigation, search, clone. Now mother/variety-aware: CSV import resolves/creates PlantMother rows and stamps motherPlantId/varietyName; supports variety-create under a mother."
+    },
+    {
+      "node_id": "farm_manager.service.BlockRepository",
+      "node_type": "class",
+      "name": "BlockRepository",
+      "file_path": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "line_number": 21,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": ["BlockRepository"],
+      "description": "MongoDB data access for 'blocks' collection with filtering and aggregation. Looks up the variety's PlantMother to stamp block.productMotherId/productName at planting."
+    },
+    {
+      "node_id": "component::PlantMotherCard",
+      "node_type": "component",
+      "name": "PlantMotherCard",
+      "file_path": "frontend/user-portal/src/components/farm/PlantMotherCard.tsx",
+      "line_number": 205,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PlantMotherCard", "PlantMotherCardProps"],
+      "description": "Plant Library mother (product/folder) card with variety count and view/edit/delete/add-variety actions."
+    },
+    {
+      "node_id": "component::PlantMotherFormModal",
+      "node_type": "component",
+      "name": "PlantMotherFormModal",
+      "file_path": "frontend/user-portal/src/components/farm/PlantMotherFormModal.tsx",
+      "line_number": 260,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PlantMotherFormModal", "PlantMotherFormModalProps"],
+      "description": "Create/edit modal for a Plant Library mother (plantName, scientificName, plantType)."
+    },
+    {
+      "node_id": "component::PlantMotherDetailModal",
+      "node_type": "component",
+      "name": "PlantMotherDetailModal",
+      "file_path": "frontend/user-portal/src/components/farm/PlantMotherDetailModal.tsx",
+      "line_number": 328,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PlantMotherDetailModal", "PlantMotherDetailModalProps"],
+      "description": "Detail modal for a Plant Library mother showing its varieties and per-variety actions."
+    },
+    {
+      "node_id": "hook::usePlantMothers",
+      "node_type": "hook",
+      "name": "usePlantMothers",
+      "file_path": "frontend/user-portal/src/hooks/queries/usePlantMothers.ts",
+      "line_number": 17,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["usePlantMothers", "usePlantMother", "useVarietiesForMother", "useCreatePlantMother", "useUpdatePlantMother", "useDeletePlantMother", "useCreateVarietyForMother"],
+      "description": "TanStack Query hooks for Plant Library mothers/varieties (list/get/varieties + create/update/delete/create-variety mutations) over plantMotherApi."
+    },
+    {
+      "node_id": "service::plantMotherApi",
+      "node_type": "function",
+      "name": "plantMotherApi",
+      "file_path": "frontend/user-portal/src/services/plantMotherApi.ts",
+      "line_number": 117,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["plantMotherApi"],
+      "description": "Axios wrapper for /api/v1/farm/plant-mothers (mother CRUD + variety list/create)."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "farm_manager.api.plant_mothers",
+      "target_id": "farm_manager.service.PlantMotherService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "context": "Plant mothers API delegates to PlantMotherService."
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherService",
+      "target_id": "farm_manager.service.PlantMotherRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "context": "PlantMotherService delegates DB operations to PlantMotherRepository."
+    },
+    {
+      "source_id": "PlantMotherRepository",
+      "target_id": "collection_plant_mothers",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "context": "PlantMotherRepository reads/writes the 'plant_mothers' collection."
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherService",
+      "target_id": "farm_manager.service.PlantDataEnhancedService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "context": "PlantMotherService delegates variety-create to PlantDataEnhancedService."
+    },
+    {
+      "source_id": "farm_manager.service.PlantMotherRepository",
+      "target_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "context": "PlantMotherRepository counts child varieties via the plant_data_enhanced collection."
+    },
+    {
+      "source_id": "farm_manager.service.BlockRepository",
+      "target_id": "farm_manager.service.PlantMotherRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+      "context": "BlockRepository looks up the variety's PlantMother to stamp productMotherId/productName at planting."
+    },
+    {
+      "source_id": "hook::usePlantMothers",
+      "target_id": "service::plantMotherApi",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/hooks/queries/usePlantMothers.ts",
+      "target_file": "frontend/user-portal/src/services/plantMotherApi.ts",
+      "context": "usePlantMothers query/mutation hooks call plantMotherApi."
+    },
+    {
+      "source_id": "service::plantMotherApi",
+      "target_id": "farm_manager.api.plant_mothers",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/plantMotherApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plant_mothers.py",
+      "context": "plantMotherApi calls the /api/v1/farm/plant-mothers endpoints."
+    },
+    {
+      "source_id": "component::PlantMotherCard",
+      "target_id": "hook::usePlantMothers",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/PlantMotherCard.tsx",
+      "target_file": "frontend/user-portal/src/hooks/queries/usePlantMothers.ts",
+      "context": "PlantMotherCard uses usePlantMothers hooks."
+    },
+    {
+      "source_id": "component::PlantMotherFormModal",
+      "target_id": "hook::usePlantMothers",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/PlantMotherFormModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/queries/usePlantMothers.ts",
+      "context": "PlantMotherFormModal uses create/update mother mutations."
+    },
+    {
+      "source_id": "component::PlantMotherDetailModal",
+      "target_id": "hook::usePlantMothers",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/PlantMotherDetailModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/queries/usePlantMothers.ts",
+      "context": "PlantMotherDetailModal uses variety hooks and mutations."
+    },
+    {
+      "source_id": "component::PlantDataLibraryPage",
+      "target_id": "component::PlantMotherCard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/PlantMotherCard.tsx",
+      "context": "PlantDataLibrary renders a grid of PlantMotherCard."
+    },
+    {
+      "source_id": "component::PlantDataLibraryPage",
+      "target_id": "hook::usePlantMothers",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx",
+      "target_file": "frontend/user-portal/src/hooks/queries/usePlantMothers.ts",
+      "context": "PlantDataLibrary lists mothers via usePlantMothers."
+    }
+  ]
+}

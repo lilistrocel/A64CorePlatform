@@ -4,7 +4,7 @@ Block Repository - Data Access Layer (UPDATED)
 Handles all database operations for blocks with new status system.
 """
 
-from typing import List, Optional, Dict, TYPE_CHECKING
+from typing import List, Optional, Dict, Tuple, TYPE_CHECKING
 from uuid import UUID
 from datetime import datetime
 import logging
@@ -27,6 +27,13 @@ from ...models.block import (
     BlockKPI,
 )
 from ..database import farm_db
+
+# Plant Library Phase 2: resolving a planted variety -> its mother product,
+# so the block's productMotherId/productName can be stamped atomically with
+# the same status-update write (see _resolve_product_ref below). Safe,
+# one-directional import — neither module imports anything from ..block.
+from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+from ..plant_data.plant_mother_repository import PlantMotherRepository
 
 logger = logging.getLogger(__name__)
 
@@ -401,6 +408,17 @@ class BlockRepository:
             # Save crop information for both planned and growing
             if target_crop:
                 update_dict["targetCrop"] = str(target_crop)
+
+                # Plant Library Phase 2: stamp the product (mother) ref
+                # atomically with this same write, exactly like the Phase 1
+                # migration backfilled it for pre-existing plantings. Never
+                # blocks/raises on a resolution gap — see docstring.
+                product_mother_id, product_name = (
+                    await BlockRepository._resolve_product_ref(target_crop)
+                )
+                if product_mother_id is not None:
+                    update_dict["productMotherId"] = str(product_mother_id)
+                    update_dict["productName"] = product_name
             if target_crop_name:
                 update_dict["targetCropName"] = target_crop_name
             if actual_plant_count is not None:
@@ -436,6 +454,8 @@ class BlockRepository:
                 {
                     "targetCrop": None,
                     "targetCropName": None,
+                    "productMotherId": None,
+                    "productName": None,
                     "actualPlantCount": None,
                     "plantedDate": None,
                     "farmingYearPlanted": None,  # Clear farming year when cycle ends
@@ -474,6 +494,62 @@ class BlockRepository:
             f"[Block Repository] Updated block status: {block_id} -> {new_status.value}"
         )
         return await BlockRepository.get_by_id(block_id)
+
+    @staticmethod
+    async def _resolve_product_ref(
+        variety_id: UUID,
+    ) -> Tuple[Optional[UUID], Optional[str]]:
+        """
+        Resolve a variety (plant_data_enhanced.plantDataId, i.e. targetCrop)
+        to its mother product ref, for stamping block.productMotherId/
+        productName at planting time (Plant Library Phase 2).
+
+        Mirrors scripts/migrations/plant_library_mother_variety_migration.py's
+        resolution: looks up the variety with no active/deleted filter (a
+        block can legitimately reference a since-deactivated or
+        since-deleted variety) and reads its motherPlantId.
+
+        Returns (None, None) on any gap — unresolvable variety, variety with
+        no motherPlantId (should not happen post-Phase-1-migration, but new
+        varieties are also always created with one via
+        PlantMotherService.create_variety_for_mother), or a motherPlantId
+        that doesn't resolve to an existing plant_mothers doc — logging a
+        warning instead of raising. A resolution gap here must never block
+        the actual planting write.
+        """
+        try:
+            variety = await PlantDataEnhancedRepository.get_by_id(
+                variety_id, include_deleted=True
+            )
+        except Exception:
+            logger.warning(
+                f"[Block Repository] Could not load variety {variety_id} "
+                f"to resolve product ref; planting will proceed without "
+                f"productMotherId/productName"
+            )
+            return None, None
+
+        if not variety or not variety.motherPlantId:
+            logger.warning(
+                f"[Block Repository] Variety {variety_id} has no "
+                f"motherPlantId; planting will proceed without "
+                f"productMotherId/productName"
+            )
+            return None, None
+
+        mother = await PlantMotherRepository.get_by_id(
+            variety.motherPlantId, include_deleted=True
+        )
+        if not mother:
+            logger.warning(
+                f"[Block Repository] Variety {variety_id}'s motherPlantId "
+                f"{variety.motherPlantId} does not resolve to an existing "
+                f"plant_mothers doc; planting will proceed without "
+                f"productMotherId/productName"
+            )
+            return None, None
+
+        return mother.plantMotherId, mother.plantName
 
     @staticmethod
     async def update_kpi(

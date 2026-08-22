@@ -133,6 +133,22 @@ def _generate_cache_key_from_args(func_name: str, kwargs: dict) -> str:
         and not k.startswith("_")
     }
 
+    # Per-caller isolation: fold the authenticated user's id + organization into
+    # the key so a per-user / per-tenant response is NEVER served to a different
+    # caller. Most cached endpoints vary by role/manager/organization (e.g. the
+    # farms list, farm/sales dashboards); without this, the first caller's result
+    # leaks to every other caller for the whole TTL window — a cross-user and
+    # cross-tenant data exposure. Endpoints that are genuinely global just get a
+    # per-user copy (slightly lower hit-rate, still correct).
+    user = kwargs.get("current_user")
+    if user is not None:
+        user_id = getattr(user, "userId", None) or getattr(user, "id", None)
+        if user_id:
+            cacheable_args["__uid"] = str(user_id)
+        org_id = getattr(user, "organizationId", None)
+        if org_id:
+            cacheable_args["__org"] = str(org_id)
+
     if cacheable_args:
         # Sort params for consistent hashing
         sorted_args = sorted(cacheable_args.items())
@@ -145,7 +161,7 @@ def _generate_cache_key_from_args(func_name: str, kwargs: dict) -> str:
 
         return f"{func_name}:{args_hash}"
     else:
-        # No cacheable args
+        # No cacheable args and no authenticated caller
         return func_name
 
 

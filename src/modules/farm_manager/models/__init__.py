@@ -33,6 +33,15 @@ from .plant_data_enhanced import (
     FarmTypeEnum,
     GrowthStageEnum,
 )
+from .plant_mother import (
+    PlantMother,
+    PlantMotherCreate,
+    PlantMotherUpdate,
+    PlantMotherWithVarietyCount,
+    PlantMotherWithVarieties,
+    VarietySummary,
+    VarietyCreateForMother,
+)
 from .planting import Planting, PlantingItem, PlantingCreate
 from .daily_harvest import DailyHarvest, DailyHarvestEntry, DailyHarvestCreate
 
@@ -135,6 +144,14 @@ __all__ = [
     "PlantDataEnhancedUpdate",
     "FarmTypeEnum",
     "GrowthStageEnum",
+    # Plant Mother (Plant Library Phase 1 + 2)
+    "PlantMother",
+    "PlantMotherCreate",
+    "PlantMotherUpdate",
+    "PlantMotherWithVarietyCount",
+    "PlantMotherWithVarieties",
+    "VarietySummary",
+    "VarietyCreateForMother",
     # Planting
     "Planting",
     "PlantingItem",

@@ -43,12 +43,18 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 > **Known drift (flagged, not resolved by this update):** this section's
 > `1.15.0` and the `src/main.py` version constant (`1.17.0`) both trail the
-> Version History below, which already documents through `v1.20.0` plus two
-> further independent Unreleased entries (Genetics, and Wave 3 Phase 2 Sales
-> AR). `src/main.py` has not been bumped since the `v1.16.0` release commit.
-> Out of scope for this pass (docs/CodeMaps only, no source-file edits) —
-> reconciling `main.py`, this summary table, and a real release/tag is a
-> release-manager decision, not a `change-guardian` doc-sync one.
+> Version History below, which already documents through `v1.20.0` plus five
+> further independent Unreleased entries (Plant Library product extension —
+> now spanning Stage 1+2 and Stage 3+4, a global React Query `refetchOnMount`
+> fix, Security Hardening, Genetics, and Wave 3 Phase 2 Sales AR).
+> `src/main.py` has not been bumped since the `v1.16.0` release commit. Out of scope for
+> these passes (docs/CHANGELOG only, no source-file edits) — reconciling
+> `main.py`, this summary table, and a real release/tag is a release-manager
+> decision, not a `change-guardian` doc-sync one. Each pending entry
+> deliberately follows the same "flag classification, defer concrete number"
+> convention, rather than picking a number that would either collide with
+> another pending thread or appear to revert the already-documented
+> `v1.18.0`-`v1.20.0` history.
 
 ### Platform Version
 **A64 Core Platform:** `1.15.0` (Unreleased) — see drift note above; the
@@ -99,6 +105,236 @@ shipped/landed.
 ## Version History
 
 ### Platform Version History
+
+#### Unreleased — Plant Library: harvest batch routing + multi-line harvest modal (Stage 3+4) — 2026-08-19
+**Type:** Minor Release (pending) — T-923 on the `farm_manager` module,
+Stages 3 (backend) + 4 (frontend); the one remaining design §7 capability
+(batch editing) is not built and is filed separately as **T-924**. See
+`CHANGELOG.md` (`## [Unreleased] — Plant Library: harvest batch routing +
+multi-line harvest modal ...`) for the full itemised list; summarized here
+per this document's own "update on every version change" rule.
+
+**Author: Viet Anh**
+
+**Note on version number:** Not yet assigned a concrete `X.Y.Z`, for the
+same reason as every other pending entry in this section — this document
+already carries an unresolved version-number drift (see "Known drift" note
+above), and it is not this pass's place to resolve it or decide ordering
+among the now six pending unreleased threads. **Classification is fixed
+regardless of numbering: MINOR** — every change is additive (new
+endpoints, a new collection, new optional model fields); nothing existing
+was removed or changed shape.
+
+**Added (summary — see CHANGELOG.md for full detail):**
+- `POST .../harvests/batch` + `GET .../harvests/batch-lookup`, a new
+  `processing_inventory` collection, and per-category routing (`sellable`
+  → `block_harvests`, `process` → `processing_inventory`, `waste` →
+  `inventory_waste`) that leaves all 48 existing
+  `block_harvests.quantityKg` consumers — including the finance P&L — 
+  untouched by construction (design §3.1).
+- `BlockHarvestEntryModal.tsx` rewritten for multi-line submission with a
+  live per-block product picklist; `BlockHarvestsTab.tsx` gains a Product
+  column + Batch Lookup entry point; new read-only
+  `BlockHarvestBatchLookupModal.tsx`.
+- Retires the old direct-to-waste frontend write path
+  (`farmApi.recordBlockWaste`).
+
+**Known gap:** batch lookup ships read-only — no batch edit/delete
+endpoint exists yet, though design §7 framed lookup as the route to
+editing. Filed as **T-924**.
+
+**Compatibility:**
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. All new model fields are optional; legacy rows keep nulls, no
+  backfill beyond the one row migrated by
+  `plant_library_harvest_routing_migration.py`.
+
+**Verification:** Backend suite unchanged since Stage 3 (883 passed, 1
+skipped, 2 pre-existing unrelated failures). Frontend `npx tsc -b`
+byte-identical to the 234-error/129-TS6133 baseline, zero new. User
+click-through verified the feature end to end.
+
+**CodeMaps:** Not regenerated — two stages of accumulated drift now (4
+endpoints from Stage 1+2, 3 more here, 1 new collection, 4+ new/changed
+frontend files). Tracked in **T-924**.
+
+---
+
+#### Unreleased — React Query: `refetchOnMount` default fix (app-wide) — 2026-08-19
+**Type:** Patch Release (pending). See `CHANGELOG.md` (`## [Unreleased] —
+Fix: global React Query refetchOnMount default ...`) for the full detail;
+summarized here per this document's own "update on every version change"
+rule.
+
+**Author: Viet Anh**
+
+**Note on version number:** Not yet assigned, same open drift as every
+other pending entry above. **Classification: PATCH** — a bug fix
+restoring behavior the setting's own pre-existing comment already claimed
+it had; no new endpoint, no schema change, no new capability.
+
+**Fixed (summary):** The global `refetchOnMount: false`
+(`frontend/user-portal/src/config/react-query.config.ts`) silently
+suppressed refetch of stale/invalidated queries app-wide, contradicting
+its own comment (which described `true`'s behavior). Symptom: a record
+created on one page could keep showing a stale list on another page for
+up to 5 minutes, until `gcTime` eviction. Concretely broke the Plant
+Library harvest picklist (`useProductsForMother`) after a product was
+added — the bug that surfaced this while verifying the entry above. Fixed
+to `true`; `useProductsForMother` additionally pins `staleTime: 0` /
+`refetchOnMount: 'always'` per design doc §5's live-read requirement, so
+it stays correct even if the global default changes again. Verified safe
+against all 20+ existing per-query overrides (none touch
+`refetchOnMount`) and against `staleTime: Infinity` queries (unaffected
+by definition).
+
+---
+
+#### Unreleased — Plant Library: product extension Stage 1+2 — 2026-08-19
+**Type:** Minor Release (pending) — T-922 on the `farm_manager` module. See
+`CHANGELOG.md` (`## [Unreleased] — Plant Library: product extension Stage
+1+2 ...`) for the full itemised list; summarized here per this document's
+own "update on every version change" rule.
+
+**Author: Viet Anh**
+
+**Note on version number:** Not yet assigned a concrete `X.Y.Z`, for the
+same reason as the Genetics and Wave 3 Phase 2 Sales AR entries below —
+this document already carries an unresolved version-number drift (see
+"Known drift" note above), and it is not this pass's place to resolve it
+or decide ordering between the three unreleased entries. **Classification
+is fixed regardless of numbering: MINOR** — every change is additive (new
+endpoints, new optional model fields, new indexes); nothing existing was
+removed or changed shape.
+
+**Added (summary — see CHANGELOG.md for full detail):**
+- `PlantMother.products: List[PlantProduct]` — a picklist of concrete
+  products (e.g. "Green Capsicum") each mother can yield, with `unit`
+  (`kg` only today) and `category` (`sellable`/`process`/`waste`, fixed
+  enum). 4 new endpoints under
+  `/api/v1/farm/plant-mothers/{id}/products` (`POST`/`GET`/`PATCH`/
+  `DELETE` — `DELETE` deactivates, never removes).
+- Server-enforced invariant: every mother always keeps at least one
+  active sellable product (auto-seeded on create when none supplied;
+  409 on any mutation that would drop the last one). Closed a bypass
+  where CSV-imported mothers escaped this invariant.
+- 3 new indexes: `plant_mothers.products.productId`,
+  `plant_data_enhanced.motherPlantId`, `blocks.productMotherId` (the
+  latter two fix pre-existing collection scans, unrelated to the new
+  feature but bundled in per the design doc).
+- New migration `scripts/migrations/plant_library_default_product_migration.py`
+  — already run against production, 59 mothers seeded, idempotency
+  verified by a clean second run.
+- New frontend `ProductsEditor.tsx` (draft/live dual-mode), embedded in
+  `PlantMotherFormModal` (create only) and `PlantMotherDetailModal`
+  (always).
+
+**Compatibility:**
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. `products` is new and empty-by-default; existing clients ignore
+  it.
+- Fully backward-compatible with the prior farm-manager module baseline.
+
+**Not included in this pass:** Stages 3-5 (harvest modal multi-line
+rework, `block_harvests`/waste/processing-inventory routing, batch
+lookup/editing) — tracked as backlog T-923.
+
+**CodeMaps:** Not regenerated — 4 new endpoints, 5 new/changed models
+(`PlantProduct`/`PlantProductCreate`/`PlantProductUpdate`/`ProductUnit`/
+`ProductCategory`), and one new frontend component. Flagged per CLAUDE.md;
+deferred to whoever picks up T-923, since that stage touches the same
+surface again shortly.
+
+#### Unreleased — Security Hardening: role/activation audit trail, seed_admin lockdown, defense-in-depth route gating — 2026-08-14
+
+**Type:** Patch Release (pending) — three-part security audit (backend audit
+of the authorization/role code, frontend audit of route/UI gating, and
+live-DB forensics on how existing super_admin accounts on the deployment
+were actually granted) followed by fixes. See `CHANGELOG.md` (`## [Unreleased]
+— Security Hardening: ...`) for the full itemised list; summarized here per
+this document's own "update on every version change" rule.
+
+**Author: Viet Anh**
+
+**Audit conclusion (the reason this is a PATCH, not a MAJOR fix for an actual
+escalation bug):** there was no privilege-escalation vulnerability.
+Registration hardcodes `role: USER`; JWTs are never trusted for role (every
+request re-reads the role from the database); `can_change_role`
+(`src/middleware/permissions.py`) correctly caps `admin` at
+`moderator`/`user`/`guest`; `UserUpdate` has no `role` field at all. Every
+super_admin grant found on the live deployment traced back to an action by
+an existing super_admin. The reason those grants *looked* unapproved under
+review is that the system recorded neither an approver nor an audit entry
+for role/activation changes — that gap is what this work closes, not a hole
+that let anyone actually escalate themselves.
+
+**Note on version number:** Not yet assigned a concrete `X.Y.Z`, for the
+same reason as the Genetics and Wave 3 Phase 2 Sales AR entries below: this
+sits on its own branch (`various-fixes-140826`), independent of and not
+presuming an ordering against either of those two, and `src/main.py`'s
+actual running value (`1.17.0`) already trails this file's own documented
+history through `v1.20.0` (see the drift note above) — picking a number now
+would either collide with a pending thread or misrepresent that drift as
+resolved. **Classification is fixed regardless of numbering: PATCH** —
+every change is a security/bug fix or an added audit trail on existing
+write paths; no endpoint was added, removed, or had its signature changed.
+
+**Added (summary — see CHANGELOG.md for full detail):**
+- Shared `write_user_audit_log` (`src/services/audit_log_service.py`),
+  wired into all five role/activation write paths across
+  `src/services/user_service.py` and `src/api/v1/admin.py` — previously the
+  most sensitive mutation in the system (who holds `super_admin`) left no
+  audit trail at all.
+- `guard_target_not_super_admin` (`src/middleware/permissions.py`), closing
+  a gap where `POST /users/{id}/activate`/`/deactivate` lacked the
+  super_admin-target check their `admin.py` sibling already enforced.
+- Frontend defense-in-depth: `ProtectedRoute`'s new `allowedRoles` prop
+  route-gates `/admin/users`, `/admin/tenant-setup`, `/ai`; role dropdown on
+  `UserManagementPage` now offers only roles the viewer may actually assign.
+- 24 new backend unit tests across `tests/unit/test_main/`,
+  `tests/unit/test_users/`, and `tests/unit/test_deployment_settings/`.
+
+**Fixed (summary):**
+- `seed_admin()` (`src/main.py`) no longer silently re-promotes a
+  pre-existing account matching the public `ADMIN_EMAIL` value whenever the
+  super_admin count hits zero on an already-initialised deployment; that
+  path is now refused (logged at WARNING) rather than auto-repaired. The
+  one surviving genuine first-boot promotion path is preserved but always
+  audit-logged.
+- `CF_ACCESS_DEFAULT_ROLE` on the runtime `PATCH
+  /api/v1/admin/deployment-settings` path now gets the same `UserRole`
+  enum-membership validation `config/settings.py`'s startup validator
+  already enforces on the env-var path — previously type-checked only.
+
+**Compatibility:**
+- No breaking changes to any endpoint signature, request/response shape, or
+  MongoDB collection.
+- Two narrow, intentional behavior tightenings: `CF_ACCESS_DEFAULT_ROLE`
+  now rejects invalid role strings (422) that previously wrote silently;
+  `POST /users/{id}/activate`/`/deactivate` now 403 the one case
+  (`admin` acting on a `super_admin` target) every sibling endpoint already
+  blocked. Both are closing inconsistencies, not new restrictions on
+  previously-valid requests.
+
+**Verification:** Full backend unit suite in-container: 838 passed, 1
+skipped, 2 pre-existing failures unrelated to this work (`tests/unit/
+test_finance_bridge/test_outbox_reconciler.py`, a `MagicMock`-awaited-as-
+coroutine bug in the finance-bridge reconciler, confirmed pre-existing by
+reproducing in isolation). Frontend `npx tsc -b`: 234 pre-existing errors
+across 165 files, zero new errors from this work.
+
+**CodeMaps:** Not structural — no new/removed endpoints, services, or
+collections. One new internal helper module
+(`src/services/audit_log_service.py`) and one new function in
+`src/middleware/permissions.py`, both additive to modules already
+represented in the maps. Regeneration not required by this repo's own rule.
+Separately (same session, unrelated to the security audit): the codebase
+mapper itself had a task-coverage gap — six backend modules with zero
+mapping task despite `task_manager.py` reporting "26/26 completed" — fixed
+in `scripts/codebase_mapper/`; see `CHANGELOG.md`'s "Internal / Tooling"
+note under this same entry.
+
+---
 
 #### Unreleased — Genetics: label/QR traceability, safe line removal, public info page — 2026-08-01
 **Type:** Minor Release (pending) — T-804 through T-809 on the `genetics`

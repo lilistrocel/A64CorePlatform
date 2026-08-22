@@ -5,6 +5,509 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Plant Library: harvest batch routing + multi-line harvest modal (Stage 3+4 — product extension reachable end to end)
+
+**Scope:** T-923 Stages 3 (backend, commits `450629f`/`dbccb1f`/`fd9211a`) and
+4 (frontend, this pass) — the harvest modal now records N products in one
+submission, each routed to the destination its category implies (design doc
+§3/§5). This is the one coherent `Added` entry the Stage-3-only bug-fix entry
+below (`fd0f3d2`) deliberately deferred, since Stage 3 shipped with no UI
+caller until now. The three pre-existing bugs folded into the same Stage 3
+commits (harvest inventory writing the variety name instead of the product
+name, cycle-archive dropping the product link, and the `plant_data_enhanced`
+cross-tenant read leak) are documented in that PATCH entry, not repeated
+here. **Classification: MINOR** (additive only — new endpoints, a new
+collection, new optional model fields; nothing existing was removed or
+changed shape). Version number TBD — same open drift as every other pending
+entry in this file (see `Versioning.md`'s "Known drift" note); this entry
+does not attempt to resolve it or pick a number that would collide with the
+other pending threads. (Viet Anh)
+
+### Added
+
+- **`POST /api/v1/farm/farms/{farmId}/blocks/{blockId}/harvests/batch`** —
+  submit N product lines in one call, sharing a server-generated
+  `harvestBatchId`. `HarvestService.submit_harvest_batch` validates every
+  line up front (product belongs to the block's mother and is active; grade
+  required for sellable/process, rejected outright — not silently dropped —
+  for waste) before writing anything: one bad line rejects the whole
+  submission, never a partial write.
+- **Per-category routing (design §3/§3.1).** `sellable` reuses the existing
+  `record_harvest`/`HarvestRepository.create` path into `block_harvests` →
+  `inventory_harvest` FIFO, now accepting optional
+  `productId`/`productName`/`harvestBatchId`; `process` writes to the new
+  `processing_inventory` collection (mirrors `inventory_harvest`'s shape,
+  graded, kept separate from sellable stock); `waste` writes straight to
+  `inventory_waste` (`sourceType: 'harvest'`, `sourceBlockId`, `plantName`
+  set from the product name), retiring the old direct-write path. **Zero of
+  the 48 existing `block_harvests.quantityKg` consumers — including the
+  finance P&L (`pnl_service.py:394`) — were touched**; every row in that
+  collection stays sellable-only, legacy and new alike, by construction
+  rather than by a filter that could later be forgotten somewhere.
+- **`GET .../harvests/batch-lookup?harvestDate=`** — unions all three
+  destinations for one block + calendar date, grouped by `harvestBatchId`
+  (a block can have more than one same-day submission). `GET
+  /inventory/processing` added for read visibility into the new collection.
+  The existing default `GET .../harvests` is unchanged — still
+  `block_harvests`-only, sellable.
+- **Harvest modal rewritten for multi-line submission**
+  (`BlockHarvestEntryModal.tsx`): the product picklist resolves LIVE from
+  `block.productMotherId` → the mother's active products (design §5) via a
+  new `useBlock` hook; lines can be added/removed, each with product + kg
+  quantity + grade; the grade control is hidden entirely for a
+  waste-category line, matching the server's reject-if-supplied rule. One
+  POST submits the whole batch; on success the modal swaps to a results
+  view (not an auto-close) reporting each line's actual destination,
+  colour-coded, surfacing the server's verbatim rejection detail if one
+  line failed the whole submission. The old "Waste" pseudo-grade toggle and
+  its direct `POST /inventory/waste` write are gone — `farmApi.ts` drops
+  `recordBlockWaste`/`RecordBlockWastePayload` entirely (grep-verified zero
+  other callers) in favour of `submitHarvestBatch`/`getHarvestBatchLookup`.
+- **`BlockHarvestsTab.tsx`** gains a Product column
+  (`harvest.productName ?? 'Unspecified'` on the 13,947 legacy
+  null-product rows) and a Batch Lookup button. The default list
+  deliberately stays sellable-only per design §7 — it is NOT unioned across
+  destinations; that union is what the new lookup modal is for.
+- **New `BlockHarvestBatchLookupModal.tsx`** — read-only, block +
+  harvest-date filter, groups results by `harvestBatchId`, reuses the
+  shared `genetics/Modal.tsx` shell. See "Known gap" below.
+- **New hooks/utils:** `hooks/queries/useBlocks.ts` (`useBlock`),
+  `hooks/queries/useHarvestBatch.ts` (submit + lookup),
+  `utils/harvestCategory.ts` (shared category/destination labels + colour,
+  used by both modals so the vocabulary can't drift between them).
+- **3 new indexes:** `block_harvests.{productId,harvestBatchId}`,
+  `inventory_waste.{harvestBatchId,sourceBlockId}`, the full
+  `processing_inventory` index set.
+- **Migration** `plant_library_harvest_routing_migration.py` — backfilled
+  `productId`/`harvestBatchId` onto the one pre-existing harvest-sourced
+  `inventory_waste` row. Already run against production (backup taken
+  first); idempotent, proven via a clean second run (`migrated: 0,
+  skipped: 1`).
+
+### Known gap
+
+- **Batch lookup ships read-only.** Design §7 frames it as the route to
+  *editing* a mixed submission, but no batch edit/delete endpoint exists
+  yet. Finding and viewing a batch works; correcting one from there does
+  not. Filed as backlog **T-924**.
+
+### Not changed
+
+- `HarvestInventoryList.tsx` — `inventory_harvest` has no `productId`
+  field; its existing Product column already reads `plantName`, which
+  `fd0f3d2`'s bug fix corrected to hold the product name. Nothing to add
+  here.
+- `BlockHarvestEntryModal.tsx` kept its bespoke modal chrome rather than
+  moving to the shared `genetics/Modal.tsx` shell — it has a
+  `stopPropagation` guard against `CompactBlockCard`'s hover-visibility
+  state that the shared shell doesn't support.
+
+### Compatibility
+
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. All new model fields (`productId`/`productName`/`harvestBatchId`
+  on `BlockHarvest`/`WasteInventoryBase`) are optional; the 13,947 legacy
+  `block_harvests` rows and pre-existing waste rows keep nulls, no backfill
+  beyond the one row migrated above.
+- `farmApi.recordBlockWaste`/`RecordBlockWastePayload` are removed
+  (frontend-only helper, not a wire contract) — any code calling `POST
+  /inventory/waste` directly for harvest-time waste must move to
+  `submitHarvestBatch`. Verified zero remaining callers in this codebase.
+
+**Verification:** Backend suite unchanged since Stage 3 (883 passed, 1
+skipped, 2 pre-existing unrelated failures). Frontend `npx tsc -b`: 234
+errors / 129 TS6133 — diffed the full sorted error list against baseline,
+byte-identical, zero new. User has click-through verified the feature end
+to end, including that a product added in Plant Library now appears live in
+the harvest modal's picklist (see the React Query entry below — that fix
+was necessary for this verification to pass).
+
+**CodeMaps:** Still not regenerated — two stages of accumulated drift now
+(4 endpoints from Stage 1+2, 3 more here, 1 new collection, 4+ new/changed
+frontend components/hooks from Stage 4). Flagged per CLAUDE.md; tracked in
+backlog **T-924** alongside the batch-edit gap so both land in the same
+regeneration pass.
+
+---
+
+## [Unreleased] — Fix: global React Query `refetchOnMount` default suppressed refetch of stale/invalidated data app-wide
+
+**Scope:** `frontend/user-portal/src/config/react-query.config.ts` +
+`hooks/queries/usePlantMothers.ts`. Found while verifying the Plant Library
+harvest-modal Stage 4 work above, but the bug itself is app-wide, not
+feature-specific — every query in the app was affected, which is why it
+gets its own entry rather than folding into the Plant Library one.
+**Classification: PATCH** (bug fix restoring already-documented intended
+behavior; no new capability). Version number TBD, same open drift as every
+other pending entry. (Viet Anh)
+
+### Fixed
+
+- **`refetchOnMount` default was `false` while its own comment said
+  `true`'s behavior.** The global React Query default read `refetchOnMount:
+  false` under the comment *"Don't refetch when component remounts if data
+  is still fresh"* — which describes what `true` actually does (skip the
+  refetch only when NOT stale). `false` unconditionally suppresses the
+  refetch, fresh or stale alike. Consequence:
+  `queryClient.invalidateQueries()` marks an inactive query stale but does
+  not itself trigger a refetch (by design — that happens on the next
+  mount); with the default at `false`, the refetch was then suppressed
+  *again* when the component finally did mount. Net effect: **a record
+  created on one page kept showing a stale cached list on another page
+  until `gcTime` evicted it 5 minutes later**, for every query in the app
+  that didn't override the default.
+- **Concretely:** a product added via the Plant Library's `ProductsEditor`
+  did not appear in the harvest modal's product picklist
+  (`useProductsForMother`) without a hard page reload, because the
+  picklist's query had gone inactive (modal closed) and the mother-update
+  mutation's `invalidateQueries()` had nothing mounted to refetch into.
+- Changed `refetchOnMount` to `true`
+  (`config/react-query.config.ts`). Each query's own `staleTime` still
+  governs whether a mount costs a network request — fresh data continues
+  to serve from cache exactly as before; only stale or explicitly
+  invalidated data now refetches, which is what the pre-existing comment
+  always claimed the setting did.
+- `useProductsForMother` (`hooks/queries/usePlantMothers.ts`) additionally
+  pins `staleTime: 0` + `refetchOnMount: 'always'`, since design doc §5
+  mandates the harvest picklist be a live read from the mother, not merely
+  "not stale" — this keeps that guarantee correct even if the global
+  default changes again later.
+
+### Verified safe
+
+- Grepped every `useQuery`/`useInfiniteQuery` call in
+  `frontend/user-portal/src`: the 20+ existing per-query overrides all
+  touch `staleTime` only, none override `refetchOnMount` — so none could
+  have been relying on the old `false` behavior surviving.
+- `staleTime: Infinity` queries are unaffected — `true` only changes
+  behavior for data that is stale or invalidated; an `Infinity`-staleTime
+  query is by definition never stale, so it never refetches on mount
+  either way.
+
+### Compatibility
+
+- No API or schema change. Behavior-only: components that mount while
+  their query data is stale now receive a background refetch they
+  previously did not. This restores documented intended behavior rather
+  than introducing new behavior — the "more requests than before" surface
+  is scoped to genuinely stale/invalidated queries only, which is the case
+  the setting's own comment already claimed to handle.
+
+---
+
+## [Unreleased] — Plant Library: product extension Stage 1+2 (products picklist, sellable invariant, seeding migration)
+
+**Scope:** T-922 on the `farm_manager` module — each plant mother (the
+common crop name, e.g. "Capsicum") now carries a picklist of concrete
+products it can yield (e.g. "Green Capsicum" sellable, "Capsicum Puree"
+process, "Capsicum Trim" waste), CRUD for that picklist, a server-side
+invariant that every mother always keeps at least one active sellable
+product, a production-run seeding migration, and the UI to manage it.
+**Classification: MINOR** (purely additive — new endpoints, new optional
+model fields, new collection indexes; no existing endpoint, response
+shape, or field was removed or changed). Version number TBD, same open
+question as the Genetics and Wave 3 Phase 2 entries below — this repo
+currently has independent unreleased work stacked on top of a version
+drift (`src/main.py` at `1.17.0`, Versioning.md's summary table at
+`1.15.0`, CHANGELOG history already through `[1.20.0]`) that a prior
+change-guardian pass deliberately left unresolved (`various-fixes-140826`,
+PR #6, open). Not resolved here either — see `Versioning.md`'s "Known
+drift" note. (Viet Anh)
+
+### Added
+
+- **Products picklist on plant mothers.** New `ProductUnit` (`kg` only
+  today — deliberately a real enum so a future animal-husbandry module
+  adds a member instead of backfilling every harvest row) and
+  `ProductCategory` (`sellable`/`process`/`waste`, fixed vocabulary)
+  enums; `PlantProduct`/`PlantProductCreate`/`PlantProductUpdate` models;
+  `products: List[PlantProduct]` embedded on `PlantMother`
+  (`src/modules/farm_manager/models/plant_mother.py`). Products are
+  embedded rather than a separate collection — they're meaningless
+  outside their mother.
+- **4 new endpoints** at `/api/v1/farm/plant-mothers/{id}/products`:
+  `POST`/`GET` (add/list, `activeOnly` filter) and, at
+  `.../products/{product_id}`, `PATCH`/`DELETE` (update/deactivate).
+  `DELETE` deactivates only (`isActive: false`) and never removes the
+  entry — mirrors the existing mother-delete refuse-don't-cascade
+  precedent so a future harvest line referencing a `productId` never
+  needs a migration. `POST`/`PATCH`/`DELETE` require `agronomist`
+  permission; `GET` any active user.
+- **Sellable-product invariant.** Every mother must always carry at least
+  one active `sellable` product, enforced server-side: on mother
+  creation, if none results from the request (no products supplied, or
+  only `process`/`waste`), the server auto-creates one named after the
+  mother (`productId = uuid5(NAMESPACE_OID, motherId)`, matching the
+  seeding migration's id scheme so both paths agree). Any later mutation
+  that would drop the last active sellable — deactivate, `PATCH
+  isActive:false`, or `PATCH category` away from `sellable` — is rejected
+  with 409, all three routed through one guarded code path in
+  `plant_mother_service.py`.
+- **CSV importer invariant coverage.** The CSV importer's mother
+  find-or-create (`plant_data_enhanced_service.py::import_from_csv`)
+  previously called `PlantMotherRepository.create()` directly, bypassing
+  the invariant above entirely. Now routed through
+  `PlantMotherService.create_mother`, so CSV-created mothers get the same
+  auto-seeded default and the same 409 protection. A 409 from a
+  duplicate-name race is caught per-row into the import's existing
+  `rowsFailed` list rather than aborting the batch.
+- **3 new MongoDB indexes**: `plant_mothers.products.productId`, plus
+  `plant_data_enhanced.motherPlantId` and `blocks.productMotherId` — the
+  latter two were missing entirely, making every mother→variety lookup
+  and the whole `cascade_rename` a collection scan; pure additive perf
+  fix, no behavior change.
+- **Seeding migration**
+  (`scripts/migrations/plant_library_default_product_migration.py`,
+  `--dry-run` default / `--execute` to write, idempotent at the mother
+  level — a mother with ANY product is skipped entirely, never appended
+  to). **Already run against production**: 59 mothers seeded one
+  sellable/kg product each, verified 59/59; a second run reported 59
+  skipped / 0 seeded.
+- **Frontend — products editor.** New shared `ProductsEditor.tsx`
+  component with two modes: draft (create flow, before the mother
+  exists — local state, client-side name-collision check) and live
+  (CRUD against the four endpoints, used always in
+  `PlantMotherDetailModal` and once a mother exists in
+  `PlantMotherFormModal`). `PlantMotherFormModal` embeds the editor in
+  **create mode only**; edit mode is back to the plain 3-field form, so
+  `PlantMotherDetailModal` is the single place products are managed on an
+  existing mother. A confirmation dialogue fires before submit when no
+  sellable draft product exists, naming the product that will be
+  auto-created. Draft products are POSTed sequentially (not
+  `Promise.all`) on save for unambiguous 409 attribution; the mother is
+  never rolled back on a partial product-add failure — failures are
+  reported by name so the user can retry just those.
+
+### Compatibility
+
+- No breaking changes to any existing farm-manager endpoint or response
+  shape. `products` is a new, empty-by-default field on `PlantMother` and
+  its subclasses (`PlantMotherWithVarietyCount`,
+  `PlantMotherWithVarieties`); existing clients ignore it.
+- The four new product endpoints are entirely new routes.
+- `PlantMotherCreate.products` is a new optional request field
+  (`[]` default) — existing create-mother callers are unaffected and will
+  now receive an auto-created default sellable product in the response.
+- New indexes are additive; no schema migration required for
+  already-passing documents.
+
+### Not included in this pass
+
+- Stages 3-5 of the design doc — harvest modal multi-line rework,
+  `block_harvests`/waste/processing-inventory routing, and batch
+  lookup/editing — are **not built**. Tracked as backlog T-923.
+- Frontend changes were not run through Playwright; pending user
+  click-through verification.
+
+**CodeMaps:** Stale, not regenerated — 4 new endpoints, 5 new/changed
+models, and one new frontend component (`ProductsEditor.tsx`). Flagged
+per CLAUDE.md; deferred to whoever picks up T-923, since that stage will
+touch the same surface again shortly.
+
+## [Unreleased] — Plant Library: cross-tenant leak + two data-integrity bugs fixed during Stage 3's design audit
+
+**Scope:** T-923 (Plant Library product-extension Stage 3, harvest batch
+routing — backend only, commits `450629f`/`dbccb1f`/`fd9211a`) surfaced
+three pre-existing bugs during its design audit (design doc §9), all in
+files the stage touched anyway. This entry documents those three fixes.
+It deliberately does **not** cover the harvest batch submission feature
+itself — the new `POST .../harvests/batch` / `GET
+.../harvests/batch-lookup` endpoints, the new `processing_inventory`
+collection, `GET /inventory/processing`, or the `block_harvests`/
+`inventory_waste` routing behind them (design doc §3/§3.1/§4). That work
+shipped in the same commits but has no UI caller yet — Stage 4 (the
+harvest-modal multi-line rework) hasn't started — so it gets one coherent
+`Added` entry once Stage 4 ships instead of being split across two.
+**Classification: PATCH** (bug fixes only — no new endpoint, no
+request/response shape change, no field removed). Version number TBD —
+same open drift noted in the Stage 1+2 entry above and `Versioning.md`'s
+"Known drift" note. (Viet Anh)
+
+### Fixed
+
+- **Harvest inventory recorded the block's variety name, not the product
+  name** (`src/modules/farm_manager/services/block/harvest_service.py`,
+  `_add_to_inventory`) — `inventory_harvest.plantName` was written from
+  `block.targetCropName` (the *variety*, e.g. "Purple Beauty") instead of
+  the product actually being harvested. This is the fix that matters
+  operationally: `_add_to_inventory` is the one function both the
+  existing single-harvest submission path (`record_harvest`) and the new
+  batch path share, so the correction changes what **every harvest
+  recorded today** writes to inventory, not just the new batch path.
+  Existing `inventory_harvest` rows are not backfilled — this changes
+  writes from this deploy forward only.
+- **Cycle-complete archiving silently dropped the product link**
+  (`src/modules/farm_manager/services/block/archive_repository.py`) —
+  `BlockArchive` has carried `productMotherId`/`productName` since the
+  mother/variety migration, but the archive constructor never copied
+  them from the block being archived, so every archive created since
+  then got nulls in both fields. Lower stakes than the other two fixes
+  here (nothing currently reads those fields off an archive), but it
+  ships in the same commit as the rest of Stage 3, so a changelog that
+  omitted it would be incomplete about what actually changed. The next
+  block cycle any user completes now archives correctly.
+
+### Security
+
+- **Closed a cross-tenant read leak on plant/variety data**
+  (`src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py`,
+  `plant_data_enhanced_service.py`, `plant_mother_service.py`,
+  `src/modules/farm_manager/api/v1/plant_data_enhanced.py`) — the
+  `plant_data_enhanced` collection (variety search, the active-plants
+  dropdown used when planting a block, and variety create) had **zero
+  `organizationId` references anywhere in its read or write path**,
+  while the sibling `plant_mothers` collection has always filtered by
+  org. Any authenticated user of any organization could read and search
+  every other organization's variety data through these live endpoints.
+  Same bug family as the T-918 cache cross-tenant leak (PR #4), a
+  different layer: a missing query filter rather than a missing cache
+  key. Now threaded through `create`/`search`/`get_active_plants` and
+  the org-scoped mother→variety create path, matching
+  `PlantMotherRepository`'s existing convention of filtering only when a
+  caller supplies an org context (so scripts/migrations without one are
+  unaffected). **Impact on this deployment verified as junk-only**:
+  exactly 2 of ~58 existing `plant_data_enhanced` records had no
+  `organizationId` at all ("Test 1", and "Lettuce Test" — already
+  soft-deleted since 2026-07-20); neither is referenced by any block,
+  and only one organization exists on this deployment today, so no real
+  cross-tenant read has actually occurred — but the gap was live and
+  would have been exploitable the moment a second organization existed.
+
+## [Unreleased] — Security Hardening: role/activation audit trail, seed_admin lockdown, defense-in-depth route gating
+
+**Scope:** A three-part security audit (backend, frontend, live-DB forensics)
+of how users obtain the `super_admin` role, followed by fixes.
+**Audit conclusion: there was no privilege-escalation bug.** Registration
+hardcodes `role: USER`, JWTs are never trusted for role (every request
+re-reads the role from the database), `can_change_role` correctly caps
+`admin` at `moderator`/`user`/`guest`, and `UserUpdate` has no `role` field.
+Every super_admin grant on the live deployment was made by an existing
+super_admin — the reason those grants *looked* unapproved is that the
+system recorded neither approver nor audit entry, which is what this work
+fixes. **Classification: PATCH** — security patches and bug fixes only; no
+new endpoints, no endpoint signature changes, no collections added or
+removed. **Version number TBD pending release:** `src/main.py`'s version
+constant (currently `1.17.0`) already trails this file's documented history
+through `[1.20.0]` — see the drift note in `Versioning.md`'s Current
+Versions section, unresolved by this entry. This entry sits independently
+of, and does not presume an ordering against, the Genetics and Wave 3
+Phase 2 Sales AR `[Unreleased]` entries below — all three are currently
+unreleased, on three different branches (this one: `various-fixes-140826`).
+(Viet Anh)
+
+### Added
+
+- **Shared audit-trail writer** — `src/services/audit_log_service.py`
+  (`write_user_audit_log`), matching the `admin_audit_log` document shape
+  already used by `deployment_settings_service.update()`, the
+  organizations modules-update endpoint, and `admin.py`'s `mfa_reset`.
+  Wired into every role/activation write path: `UserService
+  .change_user_role` / `activate_user` / `deactivate_user`
+  (`src/services/user_service.py`) and the sibling raw-update endpoints in
+  `src/api/v1/admin.py` (`PATCH /admin/users/{id}/role`, `PATCH
+  /admin/users/{id}/status`). Each entry records actor userId + email,
+  target userId + email, before/after value, and a UTC timestamp. Role
+  changes — the most sensitive mutation in the system — previously wrote
+  no audit record at all.
+- **`guard_target_not_super_admin`** (`src/middleware/permissions.py`) —
+  shared guard, now used by `POST /users/{id}/activate` and `/deactivate`
+  (via `UserService.activate_user`/`deactivate_user`), which previously
+  lacked the super_admin-target check their `admin.py` sibling
+  (`PATCH /admin/users/{id}/status`) already had — a plain `admin` could
+  activate or deactivate a `super_admin` account.
+- **Frontend route-level role gating** — `ProtectedRoute` gains an optional
+  `allowedRoles` prop and a "Not authorized" fallback view. `/admin/users`
+  now requires `admin`/`super_admin`; `/admin/tenant-setup` and `/ai`
+  require `super_admin`; enforced in `App.tsx`. Previously these routes had
+  no route-level check — only the sidebar link was hidden, so any
+  authenticated user could reach them by typing the URL directly. This is
+  defense-in-depth only; the backend already rejected the underlying
+  requests with 403.
+- **Frontend role-dropdown restriction** — `UserManagementPage`'s inline
+  role `<select>` previously offered `super_admin` to every viewer
+  unconditionally. New `getAssignableRoles()` helper mirrors
+  `can_change_role` in `src/middleware/permissions.py` so the dropdown only
+  ever offers roles the viewer is actually permitted to assign.
+- 24 new backend unit tests: `tests/unit/test_main/test_seed_admin.py` (5),
+  `tests/unit/test_users/test_admin_role_status_audit.py` (4),
+  `test_user_service_role_activation_audit.py` (8),
+  `test_users_route_activation_wiring.py` (4), plus 3 appended to
+  `tests/unit/test_deployment_settings/test_deployment_settings_service.py`.
+
+### Fixed
+
+- **`seed_admin()` silent re-promotion** (`src/main.py`) — previously,
+  whenever the super_admin count hit zero on any deployment (not just a
+  fresh one), whatever pre-existing account matched the public
+  `ADMIN_EMAIL` value was silently re-promoted to super_admin, with no
+  approver and no audit trail. Since `ADMIN_EMAIL` is documented publicly
+  and registration is open, anyone could pre-register that address as an
+  ordinary user and wait for a future restart where the super_admin count
+  dropped to zero. Now gated on "genuinely uninitialised" (no organization
+  has ever been created on this deployment); once initialised, a
+  zero-super_admin state is refused rather than auto-repaired, and logged
+  at WARNING. The surviving genuine first-boot promotion path is preserved
+  but always audit-logged (`performedBy="system:seed_admin"`).
+- **`CF_ACCESS_DEFAULT_ROLE` validation gap**
+  (`src/services/deployment_settings_service.py::update()`) — the runtime
+  `PATCH /api/v1/admin/deployment-settings` write path only type-checked
+  this value (`isinstance(value, str)`); the `UserRole` enum-membership
+  check that `config/settings.py`'s startup validator already enforces on
+  the env-var path was never applied here. Fixed to match the startup
+  validator's strictness exactly (enum-membership only — `"super_admin"`
+  remains a valid value on both paths; this closes a validation gap, it
+  does not add a new business restriction). Relevant because Cloudflare
+  Access JIT provisioning is enabled by default wherever
+  `CF_ACCESS_ENABLED = true`.
+
+### Internal / Tooling
+
+- **Codebase mapper task-coverage gap** (`scripts/codebase_mapper/`) — six
+  backend modules (~118 Python files: purchasing, mushroom_manager,
+  protocols, ai_assistant, attachments, finance, plus finance_bridge) had
+  **zero** representation in any generated map while `task_manager.py`
+  reported a confident "26/26 completed," because its invalidation table
+  referenced task IDs (`map_purchasing_module`, `map_finance_module`, etc.)
+  that `setup.py` never defined — matches against nothing, silent no-op.
+  `setup.py` now seeds 33 task definitions (was 26); `task_manager.py`
+  gained the missing invalidation prefixes and upgraded several modules'
+  prefixes to also dirty the api/service/database generators, not just
+  `gen_module_map`. Also fixed `MONGO_URL` being hard-coded to an
+  unauthenticated `localhost` URI in `setup.py`, which meant it could not
+  seed a credentialed deployment at all. `NODE_ID_CONVENTIONS.md` and
+  `map_generator.py`'s INDEX Module Directory corrected to match. Not part
+  of the running application; no version-bump implication.
+
+### Not done / deliberately out of scope
+
+- `UserService.change_user_role` still does not gate on the target's
+  *current* role, only the role being assigned — an `admin` can demote an
+  existing `super_admin` to `moderator`. Flagged, not fixed (only
+  activate/deactivate were in scope for the super_admin-target guard in
+  this audit).
+- No approval workflow was added to registration or role assignment —
+  explicitly out of scope; this work is audit logging plus gap-closing
+  only, not a new business process.
+
+### Compatibility
+
+- No breaking changes to any existing endpoint signature, request/response
+  shape, or MongoDB collection.
+- `CF_ACCESS_DEFAULT_ROLE` validation is stricter than before — a request
+  that previously wrote an invalid role string now gets 422 instead of
+  silently persisting it; no previously-valid value is newly rejected.
+- `POST /users/{id}/activate` and `/deactivate` now return 403 for the one
+  previously-permitted case (`admin` acting on a `super_admin` target) that
+  every sibling role-mutation endpoint already blocked — closing an
+  inconsistency, not changing documented behavior.
+- **CodeMaps:** not structural — no new/removed endpoints, services, or
+  collections; one new internal helper module and one new permissions
+  function, both additive to modules already represented in the maps.
+  Regeneration not required per this repo's own rule ("bug fixes, logic
+  changes... NOT needed").
+
+---
+
 ## [Unreleased] — Genetics: label/QR traceability, safe line removal, public info page
 
 **Scope:** T-804 through T-809 on the `genetics` module — per-vessel QR labels

@@ -29,8 +29,18 @@ export const queryClient = new QueryClient({
       // Don't refetch when window regains focus (reduces unnecessary API calls)
       refetchOnWindowFocus: false,
 
-      // Don't refetch when component remounts if data is still fresh
-      refetchOnMount: false,
+      // Refetch on mount ONLY when the data is stale (this is what the
+      // previous comment here always described, but `false` did not do:
+      // `false` suppresses the refetch even for stale or explicitly
+      // invalidated data). That mismatch silently broke cross-page
+      // mutations: invalidateQueries() marks an INACTIVE query stale but
+      // does not refetch it, and `false` then suppressed the refetch when
+      // its component finally mounted — so a record added on page A kept
+      // showing a cached list on page B until gcTime evicted it 5 minutes
+      // later. With `true`, each query's own staleTime still governs
+      // whether a mount costs a request, so fresh data is served from
+      // cache exactly as before; only stale/invalidated data refetches.
+      refetchOnMount: true,
 
       // Don't refetch on reconnect (prevents spam when connection fluctuates)
       refetchOnReconnect: false,
@@ -83,6 +93,20 @@ export const queryKeys = {
       [...queryKeys.farmingYearConfig.all, 'list', { count, includeNext }] as const,
   },
 
+  // Plant Mother queries (Plant Library Phase 3 — mother/variety hierarchy)
+  plantMothers: {
+    all: ['plantMothers'] as const,
+    lists: () => [...queryKeys.plantMothers.all, 'list'] as const,
+    list: (page: number, perPage: number, search?: string) =>
+      [...queryKeys.plantMothers.lists(), { page, perPage, search }] as const,
+    details: () => [...queryKeys.plantMothers.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.plantMothers.details(), id] as const,
+    varieties: (motherId: string) =>
+      [...queryKeys.plantMothers.detail(motherId), 'varieties'] as const,
+    products: (motherId: string, activeOnly?: boolean) =>
+      [...queryKeys.plantMothers.detail(motherId), 'products', { activeOnly }] as const,
+  },
+
   // Block queries
   blocks: {
     all: ['blocks'] as const,
@@ -91,6 +115,10 @@ export const queryKeys = {
       [...queryKeys.blocks.detail(farmId, blockId), 'alerts'] as const,
     harvests: (farmId: string, blockId: string) =>
       [...queryKeys.blocks.detail(farmId, blockId), 'harvests'] as const,
+    // Plant Library product extension Stage 4 (design doc §7) — unions
+    // block_harvests/processing_inventory/inventory_waste for one block+date.
+    harvestBatchLookup: (farmId: string, blockId: string, harvestDate: string) =>
+      [...queryKeys.blocks.detail(farmId, blockId), 'harvestBatchLookup', harvestDate] as const,
   },
 
   // Sales queries

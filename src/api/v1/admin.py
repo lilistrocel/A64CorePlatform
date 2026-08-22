@@ -29,6 +29,7 @@ from ...models.user import (
     UserOrganizationAssignment,
 )
 from ...services import deployment_settings_service
+from ...services.audit_log_service import write_user_audit_log
 from ...services.database import mongodb
 from ...services.user_service import user_service
 from ...middleware.auth import get_current_user
@@ -367,6 +368,8 @@ async def update_user_role(
             detail="Only super admins can modify other super admin roles",
         )
 
+    old_role = user.get("role")
+
     # Update role
     result = await db.users.update_one(
         {"userId": user_id},
@@ -377,6 +380,18 @@ async def update_user_role(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update user role"
         )
+
+    # Reason: role grants are the most sensitive mutation in the system —
+    # record who granted it, on whom, and the before/after value.
+    await write_user_audit_log(
+        action="user.role.changed",
+        target_user_id=user_id,
+        target_user_email=user.get("email"),
+        performed_by=current_user.userId,
+        performed_by_email=current_user.email,
+        performed_by_role=current_user.role,
+        details={"before": old_role, "after": role_update.role.value},
+    )
 
     # Fetch updated user
     updated_user = await db.users.find_one({"userId": user_id})
@@ -450,6 +465,8 @@ async def update_user_status(
             detail="Only super admins can modify other super admin accounts",
         )
 
+    old_active = user.get("isActive")
+
     # Update status
     result = await db.users.update_one(
         {"userId": user_id},
@@ -461,6 +478,19 @@ async def update_user_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to update user status",
         )
+
+    await write_user_audit_log(
+        action="user.activated" if status_update.isActive else "user.deactivated",
+        target_user_id=user_id,
+        target_user_email=user.get("email"),
+        performed_by=current_user.userId,
+        performed_by_email=current_user.email,
+        performed_by_role=current_user.role,
+        details={
+            "before": {"isActive": old_active},
+            "after": {"isActive": status_update.isActive},
+        },
+    )
 
     # Fetch updated user
     updated_user = await db.users.find_one({"userId": user_id})

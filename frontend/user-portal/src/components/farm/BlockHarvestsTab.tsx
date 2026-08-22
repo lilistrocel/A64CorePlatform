@@ -7,10 +7,11 @@
 
 import { useState, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { Sprout, BarChart3 } from 'lucide-react';
+import { Sprout, BarChart3, ListFilter } from 'lucide-react';
 import { glassPanel, glassControl, monoLabel } from '@a64core/shared';
 import { farmApi, getAvailableFarmingYears, type FarmingYearItem } from '../../services/farmApi';
 import { FarmingYearSelector } from './FarmingYearSelector';
+import { BlockHarvestBatchLookupModal } from './BlockHarvestBatchLookupModal';
 import type { BlockHarvest, BlockHarvestSummary, QualityGrade } from '../../types/farm';
 import { formatNumber } from '../../utils';
 
@@ -165,6 +166,13 @@ const HarvestMeta = styled.div`
   color: ${({ theme }) => theme.colors.muted};
   display: flex;
   gap: 12px;
+`;
+
+// Legacy rows predate the Plant Library product extension and have no
+// linked product — 'Unspecified' rather than a blank cell (design doc §4.2).
+const ProductName = styled.span`
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 // Quality grade extrapolates the phase vocabulary (spec §5.2) rather than
@@ -390,6 +398,9 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
   const [loading, setLoading] = useState(true);
   const [harvestToDelete, setHarvestToDelete] = useState<BlockHarvest | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Plant Library product extension Stage 4 (design doc §7) — reviews a
+  // mixed multi-line submission (sellable + process + waste) as a unit.
+  const [showBatchLookup, setShowBatchLookup] = useState(false);
 
   // Farming year filter state
   const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
@@ -523,6 +534,10 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
           )}
         </HeaderLeft>
         <HeaderControls>
+          <Button type="button" $variant="secondary" onClick={() => setShowBatchLookup(true)}>
+            <ListFilter size={14} strokeWidth={1.8} />
+            Batch Lookup
+          </Button>
           <FarmingYearSelector
             selectedYear={selectedFarmingYear}
             availableYears={availableFarmingYears}
@@ -586,6 +601,8 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
                   {harvest.metadata?.crop && <span style={{ fontWeight: 400, marginLeft: 8, color: theme.colors.success }}>({harvest.metadata.crop})</span>}
                 </HarvestDate>
                 <HarvestMeta>
+                  <ProductName>{harvest.productName ?? 'Unspecified'}</ProductName>
+                  <span>•</span>
                   <span>{formatNumber(harvest.quantityKg, { decimals: 1 })} kg</span>
                   <span>•</span>
                   <span>
@@ -634,6 +651,14 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
             </ConfirmModalContent>
           </Modal>
         </Overlay>
+      )}
+
+      {showBatchLookup && (
+        <BlockHarvestBatchLookupModal
+          farmId={farmId}
+          blockId={blockId}
+          onClose={() => setShowBatchLookup(false)}
+        />
       )}
     </Container>
   );

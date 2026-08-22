@@ -32,6 +32,9 @@ import type {
   SpacingCategory,
   SpacingCategoriesResponse,
   CalculatePlantsResponse,
+  HarvestBatchSubmitRequest,
+  HarvestBatchSubmitResponse,
+  HarvestBatchLookupResponse,
 } from '../types/farm';
 
 // ============================================================================
@@ -487,44 +490,47 @@ export async function recordBlockHarvest(farmId: string, blockId: string, data: 
 }
 
 /**
- * Payload for recording harvest-time waste directly to inventory_waste.
- * Does NOT write to block_harvests — waste is excluded from KPI / yield tracking.
+ * Record a multi-line harvest batch (Plant Library product extension Stage
+ * 3/4 — design doc §5). One submission -> N product lines, each resolved
+ * from the block's mother and routed by its product's category:
+ * sellable -> block_harvests, process -> processing_inventory,
+ * waste -> inventory_waste directly. All lines share one server-generated
+ * harvestBatchId. One bad line rejects the WHOLE submission — nothing is
+ * written partially.
+ *
+ * Retires the old single-grade waste write path (formerly `recordBlockWaste`
+ * -> POST /v1/farm/inventory/waste) — waste now flows through a
+ * waste-category product line in this same submission.
  */
-export interface RecordBlockWastePayload {
-  /** Quantity in kilograms (plain number) */
-  quantityKg: number;
-  /** Free-text reason; auto-filled by the modal but user-editable */
-  wasteReason: string;
-  /** ISO datetime; falls back to now if not provided */
-  wasteDate?: string;
-  /** Display name of the crop (block.targetCropName) */
-  plantName: string;
+export async function submitHarvestBatch(
+  farmId: string,
+  blockId: string,
+  data: HarvestBatchSubmitRequest
+): Promise<HarvestBatchSubmitResponse> {
+  const response = await apiClient.post<{ data: HarvestBatchSubmitResponse }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/harvests/batch`,
+    data
+  );
+  return response.data.data;
 }
 
 /**
- * Record harvest-time waste for a block.
- * Writes to inventory_waste via POST /v1/farm/inventory/waste.
- * organizationId is set from auth on the backend — not sent here.
- * disposalMethod defaults to "pending" on the backend.
- * originalGrade intentionally omitted — no prior grade for harvest-time waste.
+ * Look up every harvest line recorded for a block on a calendar date,
+ * unioned across all three destinations (block_harvests, processing_inventory,
+ * inventory_waste) and grouped by harvestBatchId (design doc §7). Used only
+ * for reviewing/editing a mixed multi-line submission — the default
+ * `getBlockHarvests` list stays block_harvests-only (sellable rows).
  */
-export async function recordBlockWaste(
+export async function getHarvestBatchLookup(
   farmId: string,
   blockId: string,
-  payload: RecordBlockWastePayload
-) {
-  const body = {
-    farmId,
-    sourceType: 'harvest',
-    sourceBlockId: blockId,
-    plantName: payload.plantName,
-    quantity: payload.quantityKg,
-    unit: 'kg',
-    wasteReason: payload.wasteReason,
-    wasteDate: payload.wasteDate ?? new Date().toISOString(),
-  };
-  const response = await apiClient.post('/v1/farm/inventory/waste', body);
-  return response.data;
+  harvestDate: string
+): Promise<HarvestBatchLookupResponse> {
+  const response = await apiClient.get<{ data: HarvestBatchLookupResponse }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/harvests/batch-lookup`,
+    { params: { harvestDate } }
+  );
+  return response.data.data;
 }
 
 /**
@@ -1311,6 +1317,8 @@ export const farmApi = {
   getBlockHarvests,
   getBlockHarvestSummary,
   recordBlockHarvest,
+  submitHarvestBatch,
+  getHarvestBatchLookup,
   deleteBlockHarvest,
 
   // Block Archives

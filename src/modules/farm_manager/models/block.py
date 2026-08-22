@@ -402,6 +402,18 @@ class Block(BlockBase):
         None, ge=0, description="Current number of plants"
     )
 
+    # Product reference (Plant Library Phase 1). targetCrop above stays the
+    # VARIETY (growing data + traceability, meaning UNCHANGED); these two
+    # fields carry the MOTHER (product/SKU) that harvest/inventory/sales roll
+    # up to. Optional/denormalized, backfilled by the Phase 1 migration.
+    productMotherId: Optional[UUID] = Field(
+        None,
+        description="Mother plant (product) ID, resolved from targetCrop's variety",
+    )
+    productName: Optional[str] = Field(
+        None, description="Mother plant (product) name (denormalized)"
+    )
+
     # KPI Tracking
     kpi: BlockKPI = Field(default_factory=BlockKPI, description="Block KPI metrics")
 

@@ -56,6 +56,7 @@ import httpx
 from fastapi import HTTPException, status
 
 from ..config.settings import settings
+from ..models.user import UserRole
 from ..utils.security import verify_password
 from .database import mongodb
 
@@ -323,6 +324,24 @@ async def update(
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"{key} must be a {expected_type.__name__}.",
+            )
+
+    # Reason: config/settings.py's startup validator enforces
+    # CF_ACCESS_DEFAULT_ROLE membership in UserRole, but only for the
+    # env-var path — a value written here via PATCH bypasses that validator
+    # entirely, so without this check CF_ACCESS_DEFAULT_ROLE could be set to
+    # "super_admin" (or any garbage string) through the API and handed
+    # verbatim to every CF-Access JIT-provisioned user. Match the startup
+    # validator's strictness (enum membership only, same allowed set).
+    if "CF_ACCESS_DEFAULT_ROLE" in changes:
+        valid_roles = {role.value for role in UserRole}
+        if changes["CF_ACCESS_DEFAULT_ROLE"] not in valid_roles:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"CF_ACCESS_DEFAULT_ROLE={changes['CF_ACCESS_DEFAULT_ROLE']!r} is "
+                    f"not a valid role. Valid roles: {sorted(valid_roles)}"
+                ),
             )
 
     resolved_before = await get_resolved()

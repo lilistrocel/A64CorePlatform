@@ -1,6 +1,6 @@
 # Frontend Map
 
-> Generated: 2026-08-03 12:15 UTC  
+> Generated: 2026-08-07 08:14 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=component|hook|store|type, layer=frontend)
 
 ## Overview
@@ -10,7 +10,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 
 **Related Maps:** [api-map.md](api-map.md) | [module-map.md](module-map.md)
 
-## React Components (291)
+## React Components (294)
 
 | Component | File | Description |
 |-----------|------|-------------|
@@ -214,6 +214,9 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `PlantDataDetail` | `frontend/user-portal/src/components/farm/PlantDataDetail.tsx:1` | Plant data detail panel | PlantDataDetail |
 | `PlantDataFormModal` | `frontend/user-portal/src/components/farm/PlantDataFormModal.tsx:1` | Create/edit plant data modal | PlantDataFormModal |
 | `PlantDataLibrary` | `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx:1` | Page: plant data library with CSV import. Uses plantDataEnhancedApi | default |
+| `PlantMotherCard` | `frontend/user-portal/src/components/farm/PlantMotherCard.tsx:205` | Plant Library mother (product/folder) card with variety count and view/edit/delete/add-variety actions. | PlantMotherCard, PlantMotherCardProps |
+| `PlantMotherDetailModal` | `frontend/user-portal/src/components/farm/PlantMotherDetailModal.tsx:328` | Detail modal for a Plant Library mother showing its varieties and per-variety actions. | PlantMotherDetailModal, PlantMotherDetailModalProps |
+| `PlantMotherFormModal` | `frontend/user-portal/src/components/farm/PlantMotherFormModal.tsx:260` | Create/edit modal for a Plant Library mother (plantName, scientificName, plantType). | PlantMotherFormModal, PlantMotherFormModalProps |
 | `PnLPage` | `frontend/user-portal/src/pages/pnl/PnLPage.tsx:1` | Page: P&L. Renders Pnl* widget components. Uses farmApi | default |
 | `PnlArAging` | `frontend/user-portal/src/components/pnl/PnlArAging.tsx:1` | P&L AR aging table | PnlArAging |
 | `PnlBreakdownCharts` | `frontend/user-portal/src/components/pnl/PnlBreakdownCharts.tsx:1` | P&L breakdown charts (revenue / costs) | PnlBreakdownCharts |
@@ -306,7 +309,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `WasteInventoryList` | `frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx:1` | Page: waste inventory list. Uses api client | default |
 | `genetics styled primitives` | `frontend/user-portal/src/components/genetics/styled.ts:1` | T-800 Shared styled-components for the genetics screens. GenerationBadge shades warmer as clone depth rises, making senescence a standing visual cue. | PageWrap, Card, Button, Input, Select, GenerationBadge, StatusBadge, KindBadge,  |
 
-## Custom Hooks (72)
+## Custom Hooks (73)
 
 | Hook | File | Description |
 |------|------|-------------|
@@ -361,6 +364,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `useOrganizations` | `frontend/user-portal/src/hooks/queries/useOrganizations.ts:1` | Tenant org list + create + user-assignment mutation. | useOrganizations, useCreateOrganization, useAssignUserOrg, organizationsQueryKey |
 | `usePageVisibility` | `frontend/user-portal/src/hooks/usePageVisibility.ts:1` | Page-visibility callbacks + isMobile + isPageVisible utility hooks (no network). | usePageVisibility, useIsMobile, useIsPageVisible |
 | `usePayments` | `frontend/user-portal/src/hooks/queries/usePayments.ts:1` | AP payment list/detail + create (with JE summary). | usePayments, usePayment, useCreatePayment, paymentsQueryKeys |
+| `usePlantMothers` | `frontend/user-portal/src/hooks/queries/usePlantMothers.ts:17` | TanStack Query hooks for Plant Library mothers/varieties (list/get/varieties + create/update/delete/create-variety mutations) over plantMotherApi. | usePlantMothers, usePlantMother, useVarietiesForMother, useCreatePlantMother, us |
 | `usePostingSetup` | `frontend/user-portal/src/hooks/queries/usePostingSetup.ts:1` | Per-company posting setup get + upsert. | usePostingSetup, useUpsertPostingSetup, postingSetupQueryKeys |
 | `useProtocols` | `frontend/user-portal/src/hooks/protocols/useProtocols.ts:1` | TanStack Query hooks over protocolsApi: list/get a protocol, get protocols matching a scope (ProtocolPicker), and create/update/approve mutations (ProtocolFormModal). | useProtocols, useProtocol, useProtocolsForScope, useCreateProtocol, useUpdatePro |
 | `usePurchasing` | `frontend/user-portal/src/hooks/queries/usePurchasing.ts:1` | Mega-hook covering vendors, items, payment terms, PR/PO CRUD + lifecycle transitions + approvals inbox/history. The canonical purchasing surface. | useVendors, useVendor, useCreateVendor, useUpdateVendor, useDeleteVendor, usePur |
