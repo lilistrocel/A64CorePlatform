@@ -143,6 +143,28 @@ class MongoDBManager:
             await cls.db.user_mfa.create_index([("updatedAt", -1)])
             logger.info("MFA user_mfa collection indexes created")
 
+            # mfa_pending_tokens collection - short-lived MFA login challenges
+            #
+            # This collection was created ad hoc by auth_service (the challenge
+            # is inserted at _issue_mfa_challenge) and was never declared here,
+            # so unlike every sibling token collection it had NO indexes at all
+            # — not even on `tokenId`, which is the field every lookup uses.
+            #
+            # The missing TTL is the part that mattered: refresh_tokens,
+            # verification_tokens and mfa_backup_codes all self-expire via
+            # `expiresAt`, but MFA challenges accumulated forever. 74 documents
+            # were found here, all 74 already expired, the oldest from July.
+            # A stale challenge is not directly exploitable (verification
+            # re-checks expiry and isUsed), but an unbounded collection of
+            # login-adjacent tokens is not something to keep by accident.
+            await cls.db.mfa_pending_tokens.create_index("tokenId", unique=True)
+            await cls.db.mfa_pending_tokens.create_index("userId")
+            await cls.db.mfa_pending_tokens.create_index(
+                "expiresAt",
+                expireAfterSeconds=0,  # TTL uses the expiresAt value directly
+            )
+            logger.info("MFA mfa_pending_tokens collection indexes created")
+
             # mfa_backup_codes collection - stores hashed backup codes
             # Multiple codes per user, lookup by userId + codeHash
             await cls.db.mfa_backup_codes.create_index("codeId", unique=True)
