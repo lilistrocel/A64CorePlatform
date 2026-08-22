@@ -1,8 +1,100 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 121 tasks
+> **Total completed:** 122 tasks
 
 ## 2026-08
+
+### T-929 | Verification/reset emails silently claimed success without ever sending outside development. HONESTY/ACCOUNT-RECOVERY.
+- **Category:** Backend (auth) · **Priority:** P1
+- **Completed:** 2026-08-22 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** —
+- **Description:** `src/utils/email.py`'s three helpers
+  (`send_email_verification`, `send_password_reset`, `send_welcome_email`)
+  logged the formatted link/content only when `ENVIRONMENT == "development"`
+  and otherwise fell past ~18 lines of commented-out SendGrid example code
+  per function — logging nothing, sending nothing, and still returning
+  `True`. `auth_service.py` trusted that `True` and logged e.g.
+  `"Verification email sent to: {email}"` unconditionally. Net effect: on
+  any non-development deployment, account verification and password reset
+  were completely inert, unrecoverable (the link wasn't even logged), and
+  every layer reported success. Distinct from the already-merged
+  `fix/honest-email-state` work (commit `55c0dc9`), which added
+  `settings.EMAIL_DELIVERY_CONFIGURED` and made the authenticated
+  `POST /send-verification-email` endpoint report `delivered: "false"` —
+  that fix never touched `email.py` itself, which is what actually decides
+  whether anything is sent.
+- **Result:**
+  - `src/utils/email.py` rewritten: all three functions now ALWAYS log the
+    full human-readable subject/body/link at INFO, on every environment
+    (`ENVIRONMENT` branching removed entirely from this file) — the link is
+    therefore always recoverable from the API log, not just in dev.
+  - Each function now returns a genuinely honest `bool`: `True` only if a
+    configured provider actually accepted the message; `False` whenever
+    nothing was sent. The old "always `True`" behavior is gone.
+  - Delivery decision is centralised in one new `_dispatch()` helper —
+    a single documented EXTENSION POINT for a real provider, replacing the
+    three duplicated ~18-line commented SendGrid blocks. It branches on
+    `settings.EMAIL_DELIVERY_CONFIGURED` per that setting's own docstring
+    instruction: unconfigured (`EMAIL_PROVIDER` empty) logs at INFO — an
+    expected, non-error state — and returns `False`; configured but with no
+    matching provider branch implemented (still `False` today for every
+    value) logs at ERROR, since that is an operator misconfiguration that
+    must be visible, not a silent no-op.
+  - `src/services/auth_service.py`'s three call sites
+    (`send_verification_email`, `verify_email`, `request_password_reset`)
+    now capture the returned bool and log the real outcome ("... sent to
+    ..." only when actually delivered; an explicit "... NOT delivered ..."
+    line otherwise, pointing at the log line that carries the recoverable
+    link). Each method's own `True` return value is unchanged — it still
+    means "the operation (token issuance, verification) completed," not
+    "an email was delivered"; delivery status is a log fact, not a return
+    value, at this layer.
+  - `settings.py`'s `EMAIL_PROVIDER` docstring corrected to describe the
+    actual post-fix behavior (always logs, branches on
+    `EMAIL_DELIVERY_CONFIGURED`, distinguishes unconfigured from
+    misconfigured) instead of describing the pre-fix dev-only logging it
+    previously claimed.
+  - **Explicitly NOT done** (out of scope — no provider credentials exist):
+    no real SendGrid/SMTP/etc. integration was implemented. Every
+    deployment remains unable to actually deliver email until an operator
+    both sets `EMAIL_PROVIDER` and someone implements the matching branch
+    in `email._dispatch()`. That is now loud (ERROR-logged) rather than
+    silent.
+  - **Anti-enumeration preserved:** `POST /request-password-reset` (the
+    anonymous endpoint) never inspected `AuthService.request_password_reset`'s
+    return value before this change and still doesn't — it always returns
+    the same fixed generic message regardless of whether the email exists
+    or whether delivery succeeded. Verified with a test asserting
+    byte-identical status code, JSON body, and `Content-Length` for a known
+    vs. an unknown email. The authenticated `POST /send-verification-email`
+    endpoint (which is allowed to be specific, per the prior fix) is
+    unaffected — it already branched on `EMAIL_DELIVERY_CONFIGURED`
+    directly rather than on this helper's return value.
+- **Tests:** `tests/unit/test_auth/test_t929_email_delivery_honesty.py` (13
+  new): each of the three `email.py` helpers returns not-delivered with the
+  link/content still logged, parametrized over
+  `ENVIRONMENT=development|production`; unconfigured delivery logs at INFO
+  not ERROR; a configured-but-unimplemented provider logs at ERROR and
+  still returns not-delivered; `AuthService`'s three call sites log the
+  real delivered/not-delivered outcome instead of a hardcoded success
+  string; the anonymous password-reset endpoint's response is
+  byte-identical for a known vs. unknown email. Full suite in the running
+  container: **995 passed, 2 failed, 1 skipped** — the 2 failures are the
+  same pre-existing ones in
+  `tests/unit/test_finance_bridge/test_outbox_reconciler.py` cited as this
+  task's baseline (962/2/1); the baseline-to-now delta is larger than this
+  task's 13 new tests because the working tree already carried other
+  in-progress, uncommitted test files (`test_harvest_batch_routing.py` and
+  related plant-library-harvest-routing changes) unrelated to this task.
+  `black==26.5.1` clean on every file touched
+  (`src/utils/email.py`, `src/config/settings.py`,
+  `src/services/auth_service.py`, the new test file). No real email was
+  sent by any test (`EMAIL_PROVIDER` was only ever set to the fictitious
+  value `"sendgrid"` to exercise the misconfiguration branch, which never
+  reaches a network call). No test touched the live database — all
+  DB-touching tests monkeypatch `mongodb.get_database()` with a hand-built
+  fake; verified post-hoc via `mongosh` that zero documents exist for any
+  of the test fixtures' email addresses.
 
 ### T-938 | Cloudflare Access login 500s on a soft-deleted email — DuplicateKeyError. SECURITY/PROD-INCIDENT.
 - **Category:** Backend (auth) · **Priority:** P0

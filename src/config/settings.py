@@ -53,14 +53,20 @@ class Settings(BaseSettings):
     FROM_EMAIL: str = "noreply@a64core.com"
 
     # Name of the outbound email provider, e.g. "sendgrid" or "smtp".
-    # EMPTY IS THE HONEST DEFAULT AND CURRENTLY THE ONLY REAL VALUE:
-    # src/utils/email.py does not send anything. It formats the verification /
-    # password-reset link, writes it to the API log, and returns — the provider
-    # integration is still a TODO there. Account recovery is therefore inert on
-    # every deployment, which went unnoticed for as long as the feature has
-    # existed because the API answered "sent successfully" either way.
-    # Setting this does NOT enable delivery on its own; whoever implements a
-    # provider in email.py should branch on it.
+    # EMPTY IS THE HONEST DEFAULT (T-929): src/utils/email.py never sends
+    # anything today, on any environment. It formats the verification /
+    # password-reset / welcome message and ALWAYS writes it to the API log
+    # (recoverable by an operator), then returns False — no provider
+    # integration exists yet. Callers (auth_service.py, auth.py) report that
+    # honestly: the "delivered" field/log line reflects the real outcome,
+    # not a hardcoded success.
+    # Setting this to a non-empty value does NOT enable delivery on its own —
+    # email.py's _dispatch() has no branch implemented for any provider name
+    # yet, so a non-empty EMAIL_PROVIDER with no matching branch is treated
+    # as a misconfiguration (logged at ERROR, still returns False) rather
+    # than silently pretending to work. Whoever implements a provider must
+    # add a branch in email._dispatch() for the EMAIL_PROVIDER value they
+    # support.
     EMAIL_PROVIDER: str = ""
 
     @property

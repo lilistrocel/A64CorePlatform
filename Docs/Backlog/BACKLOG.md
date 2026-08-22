@@ -151,13 +151,10 @@ remaining 112 dangling edges belong to them.
   Quote attachments both pointed at `quotes_v2*`, a collection that has
   never existed — corrected to `sales_quotes`/`sales_quotes_audit` in both
   dispatch tables.
-- **T-929 — Verification/reset emails silently never send outside
-  development.** `src/utils/email.py` logs and returns `True` when
-  `ENVIRONMENT == "development"`, otherwise falls past commented-out
-  SendGrid code and **still returns `True`**. `auth_service.py` trusts that
-  boolean. Harmless on this dev box; on any production deployment account
-  verification and password reset silently fail. Distinct from the merged
-  `fix/honest-email-state` work, which fixed the API responses, not this.
+- **T-929 — FIXED, see ARCHIVE.md (2026-08-22).** Verification/reset/welcome
+  emails always logged the link and returned an honest `bool`; a
+  configured-but-unimplemented `EMAIL_PROVIDER` now logs at ERROR instead
+  of silently no-op'ing.
 - **T-930 — Wave 3 sales collections have no indexes.** `sales/services/
   database.py` declares indexes only for legacy `sales_orders`/
   `purchase_orders`. Nothing creates them for `sales_orders_v2`,

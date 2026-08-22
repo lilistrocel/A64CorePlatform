@@ -530,11 +530,18 @@ class AuthService:
         await db.verification_tokens.insert_one(token_doc)
 
         # Send verification email
-        await send_email_verification(
+        delivered = await send_email_verification(
             email=user_doc["email"], token=token, user_name=user_doc["firstName"]
         )
 
-        logger.info(f"Verification email sent to: {user_doc['email']}")
+        if delivered:
+            logger.info(f"Verification email sent to: {user_doc['email']}")
+        else:
+            logger.info(
+                f"Verification email NOT delivered to {user_doc['email']} — "
+                f"no email provider configured (or delivery failed); the "
+                f"link was written to the API log by send_email_verification()."
+            )
         return True
 
     @staticmethod
@@ -609,11 +616,17 @@ class AuthService:
         user_doc = await db.users.find_one({"userId": user_id})
 
         # Send welcome email
-        await send_welcome_email(
+        delivered = await send_welcome_email(
             email=user_doc["email"], user_name=user_doc["firstName"]
         )
 
         logger.info(f"Email verified for user: {user_doc['email']}")
+        if not delivered:
+            logger.info(
+                f"Welcome email NOT delivered to {user_doc['email']} — no "
+                f"email provider configured (or delivery failed); the "
+                f"content was written to the API log by send_welcome_email()."
+            )
 
         # Return user response
         return UserResponse(
@@ -689,11 +702,18 @@ class AuthService:
         await db.verification_tokens.insert_one(token_doc)
 
         # Send password reset email
-        await send_password_reset(
+        delivered = await send_password_reset(
             email=email, token=token, user_name=user_doc["firstName"]
         )
 
-        logger.info(f"Password reset email sent to: {email}")
+        if delivered:
+            logger.info(f"Password reset email sent to: {email}")
+        else:
+            logger.info(
+                f"Password reset email NOT delivered to {email} — no email "
+                f"provider configured (or delivery failed); the link was "
+                f"written to the API log by send_password_reset()."
+            )
         return True
 
     @staticmethod
