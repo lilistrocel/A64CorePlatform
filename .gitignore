@@ -39,8 +39,16 @@ env/
 *~
 .DS_Store
 
-# Claude Code AI - keeping CLAUDE.md and .claude/ tracked for team sharing
-# But excluding local settings which contain machine-specific permissions
+# Claude Code AI - .claude/ stays tracked for team sharing, but CLAUDE.md is
+# now MACHINE-LOCAL. Each box (production server, dev PCs) keeps its own:
+# hostname, container prefix, public URL, and whether the box holds real data
+# all differ per machine, and asserting one box's values on another has caused
+# real mistakes. Bootstrap a new machine from the tracked CLAUDE.template.md,
+# then fill in its "THIS MACHINE" section. Shared guidance belongs in the
+# template so every box gets it.
+CLAUDE.md
+
+# Excluding local settings which contain machine-specific permissions
 .claude/settings.local.json
 
 # SSH connection scripts (contain server details)

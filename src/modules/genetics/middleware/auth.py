@@ -94,10 +94,15 @@ def _resolve(permission: str) -> FrozenSet[str]:
 
     Fails closed. The per-module ``require_permission`` helpers elsewhere in
     this codebase are if/elif chains with no ``else``, so an unrecognised
-    permission string falls through and authorises everyone. That is latent
-    rather than active today — each module happens to handle all of its own
-    strings — but it means a typo in a new route would silently open it up.
-    Here, an unknown permission raises instead.
+    permission string falls through and authorises everyone. This was
+    demonstrated to be actively exploitable, not merely latent: T-927 found
+    that farm_manager's own chain was missing ``admin.manage``, which three
+    weather-cache-admin endpoints (``src/modules/farm_manager/api/v1/
+    weather.py``) had been passing to ``require_permission`` in production —
+    every authenticated active user could reach admin-only cache
+    management. farm_manager's chain has since been converted to the same
+    fail-closed dict pattern used here. Here, an unknown permission raises
+    instead.
     """
     roles = PERMISSION_ROLES.get(permission)
     if roles is None:

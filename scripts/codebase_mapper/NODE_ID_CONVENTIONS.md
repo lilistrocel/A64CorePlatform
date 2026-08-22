@@ -245,6 +245,64 @@ collection_return_requests_v2
 - Prefix `collection_` plus snake_case collection name as it appears in
   MongoDB.
 
+### Environment variables and deployment config
+
+```
+env_SECRET_KEY
+env_PUBLIC_BASE_URL
+env_FINANCE_OUTBOX_ENABLED
+```
+
+- Prefix `env_` plus the variable name **verbatim**, in its own casing
+  (`SCREAMING_SNAKE_CASE`). One node per variable *name*, not per
+  declaration site — `MONGODB_URL` is declared in `src/config/settings.py`,
+  `.env.example` and three compose files, and is still one node. Set
+  `file_path`/`line_number` to the authoritative consumer (the `Settings`
+  field when one exists, otherwise the compose service or `.env.example`
+  line) and mention the other sites in the description.
+- `node_type: "config"`, `layer: "config"`. `module` is the consuming
+  module (`core`, `farm_manager`, `ai_assistant`, `finance_bridge`,
+  `frontend`) or `infra` for pure deployment plumbing (host ports,
+  backup, tunnel identity, compose-internal wiring).
+- **Never record a secret's value** — not a key, password, token, or a
+  `${VAR:-default}` fallback that contains one. Record the name, the
+  consumer, whether it is required, and how it fails when missing.
+
+### Compose services and overlays
+
+```
+compose_api
+compose_mongodb
+compose_finance_consumer
+compose_overlay_prod
+```
+
+- Prefix `compose_` plus the service key as it appears under `services:`
+  in the compose file, with `-` normalised to `_`
+  (`user-portal` → `compose_user_portal`).
+- Overlay *files* that only override other services get
+  `compose_overlay_<name>` (`docker-compose.prod.yml` →
+  `compose_overlay_prod`).
+- `node_type: "config"`, `layer: "config"`, `module: "infra"`.
+- Introduced by `map_config_env` (2026-08-21); there was no prior
+  convention for compose services in the graph.
+
+### Config edge direction
+
+The graph's de-facto direction — set by `map_core_middleware` and followed
+by `map_config_env` — is **consumer → config**, not the reverse:
+
+```
+core.middleware.rate_limit  --[uses]-->    env_RATE_LIMIT_GUEST
+core.service.deployment_settings_service --[uses]--> env_CF_ACCESS_AUD
+compose_api                 --[exports]--> env_GOOGLE_CLOUD_PROJECT
+compose_api                 --[depends_on]--> compose_mongodb
+```
+
+`uses` for code that reads a variable, `exports` for a compose service
+whose `environment:` block injects it into a container, `depends_on` for
+compose `depends_on:` relationships.
+
 ### Other DB models (MySQL / SQLAlchemy)
 
 Use the dot-notation backend convention:
@@ -346,6 +404,7 @@ in them unless your task owns them:
 | `type::*`                           | `map_frontend_types`         |
 | `file::*`                           | `map_frontend_components`    |
 | `collection_*`                      | see note below               |
+| `env_*`, `compose_*`                | `map_config_env`             |
 
 ### `collection_*` is owned per-module, not centrally
 

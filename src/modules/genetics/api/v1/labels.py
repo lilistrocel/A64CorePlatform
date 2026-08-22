@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import qrcode
@@ -32,12 +32,13 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
+from src.services import label_printer_service
 from src.services.deployment_settings_service import (
     get_value as get_deployment_setting_value,
 )
 from src.services.user_service import UserService
 
-from ...middleware.auth import CurrentUser, require_view
+from ...middleware.auth import CurrentUser, require_permission, require_view
 from ...services.accession.accession_service import AccessionService
 from ...services.database import ACCESSIONS, genetics_db
 from ...services.line.line_service import LineService
@@ -1013,36 +1014,49 @@ def _draw_label_page(
     )
 
 
-@router.get(
-    "/{accession_id}/labels",
-    summary="Generate a label PDF for a range of vessels",
-    description=(
-        "One PDF page per vessel, sized for a Brother QL-800 (29x90 or "
-        "17x87 fixed die-cut tape, or 62xN continuous tape, N = feed "
-        "length in mm, 12-100). Read-only in permission but not in "
-        "effect: printing raises labelledVesselCount to max(current, to) "
-        "— see genetics-label-qr-spec.md §5.1."
-    ),
-)
-async def get_labels(
+@dataclass(frozen=True)
+class LabelsPdfResult:
+    """Pure result of rendering a label PDF for one accession/range.
+
+    Deliberately carries no side effects: building this does NOT touch the
+    database (unlike the pre-T-925 `get_labels`, which built the PDF and
+    bumped `labelledVesselCount` in one pass). See `_bump_labelled_vessel_count`
+    — callers decide when, or whether, to apply that write. `GET
+    /{accession_id}/labels` applies it unconditionally, matching its
+    pre-T-925 behaviour exactly; `POST /{accession_id}/labels/print` applies
+    it only after the printer confirms success.
+    """
+
+    pdf_bytes: bytes
+    accession: Any  # genetics.models.accession.Accession — avoids an import cycle risk from typing this precisely here
+    from_n: int
+    to_n: int
+    filename: str
+
+
+async def _build_labels_pdf(
     accession_id: str,
-    from_: Optional[int] = Query(
-        None,
-        alias="from",
-        ge=1,
-        description="First vessel ordinal; defaults to the first never-printed one, or 1 if everything is already labelled (reprint)",
-    ),
-    to: Optional[int] = Query(
-        None,
-        ge=1,
-        description="Last vessel ordinal; defaults to quantity, or to labelledVesselCount if everything is already labelled (reprint)",
-    ),
-    size: str = Query(
-        "29x90",
-        description="Tape size: 29x90, 17x87 (fixed die-cut), or 62xN (continuous, N = length in mm, 12-100, e.g. 62x15, 62x20)",
-    ),
-    current_user: CurrentUser = Depends(require_view),
-) -> Response:
+    from_: Optional[int],
+    to: Optional[int],
+    size: str,
+) -> LabelsPdfResult:
+    """
+    Resolve the vessel range, render the PDF, and return it — the shared
+    body behind both `GET /{accession_id}/labels` and
+    `POST /{accession_id}/labels/print` (T-925). Reused verbatim rather than
+    reimplemented so the two routes can never drift in QR geometry, fonts,
+    brand-mark placement, or default-range logic — see labels.py's module
+    docstring and `Docs/2-Working-Progress/genetics-label-qr-spec.md`.
+
+    Does NOT raise the `labelledVesselCount` high-water mark — see
+    `_bump_labelled_vessel_count`, called separately by each caller at the
+    point where the write is actually safe to make.
+
+    Raises:
+        HTTPException: 400 for an invalid `size`, an inverted range, or a
+            range exceeding `_MAX_LABELS_PER_REQUEST`; 500 if
+            `PUBLIC_BASE_URL` is unset/loopback (`_require_public_base_url`).
+    """
     # Resolves AND validates `size` in one place — 400 on anything invalid
     # (unknown fixed size, out-of-range 62xN, or a malformed string like
     # "62x"/"62xabc"/"62") via _parse_tape_spec, never a 500.
@@ -1197,19 +1211,178 @@ async def get_labels(
     pdf_bytes = buffer.getvalue()
     buffer.close()
 
-    # Side effect (spec §5.1, deliberate): printing raises the high-water mark
-    # so /labels?from=... defaults to "what's never been printed" next time.
-    # This is the one write on an otherwise read-only path.
-    new_count = max(accession.labelledVesselCount, to_n)
+    filename = f"labels-{accession.accessionCode}-{from_n}-{to_n}.pdf"
+    return LabelsPdfResult(
+        pdf_bytes=pdf_bytes,
+        accession=accession,
+        from_n=from_n,
+        to_n=to_n,
+        filename=filename,
+    )
+
+
+async def _bump_labelled_vessel_count(
+    accession_id: str, current_count: int, to_n: int
+) -> None:
+    """Raise `labelledVesselCount` to `max(current_count, to_n)`.
+
+    Unchanged logic from the pre-T-925 `get_labels` (spec §5.1, deliberate):
+    a high-water mark that is never decremented, so `/labels?from=...`
+    defaults to "what's never been printed" next time. Split out so
+    `POST /{accession_id}/labels/print` can call it only AFTER the printer
+    confirms success — see that route's docstring.
+    """
+    new_count = max(current_count, to_n)
     db = genetics_db.get_database()
     await db[ACCESSIONS].update_one(
         {"accessionId": accession_id},
         {"$set": {"labelledVesselCount": new_count, "updatedAt": datetime.utcnow()}},
     )
 
-    filename = f"labels-{accession.accessionCode}-{from_n}-{to_n}.pdf"
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+
+def _printer_label_for_size(size: str) -> str:
+    """Map a `size` tape spec to the printer's media identifier (T-925).
+
+    Must only be called with a `size` that `_tape_dimensions`/`_parse_tape_spec`
+    has already validated — this performs no validation of its own. Every
+    `62xN` continuous-tape spec sends the printer `label=62` (the media type
+    identifier is one value regardless of feed length; length is carried in
+    the PDF's own page geometry, not in this field). `29x90` and `17x87`
+    pass through unchanged — they are already the printer's own media
+    identifiers for those two fixed die-cut stocks.
+    """
+    return "62" if size.startswith("62x") else size
+
+
+@router.get(
+    "/{accession_id}/labels",
+    summary="Generate a label PDF for a range of vessels",
+    description=(
+        "One PDF page per vessel, sized for a Brother QL-800 (29x90 or "
+        "17x87 fixed die-cut tape, or 62xN continuous tape, N = feed "
+        "length in mm, 12-100). Read-only in permission but not in "
+        "effect: printing raises labelledVesselCount to max(current, to) "
+        "— see genetics-label-qr-spec.md §5.1."
+    ),
+)
+async def get_labels(
+    accession_id: str,
+    from_: Optional[int] = Query(
+        None,
+        alias="from",
+        ge=1,
+        description="First vessel ordinal; defaults to the first never-printed one, or 1 if everything is already labelled (reprint)",
+    ),
+    to: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Last vessel ordinal; defaults to quantity, or to labelledVesselCount if everything is already labelled (reprint)",
+    ),
+    size: str = Query(
+        "29x90",
+        description="Tape size: 29x90, 17x87 (fixed die-cut), or 62xN (continuous, N = length in mm, 12-100, e.g. 62x15, 62x20)",
+    ),
+    current_user: CurrentUser = Depends(require_view),
+) -> Response:
+    result = await _build_labels_pdf(accession_id, from_, to, size)
+
+    # Side effect (spec §5.1, deliberate): printing raises the high-water mark
+    # so /labels?from=... defaults to "what's never been printed" next time.
+    # This is the one write on an otherwise read-only path. Behaviour
+    # unchanged from before T-925's refactor — this route still bumps the
+    # count unconditionally, on every call, exactly as before.
+    await _bump_labelled_vessel_count(
+        accession_id, result.accession.labelledVesselCount, result.to_n
     )
+
+    return Response(
+        content=result.pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{result.filename}"'},
+    )
+
+
+@router.post(
+    "/{accession_id}/labels/print",
+    summary="Render a label range and print it directly to the configured Brother QL-800",
+    description=(
+        "Builds the byte-identical PDF GET .../labels would render (same "
+        "range-resolution and layout logic, see _build_labels_pdf) and "
+        "sends it to this deployment's configured network label printer "
+        "instead of returning it. Default `size` is 62x15 — the 62mm "
+        "continuous roll, NOT the GET route's 29x90 default — since that "
+        "is the media physically loaded on the reference printer. "
+        "labelledVesselCount is raised only after the printer confirms the "
+        "job succeeded; a refused or failed print leaves it untouched. "
+        "Requires genetics.edit (stricter than the GET route's "
+        "genetics.view) — printing is a physical, irreversible action."
+    ),
+)
+async def print_labels(
+    accession_id: str,
+    from_: Optional[int] = Query(
+        None,
+        alias="from",
+        ge=1,
+        description="First vessel ordinal; same default-resolution as GET .../labels",
+    ),
+    to: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Last vessel ordinal; same default-resolution as GET .../labels",
+    ),
+    size: str = Query(
+        "62x15",
+        description=(
+            "Tape size: 29x90, 17x87 (fixed die-cut), or 62xN (continuous, "
+            "N = length in mm, 12-100). Defaults to 62x15 — the roll "
+            "physically loaded on the reference printer — unlike the GET "
+            "route's 29x90 default."
+        ),
+    ),
+    copies: int = Query(
+        1,
+        ge=1,
+        le=label_printer_service.MAX_COPIES,
+        description="Number of physical copies of the whole print job; capped at the printer's own limit",
+    ),
+    current_user: CurrentUser = Depends(require_permission("genetics.edit")),
+) -> Dict[str, Any]:
+    result = await _build_labels_pdf(accession_id, from_, to, size)
+    printer_label = _printer_label_for_size(size)
+
+    print_result = await label_printer_service.print_pdf(
+        result.pdf_bytes,
+        label=printer_label,
+        copies=copies,
+        filename=result.filename,
+    )
+
+    # Only bump the high-water mark AFTER a successful print (T-925) — a
+    # failed or refused print must never mark vessels as labelled that were
+    # never actually produced. Contrast GET .../labels above, which bumps
+    # unconditionally because generating the PDF IS the deliverable there.
+    await _bump_labelled_vessel_count(
+        accession_id, result.accession.labelledVesselCount, result.to_n
+    )
+
+    # Wrapped in the module's standard `{"data": ...}` envelope (see
+    # ../../utils/responses.py's SuccessResponse, used by every other
+    # genetics route) — built as a plain dict rather than SuccessResponse[...]
+    # because the payload's "from" key is a Python reserved word that a
+    # Pydantic field can only carry via an alias, and this route's response
+    # is simple enough that a manual envelope is clearer than an aliased
+    # model. No response_model is declared, so nothing here is at risk of
+    # the response_model field-stripping gotcha (see CLAUDE.md).
+    return {
+        "data": {
+            "ok": print_result.ok,
+            "jobId": print_result.jobId,
+            "pagesPrinted": print_result.pagesPrinted,
+            "printer": print_result.printer,
+            "label": print_result.label,
+            "from": result.from_n,
+            "to": result.to_n,
+            "copies": copies,
+        }
+    }

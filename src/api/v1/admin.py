@@ -40,7 +40,14 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 # Secrets that must never be returned in full — see
 # deployment_settings_service.py's module docstring for why.
-_SECRET_DEPLOYMENT_KEYS = {"CF_ACCESS_TEAM_DOMAIN", "CF_ACCESS_AUD"}
+# LABEL_PRINTER_API_KEY (T-925) added alongside the two Cloudflare Access
+# secrets — the Brother QL-800 print API key gets the exact same
+# isSet + maskedHint treatment, never the raw value.
+_SECRET_DEPLOYMENT_KEYS = {
+    "CF_ACCESS_TEAM_DOMAIN",
+    "CF_ACCESS_AUD",
+    "LABEL_PRINTER_API_KEY",
+}
 
 
 def _build_deployment_settings_response(
@@ -82,7 +89,8 @@ def _build_deployment_settings_response(
         "Super admin only. Reports the effective value of each managed key "
         "plus where it came from ('env' | 'db' | 'unset') and whether it can "
         "be edited through this API. CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD "
-        "are never returned in full — only isSet + a last-4-character hint."
+        "are never returned in full — only isSet + a last-4-character hint. "
+        "Same treatment for LABEL_PRINTER_API_KEY (T-925)."
     ),
 )
 async def get_deployment_settings(
@@ -96,7 +104,8 @@ async def get_deployment_settings(
     **Returns:**
     - 200: One entry per managed key (PUBLIC_BASE_URL, FRONTEND_URL,
       CF_ACCESS_ENABLED, CF_ACCESS_TEAM_DOMAIN, CF_ACCESS_AUD,
-      CF_ACCESS_EXCLUSIVE, CF_ACCESS_JIT_PROVISION, CF_ACCESS_DEFAULT_ROLE).
+      CF_ACCESS_EXCLUSIVE, CF_ACCESS_JIT_PROVISION, CF_ACCESS_DEFAULT_ROLE,
+      LABEL_PRINTER_ENABLED, LABEL_PRINTER_BASE_URL, LABEL_PRINTER_API_KEY).
     - 403: Not a super_admin.
     """
     _require_super_admin(current_user)
@@ -114,8 +123,11 @@ async def get_deployment_settings(
         "validates CF_ACCESS_TEAM_DOMAIN against Cloudflare's JWKS endpoint "
         "before saving, and refuses to enable CF_ACCESS_EXCLUSIVE unless a "
         "Cloudflare Access sign-in has already been recorded on this "
-        "deployment. Writes an audit log entry with masked before/after "
-        "values."
+        "deployment. Same pattern extends to LABEL_PRINTER_* (T-925): "
+        "LABEL_PRINTER_BASE_URL must be a valid http(s) URL, and "
+        "LABEL_PRINTER_ENABLED cannot be turned on without a base URL and "
+        "API key already resolved. Writes an audit log entry with masked "
+        "before/after values."
     ),
 )
 async def update_deployment_settings(
@@ -135,11 +147,12 @@ async def update_deployment_settings(
     - 200: Full resolved settings after the update (same shape as GET).
     - 401: currentPassword does not match the actor's stored hash.
     - 403: Not a super_admin.
-    - 409: A changed key is pinned by an environment variable, or
+    - 409: A changed key is pinned by an environment variable,
       CF_ACCESS_EXCLUSIVE was requested without a previously recorded
-      Cloudflare Access sign-in.
-    - 422: Unknown key, wrong value type, or CF_ACCESS_TEAM_DOMAIN failed
-      JWKS validation.
+      Cloudflare Access sign-in, or LABEL_PRINTER_ENABLED was requested
+      without a resolved LABEL_PRINTER_BASE_URL + LABEL_PRINTER_API_KEY.
+    - 422: Unknown key, wrong value type, CF_ACCESS_TEAM_DOMAIN failed JWKS
+      validation, or LABEL_PRINTER_BASE_URL is not a valid http(s) URL.
     """
     _require_super_admin(current_user)
     resolved = await deployment_settings_service.update(
@@ -564,8 +577,11 @@ async def delete_user(
 
     **Authentication:** Required (admin or super_admin)
 
-    **Note:** This performs a soft delete (sets deletedAt timestamp).
-    User can be restored within 90 days.
+    **Note:** This performs a soft delete (sets deletedAt timestamp and
+    isActive: False). The document is retained, not purged — but there is
+    currently no restore endpoint (T-938: this docstring previously
+    promised a 90-day restore window that was never implemented). Restoring
+    a soft-deleted user today requires a direct database edit.
 
     **Returns:**
     - 200: User deleted successfully

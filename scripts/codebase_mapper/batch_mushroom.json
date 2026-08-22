@@ -1,0 +1,487 @@
+{
+  "meta": {
+    "task_id": "map_mushroom_module",
+    "scope": "src/modules/mushroom_manager/",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "notes": "First-ever mapping of this module; it had zero nodes. Backend dot-notation, file-level API/service/model granularity, mirroring the structurally-identical genetics module. Enums live inline in the model files (no enums.py), so they are carried in each model node's exports rather than getting their own nodes."
+  },
+  "nodes": [
+    {
+      "node_id": "mushroom_manager.register",
+      "node_type": "file",
+      "name": "mushroom_manager module registration",
+      "file_path": "src/modules/mushroom_manager/register.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "config",
+      "exports": ["register", "startup_hook", "shutdown_hook", "__module_name__", "__version__"],
+      "description": "Plugin-system entry point. Mounts the aggregated api_router at settings.API_PREFIX (/api/v1/mushroom) under tag 'mushroom' and attaches startup/shutdown hooks; startup calls mushroom_db.connect() which only builds indexes (the connection itself belongs to core). manifest.json declares industries:['mushroom'] / industry_mode:'exclusive' — unlike the shared genetics repo this module is visible to mushroom divisions only. The manifest also declares a mushroom.* permission namespace (mushroom.view/create/edit/delete, harvest.*, environment.view, contamination.report) that the code does NOT yet use: every route still authorises against farm_manager's farm.manage / farm.operate strings."
+    },
+    {
+      "node_id": "mushroom_manager.config.settings",
+      "node_type": "config",
+      "name": "Mushroom module settings",
+      "file_path": "src/modules/mushroom_manager/config/settings.py",
+      "line_number": 12,
+      "module": "mushroom_manager",
+      "layer": "config",
+      "exports": ["settings", "Settings", "MODULE_NAME", "MODULE_VERSION", "API_PREFIX", "MONGODB_URL", "MONGODB_DB_NAME", "DEFAULT_PAGE_SIZE", "MAX_PAGE_SIZE"],
+      "description": "Pydantic BaseSettings for the module. API_PREFIX=/api/v1/mushroom, MODULE_VERSION=1.0.0, page size default 20 / max 100. Carries its own MONGODB_URL/MONGODB_DB_NAME defaults but they are vestigial — the database manager delegates to the core connection and never reads them."
+    },
+    {
+      "node_id": "mushroom_manager.utils.responses",
+      "node_type": "function",
+      "name": "mushroom response envelopes",
+      "file_path": "src/modules/mushroom_manager/utils/responses.py",
+      "line_number": 13,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["SuccessResponse", "ErrorResponse", "PaginationMeta", "PaginatedResponse"],
+      "description": "Generic A64Core response envelopes for this module: SuccessResponse[T] ({data, message}) and PaginatedResponse[T] ({data, meta}) with PaginationMeta {total, page, perPage, totalPages}. Every mushroom route returns one of these two."
+    },
+    {
+      "node_id": "mushroom_manager.service.database",
+      "node_type": "class",
+      "name": "MushroomDatabaseManager",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 16,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["mushroom_db", "MushroomDatabaseManager", "connect", "disconnect", "health_check", "get_database", "get_collection"],
+      "description": "Module database manager and the single accessor every mushroom service uses (mushroom_db.get_database()). Owns index creation for all seven mushroom collections and nothing else — connection pooling, health checks and shutdown are delegated to the core MongoDB manager, so disconnect() is a no-op kept for lifecycle symmetry. _create_indexes swallows its own exceptions deliberately (indexes treated as non-critical for startup). Notable indexes: unique compound (facilityId, roomCode) on growing_rooms, and accessionId / lineId / (lineId, cloneGeneration) on mushroom_harvests backing the yield-by-lineage rollup."
+    },
+
+    {
+      "node_id": "mushroom_manager.api.facilities",
+      "node_type": "api_endpoint",
+      "name": "CRUD /mushroom/facilities",
+      "file_path": "src/modules/mushroom_manager/api/v1/facilities.py",
+      "line_number": 25,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "create_facility", "list_facilities", "get_facility", "update_facility", "delete_facility"],
+      "description": "Facility CRUD — the top-level cultivation container (indoor/greenhouse/cave/container/outdoor/hybrid), the mushroom analogue of a Farm. POST/GET '' , GET/PATCH/DELETE /{facility_id}. Writes require farm.manage, reads only an active user. The authenticated caller is stamped as managerId/managerEmail on create. DELETE refuses with 409 while any room or substrate batch still belongs to the facility — deliberately no cascade, so each room's own dependency check has to run."
+    },
+    {
+      "node_id": "mushroom_manager.api.growing_rooms",
+      "node_type": "api_endpoint",
+      "name": "CRUD + phase lifecycle /mushroom/facilities/{id}/rooms",
+      "file_path": "src/modules/mushroom_manager/api/v1/growing_rooms.py",
+      "line_number": 28,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "create_room", "list_rooms", "get_room", "update_room", "advance_phase", "delete_room", "room_dependents"],
+      "description": "Growing-room CRUD plus the lifecycle endpoint. Routes carry full paths (/facilities/{facility_id}/rooms...) so the aggregator mounts this router with no extra prefix. PATCH /{room_id}/phase is the only way to change currentPhase (farm.operate); ordinary PATCH cannot. GET /{room_id}/dependents returns the blocking counts so the UI can warn before offering DELETE, and DELETE itself 409s when accessions, harvests, contamination reports or environment logs are attached — retiring a used room is the DECOMMISSIONED phase, not deletion."
+    },
+    {
+      "node_id": "mushroom_manager.api.strains",
+      "node_type": "api_endpoint",
+      "name": "CRUD /mushroom/strains",
+      "file_path": "src/modules/mushroom_manager/api/v1/strains.py",
+      "line_number": 23,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "create_strain", "list_strains", "get_strain", "update_strain"],
+      "description": "Strain catalogue CRUD — a global (not facility-scoped) library of species/varieties and their climate requirements, the mushroom analogue of Plant Data. POST/GET '' with ?activeOnly, GET/PATCH /{strain_id}. No DELETE: strains are retired by PATCHing isActive=false."
+    },
+    {
+      "node_id": "mushroom_manager.api.substrate_batches",
+      "node_type": "api_endpoint",
+      "name": "CRUD /mushroom substrate batches",
+      "file_path": "src/modules/mushroom_manager/api/v1/substrate_batches.py",
+      "line_number": 26,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "create_batch", "list_batches", "get_batch", "update_batch"],
+      "description": "Substrate batch CRUD. Split addressing: creation and listing are nested under the facility (POST/GET /facilities/{facility_id}/substrates) while single-batch access is flat (GET/PATCH /substrates/{batch_id}), because a batchId is globally unique. Writes require farm.operate. No DELETE."
+    },
+    {
+      "node_id": "mushroom_manager.api.harvests",
+      "node_type": "api_endpoint",
+      "name": "Harvest recording + yield-by-lineage /mushroom",
+      "file_path": "src/modules/mushroom_manager/api/v1/harvests.py",
+      "line_number": 26,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "LineYieldRow", "create_harvest", "list_harvests_for_room", "list_harvests_for_facility", "get_yield_by_line"],
+      "description": "Flush-aware harvest recording. POST /facilities/{fid}/rooms/{rid}/harvests (farm.operate) auto-fills flushNumber from the room's current flush and computes biological efficiency. Reads: per-room and per-facility listings, both newest-first and unpaginated. GET /harvests/by-line is the cross-module payoff — yield grouped by genetic line and clone generation, answering 'does this culture decline as I keep transferring it'; its LineYieldRow response model is declared inline here rather than in models/."
+    },
+    {
+      "node_id": "mushroom_manager.api.environment",
+      "node_type": "api_endpoint",
+      "name": "Climate logs /mushroom rooms",
+      "file_path": "src/modules/mushroom_manager/api/v1/environment.py",
+      "line_number": 23,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "create_log", "list_logs", "get_latest_log"],
+      "description": "Room climate readings under /facilities/{fid}/rooms/{rid}/environment: POST one reading (farm.operate), GET recent readings with ?limit (default 50, max 500), and GET /latest which returns data:null rather than 404 when a room has never been read. Append-only — no update or delete."
+    },
+    {
+      "node_id": "mushroom_manager.api.contamination",
+      "node_type": "api_endpoint",
+      "name": "Contamination reports /mushroom",
+      "file_path": "src/modules/mushroom_manager/api/v1/contamination.py",
+      "line_number": 27,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "create_report", "list_reports", "resolve_report"],
+      "description": "Contamination incident reporting. POST/GET /facilities/{fid}/rooms/{rid}/contamination; posting with quarantined=true also forces the room into the QUARANTINED phase as a safety override that bypasses the normal transition table. PATCH /contamination/{report_id}/resolve (farm.manage) closes a report and 409s if it is already resolved."
+    },
+    {
+      "node_id": "mushroom_manager.api.dashboard",
+      "node_type": "api_endpoint",
+      "name": "GET /mushroom/dashboard + facility analytics",
+      "file_path": "src/modules/mushroom_manager/api/v1/dashboard.py",
+      "line_number": 24,
+      "module": "mushroom_manager",
+      "layer": "api",
+      "exports": ["router", "get_dashboard", "get_facility_analytics"],
+      "description": "Read-only rollups, and the one router with no service behind it — it runs its Mongo aggregations inline via mushroom_db. GET '' returns global counts, rooms-by-phase, the last 10 harvests and unresolved contamination alerts. GET /facilities/{fid}/analytics returns per-facility yield totals, average biological efficiency, yield-per-flush distribution and contamination totals/resolved/active. Both mounted under the /dashboard prefix, which makes the analytics path /api/v1/mushroom/dashboard/facilities/{fid}/analytics."
+    },
+
+    {
+      "node_id": "mushroom_manager.service.facility_service",
+      "node_type": "class",
+      "name": "FacilityService",
+      "file_path": "src/modules/mushroom_manager/services/facility/facility_service.py",
+      "line_number": 39,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["FacilityService", "create_facility", "get_facility", "list_facilities", "update_facility", "delete_facility"],
+      "description": "Facility CRUD against mushroom_facilities. All-static-method class. Carries the module's id-renaming convention: Mongo stores facilityId, the Pydantic model exposes id, and _doc_to_model/_model_to_doc translate on every read/write so the frontend contract stays id-shaped. delete_facility counts growing_rooms and substrate_batches first and raises 409 with a per-kind breakdown rather than cascading."
+    },
+    {
+      "node_id": "mushroom_manager.service.room_service",
+      "node_type": "class",
+      "name": "RoomService",
+      "file_path": "src/modules/mushroom_manager/services/room/room_service.py",
+      "line_number": 52,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["RoomService", "create_room", "get_room", "list_rooms", "update_room", "advance_phase", "_commit_phase", "room_dependents", "delete_room"],
+      "description": "Growing-room CRUD and the phase state machine, the most behaviour-heavy service in the module. create_room validates the parent facility and enforces roomCode uniqueness per facility (409). advance_phase branches on room type: a FRUITING room is a batch room and must follow VALID_TRANSITIONS, while lab/spawn/incubation/storage container rooms may move freely among OPERATIONAL_PHASES only — both paths converge on _commit_phase, which appends a PhaseHistoryEntry and increments flushInfo.currentFlush/totalFlushes when re-entering FRUITING_INITIATION from RESTING. room_dependents counts genetic_accessions located in the room plus harvests, contamination reports and environment logs; delete_room refuses (409) if any are non-zero. Same facilityId+roomId scoping on every read, and the same roomId<->id renaming as FacilityService."
+    },
+    {
+      "node_id": "mushroom_manager.service.strain_service",
+      "node_type": "class",
+      "name": "StrainService",
+      "file_path": "src/modules/mushroom_manager/services/strain/strain_service.py",
+      "line_number": 40,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["StrainService", "create_strain", "get_strain", "list_strains", "update_strain"],
+      "description": "Strain catalogue CRUD against mushroom_strains, sorted by commonName with an optional active_only filter. Global scope — strains are not tied to a facility. Stamps createdBy from the caller and applies the same strainId<->id renaming as the other services. No delete path; isActive is the retirement switch."
+    },
+    {
+      "node_id": "mushroom_manager.service.substrate_service",
+      "node_type": "class",
+      "name": "SubstrateService",
+      "file_path": "src/modules/mushroom_manager/services/substrate/substrate_service.py",
+      "line_number": 25,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["SubstrateService", "create_batch", "get_batch", "list_batches", "update_batch"],
+      "description": "Substrate batch CRUD against substrate_batches. Validates the parent facility and enforces batchCode uniqueness per facility (409). Unlike the facility/room/strain services this one does no id renaming — the model field is already batchId — so it just strips _id. Batches track raw materials, sterilization method/temp/duration, a preparing→sterilized→loaded→spent→disposed status and an assignedRooms list."
+    },
+    {
+      "node_id": "mushroom_manager.service.harvest_service",
+      "node_type": "class",
+      "name": "HarvestService",
+      "file_path": "src/modules/mushroom_manager/services/harvest/harvest_service.py",
+      "line_number": 22,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["HarvestService", "create_harvest", "yield_by_line", "list_harvests_for_room", "list_harvests_for_facility"],
+      "description": "Flush-aware harvest recording and the lineage yield rollup — the module's main integration point with genetics and protocols. create_harvest auto-fills flushNumber from the room's flushInfo.currentFlush; optionally resolves an accessionId against genetic_accessions (and its line against genetic_lines) and denormalises accessionCode/lineId/lineCode/cloneGeneration/filialGeneration onto the harvest so attribution stays truthful after the accession is split or relabelled; optionally pins a protocolRef from the protocols collection, rejecting any protocol that is not 'active'. Biological efficiency = weightKg / substrate weight * 100, where a per-block substrateWeightKg beats the room-level figure. Finally $inc's the room's totalYieldKg. yield_by_line aggregates by (lineId, cloneGeneration) — totals, harvest count, mean BE, distinct block count — excluding harvests with no accession rather than guessing. Deliberately reads the genetics and protocols collections directly instead of importing their services: exclusive module depending on shared modules at the data layer, avoiding a service import cycle."
+    },
+    {
+      "node_id": "mushroom_manager.service.environment_service",
+      "node_type": "class",
+      "name": "EnvironmentService",
+      "file_path": "src/modules/mushroom_manager/services/environment/environment_service.py",
+      "line_number": 22,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["EnvironmentService", "create_log", "list_logs", "get_latest"],
+      "description": "Append-only climate logging against room_environment_logs. create_log validates the room and denormalises its currentPhase onto the reading so measurements can later be analysed per growth phase; recordedBy takes the caller id (the model documents it as a user OR sensor id). list_logs returns newest-first up to a limit; get_latest returns None rather than raising when a room has no readings. Note: the EnvironmentLog model carries an isOutOfRange alert flag, but nothing in this service ever sets it against the room's climateSettings — it is always the default False."
+    },
+    {
+      "node_id": "mushroom_manager.service.contamination_service",
+      "node_type": "class",
+      "name": "ContaminationService",
+      "file_path": "src/modules/mushroom_manager/services/contamination/contamination_service.py",
+      "line_number": 28,
+      "module": "mushroom_manager",
+      "layer": "service",
+      "exports": ["ContaminationService", "create_report", "list_reports", "resolve_report"],
+      "description": "Contamination incident tracking against contamination_reports. create_report validates the room, then — when quarantined=True — writes currentPhase=QUARANTINED straight onto the growing_rooms document and pushes a phaseHistory entry itself, bypassing RoomService.advance_phase and the VALID_TRANSITIONS table entirely, because isolation is a safety override rather than a lifecycle step. resolve_report sets isResolved/resolvedAt/resolvedBy/resolutionNotes and 409s on an already-resolved report. Resolving does NOT un-quarantine the room; that has to be done through the phase endpoint."
+    },
+
+    {
+      "node_id": "mushroom_manager.model.facility",
+      "node_type": "pydantic_model",
+      "name": "Facility models",
+      "file_path": "src/modules/mushroom_manager/models/facility.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": ["FacilityType", "FacilityStatus", "FacilityLocation", "FacilityBase", "FacilityCreate", "FacilityUpdate", "Facility"],
+      "description": "The top-level cultivation container. Enums: FacilityType (indoor/greenhouse/outdoor/hybrid/container/cave) and FacilityStatus (active/inactive/maintenance/construction), both written to match the frontend union types exactly. The document model exposes 'id' (renamed to facilityId in Mongo by the service) and carries totalRooms/activeRooms counters plus manager and division/organization scoping. FacilityLocation is dead weight kept only so legacy structured-location documents still decode — the live surface stores location as a plain string."
+    },
+    {
+      "node_id": "mushroom_manager.model.growing_room",
+      "node_type": "pydantic_model",
+      "name": "Growing Room models + lifecycle tables",
+      "file_path": "src/modules/mushroom_manager/models/growing_room.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": ["RoomType", "BATCH_ROOM_TYPES", "RoomPhase", "VALID_TRANSITIONS", "OPERATIONAL_PHASES", "allowed_phases_for", "ClimateSettings", "PhaseHistoryEntry", "FlushInfo", "GrowingRoomBase", "GrowingRoomCreate", "GrowingRoomUpdate", "PhaseTransitionRequest", "GrowingRoom"],
+      "description": "The module's rulebook, not just a schema. RoomType (lab/spawn/substrate_prep/incubation/fruiting/storage/harvest_pack) decides which model applies: BATCH_ROOM_TYPES is {FRUITING} alone — only a fruiting room runs one crop through a lifecycle, everything else is a container holding independently-tracked items and may only hold OPERATIONAL_PHASES (empty/cleaning/quarantined/maintenance/decommissioned), resolved by allowed_phases_for(). RoomPhase is the 12-state lifecycle and VALID_TRANSITIONS the adjacency table, whose cycle empty→preparing→inoculated→colonizing→fruiting_initiation→fruiting→harvesting→resting→(fruiting_initiation | cleaning)→empty is what makes multi-flush cropping expressible; DECOMMISSIONED is terminal. Also ClimateSettings (per-phase temp/humidity/CO2/light/air-exchange targets, stored as a phase-keyed dict), FlushInfo (currentFlush/totalFlushes/maxFlushes, default max 4) and PhaseHistoryEntry. The document exposes 'id' (roomId in Mongo) and denormalises biologicalEfficiency and totalYieldKg."
+    },
+    {
+      "node_id": "mushroom_manager.model.strain",
+      "node_type": "pydantic_model",
+      "name": "Strain models",
+      "file_path": "src/modules/mushroom_manager/models/strain.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": ["DifficultyLevel", "PhaseRequirement", "SubstrateIngredient", "StrainBase", "StrainCreate", "StrainUpdate", "Strain"],
+      "description": "The strain library entry — species-level cultivation reference, the mushroom analogue of Plant Data. DifficultyLevel enum (beginner/intermediate/advanced/expert). Requirements are deliberately FLAT fields (colonizationTempMin/Max, colonizationHumidityMin, colonizationDaysMin/Max, the matching fruiting* set, co2TolerancePpm, expectedYieldKgPerKgSubstrate, maxFlushes) named to match the frontend contract so no client-side transformation is needed. PhaseRequirement and SubstrateIngredient are the nested shapes that flattening replaced — declared but unused. Document exposes 'id' (strainId in Mongo) and isActive as the retirement switch."
+    },
+    {
+      "node_id": "mushroom_manager.model.substrate",
+      "node_type": "pydantic_model",
+      "name": "Substrate Batch models",
+      "file_path": "src/modules/mushroom_manager/models/substrate.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": ["SubstrateStatus", "SterilizationMethod", "RawMaterial", "SubstrateBatchBase", "SubstrateBatchCreate", "SubstrateBatchUpdate", "SubstrateBatch"],
+      "description": "Substrate preparation and sterilization tracking. SubstrateStatus enum (preparing/sterilized/loaded/spent/disposed) is the batch's own lifecycle, distinct from the room phase; SterilizationMethod enum (autoclave/pasteurization/cold_pasteurization/chemical/other) — note this name collides with an identically-named enum in genetics.model.enums, different module and different members. RawMaterial captures name/weight/supplier/cost per ingredient, giving a per-batch input cost trail. Unlike the other document models this one keeps its native batchId field rather than exposing 'id'."
+    },
+    {
+      "node_id": "mushroom_manager.model.harvest",
+      "node_type": "pydantic_model",
+      "name": "Harvest models",
+      "file_path": "src/modules/mushroom_manager/models/harvest.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": ["QualityGrade", "HarvestBase", "HarvestCreate", "Harvest"],
+      "description": "Flush-aware harvest record. QualityGrade enum is A/B/C/reject. The interesting half is lineage attribution: strainId answers 'what species', while accessionId/accessionCode/lineId/lineCode/cloneGeneration/filialGeneration (denormalised from the genetics collections at write time) answer 'which of my cultures produced it, at which generation'. protocolRef pins the SOP actually followed as {protocolId, code, title, version, followedAt}. substrateWeightKg may override the room-level figure so per-block biological efficiency stays comparable when a room holds blocks from several batches. On create, flushNumber is optional and auto-filled from the room."
+    },
+    {
+      "node_id": "mushroom_manager.model.environment",
+      "node_type": "pydantic_model",
+      "name": "Environment Log models",
+      "file_path": "src/modules/mushroom_manager/models/environment.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": ["EnvironmentReading", "EnvironmentLogCreate", "EnvironmentLog"],
+      "description": "A point-in-time room climate reading: temperature (C), humidity %, co2Level (ppm), lightLevel (lux), freshAirFlow — every field optional, so a partial reading from one sensor is valid. The stored EnvironmentLog denormalises the room's currentPhase at recording time and carries an isOutOfRange alert flag that no code currently computes. No enums in this file."
+    },
+    {
+      "node_id": "mushroom_manager.model.contamination",
+      "node_type": "pydantic_model",
+      "name": "Contamination Report models",
+      "file_path": "src/modules/mushroom_manager/models/contamination.py",
+      "line_number": 1,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": ["ContaminationType", "ContaminationSeverity", "ContaminationAction", "ContaminationReportBase", "ContaminationReportCreate", "ContaminationResolveRequest", "ContaminationReport"],
+      "description": "Contamination incident record. Three enums: ContaminationType (trichoderma/cobweb_mold/bacteria/black_mold/green_mold/lipstick_mold/other), ContaminationSeverity (low/medium/high/critical) and ContaminationAction (monitoring/treatment/quarantine/disposal, default monitoring). The quarantined boolean on create is what triggers the room's forced phase override. Resolution state (isResolved/resolvedAt/resolvedBy/resolutionNotes) lives on the report itself; ContaminationResolveRequest is the PATCH payload."
+    },
+
+    {
+      "node_id": "collection_mushroom_facilities",
+      "node_type": "db_model",
+      "name": "mushroom_facilities",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 61,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: mushroom_facilities — top-level cultivation sites. Unique on facilityId; indexed on managerId, status, facilityType and createdAt desc. Note the document key is facilityId while the API model calls it id."
+    },
+    {
+      "node_id": "collection_growing_rooms",
+      "node_type": "db_model",
+      "name": "growing_rooms",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 68,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: growing_rooms — climate-controlled rooms with the 12-phase lifecycle, embedded phaseHistory[] and flushInfo. Unique on roomId and on the compound (facilityId, roomCode); indexed on facilityId, currentPhase, strainId, substrateBatchId, createdAt desc. Document key is roomId while the API model calls it id."
+    },
+    {
+      "node_id": "collection_mushroom_strains",
+      "node_type": "db_model",
+      "name": "mushroom_strains",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 80,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: mushroom_strains — the global (non-facility-scoped) strain catalogue with flat climate-requirement fields. Unique on strainId; indexed on commonName, difficultyLevel, isActive, createdAt desc. Document key is strainId while the API model calls it id."
+    },
+    {
+      "node_id": "collection_substrate_batches",
+      "node_type": "db_model",
+      "name": "substrate_batches",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 87,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: substrate_batches — substrate preparation and sterilization records with embedded rawMaterials[] and an assignedRooms[] list. Unique on batchId; indexed on facilityId, status, batchCode, createdAt desc. batchCode uniqueness per facility is enforced in the service, not by an index."
+    },
+    {
+      "node_id": "collection_mushroom_harvests",
+      "node_type": "db_model",
+      "name": "mushroom_harvests",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 94,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: mushroom_harvests — flush-aware harvest events carrying denormalised genetics lineage and a pinned protocolRef. Unique on harvestId; indexed on roomId, facilityId, flushNumber, qualityGrade, harvestedAt desc, and compound (roomId, flushNumber) / (facilityId, harvestedAt desc). Lineage indexes accessionId, lineId and (lineId, cloneGeneration) exist specifically to back the yield-by-line rollup."
+    },
+    {
+      "node_id": "collection_room_environment_logs",
+      "node_type": "db_model",
+      "name": "room_environment_logs",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 114,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: room_environment_logs — append-only climate readings with the room's phase denormalised at write time. Unique on logId; indexed on roomId, facilityId, isOutOfRange, recordedAt desc, and compound (roomId, recordedAt desc) for the latest-reading query."
+    },
+    {
+      "node_id": "collection_contamination_reports",
+      "node_type": "db_model",
+      "name": "contamination_reports",
+      "file_path": "src/modules/mushroom_manager/services/database.py",
+      "line_number": 125,
+      "module": "mushroom_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: contamination_reports — incident records with resolution state. Unique on reportId; indexed on roomId, facilityId, contaminationType, severity, isResolved, reportedAt desc, createdAt desc. The isResolved index backs the dashboard's active-alerts query."
+    }
+  ],
+
+  "edges": [
+    { "edge_type": "calls", "source_id": "mushroom_manager.api.facilities", "target_id": "mushroom_manager.service.facility_service", "context": "All five facility routes delegate to FacilityService.", "source_file": "src/modules/mushroom_manager/api/v1/facilities.py", "target_file": "src/modules/mushroom_manager/services/facility/facility_service.py" },
+    { "edge_type": "calls", "source_id": "mushroom_manager.api.growing_rooms", "target_id": "mushroom_manager.service.room_service", "context": "Room CRUD, advance_phase, room_dependents and delete all delegate to RoomService.", "source_file": "src/modules/mushroom_manager/api/v1/growing_rooms.py", "target_file": "src/modules/mushroom_manager/services/room/room_service.py" },
+    { "edge_type": "calls", "source_id": "mushroom_manager.api.strains", "target_id": "mushroom_manager.service.strain_service", "context": "Strain routes delegate to StrainService.", "source_file": "src/modules/mushroom_manager/api/v1/strains.py", "target_file": "src/modules/mushroom_manager/services/strain/strain_service.py" },
+    { "edge_type": "calls", "source_id": "mushroom_manager.api.substrate_batches", "target_id": "mushroom_manager.service.substrate_service", "context": "Substrate batch routes delegate to SubstrateService.", "source_file": "src/modules/mushroom_manager/api/v1/substrate_batches.py", "target_file": "src/modules/mushroom_manager/services/substrate/substrate_service.py" },
+    { "edge_type": "calls", "source_id": "mushroom_manager.api.harvests", "target_id": "mushroom_manager.service.harvest_service", "context": "Harvest recording, both listings and the by-line rollup delegate to HarvestService.", "source_file": "src/modules/mushroom_manager/api/v1/harvests.py", "target_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py" },
+    { "edge_type": "calls", "source_id": "mushroom_manager.api.environment", "target_id": "mushroom_manager.service.environment_service", "context": "Environment routes delegate to EnvironmentService.create_log / list_logs / get_latest.", "source_file": "src/modules/mushroom_manager/api/v1/environment.py", "target_file": "src/modules/mushroom_manager/services/environment/environment_service.py" },
+    { "edge_type": "calls", "source_id": "mushroom_manager.api.contamination", "target_id": "mushroom_manager.service.contamination_service", "context": "Contamination routes delegate to ContaminationService.", "source_file": "src/modules/mushroom_manager/api/v1/contamination.py", "target_file": "src/modules/mushroom_manager/services/contamination/contamination_service.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.dashboard", "target_id": "mushroom_manager.service.database", "context": "Dashboard has no service layer — it calls mushroom_db.get_database() and runs its aggregations inline.", "source_file": "src/modules/mushroom_manager/api/v1/dashboard.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "imports", "source_id": "mushroom_manager.api.facilities", "target_id": "mushroom_manager.model.facility", "context": "Facility, FacilityCreate, FacilityUpdate as request/response schemas.", "source_file": "src/modules/mushroom_manager/api/v1/facilities.py", "target_file": "src/modules/mushroom_manager/models/facility.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.api.growing_rooms", "target_id": "mushroom_manager.model.growing_room", "context": "GrowingRoom, GrowingRoomCreate, GrowingRoomUpdate, PhaseTransitionRequest.", "source_file": "src/modules/mushroom_manager/api/v1/growing_rooms.py", "target_file": "src/modules/mushroom_manager/models/growing_room.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.api.strains", "target_id": "mushroom_manager.model.strain", "context": "Strain, StrainCreate, StrainUpdate.", "source_file": "src/modules/mushroom_manager/api/v1/strains.py", "target_file": "src/modules/mushroom_manager/models/strain.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.api.substrate_batches", "target_id": "mushroom_manager.model.substrate", "context": "SubstrateBatch, SubstrateBatchCreate, SubstrateBatchUpdate.", "source_file": "src/modules/mushroom_manager/api/v1/substrate_batches.py", "target_file": "src/modules/mushroom_manager/models/substrate.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.api.harvests", "target_id": "mushroom_manager.model.harvest", "context": "Harvest, HarvestCreate; LineYieldRow is declared inline in the router instead.", "source_file": "src/modules/mushroom_manager/api/v1/harvests.py", "target_file": "src/modules/mushroom_manager/models/harvest.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.api.environment", "target_id": "mushroom_manager.model.environment", "context": "EnvironmentLog, EnvironmentLogCreate.", "source_file": "src/modules/mushroom_manager/api/v1/environment.py", "target_file": "src/modules/mushroom_manager/models/environment.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.api.contamination", "target_id": "mushroom_manager.model.contamination", "context": "ContaminationReport, ContaminationReportCreate, ContaminationResolveRequest.", "source_file": "src/modules/mushroom_manager/api/v1/contamination.py", "target_file": "src/modules/mushroom_manager/models/contamination.py" },
+
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.facilities", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse / PaginatedResponse / PaginationMeta envelopes.", "source_file": "src/modules/mushroom_manager/api/v1/facilities.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.growing_rooms", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse / PaginatedResponse / PaginationMeta envelopes.", "source_file": "src/modules/mushroom_manager/api/v1/growing_rooms.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.strains", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse / PaginatedResponse / PaginationMeta envelopes.", "source_file": "src/modules/mushroom_manager/api/v1/strains.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.substrate_batches", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse / PaginatedResponse / PaginationMeta envelopes.", "source_file": "src/modules/mushroom_manager/api/v1/substrate_batches.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.harvests", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse envelope (harvest listings are unpaginated).", "source_file": "src/modules/mushroom_manager/api/v1/harvests.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.environment", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse envelope.", "source_file": "src/modules/mushroom_manager/api/v1/environment.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.contamination", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse envelope.", "source_file": "src/modules/mushroom_manager/api/v1/contamination.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.api.dashboard", "target_id": "mushroom_manager.utils.responses", "context": "SuccessResponse[Dict[str, Any]] envelope.", "source_file": "src/modules/mushroom_manager/api/v1/dashboard.py", "target_file": "src/modules/mushroom_manager/utils/responses.py" },
+
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.facilities", "target_id": "farm_manager.middleware.auth", "context": "Reuses farm_manager's auth middleware wholesale — get_current_active_user for reads, require_permission('farm.manage') for writes. The mushroom.* permissions declared in manifest.json are unused.", "source_file": "src/modules/mushroom_manager/api/v1/facilities.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.growing_rooms", "target_id": "farm_manager.middleware.auth", "context": "farm.manage for CRUD/delete, farm.operate for the phase transition.", "source_file": "src/modules/mushroom_manager/api/v1/growing_rooms.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.strains", "target_id": "farm_manager.middleware.auth", "context": "farm.manage for strain writes.", "source_file": "src/modules/mushroom_manager/api/v1/strains.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.substrate_batches", "target_id": "farm_manager.middleware.auth", "context": "farm.operate for batch writes.", "source_file": "src/modules/mushroom_manager/api/v1/substrate_batches.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.harvests", "target_id": "farm_manager.middleware.auth", "context": "farm.operate to record a harvest; reads need only an active user.", "source_file": "src/modules/mushroom_manager/api/v1/harvests.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.environment", "target_id": "farm_manager.middleware.auth", "context": "farm.operate to record a reading.", "source_file": "src/modules/mushroom_manager/api/v1/environment.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.contamination", "target_id": "farm_manager.middleware.auth", "context": "farm.operate to report, farm.manage to resolve.", "source_file": "src/modules/mushroom_manager/api/v1/contamination.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.api.dashboard", "target_id": "farm_manager.middleware.auth", "context": "Read-only — get_current_active_user, no permission tier.", "source_file": "src/modules/mushroom_manager/api/v1/dashboard.py", "target_file": "src/modules/farm_manager/middleware/auth.py" },
+
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.facility_service", "target_id": "mushroom_manager.model.facility", "context": "Facility, FacilityCreate, FacilityUpdate.", "source_file": "src/modules/mushroom_manager/services/facility/facility_service.py", "target_file": "src/modules/mushroom_manager/models/facility.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.room_service", "target_id": "mushroom_manager.model.growing_room", "context": "Imports the lifecycle tables themselves — VALID_TRANSITIONS, BATCH_ROOM_TYPES, allowed_phases_for — not just the schemas.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/mushroom_manager/models/growing_room.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.strain_service", "target_id": "mushroom_manager.model.strain", "context": "Strain, StrainCreate, StrainUpdate.", "source_file": "src/modules/mushroom_manager/services/strain/strain_service.py", "target_file": "src/modules/mushroom_manager/models/strain.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.substrate_service", "target_id": "mushroom_manager.model.substrate", "context": "SubstrateBatch, SubstrateBatchCreate, SubstrateBatchUpdate.", "source_file": "src/modules/mushroom_manager/services/substrate/substrate_service.py", "target_file": "src/modules/mushroom_manager/models/substrate.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.harvest_service", "target_id": "mushroom_manager.model.harvest", "context": "Harvest, HarvestCreate.", "source_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py", "target_file": "src/modules/mushroom_manager/models/harvest.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.environment_service", "target_id": "mushroom_manager.model.environment", "context": "EnvironmentLog, EnvironmentLogCreate.", "source_file": "src/modules/mushroom_manager/services/environment/environment_service.py", "target_file": "src/modules/mushroom_manager/models/environment.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.contamination_service", "target_id": "mushroom_manager.model.contamination", "context": "ContaminationReport, ContaminationReportCreate, ContaminationResolveRequest, ContaminationAction.", "source_file": "src/modules/mushroom_manager/services/contamination/contamination_service.py", "target_file": "src/modules/mushroom_manager/models/contamination.py" },
+    { "edge_type": "imports", "source_id": "mushroom_manager.service.contamination_service", "target_id": "mushroom_manager.model.growing_room", "context": "Imports RoomPhase to write QUARANTINED directly onto the room document.", "source_file": "src/modules/mushroom_manager/services/contamination/contamination_service.py", "target_file": "src/modules/mushroom_manager/models/growing_room.py" },
+
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.facility_service", "target_id": "mushroom_manager.service.database", "context": "mushroom_db.get_database() is the only DB accessor.", "source_file": "src/modules/mushroom_manager/services/facility/facility_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.room_service", "target_id": "mushroom_manager.service.database", "context": "mushroom_db.get_database() is the only DB accessor.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.strain_service", "target_id": "mushroom_manager.service.database", "context": "mushroom_db.get_database() is the only DB accessor.", "source_file": "src/modules/mushroom_manager/services/strain/strain_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.substrate_service", "target_id": "mushroom_manager.service.database", "context": "mushroom_db.get_database() is the only DB accessor.", "source_file": "src/modules/mushroom_manager/services/substrate/substrate_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.harvest_service", "target_id": "mushroom_manager.service.database", "context": "mushroom_db.get_database() is the only DB accessor.", "source_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.environment_service", "target_id": "mushroom_manager.service.database", "context": "mushroom_db.get_database() is the only DB accessor.", "source_file": "src/modules/mushroom_manager/services/environment/environment_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.contamination_service", "target_id": "mushroom_manager.service.database", "context": "mushroom_db.get_database() is the only DB accessor.", "source_file": "src/modules/mushroom_manager/services/contamination/contamination_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.service.database", "target_id": "core.service.database", "context": "from src.services.database import mongodb — the module owns no connection; connect/disconnect/health_check/get_database all delegate to the core manager.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/services/database.py" },
+
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.database", "target_id": "collection_mushroom_facilities", "context": "_create_indexes builds this collection's indexes at module startup.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.database", "target_id": "collection_growing_rooms", "context": "_create_indexes builds this collection's indexes at module startup.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.database", "target_id": "collection_mushroom_strains", "context": "_create_indexes builds this collection's indexes at module startup.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.database", "target_id": "collection_substrate_batches", "context": "_create_indexes builds this collection's indexes at module startup.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.database", "target_id": "collection_mushroom_harvests", "context": "_create_indexes builds this collection's indexes, including the lineage indexes backing yield-by-line.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.database", "target_id": "collection_room_environment_logs", "context": "_create_indexes builds this collection's indexes at module startup.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.service.database", "target_id": "collection_contamination_reports", "context": "_create_indexes builds this collection's indexes at module startup.", "source_file": "src/modules/mushroom_manager/services/database.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.facility_service", "target_id": "collection_mushroom_facilities", "context": "insert_one / update_one / delete_one on mushroom_facilities.", "source_file": "src/modules/mushroom_manager/services/facility/facility_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.facility_service", "target_id": "collection_growing_rooms", "context": "delete_facility counts rooms in the facility before refusing with 409.", "source_file": "src/modules/mushroom_manager/services/facility/facility_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.facility_service", "target_id": "collection_substrate_batches", "context": "delete_facility counts substrate batches in the facility before refusing with 409.", "source_file": "src/modules/mushroom_manager/services/facility/facility_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.room_service", "target_id": "collection_growing_rooms", "context": "insert_one, update_one (including the $push of phaseHistory and flushInfo increments) and delete_one.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.room_service", "target_id": "collection_mushroom_facilities", "context": "create_room validates the parent facility exists.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.room_service", "target_id": "collection_genetic_accessions", "context": "room_dependents counts accessions with location.roomId == this room — deleting the room would orphan physical material.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/genetics/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.room_service", "target_id": "collection_mushroom_harvests", "context": "room_dependents counts harvests attached to the room.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.room_service", "target_id": "collection_contamination_reports", "context": "room_dependents counts contamination reports attached to the room.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.room_service", "target_id": "collection_room_environment_logs", "context": "room_dependents counts environment logs attached to the room.", "source_file": "src/modules/mushroom_manager/services/room/room_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.strain_service", "target_id": "collection_mushroom_strains", "context": "insert_one / update_one on mushroom_strains.", "source_file": "src/modules/mushroom_manager/services/strain/strain_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.substrate_service", "target_id": "collection_substrate_batches", "context": "insert_one / update_one on substrate_batches, plus the batchCode uniqueness probe.", "source_file": "src/modules/mushroom_manager/services/substrate/substrate_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.substrate_service", "target_id": "collection_mushroom_facilities", "context": "create_batch validates the parent facility exists.", "source_file": "src/modules/mushroom_manager/services/substrate/substrate_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.harvest_service", "target_id": "collection_mushroom_harvests", "context": "insert_one on create; the source for both listings and the yield_by_line aggregation.", "source_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.harvest_service", "target_id": "collection_growing_rooms", "context": "Reads the room for flushInfo/strainId/substrateWeight, then $inc's its totalYieldKg after a harvest.", "source_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.harvest_service", "target_id": "collection_genetic_accessions", "context": "Resolves the harvested block by accessionId and denormalises accessionCode / cloneGeneration / filialGeneration onto the harvest. Deliberately a data-layer read, not a genetics service import.", "source_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py", "target_file": "src/modules/genetics/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.harvest_service", "target_id": "collection_genetic_lines", "context": "Looks up the accession's line to denormalise lineCode for the yield-by-line grouping.", "source_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py", "target_file": "src/modules/genetics/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.harvest_service", "target_id": "collection_protocols", "context": "Pins the cited SOP into protocolRef and rejects any protocol whose status is not 'active'.", "source_file": "src/modules/mushroom_manager/services/harvest/harvest_service.py", "target_file": "src/modules/protocols/services/database.py" },
+
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.environment_service", "target_id": "collection_room_environment_logs", "context": "insert_one on create; source of list_logs and get_latest.", "source_file": "src/modules/mushroom_manager/services/environment/environment_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.service.environment_service", "target_id": "collection_growing_rooms", "context": "Validates the room and reads its currentPhase to denormalise onto the reading.", "source_file": "src/modules/mushroom_manager/services/environment/environment_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.contamination_service", "target_id": "collection_contamination_reports", "context": "insert_one on report, update_one on resolve.", "source_file": "src/modules/mushroom_manager/services/contamination/contamination_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "stores_in", "source_id": "mushroom_manager.service.contamination_service", "target_id": "collection_growing_rooms", "context": "Auto-quarantine writes currentPhase=QUARANTINED and pushes a phaseHistory entry directly, bypassing RoomService and VALID_TRANSITIONS.", "source_file": "src/modules/mushroom_manager/services/contamination/contamination_service.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.api.dashboard", "target_id": "collection_mushroom_facilities", "context": "Global facility count and the per-facility analytics name/status lookup.", "source_file": "src/modules/mushroom_manager/api/v1/dashboard.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.api.dashboard", "target_id": "collection_growing_rooms", "context": "Room totals and the rooms-by-phase $group aggregation, globally and per facility.", "source_file": "src/modules/mushroom_manager/api/v1/dashboard.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.api.dashboard", "target_id": "collection_mushroom_harvests", "context": "Last-10 recent harvests plus the yield / average-BE / per-flush aggregations.", "source_file": "src/modules/mushroom_manager/api/v1/dashboard.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "reads_from", "source_id": "mushroom_manager.api.dashboard", "target_id": "collection_contamination_reports", "context": "Unresolved alert count and list, and the per-facility total/resolved/active split.", "source_file": "src/modules/mushroom_manager/api/v1/dashboard.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+
+    { "edge_type": "uses", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.config.settings", "context": "Route prefix and module version come from settings.", "source_file": "src/modules/mushroom_manager/register.py", "target_file": "src/modules/mushroom_manager/config/settings.py" },
+    { "edge_type": "uses", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.service.database", "context": "startup_hook awaits mushroom_db.connect() (index creation); shutdown_hook awaits disconnect().", "source_file": "src/modules/mushroom_manager/register.py", "target_file": "src/modules/mushroom_manager/services/database.py" },
+    { "edge_type": "depends_on", "source_id": "mushroom_manager.register", "target_id": "core.plugin_system.plugin_manager", "context": "register(app, prefix) is the contract the plugin manager calls to mount the module; manifest.json declares industry_mode 'exclusive' for the mushroom industry.", "source_file": "src/modules/mushroom_manager/register.py", "target_file": "src/core/plugin_system/plugin_manager.py" },
+
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.facilities", "context": "api/v1/__init__.py mounts this router under /facilities; register mounts the aggregate at /api/v1/mushroom.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/facilities.py" },
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.growing_rooms", "context": "Mounted with no extra prefix — the routes carry full /facilities/{id}/rooms paths themselves.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/growing_rooms.py" },
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.strains", "context": "Mounted under the /strains prefix.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/strains.py" },
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.substrate_batches", "context": "Mounted with no extra prefix — routes carry full paths.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/substrate_batches.py" },
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.harvests", "context": "Mounted with no extra prefix — routes carry full paths.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/harvests.py" },
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.environment", "context": "Mounted with no extra prefix — routes carry full paths.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/environment.py" },
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.contamination", "context": "Mounted with no extra prefix — routes carry full paths.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/contamination.py" },
+    { "edge_type": "exports", "source_id": "mushroom_manager.register", "target_id": "mushroom_manager.api.dashboard", "context": "Mounted under the /dashboard prefix, which also prefixes the facility-analytics route.", "source_file": "src/modules/mushroom_manager/api/v1/__init__.py", "target_file": "src/modules/mushroom_manager/api/v1/dashboard.py" }
+  ]
+}

@@ -14,6 +14,7 @@ from .lines import router as lines_router
 from .maintenance import router as maintenance_router
 from .media import router as media_router
 from .observations import router as observations_router
+from .printer import router as printer_router
 from .propagations import router as propagations_router
 
 api_router = APIRouter()
@@ -97,6 +98,15 @@ api_router.include_router(
     maintenance_router,
     prefix="/maintenance",
     tags=["genetics-maintenance"],
+)
+
+# -------------------------------------------------------------------------
+# Printer — Brother QL-800 network print health (T-925)
+# -------------------------------------------------------------------------
+api_router.include_router(
+    printer_router,
+    prefix="/printer",
+    tags=["genetics-printer"],
 )
 
 __all__ = ["api_router"]

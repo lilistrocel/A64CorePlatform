@@ -1,8 +1,294 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 117 tasks
+> **Total completed:** 121 tasks
 
 ## 2026-08
+
+### T-938 | Cloudflare Access login 500s on a soft-deleted email — DuplicateKeyError. SECURITY/PROD-INCIDENT.
+- **Category:** Backend (auth) · **Priority:** P0
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** —
+- **Description:** `users` carries a unique index (`email_1`, no partial
+  filter) and `delete_user` (`src/api/v1/admin.py`) is a SOFT delete — sets
+  `deletedAt` + `isActive: False`, document stays. The two login paths
+  disagreed about what that means: `AuthService.login_via_cf_access`
+  (`src/services/auth_service.py`) filtered its lookup to `deletedAt: None`,
+  making a soft-deleted user invisible, so a login for that email fell into
+  the JIT-provisioning branch and called `db.users.insert_one()` with the
+  SAME email — no try/except, so `DuplicateKeyError` propagated as an
+  unhandled 500 on `POST /api/v1/auth/cf-access/session` (30 occurrences in
+  production logs, `dup key: { email: "samah@agrinovame.com" }`).
+  Password registration (`AuthService.register_user`) queries without a
+  `deletedAt` filter and correctly returned 409 instead. User-visible
+  effect: enter the Cloudflare one-time PIN correctly, Cloudflare consumes
+  it, the app 500s, retry says the PIN is already used — reported as three
+  seemingly unrelated bugs that were all this one root cause. Two affected
+  accounts were restored and a backup taken by the parent session before
+  this task started; no live data was written by this task.
+- **Result:**
+  - `login_via_cf_access`'s lookup no longer filters `deletedAt` — it finds
+    ANY row for the email, live or soft-deleted. Since `delete_user` always
+    sets `isActive: False` alongside `deletedAt`, a soft-deleted row now
+    falls straight into the pre-existing "not active" branch and returns
+    the shared `pending_activation_exception()` 403 — identical shape to an
+    unknown email, preserving the non-disclosure property, with zero new
+    branching. The JIT `insert_one()` is additionally wrapped in
+    `except DuplicateKeyError` (logs at WARNING with the email) as
+    defense-in-depth against races.
+  - **The chosen rule** (documented inline in both `login_via_cf_access` and
+    `register_user`): a soft-deleted account still occupies its email — it
+    must not be silently resurrected (by JIT-provisioning or otherwise) and
+    a lookup against it must not crash either. This matches
+    `login_user`/`login_user_with_mfa_check`, which never filtered
+    `deletedAt` and already relied on `isActive` alone — CF login was the
+    outlier, not registration.
+  - **Root-cause completion, not just the try/except:** the schema itself
+    still forbade reusing a deleted email forever. Added
+    `scripts/migrations/t938_partial_unique_email_index.py` — replaces
+    `email_1` with a partial unique index
+    (`unique=True, partialFilterExpression={"deletedAt": None}`), create-
+    then-drop ordered so live-email uniqueness is never unprotected, with a
+    pre-flight abort if two live users already share an email (prints the
+    offending emails). Idempotent; NOT run against the live DB by this task
+    — parent to review and run.
+  - **Found and fixed the same day, not left as a landmine:**
+    `src/services/database.py`'s `MongoDBManager._create_indexes` runs on
+    every API boot and used to call
+    `create_index("email", unique=True)` — unnamed, defaulting to
+    `email_1`. Left alone, the very next `docker restart` after the
+    migration script ran would have silently recreated the old
+    non-partial index under the freed-up `email_1` name, undoing the
+    migration. Updated it to create the identical partial index under an
+    explicit name (`email_live_unique`, deliberately NOT `email_1`, so it
+    can coexist with the old index without a name collision before the
+    migration has run). Verified live: restarted `a64coreplatform-api-1`
+    with this change in place while `email_1` still existed (migration not
+    yet run) — both indexes coexist cleanly, no boot error, no data
+    touched (verified via `mongosh db.users.getIndexes()`).
+  - `src/api/v1/admin.py`'s `delete_user` docstring claimed "User can be
+    restored within 90 days" — no restore endpoint exists. Corrected the
+    docstring; the gap is real and out of scope (not built here).
+- **Tests:** `tests/unit/test_auth/test_t938_soft_deleted_email.py` (6 new:
+  soft-deleted email → pending 403 not 500 and no resurrection attempt;
+  JIT-insert `DuplicateKeyError` collision → pending 403 not 500;
+  soft-deleted vs. unknown-email responses byte-identical; live-inactive
+  still pending; live-active still succeeds; password registration against
+  a soft-deleted email → 409, not resurrected) +
+  `tests/unit/test_migrations/test_t938_partial_unique_email_index.py` (4
+  new: the migration's `find_live_duplicate_emails` pre-flight check
+  against a fake in-memory collection — no duplicates, two/three live
+  users sharing an email flagged, a soft-deleted+live pair on the same
+  email correctly NOT flagged). Full suite in the running container:
+  **962 passed, 2 failed, 1 skipped** (up from the 952/2/1 baseline by
+  exactly the 10 new tests; the 2 failures are pre-existing in
+  `tests/unit/test_finance_bridge/test_outbox_reconciler.py`, unrelated to
+  this change). `black==26.5.1` clean on every file touched.
+
+### T-927 | `require_permission` fails open in farm_manager — fail-closed fix. SECURITY.
+- **Category:** Backend (security) · **Priority:** P0
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** —
+- **Description:** `src/modules/farm_manager/middleware/auth.py`'s
+  `require_permission` resolved permissions via a bare `if/elif` chain over
+  exactly four strings (`farm.manage`, `farm.operate`, `agronomist`,
+  `admin`) with **no `else`** — any other string fell through and returned
+  `current_user` unchecked, authorising every authenticated active user.
+  This was live, not theoretical:
+  `require_permission("admin.manage")` gated three admin-only endpoints in
+  `src/modules/farm_manager/api/v1/weather.py` (`get_cache_stats:217`,
+  `trigger_cache_refresh:252`, `invalidate_farm_cache:291`), and
+  `admin.manage` was never one of the four handled branches — all three
+  were reachable by any authenticated active user in production.
+- **Result:** Converted `require_permission` to a fail-closed
+  `PERMISSION_ROLES: Dict[str, FrozenSet[str]]` lookup + `_resolve()`,
+  mirroring the pattern already used in
+  `src/modules/genetics/middleware/auth.py` and
+  `src/modules/protocols/middleware/auth.py`. Role sets for the four
+  pre-existing strings are byte-for-byte unchanged from the old if/elif
+  chain (`farm.manage`→admin/super_admin/moderator, `farm.operate`→+user,
+  `agronomist`→admin/super_admin/moderator, `admin`→admin/super_admin).
+  Registered `admin.manage`→admin/super_admin (the fix for the live hole).
+  An unregistered string now raises `HTTPException(500)` and logs an error
+  naming the string, resolved at `require_permission()` construction time
+  (route-definition/import time) rather than on first request, so a typo
+  surfaces at boot. `get_current_user`, `get_current_active_user`,
+  `require_farm_access`, `CurrentUser`, `security` — the public surface
+  other modules (genetics, protocols, purchasing, mushroom_manager,
+  attachments) import from this file — are unchanged. Corrected
+  `get_current_active_user`'s docstring, which claimed it "ensures user
+  account is active and verified" — it has never checked
+  `isEmailVerified`; the docstring was wrong, not the behaviour, so the
+  docstring was fixed rather than starting to enforce verification (would
+  have been an unrequested behaviour change). Updated
+  `genetics/middleware/auth.py`'s `_resolve` docstring, which claimed the
+  fail-open risk was "latent rather than active today" — `admin.manage`
+  made that demonstrably false, so the docstring now records what was
+  found instead of the earlier (incorrect) reassurance.
+  **Audit of the other 9 `require_permission` implementations**
+  (`finance`, `hr`, `logistics`, `crm`, `sales`, `marketing`, plus
+  `purchasing` and `mushroom_manager`, which re-export farm_manager's and
+  are covered by this fix): `finance`, `hr`, `logistics`, `crm`, `sales`,
+  and `marketing` all have the identical if/elif-with-no-`else` structural
+  pattern (fail-open on an unregistered string) — but cross-checked
+  against every call site in each module, **none currently has a live
+  hole**: every permission string actually passed to `require_permission`
+  in each of those six modules is handled by an existing branch. Not fixed
+  in this task — reported for the parent to decide scope; each is a
+  quick, low-risk follow-up (register-and-fail-closed like this one) if it
+  wants to close the latent bypass class before it becomes live like
+  `admin.manage` did.
+- **Tests:** `tests/unit/test_farm_manager/test_require_permission_auth.py`
+  (24 cases) — exact role-set preservation for the four pre-existing
+  permissions, `admin.manage` registration + admits admin/super_admin +
+  denies user/moderator, unregistered strings fail closed (`_resolve` and
+  `require_permission` both), definition-time failure, and the three
+  weather.py endpoints wired to `admin.manage` authorise an admin caller.
+  952 passed / 2 pre-existing unrelated failures (`test_outbox_reconciler.py`,
+  confirmed not caused by this change) / 1 skipped, full in-container suite
+  (`tests/unit`, includes T-928's tests too).
+- **Deploy:** api restart.
+
+### T-928 | Quote audit history / Quote attachments both pointed at a collection that has never existed
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert
+- **Depends on:** — · **Blocks:** —
+- **Description:** Quotes are stored in `sales_quotes` (audit trail in
+  `sales_quotes_audit`) — `sales/services/quote_service.py:65-66` is the
+  writer and was always correct. Two consumers had the wrong name:
+  `sales/api/v1/audit.py`'s `_SALES_AUDIT_COLLECTIONS["QUOTE"]` mapped to
+  `"quotes_v2_audit"` (`GET /api/v1/sales/audit?docType=QUOTE` always
+  returned empty — the Quote detail page's Audit History button never
+  worked), and `attachments/services/attachment_service.py`'s
+  `_SALES_V2_COLLECTIONS[QUOTE]` mapped to `"quotes_v2"`
+  (`_assert_sales_v2_document_is_draft` always raised `LookupError` →
+  "document not found", so attaching or deleting a file on any Quote
+  always failed). Verified live: `quotes_v2`/`quotes_v2_audit` do not
+  exist; `sales_quotes` (1 doc)/`sales_quotes_audit` (5 docs) do, and the
+  live document carries `docEntry`/`organizationId`/`status` — the
+  existing query shape works unchanged once the name is right.
+- **Result:** Both dicts corrected to `sales_quotes`/`sales_quotes_audit`.
+  Verified the other 7 doc types in both dicts against the collection
+  constant each writer service in `sales/services/*.py` actually defines
+  (`_ARI_COL`, `_CR_COL`, `_SO_COL`, `_DN_COL`, `_RR_COL`, `_RTN_COL`,
+  `_ARC_COL` + each module's `_AUDIT_COL`) — all 7 were already correct;
+  only QUOTE was wrong, in both dicts. The comment above
+  `_SALES_AUDIT_COLLECTIONS` claimed it "mirrors `_SALES_V2_COLLECTIONS`
+  plus the `_audit` suffix" — that stated mechanical invariant is exactly
+  what propagated the bug (both tables independently had `quotes_v2*`).
+  Replaced with an explicit doc-type → writer-service → audit-collection
+  table in the comment and corrected the module docstrings in both files
+  that still named `quotes_v2*` as an example. Also updated a pre-existing
+  test, `test_attachments/test_attachment_service.py::
+  test_upload_quote_draft_succeeds`, which had asserted routing to
+  `quotes_v2` — it was encoding the bug rather than catching it.
+- **Tests:** `tests/unit/test_sales/test_audit_collection_mapping.py` (new,
+  20 cases) — QUOTE resolves correctly in both dicts, plus a
+  parametrized guard test per doc type asserting every value in both
+  dispatch tables matches the collection constant its writer service
+  actually defines (the regression test that would have caught the
+  original typo, for all 8 doc types going forward, not just QUOTE).
+- **Deploy:** api restart.
+
+### T-925 | Brother QL-800 network label printing — configurable per deployment
+- **Category:** Backend · **Priority:** P2
+- **Completed:** 2026-08-21 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-804 ✅ (label PDF generator this reuses), T-905 ✅
+  (deployment-settings env-lock pattern this follows) · **Blocks:** —
+- **Summary:** Adds direct network printing of genetics labels to a real
+  Brother QL-800 (contract published at that printer's own `/agent.md`,
+  fetched and read before implementation), fully per-deployment-configurable,
+  alongside the existing PDF-download route which is untouched in
+  behaviour.
+  - **Part 1 — config (`src/config/settings.py`, `src/services/deployment_settings_service.py`,
+    `src/models/deployment_settings.py`, `src/api/v1/admin.py`):** three new
+    managed keys following the exact env→db→unset pattern —
+    `LABEL_PRINTER_ENABLED` (bool), `LABEL_PRINTER_BASE_URL` (str),
+    `LABEL_PRINTER_API_KEY` (str, joins `_SECRET_KEYS` — masked in the
+    admin API response as `isSet`+`maskedHint` and in the audit log, never
+    returned in full, no reveal endpoint). Two new guardrails in
+    `deployment_settings_service.update()`: (e) `LABEL_PRINTER_BASE_URL`
+    must parse as an http/https URL with a host (422 otherwise); (f)
+    `LABEL_PRINTER_ENABLED` cannot flip to `True` unless a base URL + API
+    key are already resolved, in the same PATCH or previously saved (409
+    otherwise) — prevents a confusing runtime failure the first time
+    anyone tries to print.
+  - **Part 2 — `src/services/label_printer_service.py` (new):** async httpx
+    client mirroring the `sales_order_service.py`/`deployment_settings_service.py`
+    HTTP-call pattern. `is_configured()`; `health()` (5s timeout, never
+    raises — collapses every failure mode to a structured
+    `PrinterHealthResult`); `print_pdf()` (30s timeout, preflights health
+    and refuses with 502 if not `["ready"]`, maps the printer's own
+    401→502 [config problem, key never leaked], 422→422 [error passed
+    through], 502→502 after exactly one retry per the printer's own
+    `/agent.md` instruction not to retry more than once).
+  - **Part 3 — `src/modules/genetics/api/v1/labels.py`:** extracted the
+    PDF-building body of `get_labels()` into `_build_labels_pdf()` (pure —
+    no DB write) and `_bump_labelled_vessel_count()` (the one side effect,
+    now callable independently) — `GET /{accession_id}/labels` is
+    behaviourally unchanged (regression-verified: all pre-existing
+    `test_label_pdf.py` cases still pass unmodified). New
+    `POST /{accession_id}/labels/print` reuses `_build_labels_pdf()`
+    verbatim, defaults `size=62x15` (the loaded roll — NOT the GET route's
+    `29x90` default), maps `62xN`→printer `label="62"`
+    (`29x90`/`17x87` pass through via `_printer_label_for_size`), caps
+    `copies` at the printer's own 50, gates on `genetics.edit` (stricter
+    than the GET route's `genetics.view` — printing is a physical,
+    irreversible action), and bumps `labelledVesselCount` only AFTER a
+    confirmed successful print, never before or on failure.
+  - **Part 3b — `src/modules/genetics/api/v1/printer.py` (new),
+    wired into `api/v1/__init__.py` at `/printer`:** `GET /printer/health`,
+    always HTTP 200 (unconfigured/unreachable/not-ready are data for the
+    UI, never a 500), gated on `genetics.view`.
+  - **Part 4 — `tests/unit/test_genetics/test_label_printing.py`:** 30 new
+    tests (httpx mocked throughout — the real printer was never contacted
+    during development, per instruction). Covers unconfigured→
+    `configured:false` not 500, refusal when not ready, 401/422/502
+    mapping, exactly-one-502-retry (and recovery on that retry),
+    `labelledVesselCount` bumped only on success, the `62xN`→`label=62`
+    mapping, the `copies` cap, and that the configured API key never
+    appears in any raised exception detail or log record (asserted via
+    `caplog`). Full suite run in-container after an api restart:
+    `tests/unit/test_genetics` 327/327 passed (297 pre-existing + 30 new,
+    zero regressions), `tests/unit/test_deployment_settings` 34/34 passed,
+    full `tests/unit` 913 passed / 2 failed (the 2 are the pre-existing,
+    unrelated `test_finance_bridge/test_outbox_reconciler.py` failures
+    already tracked in this file's "Known Open Items").
+- **Concurrent frontend work reconciled:** a `frontend-dev-expert` built
+  `PrintLabelsModal`'s printer path + the Deployment Settings "Label
+  Printer" card against this contract while it was mid-flight, and
+  flagged one assumption as unverified: both new responses wrapped in the
+  `{"data": ...}` envelope every other `geneticsApi.ts` call unwraps via
+  `return data.data`. Checked against this module's actual convention
+  (`utils/responses.py`'s `SuccessResponse`, used by every existing
+  genetics route) — the frontend's assumption was RIGHT and this
+  backend's first draft was wrong (both new routes initially returned
+  bare objects). Fixed: `GET /printer/health` now returns
+  `response_model=SuccessResponse[PrinterHealthResponse]`; `POST
+  .../labels/print` returns `{"data": {...}}` as a plain dict (not
+  `SuccessResponse[...]` — its payload's `from` key is a Python reserved
+  word, so a manual envelope is clearer than an aliased Pydantic model).
+  Re-verified live post-fix: both routes correctly 401 (not 404) against
+  the running api container. One remaining minor mismatch flagged, not
+  fixed here (cosmetic, does not block functionality): the frontend's
+  `PrintLabelsResult.jobId` is typed `string`, this backend returns the
+  printer's own `job_id` as a number (`int | None`) — JS does not enforce
+  the TS type at runtime, but the type annotation itself should be
+  corrected to `number` on a follow-up pass.
+- **Not done in this pass (explicitly out of scope):** a live printer-health
+  polling indicator elsewhere in the UI beyond what the frontend pass
+  above already added is a natural follow-on if wanted. **The one
+  supervised LIVE print test against the real hardware is deliberately
+  NOT done here** — implementation instructions were explicit that
+  development/testing must never print physically; that single
+  verification is the parent session's job.
+- **CodeMaps:** flagged stale — 2 new endpoints
+  (`POST /genetics/accessions/{id}/labels/print`,
+  `GET /genetics/printer/health`) + 1 new service
+  (`label_printer_service.py`) need `bash scripts/codebase_mapper/rerun.sh`
+  + `map_generator.py all`, blocked on the same Mongo-credentials issue
+  already logged in "Known Open Items" above.
+
+---
 
 ### T-923 | Plant Library product extension Stage 3+4 — harvest batch routing (backend) + multi-line harvest modal (frontend)
 - **Category:** Backend + Frontend · **Priority:** P2

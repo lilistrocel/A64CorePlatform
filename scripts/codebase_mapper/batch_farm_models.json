@@ -1,0 +1,2718 @@
+{
+ "meta": {
+  "generated_at": "2026-08-21T00:00:00Z",
+  "generator": "codebase_mapper/batch_farm_models",
+  "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+  "node_id_convention_summary": "farm_manager is the legacy module. Two granularities, BOTH already present in the graph before this run, are used and no third is introduced: (1) one per-file anchor node `farm_manager.model.<MainClass>` (node_type pydantic_model) - this is the id form the sibling map_farm_api / map_farm_services / map_plant_library batches already point their edges at, so all 14 pre-existing anchors are UPDATED in place, never duplicated; (2) per-class nodes `farm_manager.models.<file>.<Class>` (node_type db_model) for enums, for secondary persisted document models in multi-entity files, and for significant embedded sub-models - the same file-qualified form the 14 pre-existing farm_manager.models.farm_task.* nodes use. The file-qualified form is required because PascalCase class names collide across this module (AlertSeverity/AlertStatus in both alert.py and block_alert.py; QualityGrade in block_harvest.py, inventory.py and plant_data_enhanced.py; HarvestEntry in farm_task.py and harvest.py). Pure create/update/list-response DTOs are not given nodes; they are listed in their anchor's `exports`. Collections are collection_<snake>.",
+  "task": "map_farm_models - src/modules/farm_manager/models/ (incl. models/tools/), covering the Plant Library product-extension Stage 1/3 changes",
+  "scope": [
+   "src/modules/farm_manager/models/"
+  ]
+ },
+ "nodes": [
+  {
+   "node_id": "collection_farms",
+   "node_type": "db_model",
+   "name": "farms",
+   "file_path": "src/modules/farm_manager/services/farm/farm_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: farms - farm documents (farmId unique, managerId, isActive). Persists models/farm.py Farm."
+  },
+  {
+   "node_id": "collection_blocks",
+   "node_type": "db_model",
+   "name": "blocks",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: blocks - physical and virtual growing blocks with the status state machine. Persists models/block.py Block. Indexed on blockId (unique), farmId, state, currentPlanting, currentCycleId, estimatedHarvestDate and (Plant Library Phase 1) productMotherId."
+  },
+  {
+   "node_id": "collection_block_archives",
+   "node_type": "db_model",
+   "name": "block_archives",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: block_archives - completed growing cycles archived at cleaning->empty. Persists models/block_archive.py BlockArchive, including the Phase 1 productMotherId/productName mother (product/SKU) rollup copied from the block."
+  },
+  {
+   "node_id": "collection_block_cycles",
+   "node_type": "db_model",
+   "name": "block_cycles",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: block_cycles - one planting-to-harvest sequence per block; source for historical analytics/AI training. Persists models/block_cycle.py BlockCycle."
+  },
+  {
+   "node_id": "collection_block_harvests",
+   "node_type": "db_model",
+   "name": "block_harvests",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: block_harvests - the SELLABLE harvest ledger ONLY (Plant Library product extension Stage 3, design doc \u00a73.1: process/waste lines must never become rows here). Persists models/block_harvest.py BlockHarvest. Stage 3 added optional productId, productName (FROZEN snapshot, never re-synced on rename) and harvestBatchId, all indexed; ~13,947 legacy rows keep nulls and are not backfilled."
+  },
+  {
+   "node_id": "collection_block_alerts",
+   "node_type": "db_model",
+   "name": "block_alerts",
+   "file_path": "src/modules/farm_manager/services/block/alert_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: block_alerts - per-block alerts with severity/status/category and threaded comments. Persists models/block_alert.py BlockAlert."
+  },
+  {
+   "node_id": "collection_block_history",
+   "node_type": "db_model",
+   "name": "block_history",
+   "file_path": "src/modules/farm_manager/services/block_history/block_history_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: block_history - full block lifecycle snapshots written on the cleaning->empty transition. Persists models/block_history.py BlockHistoryArchive."
+  },
+  {
+   "node_id": "collection_alerts",
+   "node_type": "db_model",
+   "name": "alerts",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: alerts - cycle/block/farm level alerts with severity, status, escalation. Persists models/alert.py Alert."
+  },
+  {
+   "node_id": "collection_daily_harvests",
+   "node_type": "db_model",
+   "name": "daily_harvests",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: daily_harvests - individual daily harvest entries per cycle/planting/block. Persists models/daily_harvest.py DailyHarvest."
+  },
+  {
+   "node_id": "collection_harvests",
+   "node_type": "db_model",
+   "name": "harvests",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: harvests - aggregated final harvest summaries (legacy model kept for reporting/back-compat). Persists models/harvest.py Harvest."
+  },
+  {
+   "node_id": "collection_plantings",
+   "node_type": "db_model",
+   "name": "plantings",
+   "file_path": "src/modules/farm_manager/services/planting/planting_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: plantings - planting plans with block assignments. Persists models/planting.py Planting."
+  },
+  {
+   "node_id": "collection_plant_data",
+   "node_type": "db_model",
+   "name": "plant_data",
+   "file_path": "src/modules/farm_manager/services/plant_data/plant_data_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: plant_data - simple/legacy plant catalog. Persists models/plant_data.py PlantData."
+  },
+  {
+   "node_id": "collection_plant_data_enhanced",
+   "node_type": "db_model",
+   "name": "plant_data_enhanced",
+   "file_path": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: plant_data_enhanced - the VARIETY level of the two-level Plant Library (cultivation recipe: growth cycle, fertigation, environment, spacing, yield). Persists models/plant_data_enhanced.py PlantDataEnhanced; motherPlantId (indexed) + varietyName link each row up to its PlantMother."
+  },
+  {
+   "node_id": "collection_plant_mothers",
+   "node_type": "db_model",
+   "name": "plant_mothers",
+   "file_path": "src/modules/farm_manager/services/plant_data/plant_mother_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: plant_mothers - the MOTHER (product/SKU) level of the Plant Library; harvest/inventory/sales roll up here. Persists models/plant_mother.py PlantMother. Product extension Stage 1 embedded a products[] picklist of PlantProduct (productId/name/unit/category), indexed on products.productId; deletion is deactivation only."
+  },
+  {
+   "node_id": "collection_farm_assignments",
+   "node_type": "db_model",
+   "name": "farm_assignments",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: farm_assignments - maps users to farms for access control. Persists models/farm_assignment.py FarmAssignment."
+  },
+  {
+   "node_id": "collection_farm_tasks",
+   "node_type": "db_model",
+   "name": "farm_tasks",
+   "file_path": "src/modules/farm_manager/services/task/task_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: farm_tasks - operations task manager for farming activities. Persists models/farm_task.py FarmTask (taskData.harvestEntries, totalHarvest, status, division/organization scoping)."
+  },
+  {
+   "node_id": "collection_stock_inventory",
+   "node_type": "db_model",
+   "name": "stock_inventory",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: stock_inventory - farm stock/harvest inventory for FIFO tracking. Persists models/stock_inventory.py StockInventoryItem."
+  },
+  {
+   "node_id": "collection_products",
+   "node_type": "db_model",
+   "name": "products",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: products - master product catalog for inventory (organization-wide). Persists models/inventory.py Product. Distinct from PlantMother.products[] (the Plant Library per-mother picklist), which is embedded, not a collection."
+  },
+  {
+   "node_id": "collection_inventory_harvest",
+   "node_type": "db_model",
+   "name": "inventory_harvest",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: inventory_harvest - SELLABLE harvest stock only, with quality grade, reservation and FIFO fields. Persists models/inventory.py HarvestInventory."
+  },
+  {
+   "node_id": "collection_inventory_input",
+   "node_type": "db_model",
+   "name": "inventory_input",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: inventory_input - farm input supplies (fertilizer, pesticide, seed, soil...) with base-unit normalization and low-stock flags. Persists models/inventory.py InputInventory."
+  },
+  {
+   "node_id": "collection_inventory_asset",
+   "node_type": "db_model",
+   "name": "inventory_asset",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: inventory_asset - farm equipment/assets with status, allocation and maintenance tracking. Persists models/inventory.py AssetInventory."
+  },
+  {
+   "node_id": "collection_inventory_movements",
+   "node_type": "db_model",
+   "name": "inventory_movements",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: inventory_movements - append-only ledger of additions, removals, adjustments, transfers, sales, waste, reservations and shipments. Persists models/inventory.py InventoryMovement."
+  },
+  {
+   "node_id": "collection_processing_inventory",
+   "node_type": "db_model",
+   "name": "processing_inventory",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: processing_inventory - NEW (Plant Library product extension Stage 3, design doc \u00a74.4). Destination for `process`-category harvest lines, deliberately separate from inventory_harvest which stays sellable-only. Persists models/inventory.py ProcessingInventory. Graded (A/B/C) but has no reservation/FIFO machinery. Indexed on inventoryId (unique), organizationId, farmId, blockId, productId, harvestBatchId, harvestDate, createdAt."
+  },
+  {
+   "node_id": "collection_inventory_waste",
+   "node_type": "db_model",
+   "name": "inventory_waste",
+   "file_path": "src/modules/farm_manager/services/database.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: inventory_waste - waste ledger. Persists models/inventory.py WasteInventory. Pre-existing write paths (returns, expired, damaged, order deletion) are unchanged; Stage 3 added optional productId + harvestBatchId for waste-category harvest lines routed straight here from POST .../harvests/batch, plus indexes on harvestBatchId and sourceBlockId for the batch-lookup endpoint."
+  },
+  {
+   "node_id": "collection_inventory_returned",
+   "node_type": "db_model",
+   "name": "inventory_returned",
+   "file_path": "src/modules/farm_manager/services/inventory/returned_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: inventory_returned - goods returned by customers (customer-origin, unlike farm-origin inventory_harvest). Persists models/inventory.py ReturnedInventory."
+  },
+  {
+   "node_id": "collection_system_config",
+   "node_type": "db_model",
+   "name": "system_config",
+   "file_path": "src/modules/farm_manager/services/config_service.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: system_config - singleton config documents; holds the farming year config (models/farming_year_config.py FarmingYearConfig) and the plant spacing standards (models/spacing_standards.py SpacingStandardsConfig)."
+  },
+  {
+   "node_id": "collection_weather_cache",
+   "node_type": "db_model",
+   "name": "weather_cache",
+   "file_path": "src/modules/farm_manager/services/weather/weather_cache_service.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: weather_cache - caches WeatherBit API responses. Persists models/weather.py WeatherCacheEntry."
+  },
+  {
+   "node_id": "collection_deleted_farms",
+   "node_type": "db_model",
+   "name": "deleted_farms",
+   "file_path": "src/modules/farm_manager/services/cascade_deletion_service.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: deleted_farms - farms moved here on delete so the live collections stay clean for AI analytics. Persists models/deleted_archives.py DeletedFarm."
+  },
+  {
+   "node_id": "collection_deleted_blocks",
+   "node_type": "db_model",
+   "name": "deleted_blocks",
+   "file_path": "src/modules/farm_manager/services/cascade_deletion_service.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: deleted_blocks - blocks preserved on cascade delete. Persists models/deleted_archives.py DeletedBlock."
+  },
+  {
+   "node_id": "collection_deleted_block_archives",
+   "node_type": "db_model",
+   "name": "deleted_block_archives",
+   "file_path": "src/modules/farm_manager/services/cascade_deletion_service.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: deleted_block_archives - block archives preserved on cascade delete. Persists models/deleted_archives.py DeletedBlockArchive."
+  },
+  {
+   "node_id": "collection_deleted_block_harvests",
+   "node_type": "db_model",
+   "name": "deleted_block_harvests",
+   "file_path": "src/modules/farm_manager/services/cascade_deletion_service.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: deleted_block_harvests - harvest rows preserved on cascade delete. Persists models/deleted_archives.py DeletedBlockHarvest."
+  },
+  {
+   "node_id": "collection_fertilizer_chemicals",
+   "node_type": "db_model",
+   "name": "fertilizer_chemicals",
+   "file_path": "src/modules/farm_manager/services/tools/chemicals_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: fertilizer_chemicals - master chemical catalog for the Fertilizer Cost Calculator (canonical name, aliases, category, pricing unit; soft-deleted via archivedAt). Persists models/tools/fertilizer_chemical.py FertilizerChemical."
+  },
+  {
+   "node_id": "collection_fertilizer_price_overrides",
+   "node_type": "db_model",
+   "name": "fertilizer_price_overrides",
+   "file_path": "src/modules/farm_manager/services/tools/price_book.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: fertilizer_price_overrides - per-organization price per chemical (unique on chemicalId+organizationId). Persists models/tools/fertilizer_price.py PriceOverride."
+  },
+  {
+   "node_id": "collection_fertilizer_calculation_lists",
+   "node_type": "db_model",
+   "name": "fertilizer_calculation_lists",
+   "file_path": "src/modules/farm_manager/services/tools/calculation_lists_repository.py",
+   "line_number": null,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [],
+   "description": "MongoDB collection: fertilizer_calculation_lists - saved fertilizer calculation lists per organization. Persists models/tools/calculation_list.py CalculationList."
+  },
+  {
+   "node_id": "farm_manager.model.Farm",
+   "node_type": "pydantic_model",
+   "name": "Farm",
+   "file_path": "src/modules/farm_manager/models/farm.py",
+   "line_number": 89,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FarmLocation",
+    "GeoJSONPolygon",
+    "FarmBoundary",
+    "FarmBase",
+    "FarmCreate",
+    "FarmUpdate",
+    "Farm"
+   ],
+   "description": "farm.py - Farm document model (farmId, location, GeoJSON boundary, manager, metadata) plus its create/update schemas. Persists to the farms collection."
+  },
+  {
+   "node_id": "farm_manager.model.Block",
+   "node_type": "pydantic_model",
+   "name": "Block",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 341,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockStatus",
+    "BlockType",
+    "BlockLocation",
+    "SenseHubCredentials",
+    "IoTController",
+    "BlockBoundary",
+    "StatusChange",
+    "PerformanceCategory",
+    "BlockKPI",
+    "HistoricalKPI",
+    "PlantDataSnapshot",
+    "BlockBase",
+    "BlockCreate",
+    "BlockUpdate",
+    "IoTControllerUpdate",
+    "BlockStatusUpdate",
+    "Block",
+    "VirtualCropCreate",
+    "MultiCropPlantRequest",
+    "AddVirtualCropRequest",
+    "BlockWithStaleness",
+    "BlockListResponse",
+    "BlockResponse"
+   ],
+   "description": "block.py - Block document model: status lifecycle (BlockStatus), physical vs virtual blocks, IoT/SenseHub controller, KPI + historical KPI, plant-data snapshot, multi-crop virtual planting. targetCrop stays the VARIETY (plant_data_enhanced); Plant Library Phase 1 added productMotherId + productName (line 409) carrying the MOTHER product/SKU, stamped at planting and indexed. Persists to the blocks collection."
+  },
+  {
+   "node_id": "farm_manager.model.BlockArchive",
+   "node_type": "pydantic_model",
+   "name": "BlockArchive",
+   "file_path": "src/modules/farm_manager/models/block_archive.py",
+   "line_number": 32,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "QualityBreakdown",
+    "AlertsSummary",
+    "BlockArchive",
+    "BlockArchiveListResponse",
+    "BlockArchiveResponse",
+    "BlockArchiveAnalytics",
+    "CropPerformanceComparison"
+   ],
+   "description": "block_archive.py - Archive record for a completed block cycle: yield totals, QualityBreakdown, AlertsSummary, farming years planted/harvested. Carries productMotherId + productName (line 66, Plant Library Phase 1, optional - pre-migration archives leave them unset) so archived cycles roll up to the same product as the live block did. Persists to the block_archives collection."
+  },
+  {
+   "node_id": "farm_manager.model.BlockHarvest",
+   "node_type": "pydantic_model",
+   "name": "BlockHarvest",
+   "file_path": "src/modules/farm_manager/models/block_harvest.py",
+   "line_number": 81,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "QualityGrade",
+    "BlockHarvestBase",
+    "BlockHarvestCreate",
+    "BlockHarvestUpdate",
+    "HarvestMetadata",
+    "BlockHarvest",
+    "BlockHarvestListResponse",
+    "BlockHarvestResponse",
+    "BlockHarvestSummary",
+    "HarvestBatchLineCreate",
+    "HarvestBatchSubmitRequest",
+    "HarvestBatchLineResult",
+    "HarvestBatchSubmitResponse",
+    "HarvestBatchLookupLine",
+    "HarvestBatchGroup",
+    "HarvestBatchLookupResponse"
+   ],
+   "description": "block_harvest.py - Harvest event model for the SELLABLE ledger. Stage 3 of the Plant Library product extension added optional productId, productName (FROZEN name snapshot, never re-synced) and harvestBatchId to BlockHarvest, plus the multi-line batch submission models (HarvestBatchLineCreate/SubmitRequest/LineResult/SubmitResponse, lines 187-247) and the batch-lookup models (HarvestBatchLookupLine/Group/LookupResponse, lines 250-276) that union the three destinations. Persists to the block_harvests collection."
+  },
+  {
+   "node_id": "farm_manager.model.BlockAlert",
+   "node_type": "pydantic_model",
+   "name": "BlockAlert",
+   "file_path": "src/modules/farm_manager/models/block_alert.py",
+   "line_number": 83,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertSeverity",
+    "AlertStatus",
+    "AlertCategory",
+    "BlockAlertCreate",
+    "AlertComment",
+    "BlockAlert",
+    "AlertCommentCreate",
+    "AlertUpdate",
+    "AlertResolve",
+    "BlockAlertListResponse"
+   ],
+   "description": "block_alert.py - Per-block alert model with severity, status, category and threaded AlertComment list. Note: defines its own AlertSeverity/AlertStatus, distinct from alert.py's. Persists to the block_alerts collection."
+  },
+  {
+   "node_id": "farm_manager.model.Alert",
+   "node_type": "pydantic_model",
+   "name": "Alert",
+   "file_path": "src/modules/farm_manager/models/alert.py",
+   "line_number": 58,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertSeverity",
+    "AlertStatus",
+    "AlertType",
+    "AlertCreate",
+    "AlertResolve",
+    "Alert",
+    "AlertListResponse",
+    "AlertResponse"
+   ],
+   "description": "alert.py - Cycle/block/farm level alert model with severity, status, type, escalation and resolution. Persists to the alerts collection."
+  },
+  {
+   "node_id": "farm_manager.model.BlockCycle",
+   "node_type": "pydantic_model",
+   "name": "BlockCycle",
+   "file_path": "src/modules/farm_manager/models/block_cycle.py",
+   "line_number": 36,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockCycleAlert",
+    "BlockCycleDailyHarvest",
+    "BlockCycle"
+   ],
+   "description": "block_cycle.py - One complete planting-to-harvest sequence for a block, with embedded alert and daily-harvest summaries. The primary source for historical analytics and AI training. Persists to the block_cycles collection."
+  },
+  {
+   "node_id": "farm_manager.model.BlockHistoryArchive",
+   "node_type": "pydantic_model",
+   "name": "BlockHistoryArchive",
+   "file_path": "src/modules/farm_manager/models/block_history.py",
+   "line_number": 16,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockHistoryArchive",
+    "BlockHistoryCreate",
+    "BlockHistoryListResponse",
+    "BlockHistoryResponse"
+   ],
+   "description": "block_history.py - Complete snapshot of a block's lifecycle from planting to completion, written on the CLEANING -> EMPTY transition. Reuses BlockStatus/BlockType/BlockLocation/BlockKPI/StatusChange from block.py. Persists to the block_history collection."
+  },
+  {
+   "node_id": "farm_manager.model.DailyHarvest",
+   "node_type": "pydantic_model",
+   "name": "DailyHarvest",
+   "file_path": "src/modules/farm_manager/models/daily_harvest.py",
+   "line_number": 41,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DailyHarvestEntry",
+    "DailyHarvestCreate",
+    "DailyHarvest"
+   ],
+   "description": "daily_harvest.py - Individual daily harvest record for a cycle/planting/block, with per-grade DailyHarvestEntry lines. Persists to the daily_harvests collection."
+  },
+  {
+   "node_id": "farm_manager.model.Harvest",
+   "node_type": "pydantic_model",
+   "name": "Harvest",
+   "file_path": "src/modules/farm_manager/models/harvest.py",
+   "line_number": 26,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HarvestEntry",
+    "Harvest"
+   ],
+   "description": "harvest.py - Final aggregated harvest summary rolled up from daily harvests. Legacy model kept for backward compatibility and reporting. Persists to the harvests collection."
+  },
+  {
+   "node_id": "farm_manager.model.Planting",
+   "node_type": "pydantic_model",
+   "name": "Planting",
+   "file_path": "src/modules/farm_manager/models/planting.py",
+   "line_number": 39,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "PlantingItem",
+    "PlantingBase",
+    "PlantingCreate",
+    "Planting"
+   ],
+   "description": "planting.py - Planting plan assigning one or more PlantingItem crop lines to a block. Persists to the plantings collection."
+  },
+  {
+   "node_id": "farm_manager.model.PlantData",
+   "node_type": "pydantic_model",
+   "name": "PlantData",
+   "file_path": "src/modules/farm_manager/models/plant_data.py",
+   "line_number": 129,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DataContributor",
+    "PlantDataBase",
+    "PlantDataCreate",
+    "PlantDataUpdate",
+    "PlantData"
+   ],
+   "description": "plant_data.py - Simple/legacy plant catalog model with DataContributor attribution. Superseded by plant_data_enhanced.py for new work. Persists to the plant_data collection."
+  },
+  {
+   "node_id": "farm_manager.model.PlantDataEnhanced",
+   "node_type": "pydantic_model",
+   "name": "PlantDataEnhanced",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 639,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FarmTypeEnum",
+    "GrowthStageEnum",
+    "ToleranceLevelEnum",
+    "SeverityLevelEnum",
+    "LightTypeEnum",
+    "WaterTypeEnum",
+    "SoilTypeEnum",
+    "GrowthHabitEnum",
+    "SupportTypeEnum",
+    "GrowthCycleDuration",
+    "YieldInfo",
+    "TemperatureRange",
+    "HumidityRange",
+    "EnvironmentalRequirements",
+    "WateringRequirements",
+    "PHRequirements",
+    "SoilRequirements",
+    "DiseaseOrPest",
+    "LightRequirements",
+    "QualityGrade",
+    "EconomicsAndLabor",
+    "SpacingRequirements",
+    "AdditionalInformation",
+    "IngredientCategoryEnum",
+    "FertigationRuleTypeEnum",
+    "FertigationIngredient",
+    "CustomApplication",
+    "FertigationRule",
+    "FertigationCard",
+    "FertigationSchedule",
+    "PlantDataEnhancedBase",
+    "PlantDataEnhancedCreate",
+    "PlantDataEnhancedUpdate",
+    "PlantDataEnhanced",
+    "PlantDataLegacy",
+    "resolve_default_plants_per_100m2"
+   ],
+   "description": "plant_data_enhanced.py - The VARIETY level of the two-level Plant Library: the full cultivation recipe (growth cycle, yield, environment, watering, soil, light, spacing, economics, fertigation cards/rules/schedules). Variety-aware since Phase 1: motherPlantId + varietyName (lines 631-672) link each row to its PlantMother. Persists to the plant_data_enhanced collection."
+  },
+  {
+   "node_id": "farm_manager.model.PlantMother",
+   "node_type": "pydantic_model",
+   "name": "PlantMother",
+   "file_path": "src/modules/farm_manager/models/plant_mother.py",
+   "line_number": 184,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "ProductUnit",
+    "ProductCategory",
+    "PlantProductBase",
+    "PlantProductCreate",
+    "PlantProductUpdate",
+    "PlantProduct",
+    "PlantMotherBase",
+    "PlantMotherCreate",
+    "PlantMotherUpdate",
+    "PlantMother",
+    "PlantMotherWithVarietyCount",
+    "VarietySummary",
+    "PlantMotherWithVarieties",
+    "VarietyCreateForMother",
+    "PlantMotherTypeLiteral"
+   ],
+   "description": "plant_mother.py - The MOTHER (product/SKU) level of the Plant Library; harvest, inventory and sales roll up here rather than to individual varieties. Product extension Stage 1 added the per-mother products[] picklist (PlantProduct, line 115) with routing category sellable | process | waste, embedded rather than a separate collection because products are meaningless outside their mother. Also carries the Phase 2 composite response shapes. Persists to the plant_mothers collection."
+  },
+  {
+   "node_id": "farm_manager.model.FarmAssignment",
+   "node_type": "pydantic_model",
+   "name": "FarmAssignment",
+   "file_path": "src/modules/farm_manager/models/farm_assignment.py",
+   "line_number": 22,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FarmAssignmentCreate",
+    "FarmAssignment"
+   ],
+   "description": "farm_assignment.py - Maps a user to a farm for access control (assignmentId, userId, farmId, isActive). Persists to the farm_assignments collection."
+  },
+  {
+   "node_id": "farm_manager.model.FarmTask",
+   "node_type": "pydantic_model",
+   "name": "FarmTask",
+   "file_path": "src/modules/farm_manager/models/farm_task.py",
+   "line_number": 192,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "TaskType",
+    "TaskStatus",
+    "TaskPriority",
+    "HarvestGrade",
+    "HarvestEntry",
+    "HarvestTotal",
+    "TaskData",
+    "FarmTaskCreate",
+    "FarmTask",
+    "HarvestEntryCreate",
+    "TaskCompletionData",
+    "FarmTaskWithDetails",
+    "FarmTaskUpdate",
+    "FarmTaskListResponse"
+   ],
+   "description": "farm_task.py - Operations task model: type, priority, status, assignment, and taskData carrying harvest entries + rolled-up totals. FarmTaskWithDetails adds joined block/farm context for the task UI. Persists to the farm_tasks collection. Per-class nodes for this file live under the farm_manager.models.farm_task.* namespace."
+  },
+  {
+   "node_id": "farm_manager.model.FarmingYearConfig",
+   "node_type": "pydantic_model",
+   "name": "FarmingYearConfig",
+   "file_path": "src/modules/farm_manager/models/farming_year_config.py",
+   "line_number": 18,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DEFAULT_FARMING_YEAR_START_MONTH",
+    "FarmingYearConfig",
+    "FarmingYearConfigUpdate",
+    "FarmingYearConfigResponse",
+    "get_farming_year",
+    "get_farming_year_date_range",
+    "MONTH_NAMES"
+   ],
+   "description": "farming_year_config.py - Per-organization farming year definition (default start month = August) plus the get_farming_year / get_farming_year_date_range helpers used to stamp farmingYear on harvests and archives. Stored as a singleton document in the system_config collection."
+  },
+  {
+   "node_id": "farm_manager.model.SpacingStandardsConfig",
+   "node_type": "pydantic_model",
+   "name": "SpacingStandardsConfig",
+   "file_path": "src/modules/farm_manager/models/spacing_standards.py",
+   "line_number": 63,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SpacingCategory",
+    "SpacingDensity",
+    "SpacingStandardsConfig",
+    "SpacingStandardsUpdate",
+    "SpacingStandardsResponse",
+    "calculate_plant_count",
+    "convert_area_to_sqm",
+    "get_density_for_category",
+    "area_m2_from_plants",
+    "suggest_spacing_category"
+   ],
+   "description": "spacing_standards.py - Plant spacing standards: per-SpacingCategory densities (plants per 100 sqm) plus the plant-count / area conversion helpers used by block planting and plant_data. Stored as a singleton document in the system_config collection."
+  },
+  {
+   "node_id": "farm_manager.model.StockInventoryItem",
+   "node_type": "pydantic_model",
+   "name": "StockInventoryItem",
+   "file_path": "src/modules/farm_manager/models/stock_inventory.py",
+   "line_number": 32,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "StockInventoryCreate",
+    "StockInventoryItem"
+   ],
+   "description": "stock_inventory.py - FIFO stock/harvest inventory line keyed by farm, plant, block, cycle and daily harvest with a quality grade. Persists to the stock_inventory collection."
+  },
+  {
+   "node_id": "farm_manager.model.Inventory",
+   "node_type": "pydantic_model",
+   "name": "Inventory models",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 1,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "InventoryScope",
+    "InventoryType",
+    "HarvestProductType",
+    "InputCategory",
+    "BaseUnit",
+    "DisplayUnit",
+    "AssetCategory",
+    "AssetStatus",
+    "QualityGrade",
+    "MovementType",
+    "WasteSourceType",
+    "DisposalMethod",
+    "Product",
+    "HarvestInventory",
+    "InputInventory",
+    "AssetInventory",
+    "InventoryMovement",
+    "InventorySummary",
+    "InventorySearchParams",
+    "TransferRequest",
+    "TransferResponse",
+    "TransferRecord",
+    "ProcessingInventory",
+    "WasteInventory",
+    "ReturnedInventory",
+    "MoveToWasteRequest",
+    "WasteSummary",
+    "ReviveHarvestRequest",
+    "MarkWasteRequest",
+    "get_base_unit_for_category",
+    "convert_to_base_unit",
+    "convert_from_base_unit",
+    "format_base_quantity_for_display"
+   ],
+   "description": "inventory.py - The farm inventory model file (1528 lines). Holds EIGHT separately persisted document models, each with its own collection: Product (products), HarvestInventory (inventory_harvest), InputInventory (inventory_input), AssetInventory (inventory_asset), InventoryMovement (inventory_movements), ProcessingInventory (processing_inventory, NEW), WasteInventory (inventory_waste) and ReturnedInventory (inventory_returned) - see the farm_manager.models.inventory.* nodes. Also holds the unit-conversion tables (MASS_TO_MG, VOLUME_TO_ML, COUNT_TO_UNIT, CATEGORY_BASE_UNIT) and helpers that normalize input quantities to a base unit."
+  },
+  {
+   "node_id": "farm_manager.model.Weather",
+   "node_type": "pydantic_model",
+   "name": "Weather models",
+   "file_path": "src/modules/farm_manager/models/weather.py",
+   "line_number": 1,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SolarData",
+    "AirQuality",
+    "SoilConditions",
+    "CurrentWeather",
+    "AgriWeatherForecastDay",
+    "AgriWeatherForecast",
+    "AgriculturalInsights",
+    "AgriWeatherData",
+    "WeatherCacheEntry"
+   ],
+   "description": "weather.py - WeatherBit-derived models: current conditions (with solar, air quality and soil sub-models), agricultural forecast days, agronomic insights, and the WeatherCacheEntry envelope that is the only persisted model here (weather_cache collection)."
+  },
+  {
+   "node_id": "farm_manager.model.DeletedFarm",
+   "node_type": "pydantic_model",
+   "name": "Deleted archive models",
+   "file_path": "src/modules/farm_manager/models/deleted_archives.py",
+   "line_number": 15,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DeletedFarm",
+    "DeletedBlock",
+    "DeletedBlockArchive",
+    "DeletedBlockHarvest"
+   ],
+   "description": "deleted_archives.py - Tombstone models written by the cascade deletion service. Deleting a farm or block moves its documents into parallel deleted_* collections so the live collections stay clean for AI analytics while history is preserved. Four models, four collections."
+  },
+  {
+   "node_id": "farm_manager.model.DashboardSummary",
+   "node_type": "pydantic_model",
+   "name": "DashboardSummary",
+   "file_path": "src/modules/farm_manager/models/dashboard.py",
+   "line_number": 139,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockCalculated",
+    "DashboardAlert",
+    "DashboardBlock",
+    "FarmInfo",
+    "DashboardSummary",
+    "DashboardActivity",
+    "UpcomingEvent",
+    "DashboardResponse",
+    "QuickTransitionRequest",
+    "QuickHarvestRequest",
+    "FarmBlockSummary",
+    "FarmHarvestSummary",
+    "FarmYieldKpi",
+    "CropYieldKpi",
+    "DashboardOverview",
+    "DashboardBlocksByState",
+    "DashboardHarvestSummary",
+    "DashboardRecentActivity",
+    "FarmingYearContext",
+    "CropBreakdownItem",
+    "DashboardSummaryData",
+    "DashboardSummaryResponse"
+   ],
+   "description": "dashboard.py - Read-only dashboard response models (no collection of their own): block/farm summaries, blocks-by-state counts, harvest rollups, yield KPIs, crop breakdown and farming-year context. Composed from blocks, block_harvests, block_alerts and farms at query time."
+  },
+  {
+   "node_id": "farm_manager.model.BlockAnalyticsResponse",
+   "node_type": "pydantic_model",
+   "name": "BlockAnalyticsResponse",
+   "file_path": "src/modules/farm_manager/models/block_analytics.py",
+   "line_number": 298,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "TimePeriod",
+    "TrendDirection",
+    "StateProgressStep",
+    "BlockInfoAnalytics",
+    "YieldTrendPoint",
+    "HarvestRecord",
+    "YieldAnalytics",
+    "StateTransition",
+    "TimelineAnalytics",
+    "TaskTypeStats",
+    "TaskAnalytics",
+    "PerformanceMetrics",
+    "AlertAnalytics",
+    "BlockAnalyticsResponse"
+   ],
+   "description": "block_analytics.py - Read-only per-block analytics response models (no collection of their own): yield trend, state timeline, task stats, performance metrics and alert analytics, aggregated over block_harvests, farm_tasks and block_alerts."
+  },
+  {
+   "node_id": "farm_manager.model.FarmAnalyticsResponse",
+   "node_type": "pydantic_model",
+   "name": "FarmAnalyticsResponse",
+   "file_path": "src/modules/farm_manager/models/farm_analytics.py",
+   "line_number": 124,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AggregatedMetrics",
+    "StateBreakdownItem",
+    "StateBreakdown",
+    "BlockComparisonItem",
+    "YieldTimelinePoint",
+    "StateTransitionEvent",
+    "HistoricalTrends",
+    "FarmAnalyticsResponse"
+   ],
+   "description": "farm_analytics.py - Read-only farm-level analytics response models (no collection of their own): aggregated metrics, block state breakdown, block comparison, yield timeline and historical trends."
+  },
+  {
+   "node_id": "farm_manager.model.GlobalAnalyticsResponse",
+   "node_type": "pydantic_model",
+   "name": "GlobalAnalyticsResponse",
+   "file_path": "src/modules/farm_manager/models/global_analytics.py",
+   "line_number": 105,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FarmSummaryItem",
+    "GlobalAggregatedMetrics",
+    "GlobalStateBreakdown",
+    "GlobalYieldTimeline",
+    "GlobalPerformanceInsights",
+    "GlobalAnalyticsResponse"
+   ],
+   "description": "global_analytics.py - Read-only cross-farm analytics response models (no collection of their own): per-farm summaries, global aggregated metrics, state breakdown, yield timeline and performance insights."
+  },
+  {
+   "node_id": "farm_manager.model.FertilizerChemical",
+   "node_type": "pydantic_model",
+   "name": "FertilizerChemical",
+   "file_path": "src/modules/farm_manager/models/tools/fertilizer_chemical.py",
+   "line_number": 18,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FertilizerChemical",
+    "ChemicalCreate",
+    "ChemicalUpdate"
+   ],
+   "description": "tools/fertilizer_chemical.py - Master chemical catalog for the Fertilizer Cost Calculator: canonical name, aliases, IngredientCategoryEnum category and default pricing unit (kg or L). Soft-deleted via archivedAt. Persists to the fertilizer_chemicals collection."
+  },
+  {
+   "node_id": "farm_manager.model.PriceOverride",
+   "node_type": "pydantic_model",
+   "name": "PriceOverride",
+   "file_path": "src/modules/farm_manager/models/tools/fertilizer_price.py",
+   "line_number": 15,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "PriceOverride",
+    "ResolvedPrice"
+   ],
+   "description": "tools/fertilizer_price.py - Per-organization price override for a chemical, plus the ResolvedPrice value object returned after applying the price book. Persists to the fertilizer_price_overrides collection (unique on chemicalId + organizationId)."
+  },
+  {
+   "node_id": "farm_manager.model.CalculationList",
+   "node_type": "pydantic_model",
+   "name": "CalculationList",
+   "file_path": "src/modules/farm_manager/models/tools/calculation_list.py",
+   "line_number": 32,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "CalculationListItem",
+    "CalculationList",
+    "CalculationListCreate",
+    "CalculationListUpdate"
+   ],
+   "description": "tools/calculation_list.py - A saved fertilizer calculation list (crop/area line items) scoped to an organization. Persists to the fertilizer_calculation_lists collection."
+  },
+  {
+   "node_id": "farm_manager.model.CalculateRequest",
+   "node_type": "pydantic_model",
+   "name": "Fertilizer calculator DTOs",
+   "file_path": "src/modules/farm_manager/models/tools/calculator_request.py",
+   "line_number": 32,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "CalculateItem",
+    "CalculateRequest",
+    "IngredientResult",
+    "CropResult",
+    "CalculateResponse",
+    "SkippedRow",
+    "ParsedImportItem",
+    "ParsedImport"
+   ],
+   "description": "tools/calculator_request.py - Request/response DTOs for the Fertilizer Cost Calculator (no collection of their own): the calculate request lines, per-ingredient and per-crop results, and the spreadsheet-import parse result with skipped rows."
+  },
+  {
+   "node_id": "farm_manager.models.block.BlockStatus",
+   "node_type": "db_model",
+   "name": "BlockStatus",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 17,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockStatus"
+   ],
+   "description": "Enum: the block state machine - empty, planting, growing, harvesting, cleaning, maintenance, inactive. Drives task generation and dashboard blocks-by-state counts."
+  },
+  {
+   "node_id": "farm_manager.models.block.BlockType",
+   "node_type": "db_model",
+   "name": "BlockType",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 32,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockType"
+   ],
+   "description": "Enum: block type - greenhouse, open_field, hydroponic, nursery, vertical_farm, virtual (a virtual crop inside a physical block)."
+  },
+  {
+   "node_id": "farm_manager.models.block.PerformanceCategory",
+   "node_type": "db_model",
+   "name": "PerformanceCategory",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 158,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "PerformanceCategory"
+   ],
+   "description": "Enum: KPI performance banding used by BlockKPI - excellent, good, average, poor."
+  },
+  {
+   "node_id": "farm_manager.models.block.BlockKPI",
+   "node_type": "db_model",
+   "name": "BlockKPI",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 169,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockKPI"
+   ],
+   "description": "Embedded KPI block on Block: expected vs actual yield, yield variance, cycle duration and a PerformanceCategory rating."
+  },
+  {
+   "node_id": "farm_manager.models.block.HistoricalKPI",
+   "node_type": "db_model",
+   "name": "HistoricalKPI",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 216,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HistoricalKPI"
+   ],
+   "description": "Embedded on physical Blocks only: KPIs aggregated across completed virtual-block cycles."
+  },
+  {
+   "node_id": "farm_manager.models.block.IoTController",
+   "node_type": "db_model",
+   "name": "IoTController",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 61,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "IoTController"
+   ],
+   "description": "Embedded IoT/SenseHub controller config on Block, including SenseHubCredentials and last-sync/staleness fields (surfaced by BlockWithStaleness)."
+  },
+  {
+   "node_id": "farm_manager.models.block.StatusChange",
+   "node_type": "db_model",
+   "name": "StatusChange",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 122,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "StatusChange"
+   ],
+   "description": "Embedded status-transition record appended to Block.statusHistory; reused by block_archive.py and block_history.py."
+  },
+  {
+   "node_id": "farm_manager.models.block.PlantDataSnapshot",
+   "node_type": "db_model",
+   "name": "PlantDataSnapshot",
+   "file_path": "src/modules/farm_manager/models/block.py",
+   "line_number": 233,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "PlantDataSnapshot"
+   ],
+   "description": "Embedded frozen copy of the planted variety's cultivation data, taken at planting so a later plant_data_enhanced edit does not rewrite a running cycle."
+  },
+  {
+   "node_id": "farm_manager.models.block_harvest.QualityGrade",
+   "node_type": "db_model",
+   "name": "QualityGrade",
+   "file_path": "src/modules/farm_manager/models/block_harvest.py",
+   "line_number": 23,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "QualityGrade"
+   ],
+   "description": "Enum: A | B | C harvest quality scale. The canonical harvest grade - inventory.py imports it as HarvestQualityGrade for ProcessingInventory so one grade picklist works for both sellable and process lines. Distinct from inventory.py's own six-value QualityGrade."
+  },
+  {
+   "node_id": "farm_manager.models.block_harvest.HarvestMetadata",
+   "node_type": "db_model",
+   "name": "HarvestMetadata",
+   "file_path": "src/modules/farm_manager/models/block_harvest.py",
+   "line_number": 58,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HarvestMetadata"
+   ],
+   "description": "Embedded free-form metadata on BlockHarvest carrying migration provenance (migratedFrom/At, oldRef, legacyBlockCode, season). Config.extra = allow."
+  },
+  {
+   "node_id": "farm_manager.models.block_harvest.HarvestBatchSubmitRequest",
+   "node_type": "db_model",
+   "name": "HarvestBatchSubmitRequest",
+   "file_path": "src/modules/farm_manager/models/block_harvest.py",
+   "line_number": 207,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HarvestBatchLineCreate",
+    "HarvestBatchSubmitRequest"
+   ],
+   "description": "Request body for POST .../harvests/batch: one harvestDate plus >=1 HarvestBatchLineCreate product lines. The server generates one shared harvestBatchId and routes each line by its product category."
+  },
+  {
+   "node_id": "farm_manager.models.block_harvest.HarvestBatchSubmitResponse",
+   "node_type": "db_model",
+   "name": "HarvestBatchSubmitResponse",
+   "file_path": "src/modules/farm_manager/models/block_harvest.py",
+   "line_number": 233,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HarvestBatchLineResult",
+    "HarvestBatchSubmitResponse"
+   ],
+   "description": "Response for a completed multi-line harvest submission: the harvestBatchId plus a HarvestBatchLineResult per line recording category, destination collection (block_harvests | processing_inventory | inventory_waste) and the created recordId."
+  },
+  {
+   "node_id": "farm_manager.models.block_harvest.HarvestBatchLookupResponse",
+   "node_type": "db_model",
+   "name": "HarvestBatchLookupResponse",
+   "file_path": "src/modules/farm_manager/models/block_harvest.py",
+   "line_number": 271,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HarvestBatchLookupLine",
+    "HarvestBatchGroup",
+    "HarvestBatchLookupResponse"
+   ],
+   "description": "Response for GET .../harvests/batch-lookup: given a block + harvest date, unions all three destinations into HarvestBatchGroup/HarvestBatchLookupLine so a mixed submission can be reviewed as a unit. The default harvest list stays block_harvests-only."
+  },
+  {
+   "node_id": "farm_manager.models.block_harvest.BlockHarvestSummary",
+   "node_type": "db_model",
+   "name": "BlockHarvestSummary",
+   "file_path": "src/modules/farm_manager/models/block_harvest.py",
+   "line_number": 163,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BlockHarvestSummary"
+   ],
+   "description": "Per-block harvest rollup: total harvests, total kg, per-grade kg (A/B/C), average grade, first/last harvest date. Computed, not stored."
+  },
+  {
+   "node_id": "farm_manager.models.block_archive.QualityBreakdown",
+   "node_type": "db_model",
+   "name": "QualityBreakdown",
+   "file_path": "src/modules/farm_manager/models/block_archive.py",
+   "line_number": 14,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "QualityBreakdown"
+   ],
+   "description": "Embedded per-grade kg breakdown on BlockArchive."
+  },
+  {
+   "node_id": "farm_manager.models.block_archive.AlertsSummary",
+   "node_type": "db_model",
+   "name": "AlertsSummary",
+   "file_path": "src/modules/farm_manager/models/block_archive.py",
+   "line_number": 22,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertsSummary"
+   ],
+   "description": "Embedded alert counts (total, by severity, resolved) on BlockArchive."
+  },
+  {
+   "node_id": "farm_manager.models.plant_mother.ProductUnit",
+   "node_type": "db_model",
+   "name": "ProductUnit",
+   "file_path": "src/modules/farm_manager/models/plant_mother.py",
+   "line_number": 50,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "ProductUnit"
+   ],
+   "description": "Enum: unit of measure for a PlantProduct. kg is the only member today - deliberately an enum so a future animal-husbandry module can add head/litre without backfilling existing harvest rows."
+  },
+  {
+   "node_id": "farm_manager.models.plant_mother.ProductCategory",
+   "node_type": "db_model",
+   "name": "ProductCategory",
+   "file_path": "src/modules/farm_manager/models/plant_mother.py",
+   "line_number": 62,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "ProductCategory"
+   ],
+   "description": "Enum: sellable | process | waste. Fixed vocabulary, no user-created categories. Governs harvest-line routing: sellable -> block_harvests, process -> processing_inventory, waste -> inventory_waste. Sellable is the ONLY category that may ever produce a block_harvests row."
+  },
+  {
+   "node_id": "farm_manager.models.plant_mother.PlantProduct",
+   "node_type": "db_model",
+   "name": "PlantProduct",
+   "file_path": "src/modules/farm_manager/models/plant_mother.py",
+   "line_number": 115,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "PlantProductBase",
+    "PlantProductCreate",
+    "PlantProductUpdate",
+    "PlantProduct"
+   ],
+   "description": "A concrete product a mother yields (e.g. Capsicum -> Green Capsicum / Capsicum Puree / Capsicum Trim). EMBEDDED in PlantMother.products[], not its own collection. Stable productId (UUID, never reused), name unique within the mother, ProductUnit, ProductCategory, isActive. Deletion is deactivation only - never removed from the array - so harvest rows referencing productId need no migration."
+  },
+  {
+   "node_id": "farm_manager.models.plant_mother.PlantMotherWithVarieties",
+   "node_type": "db_model",
+   "name": "PlantMotherWithVarieties",
+   "file_path": "src/modules/farm_manager/models/plant_mother.py",
+   "line_number": 278,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "PlantMotherWithVarietyCount",
+    "VarietySummary",
+    "PlantMotherWithVarieties"
+   ],
+   "description": "Composite response for GET /plant-mothers/{id}: PlantMother plus its active varieties as lightweight VarietySummary entries. PlantMotherWithVarietyCount is the list-endpoint counterpart (varietyCount computed by the repository, not stored)."
+  },
+  {
+   "node_id": "farm_manager.models.plant_mother.VarietyCreateForMother",
+   "node_type": "db_model",
+   "name": "VarietyCreateForMother",
+   "file_path": "src/modules/farm_manager/models/plant_mother.py",
+   "line_number": 289,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "VarietyCreateForMother"
+   ],
+   "description": "Request body for POST /plant-mothers/{motherPlantId}/varieties. Extends PlantDataEnhancedBase; plantName/scientificName are inherited from the mother and ignored, varietyName is the one new required field (unique per mother)."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.Product",
+   "node_type": "db_model",
+   "name": "Product",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 298,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "Product",
+    "ProductCreate",
+    "ProductUpdate"
+   ],
+   "description": "Master product catalog entry, organization-wide. Persists to the products collection. NOT the same thing as PlantMother.products[] / PlantProduct, which is the embedded Plant Library picklist."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.HarvestInventory",
+   "node_type": "db_model",
+   "name": "HarvestInventory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 475,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HarvestInventoryBase",
+    "HarvestInventoryCreate",
+    "HarvestInventoryUpdate",
+    "HarvestInventory"
+   ],
+   "description": "Sellable harvest stock item: quality grade, quantities with reservation/available split for FIFO order fulfilment, expiry and source block/plant links. Persists to the inventory_harvest collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.InputInventory",
+   "node_type": "db_model",
+   "name": "InputInventory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 645,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "InputInventoryBase",
+    "InputInventoryCreate",
+    "InputInventoryUpdate",
+    "InputInventory"
+   ],
+   "description": "Farm input supply item (fertilizer, pesticide, seed, soil...) with InputCategory, base-unit normalized quantity and low-stock flagging. Persists to the inventory_input collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.AssetInventory",
+   "node_type": "db_model",
+   "name": "AssetInventory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 819,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AssetInventoryBase",
+    "AssetInventoryCreate",
+    "AssetInventoryUpdate",
+    "AssetInventory"
+   ],
+   "description": "Farm equipment/asset record with AssetCategory, AssetStatus, current allocation and maintenance schedule/overdue flag. Persists to the inventory_asset collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.InventoryMovement",
+   "node_type": "db_model",
+   "name": "InventoryMovement",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 882,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "InventoryMovement"
+   ],
+   "description": "Append-only movement ledger entry recording every quantity change against any inventory type, typed by MovementType (addition, removal, adjustment, transfer, sale, waste, usage, return, restoration, reservation, shipment). Persists to the inventory_movements collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.ProcessingInventory",
+   "node_type": "db_model",
+   "name": "ProcessingInventory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 1117,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "ProcessingInventoryBase",
+    "ProcessingInventoryCreate",
+    "ProcessingInventory"
+   ],
+   "description": "NEW (Plant Library product extension Stage 3, design doc \u00a74.4). Destination record for a `process`-category harvest line: productId + FROZEN productName snapshot, quantity/unit, an A/B/C qualityGrade (process output IS graded, unlike waste), harvestDate and the shared harvestBatchId. Deliberately kept out of inventory_harvest, which stays sellable-only, and given no reservation/availability/FIFO fields (out of scope until process output is sold directly). Persists to the processing_inventory collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.WasteInventory",
+   "node_type": "db_model",
+   "name": "WasteInventory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 1259,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "WasteInventoryBase",
+    "WasteInventoryCreate",
+    "WasteInventoryUpdate",
+    "WasteInventory"
+   ],
+   "description": "Waste ledger entry with WasteSourceType provenance (harvest, return, expired, damaged, quality_reject, order_deletion), DisposalMethod, estimated value and source links. Stage 3 added optional productId + harvestBatchId, populated only for waste lines routed straight here by the multi-line harvest submission; the pre-existing write paths leave both null. Harvest waste is NOT graded - a waste line supplying a qualityGrade is rejected 422. Persists to the inventory_waste collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.ReturnedInventory",
+   "node_type": "db_model",
+   "name": "ReturnedInventory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 1476,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "ReturnedInventoryBase",
+    "ReturnedInventoryCreate",
+    "ReturnedInventoryUpdate",
+    "ReturnedInventory"
+   ],
+   "description": "Goods returned by a customer (customer-origin, unlike farm-origin HarvestInventory), tracked for re-stock or write-off. Persists to the inventory_returned collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.TransferRecord",
+   "node_type": "db_model",
+   "name": "TransferRecord",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 1045,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "TransferRequest",
+    "TransferResponse",
+    "TransferRecord"
+   ],
+   "description": "Record of an inventory transfer between farms/scopes, produced by a TransferRequest and mirrored into inventory_movements as MovementType.TRANSFER."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.InventoryScope",
+   "node_type": "db_model",
+   "name": "InventoryScope",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 29,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "InventoryScope"
+   ],
+   "description": "Enum: organization (default inventory, farmId null) | farm (farm-specific). Indexed on all three inventory collections."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.InventoryType",
+   "node_type": "db_model",
+   "name": "InventoryType",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 36,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "InventoryType"
+   ],
+   "description": "Enum: harvest | input | asset - the three main inventory categories, each with its own collection."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.HarvestProductType",
+   "node_type": "db_model",
+   "name": "HarvestProductType",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 44,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "HarvestProductType"
+   ],
+   "description": "Enum: fresh, processed, dried, frozen, packaged - the form a harvest inventory item is held in."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.InputCategory",
+   "node_type": "db_model",
+   "name": "InputCategory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 54,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "InputCategory"
+   ],
+   "description": "Enum: fertilizer, pesticide, herbicide, fungicide, seed, seedling, soil, substrate and related input classes. Each category maps to a BaseUnit via CATEGORY_BASE_UNIT."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.BaseUnit",
+   "node_type": "db_model",
+   "name": "BaseUnit",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 71,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "BaseUnit"
+   ],
+   "description": "Enum: the canonical storage unit an input quantity is normalized to (mg / ml / unit family). Together with MASS_TO_MG, VOLUME_TO_ML and COUNT_TO_UNIT it makes quantities comparable regardless of the unit the user entered."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.DisplayUnit",
+   "node_type": "db_model",
+   "name": "DisplayUnit",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 85,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DisplayUnit"
+   ],
+   "description": "Enum: the unit a normalized base quantity is rendered back into for display (kg, g, L, ml, unit...)."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.AssetCategory",
+   "node_type": "db_model",
+   "name": "AssetCategory",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 240,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AssetCategory"
+   ],
+   "description": "Enum: tractor, harvester, irrigation_system, greenhouse, storage_facility, vehicle, tool, equipment, infrastructure, sensor, other."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.AssetStatus",
+   "node_type": "db_model",
+   "name": "AssetStatus",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 256,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AssetStatus"
+   ],
+   "description": "Enum: operational, maintenance, repair, decommissioned, stored."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.QualityGrade",
+   "node_type": "db_model",
+   "name": "QualityGrade",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 266,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "QualityGrade"
+   ],
+   "description": "Enum: premium, grade_a, grade_b, grade_c, processing, rejected - the SIX-value inventory grade scale. Distinct from block_harvest.py's three-value A/B/C QualityGrade, which is what harvest and processing lines use."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.MovementType",
+   "node_type": "db_model",
+   "name": "MovementType",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 277,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "MovementType"
+   ],
+   "description": "Enum: addition, removal, adjustment, transfer, sale, waste, usage, return, restoration (reviving an expired batch), reservation (stock held for a confirmed order), shipment (stock leaves on ship)."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.WasteSourceType",
+   "node_type": "db_model",
+   "name": "WasteSourceType",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 1151,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "WasteSourceType"
+   ],
+   "description": "Enum: harvest, return, expired, damaged, quality_reject, other, order_deletion. Harvest-sourced waste is what the Stage 3 batch routing writes."
+  },
+  {
+   "node_id": "farm_manager.models.inventory.DisposalMethod",
+   "node_type": "db_model",
+   "name": "DisposalMethod",
+   "file_path": "src/modules/farm_manager/models/inventory.py",
+   "line_number": 1163,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DisposalMethod"
+   ],
+   "description": "Enum: compost, animal_feed, discard, sold_discount, donated, pending."
+  },
+  {
+   "node_id": "farm_manager.models.weather.WeatherCacheEntry",
+   "node_type": "db_model",
+   "name": "WeatherCacheEntry",
+   "file_path": "src/modules/farm_manager/models/weather.py",
+   "line_number": 317,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "WeatherCacheEntry"
+   ],
+   "description": "Cache envelope wrapping a WeatherBit response with its location key and TTL - the only persisted model in weather.py. Persists to the weather_cache collection."
+  },
+  {
+   "node_id": "farm_manager.models.weather.CurrentWeather",
+   "node_type": "db_model",
+   "name": "CurrentWeather",
+   "file_path": "src/modules/farm_manager/models/weather.py",
+   "line_number": 118,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SolarData",
+    "AirQuality",
+    "SoilConditions",
+    "CurrentWeather"
+   ],
+   "description": "Current conditions for a farm location, embedding SolarData, AirQuality and SoilConditions. Response-only."
+  },
+  {
+   "node_id": "farm_manager.models.weather.AgriWeatherData",
+   "node_type": "db_model",
+   "name": "AgriWeatherData",
+   "file_path": "src/modules/farm_manager/models/weather.py",
+   "line_number": 269,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AgriWeatherForecastDay",
+    "AgriWeatherForecast",
+    "AgriculturalInsights",
+    "AgriWeatherData"
+   ],
+   "description": "Combined agricultural weather payload: current conditions, AgriWeatherForecast days and derived AgriculturalInsights. Response-only."
+  },
+  {
+   "node_id": "farm_manager.models.deleted_archives.DeletedBlock",
+   "node_type": "db_model",
+   "name": "DeletedBlock",
+   "file_path": "src/modules/farm_manager/models/deleted_archives.py",
+   "line_number": 59,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DeletedBlock"
+   ],
+   "description": "Tombstone copy of a deleted block. Persists to the deleted_blocks collection."
+  },
+  {
+   "node_id": "farm_manager.models.deleted_archives.DeletedBlockArchive",
+   "node_type": "db_model",
+   "name": "DeletedBlockArchive",
+   "file_path": "src/modules/farm_manager/models/deleted_archives.py",
+   "line_number": 117,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DeletedBlockArchive"
+   ],
+   "description": "Tombstone copy of a deleted block archive. Persists to the deleted_block_archives collection."
+  },
+  {
+   "node_id": "farm_manager.models.deleted_archives.DeletedBlockHarvest",
+   "node_type": "db_model",
+   "name": "DeletedBlockHarvest",
+   "file_path": "src/modules/farm_manager/models/deleted_archives.py",
+   "line_number": 175,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "DeletedBlockHarvest"
+   ],
+   "description": "Tombstone copy of a deleted harvest row. Persists to the deleted_block_harvests collection."
+  },
+  {
+   "node_id": "farm_manager.models.alert.AlertSeverity",
+   "node_type": "db_model",
+   "name": "AlertSeverity",
+   "file_path": "src/modules/farm_manager/models/alert.py",
+   "line_number": 14,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertSeverity"
+   ],
+   "description": "Enum (alert.py): info, warning, critical. Reused by block_cycle.py's BlockCycleAlert. Distinct from block_alert.py's AlertSeverity."
+  },
+  {
+   "node_id": "farm_manager.models.alert.AlertStatus",
+   "node_type": "db_model",
+   "name": "AlertStatus",
+   "file_path": "src/modules/farm_manager/models/alert.py",
+   "line_number": 23,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertStatus"
+   ],
+   "description": "Enum (alert.py): active, acknowledged, resolved. Distinct from block_alert.py's AlertStatus."
+  },
+  {
+   "node_id": "farm_manager.models.alert.AlertType",
+   "node_type": "db_model",
+   "name": "AlertType",
+   "file_path": "src/modules/farm_manager/models/alert.py",
+   "line_number": 31,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertType"
+   ],
+   "description": "Enum (alert.py): the alert trigger class - overdue, yield_variance, environmental, pest_disease and related."
+  },
+  {
+   "node_id": "farm_manager.models.block_alert.AlertSeverity",
+   "node_type": "db_model",
+   "name": "AlertSeverity",
+   "file_path": "src/modules/farm_manager/models/block_alert.py",
+   "line_number": 14,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertSeverity"
+   ],
+   "description": "Enum (block_alert.py): severity scale for per-block alerts. Distinct from alert.py's AlertSeverity - both names exist in this module."
+  },
+  {
+   "node_id": "farm_manager.models.block_alert.AlertStatus",
+   "node_type": "db_model",
+   "name": "AlertStatus",
+   "file_path": "src/modules/farm_manager/models/block_alert.py",
+   "line_number": 23,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertStatus"
+   ],
+   "description": "Enum (block_alert.py): status lifecycle for per-block alerts."
+  },
+  {
+   "node_id": "farm_manager.models.block_alert.AlertCategory",
+   "node_type": "db_model",
+   "name": "AlertCategory",
+   "file_path": "src/modules/farm_manager/models/block_alert.py",
+   "line_number": 32,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertCategory"
+   ],
+   "description": "Enum (block_alert.py): alert category (pest, disease, irrigation, equipment, environmental, other) used for filtering and analytics."
+  },
+  {
+   "node_id": "farm_manager.models.block_alert.AlertComment",
+   "node_type": "db_model",
+   "name": "AlertComment",
+   "file_path": "src/modules/farm_manager/models/block_alert.py",
+   "line_number": 60,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "AlertComment"
+   ],
+   "description": "Embedded threaded comment on a BlockAlert (author, body, timestamp)."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.FarmTypeEnum",
+   "node_type": "db_model",
+   "name": "FarmTypeEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 23,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FarmTypeEnum"
+   ],
+   "description": "Enum: which farm types a variety can be grown in (greenhouse, open_field, hydroponic, vertical...). Drives plant-library filtering by block type."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.GrowthStageEnum",
+   "node_type": "db_model",
+   "name": "GrowthStageEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 33,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "GrowthStageEnum"
+   ],
+   "description": "Enum: germination, seedling, vegetative, flowering, fruiting, harvest - the stage axis for fertigation rules and growth cycle duration."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.ToleranceLevelEnum",
+   "node_type": "db_model",
+   "name": "ToleranceLevelEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 43,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "ToleranceLevelEnum"
+   ],
+   "description": "Enum: low | medium | high tolerance rating used across environmental requirements."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.SeverityLevelEnum",
+   "node_type": "db_model",
+   "name": "SeverityLevelEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 51,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SeverityLevelEnum"
+   ],
+   "description": "Enum: severity rating for a DiseaseOrPest entry."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.LightTypeEnum",
+   "node_type": "db_model",
+   "name": "LightTypeEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 60,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "LightTypeEnum"
+   ],
+   "description": "Enum: natural, artificial, supplemental light source for LightRequirements."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.WaterTypeEnum",
+   "node_type": "db_model",
+   "name": "WaterTypeEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 69,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "WaterTypeEnum"
+   ],
+   "description": "Enum: water source/quality class for WateringRequirements."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.SoilTypeEnum",
+   "node_type": "db_model",
+   "name": "SoilTypeEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 79,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SoilTypeEnum"
+   ],
+   "description": "Enum: soil/substrate class for SoilRequirements."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.GrowthHabitEnum",
+   "node_type": "db_model",
+   "name": "GrowthHabitEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 90,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "GrowthHabitEnum"
+   ],
+   "description": "Enum: determinate, indeterminate, bush, vine and related growth habits."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.SupportTypeEnum",
+   "node_type": "db_model",
+   "name": "SupportTypeEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 101,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SupportTypeEnum"
+   ],
+   "description": "Enum: trellis, stake, cage, none - the physical support a variety needs."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.IngredientCategoryEnum",
+   "node_type": "db_model",
+   "name": "IngredientCategoryEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 373,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "IngredientCategoryEnum"
+   ],
+   "description": "Enum: fertigation ingredient class (macro, micro, acid, base, biological...). Also imported by tools/fertilizer_chemical.py so the calculator's chemical catalog shares one vocabulary with the plant library."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.FertigationRuleTypeEnum",
+   "node_type": "db_model",
+   "name": "FertigationRuleTypeEnum",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 384,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FertigationRuleTypeEnum"
+   ],
+   "description": "Enum: how a FertigationRule is applied (per_stage, per_day, custom)."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.FertigationSchedule",
+   "node_type": "db_model",
+   "name": "FertigationSchedule",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 483,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "FertigationIngredient",
+    "CustomApplication",
+    "FertigationRule",
+    "FertigationCard",
+    "FertigationSchedule"
+   ],
+   "description": "The variety's full fertigation programme: FertigationCard groups of FertigationRule entries over FertigationIngredient lines, plus CustomApplication overrides."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.GrowthCycleDuration",
+   "node_type": "db_model",
+   "name": "GrowthCycleDuration",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 115,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "GrowthCycleDuration"
+   ],
+   "description": "Per-stage day counts for a variety (germination through harvest) used to project estimatedHarvestDate on a block."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.SpacingRequirements",
+   "node_type": "db_model",
+   "name": "SpacingRequirements",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 336,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SpacingRequirements"
+   ],
+   "description": "Per-variety plant spacing and plants-per-100sqm, resolved against the shared SpacingCategory standards by resolve_default_plants_per_100m2."
+  },
+  {
+   "node_id": "farm_manager.models.plant_data_enhanced.YieldInfo",
+   "node_type": "db_model",
+   "name": "YieldInfo",
+   "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "line_number": 151,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "YieldInfo"
+   ],
+   "description": "Expected yield per plant / per sqm and waste percentage for a variety - the basis for a block's expected yield KPI."
+  },
+  {
+   "node_id": "farm_manager.models.spacing_standards.SpacingCategory",
+   "node_type": "db_model",
+   "name": "SpacingCategory",
+   "file_path": "src/modules/farm_manager/models/spacing_standards.py",
+   "line_number": 15,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "SpacingCategory"
+   ],
+   "description": "Enum: the plant spacing band (very_dense through very_sparse) that maps to a plants-per-100sqm density. Imported by both plant_data.py and plant_data_enhanced.py."
+  },
+  {
+   "node_id": "farm_manager.models.block_analytics.TimePeriod",
+   "node_type": "db_model",
+   "name": "TimePeriod",
+   "file_path": "src/modules/farm_manager/models/block_analytics.py",
+   "line_number": 15,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "TimePeriod"
+   ],
+   "description": "Enum: the analytics rollup window (week, month, quarter, year, all)."
+  },
+  {
+   "node_id": "farm_manager.models.block_analytics.TrendDirection",
+   "node_type": "db_model",
+   "name": "TrendDirection",
+   "file_path": "src/modules/farm_manager/models/block_analytics.py",
+   "line_number": 25,
+   "module": "farm_manager",
+   "layer": "model",
+   "exports": [
+    "TrendDirection"
+   ],
+   "description": "Enum: up | down | stable, used to annotate analytics trends."
+  }
+ ],
+ "edges": [
+  {
+   "source_id": "farm_manager.model.Farm",
+   "target_id": "collection_farms",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/farm.py",
+   "target_file": "",
+   "context": "Farm -> farms"
+  },
+  {
+   "source_id": "farm_manager.model.Block",
+   "target_id": "collection_blocks",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/block.py",
+   "target_file": "",
+   "context": "Block -> blocks"
+  },
+  {
+   "source_id": "farm_manager.model.BlockArchive",
+   "target_id": "collection_block_archives",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/block_archive.py",
+   "target_file": "",
+   "context": "BlockArchive -> block_archives"
+  },
+  {
+   "source_id": "farm_manager.model.BlockHarvest",
+   "target_id": "collection_block_harvests",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "",
+   "context": "BlockHarvest -> block_harvests"
+  },
+  {
+   "source_id": "farm_manager.model.BlockAlert",
+   "target_id": "collection_block_alerts",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/block_alert.py",
+   "target_file": "",
+   "context": "BlockAlert -> block_alerts"
+  },
+  {
+   "source_id": "farm_manager.model.Alert",
+   "target_id": "collection_alerts",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/alert.py",
+   "target_file": "",
+   "context": "Alert -> alerts"
+  },
+  {
+   "source_id": "farm_manager.model.BlockCycle",
+   "target_id": "collection_block_cycles",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/block_cycle.py",
+   "target_file": "",
+   "context": "BlockCycle -> block_cycles"
+  },
+  {
+   "source_id": "farm_manager.model.BlockHistoryArchive",
+   "target_id": "collection_block_history",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/block_history.py",
+   "target_file": "",
+   "context": "BlockHistoryArchive -> block_history"
+  },
+  {
+   "source_id": "farm_manager.model.DailyHarvest",
+   "target_id": "collection_daily_harvests",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/daily_harvest.py",
+   "target_file": "",
+   "context": "DailyHarvest -> daily_harvests"
+  },
+  {
+   "source_id": "farm_manager.model.Harvest",
+   "target_id": "collection_harvests",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/harvest.py",
+   "target_file": "",
+   "context": "Harvest -> harvests"
+  },
+  {
+   "source_id": "farm_manager.model.Planting",
+   "target_id": "collection_plantings",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/planting.py",
+   "target_file": "",
+   "context": "Planting -> plantings"
+  },
+  {
+   "source_id": "farm_manager.model.PlantData",
+   "target_id": "collection_plant_data",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/plant_data.py",
+   "target_file": "",
+   "context": "PlantData -> plant_data"
+  },
+  {
+   "source_id": "farm_manager.model.PlantDataEnhanced",
+   "target_id": "collection_plant_data_enhanced",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "target_file": "",
+   "context": "PlantDataEnhanced -> plant_data_enhanced"
+  },
+  {
+   "source_id": "farm_manager.model.PlantMother",
+   "target_id": "collection_plant_mothers",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/plant_mother.py",
+   "target_file": "",
+   "context": "PlantMother -> plant_mothers"
+  },
+  {
+   "source_id": "farm_manager.model.FarmAssignment",
+   "target_id": "collection_farm_assignments",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/farm_assignment.py",
+   "target_file": "",
+   "context": "FarmAssignment -> farm_assignments"
+  },
+  {
+   "source_id": "farm_manager.model.FarmTask",
+   "target_id": "collection_farm_tasks",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/farm_task.py",
+   "target_file": "",
+   "context": "FarmTask -> farm_tasks"
+  },
+  {
+   "source_id": "farm_manager.model.FarmingYearConfig",
+   "target_id": "collection_system_config",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/farming_year_config.py",
+   "target_file": "",
+   "context": "FarmingYearConfig -> system_config (singleton doc)"
+  },
+  {
+   "source_id": "farm_manager.model.SpacingStandardsConfig",
+   "target_id": "collection_system_config",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/spacing_standards.py",
+   "target_file": "",
+   "context": "SpacingStandardsConfig -> system_config (singleton doc)"
+  },
+  {
+   "source_id": "farm_manager.model.StockInventoryItem",
+   "target_id": "collection_stock_inventory",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/stock_inventory.py",
+   "target_file": "",
+   "context": "StockInventoryItem -> stock_inventory"
+  },
+  {
+   "source_id": "farm_manager.model.DeletedFarm",
+   "target_id": "collection_deleted_farms",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "",
+   "context": "DeletedFarm -> deleted_farms"
+  },
+  {
+   "source_id": "farm_manager.model.FertilizerChemical",
+   "target_id": "collection_fertilizer_chemicals",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/tools/fertilizer_chemical.py",
+   "target_file": "",
+   "context": "FertilizerChemical -> fertilizer_chemicals"
+  },
+  {
+   "source_id": "farm_manager.model.PriceOverride",
+   "target_id": "collection_fertilizer_price_overrides",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/tools/fertilizer_price.py",
+   "target_file": "",
+   "context": "PriceOverride -> fertilizer_price_overrides"
+  },
+  {
+   "source_id": "farm_manager.model.CalculationList",
+   "target_id": "collection_fertilizer_calculation_lists",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/tools/calculation_list.py",
+   "target_file": "",
+   "context": "CalculationList -> fertilizer_calculation_lists"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.Product",
+   "target_id": "collection_products",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "Product -> products"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.HarvestInventory",
+   "target_id": "collection_inventory_harvest",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "HarvestInventory -> inventory_harvest"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.InputInventory",
+   "target_id": "collection_inventory_input",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "InputInventory -> inventory_input"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.AssetInventory",
+   "target_id": "collection_inventory_asset",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "AssetInventory -> inventory_asset"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.InventoryMovement",
+   "target_id": "collection_inventory_movements",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "InventoryMovement -> inventory_movements"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.ProcessingInventory",
+   "target_id": "collection_processing_inventory",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "ProcessingInventory -> processing_inventory"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.WasteInventory",
+   "target_id": "collection_inventory_waste",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "WasteInventory -> inventory_waste"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.ReturnedInventory",
+   "target_id": "collection_inventory_returned",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "",
+   "context": "ReturnedInventory -> inventory_returned"
+  },
+  {
+   "source_id": "farm_manager.models.weather.WeatherCacheEntry",
+   "target_id": "collection_weather_cache",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/weather.py",
+   "target_file": "",
+   "context": "WeatherCacheEntry -> weather_cache"
+  },
+  {
+   "source_id": "farm_manager.models.deleted_archives.DeletedBlock",
+   "target_id": "collection_deleted_blocks",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "",
+   "context": "DeletedBlock -> deleted_blocks"
+  },
+  {
+   "source_id": "farm_manager.models.deleted_archives.DeletedBlockArchive",
+   "target_id": "collection_deleted_block_archives",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "",
+   "context": "DeletedBlockArchive -> deleted_block_archives"
+  },
+  {
+   "source_id": "farm_manager.models.deleted_archives.DeletedBlockHarvest",
+   "target_id": "collection_deleted_block_harvests",
+   "edge_type": "stores_in",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "",
+   "context": "DeletedBlockHarvest -> deleted_block_harvests"
+  },
+  {
+   "source_id": "farm_manager.model.PlantDataEnhanced",
+   "target_id": "farm_manager.model.PlantMother",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "line 631/665: motherPlantId + varietyName link each variety row up to its mother (product/SKU)"
+  },
+  {
+   "source_id": "farm_manager.model.PlantMother",
+   "target_id": "farm_manager.model.PlantDataEnhanced",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/plant_mother.py",
+   "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "context": "line 30: from .plant_data_enhanced import PlantDataEnhancedBase - VarietyCreateForMother extends it"
+  },
+  {
+   "source_id": "farm_manager.model.PlantMother",
+   "target_id": "farm_manager.models.plant_mother.PlantProduct",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/plant_mother.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "line 198: products: List[PlantProduct] embedded on PlantMother"
+  },
+  {
+   "source_id": "farm_manager.model.Block",
+   "target_id": "farm_manager.model.PlantMother",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "line 409: productMotherId + productName stamped from the planted variety's mother at planting"
+  },
+  {
+   "source_id": "farm_manager.model.Block",
+   "target_id": "farm_manager.model.PlantDataEnhanced",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block.py",
+   "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "context": "Block.targetCrop is the VARIETY (plant_data_enhanced.plantDataId); PlantDataSnapshot freezes its cultivation data at planting"
+  },
+  {
+   "source_id": "farm_manager.model.Block",
+   "target_id": "farm_manager.model.Farm",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block.py",
+   "target_file": "src/modules/farm_manager/models/farm.py",
+   "context": "line 14: from .farm import GeoJSONPolygon; Block.farmId references Farm"
+  },
+  {
+   "source_id": "farm_manager.model.BlockArchive",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_archive.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "line 11: from .block import BlockStatus, BlockType, BlockLocation, StatusChange"
+  },
+  {
+   "source_id": "farm_manager.model.BlockArchive",
+   "target_id": "farm_manager.model.PlantMother",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_archive.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "line 66: productMotherId + productName copied from the block at archive time"
+  },
+  {
+   "source_id": "farm_manager.model.BlockArchive",
+   "target_id": "farm_manager.model.PlantDataEnhanced",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_archive.py",
+   "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "context": "BlockArchive.targetCrop/targetCropName denormalize the variety"
+  },
+  {
+   "source_id": "farm_manager.model.BlockHarvest",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "BlockHarvest.blockId / farmId reference the harvested block and its farm"
+  },
+  {
+   "source_id": "farm_manager.model.BlockHarvest",
+   "target_id": "farm_manager.models.plant_mother.PlantProduct",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "line 96: productId references a sellable PlantProduct on the block's mother; productName is a frozen snapshot of its name"
+  },
+  {
+   "source_id": "farm_manager.models.block_harvest.HarvestBatchSubmitRequest",
+   "target_id": "farm_manager.models.plant_mother.PlantProduct",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "each line's productId must belong to the block's mother; its ProductCategory picks the destination"
+  },
+  {
+   "source_id": "farm_manager.models.block_harvest.HarvestBatchSubmitResponse",
+   "target_id": "farm_manager.model.BlockHarvest",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "src/modules/farm_manager/models/block_harvest.py",
+   "context": "sellable lines are written as BlockHarvest rows"
+  },
+  {
+   "source_id": "farm_manager.models.block_harvest.HarvestBatchSubmitResponse",
+   "target_id": "farm_manager.models.inventory.ProcessingInventory",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "src/modules/farm_manager/models/inventory.py",
+   "context": "process lines are written as ProcessingInventory rows"
+  },
+  {
+   "source_id": "farm_manager.models.block_harvest.HarvestBatchSubmitResponse",
+   "target_id": "farm_manager.models.inventory.WasteInventory",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "src/modules/farm_manager/models/inventory.py",
+   "context": "waste lines are written straight to WasteInventory, never to block_harvests"
+  },
+  {
+   "source_id": "farm_manager.model.Inventory",
+   "target_id": "farm_manager.model.BlockHarvest",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "src/modules/farm_manager/models/block_harvest.py",
+   "context": "line 22: from .block_harvest import QualityGrade as HarvestQualityGrade"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.ProcessingInventory",
+   "target_id": "farm_manager.models.block_harvest.QualityGrade",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "src/modules/farm_manager/models/block_harvest.py",
+   "context": "ProcessingInventory.qualityGrade uses the A/B/C harvest scale, not inventory.py's six-value QualityGrade"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.ProcessingInventory",
+   "target_id": "farm_manager.models.plant_mother.PlantProduct",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "ProcessingInventory.productId references a process-category PlantProduct"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.WasteInventory",
+   "target_id": "farm_manager.models.plant_mother.PlantProduct",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "src/modules/farm_manager/models/plant_mother.py",
+   "context": "line 1199: WasteInventory.productId references a waste-category PlantProduct (Stage 3 only; legacy waste paths leave it null)"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.HarvestInventory",
+   "target_id": "farm_manager.models.inventory.Product",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "src/modules/farm_manager/models/inventory.py",
+   "context": "harvest stock lines reference the master product catalog"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.InputInventory",
+   "target_id": "farm_manager.models.inventory.Product",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "src/modules/farm_manager/models/inventory.py",
+   "context": "line 220: inventory_input is indexed on productId"
+  },
+  {
+   "source_id": "farm_manager.models.inventory.InventoryMovement",
+   "target_id": "farm_manager.models.inventory.HarvestInventory",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/inventory.py",
+   "target_file": "src/modules/farm_manager/models/inventory.py",
+   "context": "movements are recorded against any inventory item by inventoryId + inventoryType"
+  },
+  {
+   "source_id": "farm_manager.model.BlockHistoryArchive",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/block_history.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "line 13: from .block import BlockStatus, BlockType, BlockLocation, BlockKPI, StatusChange"
+  },
+  {
+   "source_id": "farm_manager.model.BlockCycle",
+   "target_id": "farm_manager.model.Planting",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/block_cycle.py",
+   "target_file": "src/modules/farm_manager/models/planting.py",
+   "context": "line 13: from .planting import PlantingItem"
+  },
+  {
+   "source_id": "farm_manager.model.BlockCycle",
+   "target_id": "farm_manager.model.Alert",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/block_cycle.py",
+   "target_file": "src/modules/farm_manager/models/alert.py",
+   "context": "line 14: from .alert import AlertSeverity"
+  },
+  {
+   "source_id": "farm_manager.model.BlockCycle",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_cycle.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "BlockCycle.blockId / farmId scope the cycle"
+  },
+  {
+   "source_id": "farm_manager.model.DashboardSummary",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/dashboard.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "line 12: from .block import Block, BlockStatus, PerformanceCategory, StatusChange"
+  },
+  {
+   "source_id": "farm_manager.model.PlantDataEnhanced",
+   "target_id": "farm_manager.model.SpacingStandardsConfig",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "target_file": "src/modules/farm_manager/models/spacing_standards.py",
+   "context": "line 15: from .spacing_standards import SpacingCategory, get_density_for_category"
+  },
+  {
+   "source_id": "farm_manager.model.PlantDataEnhanced",
+   "target_id": "farm_manager.model.PlantData",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "target_file": "src/modules/farm_manager/models/plant_data.py",
+   "context": "line 18: from .plant_data import DataContributor"
+  },
+  {
+   "source_id": "farm_manager.model.PlantData",
+   "target_id": "farm_manager.model.SpacingStandardsConfig",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/plant_data.py",
+   "target_file": "src/modules/farm_manager/models/spacing_standards.py",
+   "context": "line 13: from .spacing_standards import SpacingCategory"
+  },
+  {
+   "source_id": "farm_manager.model.FertilizerChemical",
+   "target_id": "farm_manager.model.PlantDataEnhanced",
+   "edge_type": "imports",
+   "source_file": "src/modules/farm_manager/models/tools/fertilizer_chemical.py",
+   "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "context": "line 15: from ..plant_data_enhanced import IngredientCategoryEnum"
+  },
+  {
+   "source_id": "farm_manager.model.PriceOverride",
+   "target_id": "farm_manager.model.FertilizerChemical",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/tools/fertilizer_price.py",
+   "target_file": "src/modules/farm_manager/models/tools/fertilizer_chemical.py",
+   "context": "PriceOverride.chemicalId references a FertilizerChemical (unique with organizationId)"
+  },
+  {
+   "source_id": "farm_manager.model.CalculationList",
+   "target_id": "farm_manager.model.FertilizerChemical",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/tools/calculation_list.py",
+   "target_file": "src/modules/farm_manager/models/tools/fertilizer_chemical.py",
+   "context": "saved list items resolve chemical prices through the price book"
+  },
+  {
+   "source_id": "farm_manager.model.CalculateRequest",
+   "target_id": "farm_manager.model.PlantDataEnhanced",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/tools/calculator_request.py",
+   "target_file": "src/modules/farm_manager/models/plant_data_enhanced.py",
+   "context": "the calculator reads fertigation schedules off plant_data_enhanced varieties"
+  },
+  {
+   "source_id": "farm_manager.model.DailyHarvest",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/daily_harvest.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "DailyHarvest.blockId / cycleId / plantingId scope the entry"
+  },
+  {
+   "source_id": "farm_manager.model.Harvest",
+   "target_id": "farm_manager.model.DailyHarvest",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/harvest.py",
+   "target_file": "src/modules/farm_manager/models/daily_harvest.py",
+   "context": "Harvest aggregates daily harvest entries for a cycle"
+  },
+  {
+   "source_id": "farm_manager.model.Planting",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/planting.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "Planting.blockId / farmId assign the plan to a block"
+  },
+  {
+   "source_id": "farm_manager.model.StockInventoryItem",
+   "target_id": "farm_manager.model.DailyHarvest",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/stock_inventory.py",
+   "target_file": "src/modules/farm_manager/models/daily_harvest.py",
+   "context": "StockInventoryItem.dailyHarvestId links FIFO stock back to the harvest that produced it"
+  },
+  {
+   "source_id": "farm_manager.model.FarmTask",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/farm_task.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "tasks are generated from block state transitions; FarmTaskWithDetails joins block + farm context"
+  },
+  {
+   "source_id": "farm_manager.model.FarmAssignment",
+   "target_id": "farm_manager.model.Farm",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/farm_assignment.py",
+   "target_file": "src/modules/farm_manager/models/farm.py",
+   "context": "FarmAssignment.farmId grants a user access to a farm"
+  },
+  {
+   "source_id": "farm_manager.model.BlockAlert",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_alert.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "BlockAlert.blockId / farmId scope the alert"
+  },
+  {
+   "source_id": "farm_manager.model.Alert",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/alert.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "Alert.blockId / cycleId / farmId scope the alert"
+  },
+  {
+   "source_id": "farm_manager.model.DeletedFarm",
+   "target_id": "farm_manager.model.Farm",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "src/modules/farm_manager/models/farm.py",
+   "context": "tombstone copy of a Farm document"
+  },
+  {
+   "source_id": "farm_manager.models.deleted_archives.DeletedBlock",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "tombstone copy of a Block document"
+  },
+  {
+   "source_id": "farm_manager.models.deleted_archives.DeletedBlockArchive",
+   "target_id": "farm_manager.model.BlockArchive",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "src/modules/farm_manager/models/block_archive.py",
+   "context": "tombstone copy of a BlockArchive document"
+  },
+  {
+   "source_id": "farm_manager.models.deleted_archives.DeletedBlockHarvest",
+   "target_id": "farm_manager.model.BlockHarvest",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/deleted_archives.py",
+   "target_file": "src/modules/farm_manager/models/block_harvest.py",
+   "context": "tombstone copy of a BlockHarvest document"
+  },
+  {
+   "source_id": "farm_manager.model.BlockAnalyticsResponse",
+   "target_id": "farm_manager.model.BlockHarvest",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_analytics.py",
+   "target_file": "src/modules/farm_manager/models/block_harvest.py",
+   "context": "yield analytics aggregate block_harvests rows"
+  },
+  {
+   "source_id": "farm_manager.model.FarmAnalyticsResponse",
+   "target_id": "farm_manager.model.Block",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/farm_analytics.py",
+   "target_file": "src/modules/farm_manager/models/block.py",
+   "context": "farm analytics aggregate blocks and their harvests"
+  },
+  {
+   "source_id": "farm_manager.model.GlobalAnalyticsResponse",
+   "target_id": "farm_manager.model.Farm",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/global_analytics.py",
+   "target_file": "src/modules/farm_manager/models/farm.py",
+   "context": "global analytics aggregate across all farms"
+  },
+  {
+   "source_id": "farm_manager.model.BlockHarvest",
+   "target_id": "farm_manager.model.FarmingYearConfig",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_harvest.py",
+   "target_file": "src/modules/farm_manager/models/farming_year_config.py",
+   "context": "farmingYear is auto-calculated from harvestDate via get_farming_year"
+  },
+  {
+   "source_id": "farm_manager.model.BlockArchive",
+   "target_id": "farm_manager.model.FarmingYearConfig",
+   "edge_type": "uses",
+   "source_file": "src/modules/farm_manager/models/block_archive.py",
+   "target_file": "src/modules/farm_manager/models/farming_year_config.py",
+   "context": "farmingYearPlanted / farmingYearHarvested are stamped via get_farming_year"
+  }
+ ]
+}

@@ -44,19 +44,57 @@
 
 ## Known Open Items (as of 2026-08-03)
 
-- **CodeMaps are stale** and could not be regenerated this session.
-  `rerun.sh` diffs `HEAD~1..HEAD` (so it needs the commit to already exist),
-  and the mapper connects to Mongo unauthenticated — neither `MONGODB_URL`'s
-  app user nor `MONGO_ROOT_*` from `.env` authenticate against the running
-  instance (`AuthenticationFailed`, code 18). Mongo also runs as a replica
-  set advertising the internal hostname `mongodb`, so host-side connections
-  additionally need `directConnection=true`. Blocked on working credentials.
-- **6 pre-existing unit-test failures on `main`**, unrelated to this day's
-  work: 2 in `test_ai_assistant/test_context_composer.py`, 1 in
-  `test_tool_executor.py`, 1 in `test_sensehub_crop_sync.py`, and 2 in
-  `test_finance_bridge/test_outbox_reconciler.py` (the latter from the
-  uncommitted-then-committed `905bf43` WIP, which is **not our work** — it
-  belongs to whoever owns the finance outbox reconciler).
+- **CodeMap regeneration: UNBLOCKED (2026-08-21).** This was previously
+  recorded as "blocked on working credentials". That diagnosis was wrong and
+  cost several sessions' worth of skipped regenerations. There is no auth
+  problem: Mongo on this box does not require credentials for the mapper's
+  reads/writes. The *only* obstacle was the replica-set hostname — Mongo
+  advertises the internal hostname `mongodb`, so a host-side client must ask
+  for a direct connection or it fails with "Could not reach any servers ...
+  Replica set is configured with internal hostnames". The fix is one env var,
+  and every mapper invocation needs it:
+
+      MONGO_URL="mongodb://localhost:27017/?directConnection=true" \
+        python3 scripts/codebase_mapper/task_manager.py stats
+
+  Do NOT add credentials — `MONGO_ROOT_*` from `.env` genuinely do not
+  authenticate, which is what produced the misleading `AuthenticationFailed`
+  (code 18) and sent the original diagnosis down the wrong path.
+  `rerun.sh` still diffs `HEAD~1..HEAD`, so the commit must exist first; use
+  `--since <ref>` to cover a wider window.
+- **`rerun.sh` silently no-ops for 7 backend modules (found 2026-08-21).**
+  `FILE_TO_TASK_MAP` in `task_manager.py` referenced task ids that were never
+  seeded by `setup.py`: `map_genetics_module`, `map_mushroom_module`,
+  `map_purchasing_module`, `map_finance_module`, `map_protocols_module`,
+  `map_attachments_module`, `map_ai_assistant_module`. `cmd_reseed` does
+  `update_one({task_id, status: "completed"})`, so a non-existent task matches
+  nothing, `modified_count` stays 0, and the run still reports success. Net
+  effect: changes to those 7 modules have never once triggered a CodeMap
+  refresh. All 7 tasks have now been seeded (33 tasks total, up from 26).
+  `mushroom_manager` and `ai_assistant` had ZERO graph nodes and have been
+  mapped; `genetics` (66 nodes), `finance` (37), `purchasing` (18),
+  `protocols` (9) and `attachments` (2) had only incidental coverage from
+  other tasks and remain **pending** — their dedicated tasks are seeded and
+  will be picked up by the next mapping pass, so INDEX.md's completed count
+  honestly reflects the remaining gap.
+- **~~6~~ 2 pre-existing unit-test failures on `main` (corrected
+  2026-08-21).** This previously read "6 failures", listing 2 in
+  `test_ai_assistant/test_context_composer.py`, 1 in `test_tool_executor.py`
+  and 1 in `test_sensehub_crop_sync.py`. **Four of those six were never real.**
+  Re-run inside the api container they all pass: the two `test_ai_assistant`
+  files give `13 passed`, and `-k sensehub_crop_sync` gives `61 passed, 1
+  skipped`. They fail only on the **host**, with
+  `ModuleNotFoundError: No module named 'anthropic'` — the SDK is installed in
+  the container, not in host Python, and both test modules import it
+  transitively via `claude_service.py`. Whoever recorded the original count
+  ran pytest on the host. Per CLAUDE.md, backend tests must be run in the
+  container (`docker cp tests …` then `docker exec … python -m pytest`);
+  host-side runs produce phantom failures like these.
+  **Genuinely still failing: 2**, both in
+  `test_finance_bridge/test_outbox_reconciler.py`, from the
+  uncommitted-then-committed `905bf43` WIP — **not our work**, it belongs to
+  whoever owns the finance outbox reconciler. Full in-container suite as of
+  2026-08-21: `913 passed, 2 failed, 1 skipped`.
 - **Deployment-specific defaults still hardcoded**, despite T-904/T-905's
   deployment-identity work: `GOOGLE_CLOUD_PROJECT=a64core` in
   `docker-compose.yml` with no `${VAR:-}` indirection; `FROM_EMAIL:
@@ -68,6 +106,113 @@
   only through the Cloudflare tunnel. This box currently binds nginx on
   `0.0.0.0:80` and Mongo on `0.0.0.0:27017`; direct routing to the public IP
   would make exclusive mode bypassable.
+
+---
+
+## CodeMap Regeneration 2026-08-21 — done, plus 11 defects it surfaced
+
+**T-926 — CodeMaps regenerated and the seeding bug fixed. DONE.**
+Graph went 822 nodes/1008 edges → **1214 nodes/2578 edges**; all five maps
+plus INDEX regenerated. 29/33 tasks complete. Dangling edges 141 → 112
+(4.3%). What was actually wrong, and is now fixed:
+- The "blocked on credentials" diagnosis was wrong — see the corrected entry
+  in Known Open Items. `directConnection=true`, no credentials.
+- `rerun.sh` silently no-opped for 7 modules whose task ids were never
+  seeded. All 7 seeded (26 → 33 tasks).
+- `mushroom_manager` (0 → 33 nodes) and `ai_assistant` (0 → 12 nodes) had
+  **never** been mapped. `farm_manager/middleware/` had no node despite 11
+  edges pointing at it; genetics and all 8 mushroom routers depend on it.
+- 86 edges used bare names (`farmApi`) instead of node ids
+  (`service::farmApi`). `map_generator.get_edges_for_node` matches ids
+  exactly, so those edges **never rendered on any map**. Rewritten.
+- Removed: 8 phantom `component::` nodes for deleted pre-Wave-3 sales files,
+  2 legacy `page::` edges, and the duplicate `TaskService` node (6 edges
+  repointed onto `farm_manager.service.TaskService`).
+- `NODE_ID_CONVENTIONS.md` amended with the `env_*` / `compose_*` namespaces
+  and the consumer→config edge direction.
+- **Backup** of mapper_nodes/edges/tasks taken before cleanup (session
+  scratchpad). Re-running a stale `batch_*.json` from
+  `scripts/codebase_mapper/` ROLLS THE GRAPH BACK — `$set` replaces whole
+  node documents. One agent hit this and clobbered three descriptions before
+  catching it. Only ever write node docs read live from Mongo.
+
+**Still pending (4 tasks, deliberately):** `map_purchasing_module`,
+`map_finance_module`, `map_protocols_module`, `map_attachments_module`.
+They have partial incidental coverage; their tasks are now seeded so the
+next `rerun.sh` will pick them up instead of skipping silently. Most of the
+remaining 112 dangling edges belong to them.
+
+### Defects found while mapping (none fixed — all need a decision)
+
+- **T-927 — FIXED, see ARCHIVE.md (2026-08-21).** `require_permission`
+  failed open in farm_manager (SECURITY) — converted to a fail-closed
+  `PERMISSION_ROLES` dict, `admin.manage` registered.
+- **T-928 — FIXED, see ARCHIVE.md (2026-08-21).** Quote audit history /
+  Quote attachments both pointed at `quotes_v2*`, a collection that has
+  never existed — corrected to `sales_quotes`/`sales_quotes_audit` in both
+  dispatch tables.
+- **T-929 — Verification/reset emails silently never send outside
+  development.** `src/utils/email.py` logs and returns `True` when
+  `ENVIRONMENT == "development"`, otherwise falls past commented-out
+  SendGrid code and **still returns `True`**. `auth_service.py` trusts that
+  boolean. Harmless on this dev box; on any production deployment account
+  verification and password reset silently fail. Distinct from the merged
+  `fix/honest-email-state` work, which fixed the API responses, not this.
+- **T-930 — Wave 3 sales collections have no indexes.** `sales/services/
+  database.py` declares indexes only for legacy `sales_orders`/
+  `purchase_orders`. Nothing creates them for `sales_orders_v2`,
+  `sales_quotes`, `ar_invoices_v2`, `ar_credit_notes_v2`,
+  `customer_receipts_v2`, `deliveries_v2`, `returns_v2`,
+  `return_requests_v2`, their `_audit` twins, purchasing's `vendors`/
+  `purchase_items`/`payment_terms`, or core's `document_headers`/
+  `document_lines`. `docEntry`/`docNumber` uniqueness is enforced in
+  application code only — a concurrent create can duplicate a document
+  number. Doc counts are 1–15 so it is not biting yet.
+- **T-931 — Two frontend calls hit routes that do not exist.**
+  `inventoryApi.ts:210` calls `/v1/sales/inventory/farming-years`; sales has
+  no `inventory` sub-router (`config.py` serves `/farming-years`) — live
+  404. `tasksApi.ts:163` calls `/v1/farm/tasks/{id}/harvest-summary`, which
+  matches no route in `farm_manager/api/v1/tasks.py`.
+- **T-932 — Two dead frontend files.** `types/returns.ts` re-exports seven
+  names `sales.ts` no longer exports — 7 of the 234 `tsc` errors, nothing
+  imports it, fix is deletion. `components/ai/AIAnalyticsChat.tsx:25`
+  imports `./ScopeSelector`, which does not exist anywhere in the repo;
+  nothing imports the file, so it only builds because Vite never compiles
+  it. Routing it breaks the build.
+- **T-933 — Redis healthcheck hardcodes the password.**
+  `docker-compose.yml:203` passes a literal password to `redis-cli -a`
+  instead of interpolating `${REDIS_PASSWORD}`. Setting a real password makes
+  the container report unhealthy while working correctly.
+- **T-934 — `ANTHROPIC_MODEL` is wired but dead.** Set in `.env.example:174`
+  and `docker-compose.yml:76`, read by nothing (`settings.CLAUDE_MODEL` is
+  used). It is pinned to `claude-sonnet-4-20250514`, so "fixing" the wiring
+  without checking would silently downgrade the assistant.
+- **T-935 — Middleware order is documented backwards.** `add_middleware`
+  inserts at index 0, so last-added is outermost: the real order is
+  `DivisionContext → RateLimit → Timing → CORS`. The comment at
+  `src/main.py:66` claims Timing is outermost. Consequence: a 429 from the
+  rate limiter never reaches the timing collector, so **throttled requests
+  are invisible to `/api/metrics`**.
+- **T-936 — `X-Division-Id` is client-asserted.**
+  `core.middleware.division_context` never validates that the caller may
+  access the division named in the header. Tenant scoping depends entirely
+  on route/service-layer checks. May be intentional and correctly handled
+  downstream, but it was undocumented.
+- **T-937 — `mushroom_manager` declares permissions it never uses.** Its
+  `manifest.json` declares `mushroom.*` and marks the module
+  `industry_mode: "exclusive"`, but every route authorises against
+  farm_manager's `farm.manage`/`farm.operate`. T-927 (fixed 2026-08-21) made
+  farm_manager's `require_permission` fail closed, so a route that DID pass
+  an unregistered `mushroom.*` string would now correctly 500 rather than
+  fail open — still worth registering properly rather than relying on that.
+- **Collections that exist live with no code reference** (migration
+  artefacts, safe to leave but worth knowing): `sales_unmatched` (3,328
+  docs), `financial_summary` (543, written only by `stage7_finalize.py` and
+  never refreshed), `payroll_runs`/`payroll_entries` (0 docs, indexes only —
+  HR has no payroll service), `return_orders`/`purchase_orders` (legacy
+  shells). And code writes to four collections that do not exist:
+  `document_attachments`, `inventory_balances` (delivery COGS + return
+  restocking), `ap_down_payments_v2` + its audit twin.
 
 ---
 
@@ -2244,6 +2389,89 @@
   - Still open on T-804 (unaffected by this pass): `PrintLabelsModal` 62xN
     gap, testing-backend-specialist leakage/coverage pass, physical-scan
     verification step.
+- **Follow-up — "Send to printer" action + per-deployment printer config —
+  frontend half DONE 2026-08-21 (`frontend-dev-expert`):** Adds a
+  direct-to-Brother-QL-800 print path to `PrintLabelsModal` (previously
+  only a blob PDF download) plus a Settings → Deployment Settings "Label
+  Printer" section (`LABEL_PRINTER_ENABLED`/`LABEL_PRINTER_BASE_URL`/
+  `LABEL_PRINTER_API_KEY`). Built against a contract from a
+  `backend-dev-expert` working `GET /api/v1/genetics/printer/health` +
+  `POST /api/v1/genetics/accessions/{accessionId}/labels/print` + the three
+  deployment-settings keys concurrently (their `src/modules/genetics/api/v1/
+  printer.py`, `src/services/label_printer_service.py`,
+  `src/services/deployment_settings_service.py`,
+  `src/models/deployment_settings.py`, `src/config/settings.py`,
+  `src/api/v1/admin.py` were mid-flight in the working tree during this
+  session, not authored here) — not verified against a live backend, no
+  Playwright run per this task's own instructions.
+  - **`frontend/user-portal/src/components/genetics/PrintLabelsModal.tsx`:**
+    added `usePrinterHealth()`/`usePrintLabels()`. Printer button renders
+    only when `configured: true`; disabled with a `status`-reasons warning
+    banner when `configured && !ok`; shows the page/label count on the
+    button itself (`Send to printer — N labels`) before any click; an
+    inline (no new modal) "Print N labels? ... cannot be undone" confirm
+    step gates any request over 10 labels; success shows `jobId` +
+    `pagesPrinted`; failure shows `err.response.data.detail` verbatim,
+    matching the `(error as any)?.response?.data?.detail ?? error.message`
+    pattern already used by every sibling genetics modal (SplitAccessionModal
+    et al.) — deliberately NOT the blob-unwrap trick `getLabelsPdf` uses,
+    since this is a plain JSON error response, not a blob one. Both
+    download and print buttons disable while EITHER mutation is pending
+    (both bump `labelledVesselCount` server-side, so overlapping requests
+    would race the same high-water mark). The one gold/"primary" CTA
+    budget (spec §4) shifts to whichever action is actually usable —
+    printer when ready, download otherwise — rather than both being gold
+    at once; the download path's behavior is otherwise untouched, exactly
+    per instructions.
+  - **Tape default — already satisfied the ask, not modified:** the task
+    brief said the modal's current default was `29x90` and asked for
+    `62x15` "when the printer is available." Reading the file first showed
+    the default is already `continuous`/`62x15` unconditionally (T-804's
+    2026-07-31 follow-up already changed this) — the brief's premise was
+    stale. No code change was needed here; flagging so it isn't
+    re-attempted.
+  - **`frontend/user-portal/src/services/geneticsApi.ts` /
+    `hooks/genetics/useGenetics.ts` / `types/genetics.ts`:** added
+    `PrinterHealth`/`PrintLabelsParams`/`PrintLabelsResult` types,
+    `getPrinterHealth()`/`printLabels()` API calls, `usePrinterHealth()`
+    (query, `staleTime: 15_000`) / `usePrintLabels()` (mutation, never a
+    query — printing is a physical side effect) hooks — placed beside the
+    existing `getLabelsPdf`/`useGetLabelsPdf` labels code, same envelope
+    convention (`return data.data`) as every other genetics call in the
+    file. **Assumption flagged:** the task's contract description didn't
+    state whether `printer/health` and `labels/print` responses are
+    wrapped in the app's usual `{data: {...}}` envelope; assumed yes,
+    matching every other endpoint in this service file — unverified
+    against a live backend.
+  - **`frontend/user-portal/src/components/settings/DeploymentSettingsCard.tsx`:**
+    added `LABEL_PRINTER_ENABLED`/`LABEL_PRINTER_BASE_URL`/
+    `LABEL_PRINTER_API_KEY` to the existing `BOOL_KEYS`/`SECRET_KEYS`
+    sets and `FIELD_LABELS` map (no parallel mechanism — same
+    env-lock/masked-secret/password-confirm flow every other key already
+    goes through) plus a new "Label Printer" `<Card>`. `renderStringField`
+    gained an optional third `hint` param (rendering the existing
+    `FieldHint` style, mirroring what `renderRoleField` already does
+    inline) so the base-URL field could carry
+    `http://<printer-host>:8765` example + the "this deployment's own
+    printer" note without misusing the warning-styled prop for
+    non-warning helper text.
+  - **Verification:** `npx tsc -b --force` (NOT `--noEmit`, per the
+    documented no-op) — 234 errors before AND after (baseline captured by
+    `git stash push` on just these 5 files, re-run, `git stash pop`); zero
+    new errors, zero in any touched file. `npm run build --workspace
+    user-portal` from `frontend/` succeeded.
+  - **Not done here (explicitly out of scope per task instructions):** no
+    Playwright/browser verification — user tests UI changes themselves.
+    Backend endpoints/settings keys are a separate agent's concurrent work,
+    not verified live from this side. `LineDetailPage.tsx`/
+    `AccessionDetailPage.tsx`'s existing `<PrintLabelsModal accession=...
+    onClose=.../>` call sites needed no changes — the modal's external
+    props are unchanged, so the already-existing "opens automatically
+    after a propagation" / `?print=1` behavior is untouched by construction,
+    not re-verified live.
+  - **CodeMaps:** not regenerated — flag for whoever runs the next
+    `map_generator.py all` pass (new hooks/types/component surface here,
+    plus the backend's new `printer.py`/`label_printer_service.py`).
 
 ---
 

@@ -22,11 +22,11 @@ The default super admin account is created during initial setup.
 ## 🖥️ Admin Dashboard Access
 
 ### URL Access
-**Admin Panel URL:** http://localhost/admin/
+**Admin Panel URL:** http://localhost/legacy-admin/
 
 **Alternative URLs:**
 - Direct API: http://localhost:8000/admin/ (same interface)
-- Via NGINX: http://localhost/admin/ (recommended)
+- Via NGINX: http://localhost/legacy-admin/ (recommended)
 
 ### What is the Admin Dashboard?
 
@@ -182,7 +182,7 @@ DELETE /api/v1/admin/users/{userId}
 
 ### Step 1: Login to Admin Panel
 
-1. **Open Browser:** Navigate to http://localhost/admin/
+1. **Open Browser:** Navigate to http://localhost/legacy-admin/
 2. **Login Screen:** You'll see the admin login interface
 3. **Enter Credentials:**
    - Email: `admin@a64platform.com`
@@ -239,7 +239,7 @@ curl -X GET "http://localhost/api/v1/admin/users?page=1&per_page=20" \
 
 ### Quick Test via Browser
 
-1. Open http://localhost/admin/ in browser
+1. Open http://localhost/legacy-admin/ in browser
 2. Login with admin credentials
 3. Browse user list, test filters, try user actions
 
@@ -266,7 +266,7 @@ curl -X GET "http://localhost/api/v1/admin/users?page=1&per_page=20" \
 
 **Access:** All registered users
 
-### Admin Dashboard (http://localhost/admin/)
+### Admin Dashboard (http://localhost/legacy-admin/)
 **Purpose:** System administration
 **Features:**
 - User management (list, search, edit)
@@ -330,7 +330,7 @@ curl -X GET "http://localhost/api/v1/admin/users?page=1&per_page=20" \
 
 ### Admin Dashboard Not Loading
 
-**Problem:** http://localhost/admin/ returns 404 or error
+**Problem:** http://localhost/legacy-admin/ returns 404 or error
 **Solution:**
 1. Check API is running:
    ```bash
@@ -384,7 +384,7 @@ curl -X GET "http://localhost/api/v1/admin/users?page=1&per_page=20" \
 
 | Item | Value |
 |------|-------|
-| **Admin URL** | http://localhost/admin/ |
+| **Admin URL** | http://localhost/legacy-admin/ |
 | **Admin Email** | admin@a64platform.com |
 | **Admin Password** | Set via `ADMIN_PASSWORD` env var |
 | **Admin Role** | super_admin |

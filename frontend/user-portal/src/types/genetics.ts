@@ -436,6 +436,50 @@ export interface SplitResult {
 }
 
 // ============================================================================
+// PRINTER — direct-to-printer label send (T-804 follow-up), alongside the
+// PDF-download path above. `GET .../printer/health` always resolves 200,
+// even when the printer is unreachable or unconfigured for this deployment
+// — never throws for that; check `configured`/`ok` instead.
+// ============================================================================
+
+export interface PrinterHealth {
+  /** False when this deployment has no LABEL_PRINTER_BASE_URL configured
+   * (Settings → Deployment Settings → Label Printer). When false, the
+   * printer action should not be offered at all — PDF download is the
+   * only path. */
+  configured: boolean;
+  /** True only when `configured` is also true AND the printer answered
+   * ready to accept a job right now. */
+  ok: boolean;
+  /** Human-readable reason(s) the printer isn't ready, e.g. "Printer
+   * offline", "Paper out". Empty when `ok` is true. */
+  status: string[];
+  printer: string | null;
+  jobsQueued: number | null;
+}
+
+export interface PrintLabelsParams {
+  from?: number;
+  to?: number;
+  /** Same '29x90' / '17x87' / '62xN' vocabulary as GetLabelsPdfParams.size. */
+  size?: string;
+  copies?: number;
+}
+
+export interface PrintLabelsResult {
+  ok: boolean;
+  // The printer's own job number. Numeric, and nullable: the spooler
+  // accepted the job but did not report an id back.
+  jobId: number | null;
+  pagesPrinted: number;
+  printer: string;
+  label: string;
+  from: number;
+  to: number;
+  copies: number;
+}
+
+// ============================================================================
 // PROPAGATION
 // ============================================================================
 

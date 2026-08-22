@@ -17,13 +17,27 @@
  * a broken default range rather than an empty one, so it is special-cased
  * below into a sane reprint suggestion instead of a button that is
  * guaranteed to 400 on first click.
+ *
+ * "Send to printer" (T-804 follow-up): a second primary action beside the
+ * download, sending the same rendered PDF straight to this deployment's
+ * configured Brother QL-800 via `POST .../labels/print` instead of a blob
+ * download. The download path above is left entirely as-is — it is the
+ * fallback whenever no printer is configured for this deployment, or the
+ * configured one isn't currently ready (offline, out of paper, etc.),
+ * both surfaced via `GET .../printer/health`.
  */
 
 import { useState } from 'react';
-import { useGetLabelsPdf } from '../../hooks/genetics/useGenetics';
+import styled from 'styled-components';
+import { useGetLabelsPdf, usePrinterHealth, usePrintLabels } from '../../hooks/genetics/useGenetics';
 import type { Accession } from '../../types/genetics';
 import { Modal } from './Modal';
 import { Banner, Button, Field, FormRow, Hint, Input, Label, Select } from './styled';
+
+// Printing is physical and irreversible — a batch above this size gets an
+// explicit "are you sure" step before the request fires, in addition to the
+// count always being visible on the button itself.
+const PRINT_CONFIRM_THRESHOLD = 10;
 
 // Mirrors `_MAX_LABELS_PER_REQUEST` in src/modules/genetics/api/v1/labels.py
 // exactly — the server is the real enforcement; this is only a UI nudge so a
@@ -72,6 +86,8 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
 
 export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) {
   const labelsPdf = useGetLabelsPdf(accession.id);
+  const printerHealth = usePrinterHealth();
+  const printLabels = usePrintLabels(accession.id);
 
   // Server-default formula, mirrored client-side (spec §5.1).
   const naturalFrom = accession.labelledVesselCount + 1;
@@ -83,9 +99,17 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
   // than prefilling a range the server will reject outright.
   const [fromStr, setFromStr] = useState(String(nothingUnprinted ? 1 : naturalFrom));
   const [toStr, setToStr] = useState(String(nothingUnprinted ? Math.max(accession.quantity, 1) : naturalTo));
+  // Defaults to the 62mm continuous roll at the confirmed-good 15mm length
+  // regardless of printer availability — this IS the "printer path"
+  // default the media in the tray actually is; a user picking a die-cut
+  // size for a PDF-only export can still switch it below.
   const [tapeType, setTapeType] = useState<TapeType>('continuous');
   const [continuousLengthStr, setContinuousLengthStr] = useState(String(CONTINUOUS_DEFAULT_MM));
   const [lastDownload, setLastDownload] = useState<string | null>(null);
+  const [lastPrintJob, setLastPrintJob] = useState<{ jobId: number | null; pagesPrinted: number } | null>(
+    null
+  );
+  const [confirmingPrint, setConfirmingPrint] = useState(false);
 
   const fromNum = Number(fromStr);
   const toNum = Number(toStr);
@@ -104,7 +128,20 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
       continuousLengthNum >= CONTINUOUS_MIN_MM &&
       continuousLengthNum <= CONTINUOUS_MAX_MM);
 
-  const canDownload = rangeValid && !overCap && continuousLengthValid && !labelsPdf.isPending;
+  // Both paths raise `labelledVesselCount` server-side, so neither is
+  // allowed to fire while the other is in flight — avoids two overlapping
+  // requests racing the same high-water mark.
+  const anyRequestPending = labelsPdf.isPending || printLabels.isPending;
+  const canDownload = rangeValid && !overCap && continuousLengthValid && !anyRequestPending;
+
+  const printerData = printerHealth.data;
+  // `configured` gates whether the printer action renders AT ALL — no
+  // LABEL_PRINTER_BASE_URL set for this deployment means there is nothing
+  // to offer beyond the PDF download.
+  const printerConfigured = printerData?.configured === true;
+  const printerReady = printerConfigured && printerData?.ok === true;
+  const printerReasons = printerData?.status ?? [];
+  const canPrint = rangeValid && !overCap && continuousLengthValid && printerReady && !anyRequestPending;
 
   const handleDownload = async () => {
     setLastDownload(null);
@@ -112,6 +149,25 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
     const result = await labelsPdf.mutateAsync({ from: fromNum, to: toNum, size });
     triggerBlobDownload(result.blob, result.filename);
     setLastDownload(result.filename);
+  };
+
+  const submitPrint = async () => {
+    setConfirmingPrint(false);
+    setLastPrintJob(null);
+    const size = composeSize(tapeType, continuousLengthNum);
+    const result = await printLabels.mutateAsync({ from: fromNum, to: toNum, size });
+    setLastPrintJob({ jobId: result.jobId, pagesPrinted: result.pagesPrinted });
+  };
+
+  // Printing is irreversible, so a large batch gets one extra confirm step
+  // before the request fires — the count is already visible on the button
+  // itself either way (spec requirement, not just for the confirm case).
+  const handlePrintClick = () => {
+    if (pageCount > PRINT_CONFIRM_THRESHOLD) {
+      setConfirmingPrint(true);
+      return;
+    }
+    void submitPrint();
   };
 
   return (
@@ -124,7 +180,30 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
           <Button type="button" $variant="ghost" onClick={onClose}>
             Close
           </Button>
-          <Button type="button" onClick={handleDownload} disabled={!canDownload}>
+          {/* Only offered when this deployment actually has a printer
+              configured (T-804 follow-up) — see printerConfigured below. */}
+          {printerConfigured && (
+            <Button
+              type="button"
+              // The one gold/"primary" CTA on this screen shifts to
+              // whichever action is actually usable right now — printer
+              // when ready, download otherwise — rather than both
+              // competing for it at once.
+              $variant={printerReady ? 'primary' : 'ghost'}
+              onClick={handlePrintClick}
+              disabled={!canPrint}
+            >
+              {printLabels.isPending
+                ? 'Sending…'
+                : `Send to printer${pageCount > 0 ? ` — ${pageCount} label${pageCount === 1 ? '' : 's'}` : ''}`}
+            </Button>
+          )}
+          <Button
+            type="button"
+            $variant={printerReady ? 'ghost' : 'primary'}
+            onClick={handleDownload}
+            disabled={!canDownload}
+          >
             {labelsPdf.isPending
               ? 'Generating…'
               : `Download${pageCount > 0 ? ` ${pageCount} label${pageCount === 1 ? '' : 's'}` : ''}`}
@@ -136,6 +215,41 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
 
       {lastDownload && !labelsPdf.isError && (
         <Banner $tone="info">Downloaded {lastDownload}.</Banner>
+      )}
+
+      {printLabels.isError && (
+        <Banner $tone="error">
+          {(printLabels.error as any)?.response?.data?.detail ?? printLabels.error.message}
+        </Banner>
+      )}
+
+      {lastPrintJob && !printLabels.isError && (
+        <Banner $tone="info">
+          Sent to printer{lastPrintJob.jobId !== null ? ` — job ${lastPrintJob.jobId}` : ''},{' '}
+          {lastPrintJob.pagesPrinted} page
+          {lastPrintJob.pagesPrinted === 1 ? '' : 's'} printed.
+        </Banner>
+      )}
+
+      {printerConfigured && !printerReady && (
+        <Banner $tone="warning">
+          Printer not ready{printerReasons.length > 0 ? ` — ${printerReasons.join(', ')}` : ''}.
+          You can still download the PDF below.
+        </Banner>
+      )}
+
+      {confirmingPrint && (
+        <Banner $tone="warning">
+          Print {pageCount} labels? This sends a real job to the printer and cannot be undone.
+          <ConfirmActions>
+            <Button type="button" $variant="ghost" onClick={() => setConfirmingPrint(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void submitPrint()}>
+              Yes, print {pageCount} labels
+            </Button>
+          </ConfirmActions>
+        </Banner>
       )}
 
       {nothingUnprinted && (
@@ -216,8 +330,15 @@ export function PrintLabelsModal({ accession, onClose }: PrintLabelsModalProps) 
       <Banner $tone="info">
         Print at <strong>&quot;Actual size&quot; / 100% scale</strong>. Any &quot;fit to
         page&quot; setting rescales the QR code and is the most likely reason a batch won&apos;t
-        scan.
+        scan. (Applies to the downloaded PDF — a direct printer send is scaled correctly by
+        the printer itself.)
       </Banner>
     </Modal>
   );
 }
+
+const ConfirmActions = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+`;

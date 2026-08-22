@@ -63,7 +63,28 @@ class MongoDBManager:
         """Create database indexes for optimal query performance"""
         try:
             # Users collection indexes
-            await cls.db.users.create_index("email", unique=True)
+            #
+            # Reason (T-938): partial unique index — enforces uniqueness
+            # only among LIVE users (deletedAt: None), so a soft-deleted
+            # user's email (see api.v1.admin.delete_user — soft delete,
+            # document stays) can be reused by a genuinely new account. A
+            # plain unique index here previously made a soft-deleted email
+            # permanently unusable and caused an unhandled
+            # DuplicateKeyError -> 500 when Cloudflare Access tried to
+            # JIT-provision a new user over it (see
+            # auth_service.login_via_cf_access). Named distinctly from the
+            # historical default "email_1" so this call can never collide
+            # with that not-yet-dropped index on a database that hasn't run
+            # scripts/migrations/t938_partial_unique_email_index.py yet —
+            # both can coexist safely, and once that script drops
+            # "email_1", this call is simply a no-op against the
+            # already-existing index of the same name/spec.
+            await cls.db.users.create_index(
+                "email",
+                unique=True,
+                partialFilterExpression={"deletedAt": None},
+                name="email_live_unique",
+            )
             await cls.db.users.create_index("userId", unique=True)
             await cls.db.users.create_index("role")
             await cls.db.users.create_index([("createdAt", -1)])

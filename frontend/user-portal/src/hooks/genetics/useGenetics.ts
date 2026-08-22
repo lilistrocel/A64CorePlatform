@@ -31,6 +31,9 @@ import type {
   OrphanRecords,
   Paginated,
   PlainPurgeResult,
+  PrinterHealth,
+  PrintLabelsParams,
+  PrintLabelsResult,
   PromoteTraitPayload,
   PromotionResult,
   PropagationAmendPayload,
@@ -229,6 +232,37 @@ export function useGetLabelsPdf(accessionId: string) {
   const invalidate = useInvalidateGenetics();
   return useMutation<api.LabelsPdfResult, Error, api.GetLabelsPdfParams>({
     mutationFn: (params) => api.getLabelsPdf(accessionId, params),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Printer readiness for the direct-to-printer label action (T-804
+ * follow-up). Short `staleTime` so PrintLabelsModal picks up a printer
+ * that just came back online/out of paper without a full page reload, but
+ * doesn't hammer the endpoint on every re-render while the modal sits
+ * open. Always resolves (see `PrinterHealth` — no configured/offline
+ * printer is not an error), so this never needs `isError` handling the way
+ * every other genetics query does.
+ */
+export function usePrinterHealth() {
+  return useQuery<PrinterHealth>({
+    queryKey: [...ROOT, 'printer-health'],
+    queryFn: api.getPrinterHealth,
+    staleTime: 15_000,
+  });
+}
+
+/**
+ * Send labels directly to this deployment's configured printer. A true
+ * mutation, never a query — printing is a physical, irreversible side
+ * effect. Same broad invalidation as `useGetLabelsPdf` (raises
+ * `labelledVesselCount` server-side too).
+ */
+export function usePrintLabels(accessionId: string) {
+  const invalidate = useInvalidateGenetics();
+  return useMutation<PrintLabelsResult, Error, PrintLabelsParams>({
+    mutationFn: (params) => api.printLabels(accessionId, params),
     onSuccess: invalidate,
   });
 }

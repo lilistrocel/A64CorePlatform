@@ -110,7 +110,24 @@ class AuthService:
         """
         db = mongodb.get_database()
 
-        # Check if email already exists
+        # Check if email already exists.
+        #
+        # Reason (T-938): deliberately NOT filtered to deletedAt: None — a
+        # soft-deleted account (see api.v1.admin.delete_user) still counts
+        # as "this email is taken" here, consistent with the rule applied
+        # in login_via_cf_access: a soft-deleted account must not be
+        # silently resurrected (which registering a fresh account over its
+        # email would effectively do) and must not produce a 500 either.
+        # Today the users.email_1 index has no partial filter, so a real
+        # duplicate insert would fail at the DB layer regardless — this
+        # check just turns that into a clean 409 instead of relying on the
+        # except DuplicateKeyError branch below. Once
+        # scripts/migrations/t938_partial_unique_email_index.py lands
+        # (partialFilterExpression={"deletedAt": None}), a deleted email
+        # becomes reusable by design; an admin action (restore or purge),
+        # not a registration attempt, is what should free it up before
+        # then — see the admin.py:delete_user docstring correction for the
+        # restore-endpoint gap this exposed.
         existing_user = await db.users.find_one({"email": user_data.email})
         if existing_user:
             raise HTTPException(
@@ -1003,8 +1020,34 @@ class AuthService:
         # lookup only runs on the CF Access login path (not a hot path), so
         # the resulting collection scan is acceptable at users-collection
         # scale.
+        #
+        # Reason (T-938): deliberately NOT filtered to deletedAt: None. This
+        # used to filter it, which made a soft-deleted user (see
+        # api.v1.admin.delete_user — sets deletedAt + isActive: False, the
+        # document stays) invisible here, so a Cloudflare login for that
+        # email fell into the JIT-provisioning branch below and tried to
+        # insert_one() a brand-new document with the SAME email. The unique
+        # index on users.email_1 (no partial filter until the T-938
+        # migration lands, see scripts/migrations/
+        # t938_partial_unique_email_index.py) rejected it, and there was no
+        # try/except, so DuplicateKeyError propagated as an unhandled 500 on
+        # POST /api/v1/auth/cf-access/session — the user's one-time
+        # Cloudflare PIN got consumed, our app 500'd, and the retry told
+        # them the PIN was already used.
+        #
+        # The coherent rule (matches login_user / login_user_with_mfa_check
+        # below, which have never filtered deletedAt and rely on isActive
+        # alone): a soft-deleted account is still a row occupying this
+        # email. It must not be silently resurrected by JIT-provisioning a
+        # fresh doc over it, and looking it up must not crash either. Since
+        # delete_user always sets isActive: False alongside deletedAt, a
+        # soft-deleted user found here falls straight into the "not active"
+        # branch a few lines down and returns the identical pending_activation
+        # 403 as any other inactive account — no new branch needed, and the
+        # non-disclosure property (this endpoint never reveals whether an
+        # email is known) is preserved for free.
         user_doc = await db.users.find_one(
-            {"email": email, "deletedAt": None},
+            {"email": email},
             collation={"locale": "en", "strength": 2},
         )
 
@@ -1052,8 +1095,34 @@ class AuthService:
                     "deletedAt": None,
                     "metadata": {},
                 }
-                await db.users.insert_one(new_user_doc)
-                logger.info(f"JIT-provisioned pending Cloudflare Access user: {email}")
+                try:
+                    await db.users.insert_one(new_user_doc)
+                    logger.info(
+                        f"JIT-provisioned pending Cloudflare Access user: {email}"
+                    )
+                except DuplicateKeyError:
+                    # Reason (T-938): defense-in-depth, kept even though the
+                    # find_one above no longer filters deletedAt (see its
+                    # Reason comment) so this should no longer be reachable
+                    # via a soft-deleted tombstone. It still guards a genuine
+                    # race — e.g. two concurrent Cloudflare logins for the
+                    # same brand-new email both observing user_doc is None
+                    # before either insert lands — and it is cheap insurance
+                    # against the users.email_1 unique index (or any future
+                    # variant of it) rejecting an insert for a reason this
+                    # method didn't anticipate. Never let that escape as an
+                    # unhandled 500 again; log at WARNING (not INFO) because
+                    # a collision here means an admin should look at why —
+                    # most likely a soft-deleted account this deployment
+                    # hasn't purged or restored.
+                    logger.warning(
+                        "Cloudflare Access JIT-provisioning collided with an "
+                        "existing users.email index entry for %s — likely a "
+                        "soft-deleted account; returning pending_activation "
+                        "instead of a 500",
+                        email,
+                    )
+                    raise pending_activation_exception()
             else:
                 logger.info(
                     f"Cloudflare Access login for unknown email (JIT provisioning disabled): {email}"

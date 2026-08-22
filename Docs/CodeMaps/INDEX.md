@@ -1,8 +1,8 @@
 # A64 Core Platform — Codebase Knowledge Graph
 
-> **Generated:** 2026-08-07 08:14 UTC  
-> **Graph:** 822 nodes · 1008 edges  
-> **Tasks:** 26/26 mapping tasks completed
+> **Generated:** 2026-08-21 15:36 UTC  
+> **Graph:** 1214 nodes · 2578 edges  
+> **Tasks:** 29/33 mapping tasks completed
 
 ## What Is This?
 
@@ -17,7 +17,7 @@ architecture, dependencies, and relationships.
 A64 Core Platform is an agricultural management system with:
 - **Backend:** FastAPI (Python 3.11+), MongoDB 7.0, Redis 7
 - **Frontend:** React 18 + TypeScript, Vite, styled-components, TanStack Query
-- **Infrastructure:** Docker Compose, Nginx, 10 business modules (see Module Directory)
+- **Infrastructure:** Docker Compose, Nginx, business modules (see Module Directory below — hard-coding a count here only goes stale)
 - **AI:** Google Vertex AI (Gemini 2.5-flash) for Farm AI chat
 
 **Key ports:** API=8000 (nginx→80), Frontend=5173, MongoDB=27017, Redis=6379
@@ -28,7 +28,7 @@ A64 Core Platform is an agricultural management system with:
 |-----|----------|--------|
 | [api-map.md](api-map.md) | All REST API endpoints, routes, auth requirements, response types | ✅ |
 | [database-map.md](database-map.md) | MongoDB collections, document schemas, inter-collection relationships | ✅ |
-| [module-map.md](module-map.md) | Backend modules (farm, hr, crm, sales, logistics, marketing, ai_analytics), dependencies | ✅ |
+| [module-map.md](module-map.md) | Every backend module under `src/modules/` and its nodes by layer, plus cross-module dependencies (see the Module Directory below for the authoritative list) | ✅ |
 | [frontend-map.md](frontend-map.md) | React components, custom hooks, Zustand stores, TypeScript types, routing | ✅ |
 | [service-map.md](service-map.md) | Service layer classes, business logic, dependency injection graph | ✅ |
 
@@ -42,11 +42,15 @@ A64 Core Platform is an agricultural management system with:
 | `hr` | `src/modules/hr/` | Employee management, Emirates ID, payroll |
 | `crm` | `src/modules/crm/` | Customer relationships, contacts, leads |
 | `sales` | `src/modules/sales/` | Sales orders, invoices, products |
-| `purchasing` | `src/modules/purchasing/` | PR→PO→GR→AP chain, vendors, approvals |
-| `finance` | `src/modules/finance/` | Journal entries, CoA, periods (MySQL microservice, profile-gated) |
+| `purchasing` | `src/modules/purchasing/` | PR→PO→GR→AP chain, vendors, purchase items, payment terms, approvals |
+| `finance` | `src/modules/finance/` | Operational P&L analytics from MongoDB, mounted at `/api/v1/operations`. NOT the statutory GL — that is the MySQL microservice at `services/finance/` (`/api/v1/finance/*`, profile-gated), which has no mapping task and no nodes in this graph. |
 | `logistics` | `src/modules/logistics/` | Delivery, inventory, warehousing |
 | `marketing` | `src/modules/marketing/` | Campaigns, analytics |
 | `ai_analytics` | `src/modules/ai_analytics/` | Vertex AI integration, Farm AI chat |
+| `ai_assistant` | `src/modules/ai_assistant/` | Claude assistant: conversations, tool executor, cost tracking. Not a plugin — mounted from `src/api/routes.py` at `/api/v1/ai` |
+| `attachments` | `src/modules/attachments/` | Document attachments, pluggable storage, range requests. Not a plugin — mounted from `src/api/routes.py` at `/api/v1/attachments` |
+| `protocols` | `src/modules/protocols/` | Versioned SOPs, approve/retire lifecycle, scope tags, version pinning |
+| `finance_bridge` | `src/modules/finance_bridge/` | Outbox writer bridging ops events to the finance microservice |
 
 ## Key File Locations
 

@@ -23,7 +23,7 @@ A64 Core Platform is a modern, scalable API hub designed to handle web applicati
 ## Features
 
 - **FastAPI Backend** - High-performance async Python API
-- **Dual Database Support** - MongoDB for flexible schemas, MySQL for relational data
+- **MongoDB** - Primary datastore for the platform. (MySQL is used only by the optional finance service, not by the main API.)
 - **Docker Containerization** - Consistent development and production environments
 - **Auto-Generated API Docs** - Swagger UI and ReDoc included
 - **Health Monitoring** - Built-in health check and readiness endpoints
@@ -34,7 +34,7 @@ A64 Core Platform is a modern, scalable API hub designed to handle web applicati
 
 ### Backend
 - **Python 3.11** - Core programming language
-- **FastAPI 0.109.0** - Web framework
+- **FastAPI 0.128.0** - Web framework
 - **Uvicorn** - ASGI server
 - **Pydantic** - Data validation
 
@@ -82,13 +82,43 @@ Optional for local development without Docker:
 
 3. **Start the services**
    ```bash
-   docker-compose up -d
+   docker compose up -d
+   docker compose ps mongodb   # wait for healthy
    ```
 
-4. **Verify installation**
-   - API: http://localhost:8000
-   - API Docs: http://localhost:8000/api/docs
-   - Health Check: http://localhost:8000/api/health
+4. **Initiate the MongoDB replica set — REQUIRED, once per machine**
+
+   MongoDB runs with `--replSet rs0` and the API connects with
+   `?replicaSet=rs0`. Until this runs, every database call times out, the API
+   serves HTTP with a degraded database, and no admin account is ever created.
+
+   ```bash
+   docker exec <prefix>-mongodb-1 mongosh --quiet --eval \
+     'rs.initiate({_id:"rs0", members:[{_id:0, host:"mongodb:27017"}]})'
+   docker compose restart api
+   ```
+
+   Find `<prefix>` with `docker ps --format '{{.Names}}'` — it derives from your
+   directory name.
+
+5. **Verify installation**
+
+   Check the response **body**, not the container health status: the health
+   endpoint returns HTTP 200 with `"status": "degraded"` when the database is
+   down, so the container can report *healthy* on a dead database.
+
+   ```bash
+   curl -s http://localhost/api/health
+   # want: {"status":"healthy","database":"connected","redis":"connected"}
+   ```
+
+   - App: http://localhost/
+   - API Docs: http://localhost/api/docs
+
+> **New machine?** See
+> [`Docs/1-Main-Documentation/Local-Development-Setup.md`](Docs/1-Main-Documentation/Local-Development-Setup.md)
+> for the full walkthrough, including the `.env` values that matter and the
+> traps worth knowing before you hit them.
    - Database UI (Adminer): http://localhost:8080
 
 5. **View logs**
@@ -132,13 +162,22 @@ Optional for local development without Docker:
    uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-### Development with Docker (Hot Reload)
+### Development with Docker
 
-The docker-compose setup includes volume mounts for hot-reloading:
+`src/` is bind-mounted into the api container, so your edits are visible inside
+it immediately — but **the api container does NOT hot-reload**. Its `CMD` runs
+plain uvicorn with no `--reload` flag, so a Python change is not picked up until
+you restart:
+
 ```bash
-docker-compose up
+docker restart <prefix>-api-1
 ```
-Any changes to Python files in `src/` will automatically reload the application.
+
+Restart *immediately before verifying*, not merely after editing — a stale
+process serves old code while the files on disk look correct, which has produced
+false "verified" results. Find `<prefix>` with `docker ps --format '{{.Names}}'`.
+
+The frontend (Vite) **does** hot-reload and needs no restart.
 
 ## Project Structure
 
@@ -209,23 +248,18 @@ Access the database management interface at http://localhost:8080
 - Server: mongodb
 - Database: a64core_db
 
-**MySQL Connection:**
-- System: MySQL
-- Server: mysql
-- Username: root
-- Password: rootpassword (change in production!)
-- Database: a64core_db
+> There is no MySQL service in `docker-compose.yml`. MySQL exists only behind
+> the optional finance overlay (`docker-compose.finance.yml`) — see
+> `Docs/1-Main-Documentation/Deployment-Modes.md`.
 
 ### Direct Database Access
 
-**MongoDB:**
-```bash
-docker exec -it a64core-mongodb-dev mongosh
-```
+`mongosh` is not installed on the host; it exists only inside the container.
+Container names are prefixed by the compose project name, which derives from
+your directory — find yours with `docker ps --format '{{.Names}}'`.
 
-**MySQL:**
 ```bash
-docker exec -it a64core-mysql-dev mysql -u root -p
+docker exec -it <prefix>-mongodb-1 mongosh a64core_db
 ```
 
 ## Testing

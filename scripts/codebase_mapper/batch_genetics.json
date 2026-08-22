@@ -5,20 +5,14 @@
     "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
     "node_id_convention_summary": "Backend dot-notation at file-level snake_case (genetics.api.*, genetics.service.*, genetics.model.*) per the 'new modules' rule. Frontend double-colon (component::, hook::, service::, type::). Collections use collection_<snake_case>.",
     "task": "T-800 \u2014 Genetics Repo module (extended: T-804/805/806/807/808/809 label/QR, purge & maintenance)",
-    "scope": [
-      "src/modules/genetics/",
-      "frontend/user-portal/src/pages/genetics/",
-      "frontend/user-portal/src/components/genetics/",
-      "frontend/user-portal/src/hooks/genetics/",
-      "frontend/user-portal/src/services/geneticsApi.ts",
-      "frontend/user-portal/src/types/genetics.ts",
-      "frontend/user-portal/src/pages/public/LabelInfoPage.tsx"
-    ],
+    "scope": "src/modules/genetics/",
     "convention_divergences": [
       "components/genetics/Modal.tsx exports `Modal`, but a bare `component::Modal` node_id would be too generic and would collide with the first other modal any future task maps. Scoped to `component::GeneticsModal` (name field keeps the real export, `Modal`).",
       "components/genetics/kindIcons.ts exports a Record<OrganismKind, LucideIcon> map, not a component, but is scoped as component::GeneticsKindIcons (name field keeps the real export, KIND_ICON_COMPONENTS) since it is a small shared UI primitive rather than a type/service/hook.",
       "frontend/user-portal/src/pages/public/LabelInfoPage.tsx lives outside pages/genetics/ (and outside ProtectedRoute/MainLayout entirely \u2014 it is the public unauthenticated page a scanned QR opens) but is mapped in this genetics batch since it is genetics-domain content with no other natural home."
-    ]
+    ],
+    "task_id": "map_genetics_module",
+    "known_fixes": "core.services.database (plural) is NOT a node; genetics.service.database uses core.service.database (singular). Do not reintroduce."
   },
   "nodes": [
     {
@@ -177,7 +171,7 @@
         "get_events_for_accessions",
         "amend_event"
       ],
-      "description": "T-800 CORE RULE lives here. derive_generations: asexual method -> G+1 with F inherited; sexual method -> F+1 with G reset to 0. A spore print off a G5 fruit is F1-G0, not G6. Children are written before the event so an orphaned accession is recoverable but a dangling event is not. T-808: amend_event() corrects performedAt only, cascades to resultAccessionIds' acquiredAt where still equal to the OLD performedAt, stamps amendedAt/amendedBy, returns (event, accessions_updated, accessions_skipped)."
+      "description": "T-800 CORE RULE lives here. derive_generations: asexual method -> G+1 with F inherited; sexual method -> F+1 with G reset to 0. A spore print off a G5 fruit is F1-G0, not G6. Children are written before the event so an orphaned accession is recoverable but a dangling event is not. T-808: amend_event() corrects performedAt only, cascades to resultAccessionIds' acquiredAt where still equal to the OLD performedAt, stamps amendedAt/amendedBy, returns (event, accessions_updated, accessions_skipped). Propagation events likewise pin the cited SOP via protocol_link.build_protocol_ref."
     },
     {
       "node_id": "genetics.service.medium_service",
@@ -199,7 +193,7 @@
         "find_accessions_by_additive",
         "get_batch_codes"
       ],
-      "description": "T-800 Recipes and batches. Editing any formulation field bumps recipe version; batches snapshot ingredients/additives at pour time so history is never rewritten. find_accessions_by_additive matches batch snapshots, not live recipes."
+      "description": "T-800 Recipes and batches. Editing any formulation field bumps recipe version; batches snapshot ingredients/additives at pour time so history is never rewritten. find_accessions_by_additive matches batch snapshots, not live recipes. Batch creation pins the cited SOP through protocol_link.build_protocol_ref, so a later protocol revision cannot rewrite which procedure a pour actually followed."
     },
     {
       "node_id": "genetics.service.observation_service",
@@ -451,7 +445,7 @@
         "startup_hook",
         "shutdown_hook"
       ],
-      "description": "T-800 Plugin-system entry point. Manifest declares industries:['all'] / industry_mode:'shared' so the repo is visible to every division, unlike the exclusive mushroom_manager module. T-804 step 3: mounts a SECOND router (api.v1.public:router) at the fixed literal prefix /api/v1/public/genetics, deliberately separate from the authenticated api_router mount above it \u2014 the platform's first unauthenticated route. Manifest also declares two new permission tiers: genetics.delete.cascade (T-809 cascade purge, one tier above genetics.delete) and genetics.maintenance (T-809 orphan sweep delete), both super_admin only."
+      "description": "T-800 Plugin-system entry point. Manifest declares industries:['all'] / industry_mode:'shared' so the repo is visible to every division, unlike the exclusive mushroom_manager module. T-804 step 3: mounts a SECOND router (api.v1.public:router) at the fixed literal prefix /api/v1/public/genetics, deliberately separate from the authenticated api_router mount above it \u2014 the platform's first unauthenticated route. Manifest also declares two new permission tiers: genetics.delete.cascade (T-809 cascade purge, one tier above genetics.delete) and genetics.maintenance (T-809 orphan sweep delete), both super_admin only. T-925: the printer health route rides on the existing authenticated api_router mount (prefix /printer) \u2014 no new mount was added, so the unauthenticated surface is still exactly PUBLIC_API_PREFIX."
     },
     {
       "node_id": "genetics.utils.responses",
@@ -570,7 +564,7 @@
         "OrphanCounts",
         "OrphanRecords"
       ],
-      "description": "T-800 TypeScript mirror of the genetics Pydantic models plus display-label maps. SENESCENCE_WATCH_GENERATION mirrors the backend dashboard constant. T-807/T-809 additions: LineDependents/PlainPurgeResult/CascadePurgeResult/PurgeLineParams mirror LineService's three removal paths; OrphanAccession/OrphanObservation/OrphanPropagationEvent/OrphanCounts/OrphanRecords mirror MaintenanceService.find_orphans()/delete_orphans()."
+      "description": "T-800 TypeScript mirror of the genetics Pydantic models plus display-label maps. SENESCENCE_WATCH_GENERATION mirrors the backend dashboard constant. T-807/T-809 additions: LineDependents/PlainPurgeResult/CascadePurgeResult/PurgeLineParams mirror LineService's three removal paths; OrphanAccession/OrphanObservation/OrphanPropagationEvent/OrphanCounts/OrphanRecords mirror MaintenanceService.find_orphans()/delete_orphans(). T-925 label-printer additions: PrinterHealth (configured / ok / status[] / printer / jobsQueued \u2014 GET .../printer/health always resolves 200 even when the printer is unreachable, so callers must check configured/ok rather than catch); PrintLabelsParams (from/to/size/copies, same '29x90' | '17x87' | '62xN' size vocabulary as GetLabelsPdfParams); and PrintLabelsResult, whose jobId is `number | null` \u2014 the printer's OWN job number, null when the spooler accepted the job without reporting an id back, so it must never be treated as a required handle."
     },
     {
       "node_id": "service::geneticsApi",
@@ -618,7 +612,7 @@
         "deleteOrphans",
         "getGeneticsDashboard"
       ],
-      "description": "T-800 Axios wrappers over /api/v1/genetics. T-807/T-809: getLineDependents/purgeLine (plain + cascade, via PurgeLineParams) and getOrphans/deleteOrphans against genetics.api.maintenance. T-804: getLabelsPdf against genetics.api.labels \u2014 blob download with the auth header (a plain href can't carry one), filename read from Content-Disposition. NOTE: no by-token wrapper exists yet \u2014 T-806 part 2 ('act on scan') is not started; LabelInfoPage.tsx (the public/anonymous consumer of that data) uses a plain fetch on a relative path instead of this service, deliberately, so the authenticated axios instance never attaches a token and redirects an anonymous scan to /login."
+      "description": "T-800 Axios wrappers over /api/v1/genetics. T-807/T-809: getLineDependents/purgeLine (plain + cascade, via PurgeLineParams) and getOrphans/deleteOrphans against genetics.api.maintenance. T-804: getLabelsPdf against genetics.api.labels \u2014 blob download with the auth header (a plain href can't carry one), filename read from Content-Disposition. NOTE: no by-token wrapper exists yet \u2014 T-806 part 2 ('act on scan') is not started; LabelInfoPage.tsx (the public/anonymous consumer of that data) uses a plain fetch on a relative path instead of this service, deliberately, so the authenticated axios instance never attaches a token and redirects an anonymous scan to /login. PRINTER (T-804 follow-up / T-925): getPrinterHealth() hits GET /genetics/printer/health, which always resolves 200 \u2014 a missing or offline printer is reported through configured/ok/status, never an HTTP error \u2014 and printLabels(accessionId, params) POSTs /genetics/accessions/{id}/labels/print, the direct-to-printer twin of getLabelsPdf. printLabels is a plain JSON request (not a blob), so failures surface as ordinary AxiosErrors and callers read err.response?.data?.detail, and it raises the same labelledVesselCount high-water mark as the PDF path."
     },
     {
       "node_id": "hook::useGenetics",
@@ -664,7 +658,7 @@
         "useDeleteOrphans",
         "useGeneticsDashboard"
       ],
-      "description": "T-800 TanStack Query hooks. Mutations invalidate the whole ['genetics'] root because a propagation touches lines, accessions, lineage and dashboard at once. T-807/T-809: useLineDependents/usePurgeLine (RemoveLineModal is documented as the sole intended consumer of usePurgeLine's cascade path) and useOrphans/useDeleteOrphans."
+      "description": "T-800 TanStack Query hooks. Mutations invalidate the whole ['genetics'] root because a propagation touches lines, accessions, lineage and dashboard at once. T-807/T-809: useLineDependents/usePurgeLine (RemoveLineModal is documented as the sole intended consumer of usePurgeLine's cascade path) and useOrphans/useDeleteOrphans. T-804 follow-up: usePrinterHealth is a useQuery with a 15s staleTime so PrintLabelsModal notices a printer coming back online without a page reload, and it never needs isError handling because the endpoint always resolves; usePrintLabels(accessionId) is a useMutation \u2014 never a query \u2014 because printing is a physical, irreversible side effect, and it invalidates the ['genetics'] root like useGetLabelsPdf since it also raises labelledVesselCount."
     },
     {
       "node_id": "component::GeneticsRepoPage",
@@ -892,7 +886,7 @@
     {
       "node_id": "genetics.api.labels",
       "node_type": "api_endpoint",
-      "name": "GET /genetics/accessions/{id}/labels",
+      "name": "GET/POST /genetics/accessions/{id}/labels",
       "file_path": "src/modules/genetics/api/v1/labels.py",
       "line_number": 1,
       "module": "genetics",
@@ -902,7 +896,7 @@
         "compute_qr_geometry",
         "build_label_payload"
       ],
-      "description": "T-804. Renders a print-ready label PDF for a Brother QL-800, one page per vessel in [from, to]. Tape sizes: 29x90 and 17x87 fixed die-cut, or 62xN continuous (N = feed length mm, 12-100, parsed/validated by _parse_tape_spec/_tape_dimensions, 400 on anything malformed or out of range, never a 500). Line 1 (accession code/vessel) draws in Space Mono Bold, lines 2-4 in Hanken Grotesk \u2014 both vendored TTFs under src/modules/genetics/assets/fonts/, embedded via reportlab with a Helvetica fallback that has never actually fired. A small brand mark (src/modules/genetics/assets/brand/mark-mono-1bit.png) draws only when real measured spare space exists (below the text block, or horizontally right of lines 2/3 as a fallback), 5-8mm, never a fixed corner guess. Printing raises labelledVesselCount to max(current, to) \u2014 read-only in permission (require_view) but not in effect."
+      "description": "T-804. Renders a print-ready label PDF for a Brother QL-800, one page per vessel in [from, to]. Tape sizes: 29x90 and 17x87 fixed die-cut, or 62xN continuous (N = feed length mm, 12-100, parsed/validated by _parse_tape_spec/_tape_dimensions, 400 on anything malformed or out of range, never a 500). Line 1 (accession code/vessel) draws in Space Mono Bold, lines 2-4 in Hanken Grotesk \u2014 both vendored TTFs under src/modules/genetics/assets/fonts/, embedded via reportlab with a Helvetica fallback that has never actually fired. A small brand mark (src/modules/genetics/assets/brand/mark-mono-1bit.png) draws only when real measured spare space exists (below the text block, or horizontally right of lines 2/3 as a fallback), 5-8mm, never a fixed corner guess. Printing raises labelledVesselCount to max(current, to) \u2014 read-only in permission (require_view) but not in effect. T-925: gained POST /{accession_id}/labels/print \u2014 the direct-to-printer twin. Builds the byte-identical PDF via the extracted shared helper _build_labels_pdf (same range resolution and layout), then hands it to core.service.label_printer_service.print_pdf(). Differences from the GET route, all deliberate: default tape is 62x15 (the roll physically loaded on the reference printer) not 29x90; _printer_label_for_size maps any 62xN spec to the printer media id '62' (length lives in the PDF page geometry, not the media field) while 29x90/17x87 pass through unchanged; it requires genetics.edit (require_permission) rather than the GET route's require_view, because printing is a physical irreversible action; and it raises labelledVesselCount ONLY AFTER the printer confirms success \u2014 a refused or failed print leaves the high-water mark untouched, whereas GET still bumps unconditionally (unchanged by the refactor). Also takes `copies`, capped at label_printer_service.MAX_COPIES. Returns a hand-built {'data': {...}} envelope with no response_model, because the payload's 'from' key is a Python reserved word. The shared helpers _build_labels_pdf and _bump_labelled_vessel_count were extracted for this; the GET route's behaviour is unchanged."
     },
     {
       "node_id": "genetics.api.maintenance",
@@ -1103,6 +1097,34 @@
         "OrphanSweepCard"
       ],
       "description": "T-809. Settings-page card wrapping useOrphans/useDeleteOrphans \u2014 the org-wide orphan sweep UI. Self-gates to super_admin (same pattern as the existing ModulesSettingsCard), rendered alongside it in Settings.tsx."
+    },
+    {
+      "node_id": "genetics.api.printer",
+      "node_type": "api_endpoint",
+      "name": "GET /genetics/printer/health",
+      "file_path": "src/modules/genetics/api/v1/printer.py",
+      "line_number": 1,
+      "module": "genetics",
+      "layer": "api",
+      "exports": [
+        "router",
+        "PrinterHealthResponse",
+        "get_printer_health"
+      ],
+      "description": "T-925. Mounted at /api/v1/genetics/printer (see api/v1/__init__.py). One route: GET /health, wrapped in SuccessResponse[PrinterHealthResponse] (configured / ok / status[] / printer / jobsQueued). ALWAYS returns HTTP 200 \u2014 an unconfigured or unreachable printer is data for the UI to render, not a server error, so callers branch on `configured`/`ok`, never on the status code. `ok` is true only when the printer reported ok AND status == ['ready']; `status` carries the printer's own list ('offline', 'paper_out', 'error', 'unreachable'). Deliberately thin: all resolution and error-swallowing live in core.service.label_printer_service.health(), which never raises. Permission: require_view (genetics.view) \u2014 reading printer state is not a physical action, unlike POST .../labels/print which needs genetics.edit."
+    },
+    {
+      "node_id": "genetics.service.protocol_link",
+      "node_type": "function",
+      "name": "build_protocol_ref",
+      "file_path": "src/modules/genetics/services/protocol_link.py",
+      "line_number": 29,
+      "module": "genetics",
+      "layer": "service",
+      "exports": [
+        "build_protocol_ref"
+      ],
+      "description": "Resolves a protocolId into a pinned, denormalised reference {protocolId, code, title, version, followedAt} stored on a work record by MediumService (batch pours) and PropagationService (clone/cross events). Reads the `protocols` collection DIRECTLY via genetics_db rather than importing the protocols service \u2014 both modules are shared (industries:['all']) so the dependency is safe, but keeping it at the data layer avoids a service import cycle. Denormalisation is the point: storing only an id would let the displayed procedure drift from the one actually followed the moment someone revises the protocol. Returns None when no protocol was named (work without a cited procedure stays valid, it just carries no compliance trail); 404s on an unknown id and 400s when the protocol is not `active`, because citing a draft or retired procedure would make the compliance trail worse than having none."
     }
   ],
   "edges": [
@@ -1353,14 +1375,6 @@
       "context": "Genetics routes reuse farm_manager's auth dependencies (get_current_active_user, require_permission).",
       "source_file": "src/modules/genetics/register.py",
       "target_file": "src/modules/farm_manager/middleware/auth.py"
-    },
-    {
-      "edge_type": "uses",
-      "source_id": "genetics.service.database",
-      "target_id": "core.services.database",
-      "context": "Delegates connection pooling and health checks to the core MongoDB manager.",
-      "source_file": "src/modules/genetics/services/database.py",
-      "target_file": "src/services/database.py"
     },
     {
       "edge_type": "calls",
@@ -1913,6 +1927,886 @@
       "context": "Reads user.role for canDeleteLines gating.",
       "source_file": "frontend/user-portal/src/pages/genetics/LineDetailPage.tsx",
       "target_file": "frontend/user-portal/src/stores/auth.store.ts"
+    },
+    {
+      "source_id": "genetics.api.accessions",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/accessions.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.dashboard",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/dashboard.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.lineage",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/lineage.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.lines",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/lines.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.maintenance",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/maintenance.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.media",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/media.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.observations",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/observations.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.printer",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/printer.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.propagations",
+      "target_id": "genetics.utils.responses",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/propagations.py",
+      "target_file": "src/modules/genetics/utils/responses.py",
+      "context": "from ...utils.responses import SuccessResponse/PaginatedResponse/paginate"
+    },
+    {
+      "source_id": "genetics.api.dashboard",
+      "target_id": "genetics.middleware.auth",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/dashboard.py",
+      "target_file": "src/modules/genetics/middleware/auth.py",
+      "context": "from ...middleware.auth import CurrentUser, require_view/require_permission"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "genetics.middleware.auth",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/modules/genetics/middleware/auth.py",
+      "context": "from ...middleware.auth import CurrentUser, require_view/require_permission"
+    },
+    {
+      "source_id": "genetics.api.lineage",
+      "target_id": "genetics.middleware.auth",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/lineage.py",
+      "target_file": "src/modules/genetics/middleware/auth.py",
+      "context": "from ...middleware.auth import CurrentUser, require_view/require_permission"
+    },
+    {
+      "source_id": "genetics.api.maintenance",
+      "target_id": "genetics.middleware.auth",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/maintenance.py",
+      "target_file": "src/modules/genetics/middleware/auth.py",
+      "context": "from ...middleware.auth import CurrentUser, require_view/require_permission"
+    },
+    {
+      "source_id": "genetics.api.printer",
+      "target_id": "genetics.middleware.auth",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/printer.py",
+      "target_file": "src/modules/genetics/middleware/auth.py",
+      "context": "from ...middleware.auth import CurrentUser, require_view/require_permission"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.middleware.auth",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/middleware/auth.py",
+      "context": "from ...middleware.auth import CurrentUser, require_view/require_permission"
+    },
+    {
+      "source_id": "genetics.api.lineage",
+      "target_id": "genetics.model.lineage",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/lineage.py",
+      "target_file": "src/modules/genetics/models/lineage.py",
+      "context": "from ...models.lineage import AncestryChain, LineageGraph"
+    },
+    {
+      "source_id": "genetics.api.lines",
+      "target_id": "genetics.model.line",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/lines.py",
+      "target_file": "src/modules/genetics/models/line.py",
+      "context": "from ...models.line import Line, LineCreate, LineUpdate, LineWithStats"
+    },
+    {
+      "source_id": "genetics.api.media",
+      "target_id": "genetics.model.medium",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/media.py",
+      "target_file": "src/modules/genetics/models/medium.py",
+      "context": "from ...models.medium import Recipe/Batch models"
+    },
+    {
+      "source_id": "genetics.api.media",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/media.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession (additive readout)"
+    },
+    {
+      "source_id": "genetics.api.observations",
+      "target_id": "genetics.model.observation",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/observations.py",
+      "target_file": "src/modules/genetics/models/observation.py",
+      "context": "from ...models.observation import Observation, ObservationCreate, ..."
+    },
+    {
+      "source_id": "genetics.api.observations",
+      "target_id": "genetics.model.line",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/observations.py",
+      "target_file": "src/modules/genetics/models/line.py",
+      "context": "from ...models.line import Line (promotion result)"
+    },
+    {
+      "source_id": "genetics.api.observations",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/observations.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession (promotion result)"
+    },
+    {
+      "source_id": "genetics.api.propagations",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/propagations.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession"
+    },
+    {
+      "source_id": "genetics.api.propagations",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/propagations.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from ...models.enums import PropagationMethod, ReproductionMode (GET /methods)"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.model.lineage",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/models/lineage.py",
+      "context": "from ...models.lineage import AncestryStep, LineageGraph"
+    },
+    {
+      "source_id": "genetics.api.lines",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/lines.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ...services.database import genetics_db"
+    },
+    {
+      "source_id": "genetics.api.maintenance",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/maintenance.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ...services.database import genetics_db"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ...services.database import ACCESSIONS, genetics_db"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ...services.common import doc_to_model"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.lineage_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "context": "from ...services.lineage.lineage_service import LineageService"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.medium_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/medium/medium_service.py",
+      "context": "from ...services.medium.medium_service import MediumService"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "genetics.service.propagation_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "context": "from ...services.propagation.propagation_service import PropagationService"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "genetics.service.accession_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/modules/genetics/services/accession/accession_service.py",
+      "context": "from ...services.accession.accession_service import AccessionService"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "genetics.service.line_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/modules/genetics/services/line/line_service.py",
+      "context": "from ...services.line.line_service import LineService"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "genetics.service.medium_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/modules/genetics/services/medium/medium_service.py",
+      "context": "from ...services.medium.medium_service import MediumService"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ...services.database import ACCESSIONS, genetics_db"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "collection_genetic_accessions",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "_bump_labelled_vessel_count(): $set labelledVesselCount high-water mark on ACCESSIONS"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "core.service.deployment_settings_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/services/deployment_settings_service.py",
+      "context": "from src.services.deployment_settings_service import get_value \u2014 resolves PUBLIC_BASE_URL for the QR payload"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "core.service.user_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/services/user_service.py",
+      "context": "from src.services.user_service import UserService \u2014 resolves the organization for label branding"
+    },
+    {
+      "source_id": "genetics.api.printer",
+      "target_id": "core.service.label_printer_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/printer.py",
+      "target_file": "src/services/label_printer_service.py",
+      "context": "label_printer_service.health() \u2014 never raises, so this route is always HTTP 200"
+    },
+    {
+      "source_id": "genetics.api.labels",
+      "target_id": "core.service.label_printer_service",
+      "edge_type": "calls",
+      "source_file": "src/modules/genetics/api/v1/labels.py",
+      "target_file": "src/services/label_printer_service.py",
+      "context": "label_printer_service.print_pdf() in POST /{accession_id}/labels/print (T-925); MAX_COPIES caps the copies query param"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "core.middleware.rate_limit",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/middleware/rate_limit.py",
+      "context": "from src.middleware.rate_limit import rate_limiter \u2014 the unauthenticated route is rate limited"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "core.service.organization_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/services/organization_service.py",
+      "context": "from src.services.organization_service import OrganizationService \u2014 reads PublicInfoPageConfig show* flags"
+    },
+    {
+      "source_id": "genetics.api.public",
+      "target_id": "core.service.user_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/api/v1/public.py",
+      "target_file": "src/services/user_service.py",
+      "context": "from src.services.user_service import UserService \u2014 optional-auth user lookup"
+    },
+    {
+      "source_id": "genetics.service.accession_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/accession/accession_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.vessel_resolver",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/accession/vessel_resolver.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.dashboard_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/dashboard_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.line_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.maintenance_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/maintenance/maintenance_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.medium_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.protocol_link",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/protocol_link.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "from ..database import genetics_db + collection-name constants"
+    },
+    {
+      "source_id": "genetics.service.vessel_resolver",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/accession/vessel_resolver.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ..common import doc_to_model / model_to_doc / scope_fields"
+    },
+    {
+      "source_id": "genetics.service.line_service",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ..common import doc_to_model / model_to_doc / scope_fields"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ..common import doc_to_model / model_to_doc / scope_fields"
+    },
+    {
+      "source_id": "genetics.service.medium_service",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ..common import doc_to_model / model_to_doc / scope_fields"
+    },
+    {
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ..common import doc_to_model / model_to_doc / scope_fields"
+    },
+    {
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ..common import doc_to_model / model_to_doc / scope_fields"
+    },
+    {
+      "source_id": "genetics.service.accession_service",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/accession/accession_service.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession, AccessionCreate, AccessionUpdate, AccessionSplit"
+    },
+    {
+      "source_id": "genetics.service.accession_service",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/accession/accession_service.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from ...models.enums import AccessionStatus"
+    },
+    {
+      "source_id": "genetics.service.vessel_resolver",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/accession/vessel_resolver.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession"
+    },
+    {
+      "source_id": "genetics.service.vessel_resolver",
+      "target_id": "collection_genetic_accessions",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/genetics/services/accession/vessel_resolver.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "walks split() chains forward through ACCESSIONS to find the child holding a scanned vessel"
+    },
+    {
+      "source_id": "genetics.service.dashboard_service",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/dashboard_service.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from ..models.enums import AccessionStatus"
+    },
+    {
+      "source_id": "genetics.service.dashboard_service",
+      "target_id": "collection_genetic_lines",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/genetics/services/dashboard_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "lines-by-biological-domain counters"
+    },
+    {
+      "source_id": "genetics.service.dashboard_service",
+      "target_id": "collection_genetic_observations",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/genetics/services/dashboard_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "30-day activity + novel traits awaiting promotion"
+    },
+    {
+      "source_id": "genetics.service.dashboard_service",
+      "target_id": "collection_propagation_events",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/genetics/services/dashboard_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "30-day propagation activity"
+    },
+    {
+      "source_id": "genetics.service.dashboard_service",
+      "target_id": "collection_medium_batches",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/genetics/services/dashboard_service.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "30-day pour activity"
+    },
+    {
+      "source_id": "genetics.service.line_service",
+      "target_id": "genetics.model.line",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/line/line_service.py",
+      "target_file": "src/modules/genetics/models/line.py",
+      "context": "from ...models.line import Line, LineCreate, LineStats, LineUpdate, LineWithStats"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.config.settings",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/config/settings.py",
+      "context": "MAX_LINEAGE_DEPTH / MAX_LINEAGE_NODES traversal guards"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.model.lineage",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/models/lineage.py",
+      "context": "from ...models.lineage import LineageGraph, LineageNode, LineageEdge, AncestryChain, AncestryStep"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from ...models.enums import ParentRole"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.service.accession_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/services/accession/accession_service.py",
+      "context": "from ..accession.accession_service import AccessionService"
+    },
+    {
+      "source_id": "genetics.service.lineage_service",
+      "target_id": "genetics.service.line_service",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/genetics/services/lineage/lineage_service.py",
+      "target_file": "src/modules/genetics/services/line/line_service.py",
+      "context": "from ..line.line_service import LineService"
+    },
+    {
+      "source_id": "genetics.service.medium_service",
+      "target_id": "genetics.model.medium",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/models/medium.py",
+      "context": "from ...models.medium import Recipe/Batch models"
+    },
+    {
+      "source_id": "genetics.service.medium_service",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession (find_accessions_by_additive)"
+    },
+    {
+      "source_id": "genetics.service.medium_service",
+      "target_id": "genetics.service.protocol_link",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/medium/medium_service.py",
+      "target_file": "src/modules/genetics/services/protocol_link.py",
+      "context": "from ..protocol_link import build_protocol_ref \u2014 pins the SOP onto a pour"
+    },
+    {
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.model.observation",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/models/observation.py",
+      "context": "from ...models.observation import Observation, ObservationCreate, ..."
+    },
+    {
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.model.line",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/models/line.py",
+      "context": "from ...models.line import Line, LineCreate, Provenance (promote_trait)"
+    },
+    {
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession, ParentRef (promote_trait founding accession)"
+    },
+    {
+      "source_id": "genetics.service.observation_service",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/observation/observation_service.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from ...models.enums import ObservationType, ParentRole, ProvenanceType"
+    },
+    {
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.model.propagation",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/models/propagation.py",
+      "context": "from ...models.propagation import PropagationEvent, PropagationCreate, ..."
+    },
+    {
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from ...models.accession import Accession, ParentRef, StorageLocation"
+    },
+    {
+      "source_id": "genetics.service.propagation_service",
+      "target_id": "genetics.service.protocol_link",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/services/propagation/propagation_service.py",
+      "target_file": "src/modules/genetics/services/protocol_link.py",
+      "context": "from ..protocol_link import build_protocol_ref \u2014 pins the SOP onto a clone/cross event"
+    },
+    {
+      "source_id": "genetics.service.protocol_link",
+      "target_id": "collection_protocols",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/genetics/services/protocol_link.py",
+      "target_file": "src/modules/protocols/services/database.py",
+      "context": "reads the `protocols` collection directly (db['protocols'].find_one) rather than importing the protocols service, to avoid a service import cycle"
+    },
+    {
+      "source_id": "genetics.model.accession",
+      "target_id": "genetics.model.line",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/models/accession.py",
+      "target_file": "src/modules/genetics/models/line.py",
+      "context": "from .line import Provenance"
+    },
+    {
+      "source_id": "genetics.model.accession",
+      "target_id": "genetics.service.common",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/models/accession.py",
+      "target_file": "src/modules/genetics/services/common.py",
+      "context": "from ..services.common import generate_public_token (T-804 publicToken default)"
+    },
+    {
+      "source_id": "genetics.model.line",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/models/line.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from .enums import DerivationType, OrganismKind, ProvenanceType"
+    },
+    {
+      "source_id": "genetics.model.lineage",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/models/lineage.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from .enums import ..."
+    },
+    {
+      "source_id": "genetics.model.medium",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/models/medium.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from .enums import IngredientUnit, MediumBatchStatus, MediumType, SterilizationMethod"
+    },
+    {
+      "source_id": "genetics.model.observation",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/models/observation.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from .enums import DerivationType, ObservationType"
+    },
+    {
+      "source_id": "genetics.model.propagation",
+      "target_id": "genetics.model.enums",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/models/propagation.py",
+      "target_file": "src/modules/genetics/models/enums.py",
+      "context": "from .enums import PropagationMethod, ReproductionMode, VesselForm"
+    },
+    {
+      "source_id": "genetics.model.propagation",
+      "target_id": "genetics.model.accession",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/models/propagation.py",
+      "target_file": "src/modules/genetics/models/accession.py",
+      "context": "from .accession import ParentRef, StorageLocation"
+    },
+    {
+      "source_id": "genetics.middleware.auth",
+      "target_id": "farm_manager.middleware.auth",
+      "edge_type": "imports",
+      "source_file": "src/modules/genetics/middleware/auth.py",
+      "target_file": "src/modules/farm_manager/middleware/auth.py",
+      "context": "Identity ONLY (CurrentUser, get_current_user, get_current_active_user, security) is reused from farm_manager; the genetics.* permission-to-role mapping lives in genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.config.settings",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/config/settings.py",
+      "context": "route_prefix = prefix or settings.API_PREFIX"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.service.database",
+      "edge_type": "uses",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/services/database.py",
+      "context": "startup_hook awaits genetics_db.connect() (index creation); shutdown_hook disconnects"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.public",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/public.py",
+      "context": "mounts public_router at the hardcoded literal PUBLIC_API_PREFIX='/api/v1/public/genetics', separate from api_router \u2014 the module's entire unauthenticated surface"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.accessions",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/accessions.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.dashboard",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/dashboard.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.labels",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/labels.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.lineage",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/lineage.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.lines",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/lines.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.maintenance",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/maintenance.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.media",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/media.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.observations",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/observations.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.printer",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/printer.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
+    },
+    {
+      "source_id": "genetics.register",
+      "target_id": "genetics.api.propagations",
+      "edge_type": "exports",
+      "source_file": "src/modules/genetics/register.py",
+      "target_file": "src/modules/genetics/api/v1/propagations.py",
+      "context": "included in api_router (api/v1/__init__.py) and mounted at settings.API_PREFIX=/api/v1/genetics"
     }
   ]
 }
