@@ -5,6 +5,70 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Fixes: an authorisation bypass, a login 500, a refresh 404, and a wrong collection name (T-927, T-928, T-938)
+
+**Scope:** four defects, three of them found by regenerating the CodeMaps
+(T-926) rather than by a bug report. **Classification: PATCH** (no API shape
+changes; one endpoint becomes correctly restricted). Version number TBD —
+same open drift as every other pending entry in this file. (Viet Anh)
+
+### Fixed
+
+- **`require_permission` failed open in farm_manager (T-927, SECURITY).** It
+  resolved permissions with an `if/elif` chain over four strings and no
+  `else`, so any unrecognised string returned `current_user` unchecked. This
+  was live, not theoretical: `"admin.manage"` was never one of the branches
+  and guards three admin-only weather-cache endpoints (`weather.py` lines
+  217/252/291), which were reachable by any authenticated user. Replaced with
+  the fail-closed `PERMISSION_ROLES` lookup `genetics` and `protocols`
+  already used; `admin.manage` is registered to admin/super_admin so the
+  endpoints close rather than break. Unregistered strings now deny at
+  dependency-construction time, so a typo in a new route fails at boot.
+  `finance`, `hr`, `logistics`, `crm`, `sales` and `marketing` still use the
+  same shape but each handles every string it actually passes — audited, no
+  live hole, left for a deliberate follow-up.
+- **Quote documents pointed at a collection that never existed (T-928).**
+  Two sites mapped `QUOTE` to `quotes_v2*` while `quote_service` writes to
+  `sales_quotes`. Quote audit history always returned empty, and — not
+  previously reported — `_assert_sales_v2_document_is_draft` found nothing
+  and raised `LookupError`, so uploading or deleting an attachment on any
+  Quote always failed with a misleading "document not found". The comment
+  claiming one dict "mirrors" the other is what propagated the bug and is
+  replaced by an explicit table plus a guard test.
+- **Cloudflare Access login 500'd on any soft-deleted email (T-938).**
+  `users.email_1` was a full unique index while deletion is a *soft* delete,
+  and `login_via_cf_access` filtered its lookup to `deletedAt: None` — so a
+  soft-deleted user looked unknown, fell into JIT provisioning, and hit the
+  index. `DuplicateKeyError` escaped as an unhandled 500 (30 occurrences in
+  retained logs). Reported as three separate problems — "the PIN says it's
+  already used", "users cannot register", "registered users don't appear in
+  the database". **The PIN symptom was downstream of our 500**: Cloudflare
+  accepts and consumes the code, our app fails, the user retries the same
+  code, and Cloudflare correctly reports it used. Cloudflare was never at
+  fault. A soft-deleted account now returns the existing pending-activation
+  403 — the same shape as an unknown email, so the endpoint still never
+  reveals whether an address is known.
+  `scripts/migrations/t938_partial_unique_email_index.py` replaces the index
+  with a partial unique one (`deletedAt: null`) so a deleted email can be
+  reused; it defaults to a dry run and aborts if any two live users share an
+  email.
+- **SPA admin pages 404'd on refresh.** `/admin/users` and
+  `/admin/tenant-setup` returned FastAPI's `{"detail":"Not Found"}` on a full
+  page load, because nginx's `location /admin/` sent the whole prefix to the
+  API for the legacy static panel while the React SPA also owns those paths.
+  Client-side navigation worked; refresh and deep links did not. The legacy
+  panel moves to `/legacy-admin/`. Fix authored 2026-08-05, unmerged until
+  now.
+- **A boot-time landmine that would have silently undone the T-938
+  migration.** `services/database.py`'s `_create_indexes` runs on every
+  startup and recreated the plain unique `email_1`; the first api restart
+  after migrating would have restored the broken index with no error. It now
+  creates the partial index under an explicit name.
+- **Two docstrings that promised behaviour the code lacked:**
+  `admin.delete_user` claimed users "can be restored within 90 days" (no
+  restore endpoint exists), and `get_current_active_user` claimed to verify
+  email (it only checks `isActive`). Corrected without changing behaviour.
+
 ## [Unreleased] — Genetics: network label printing to a Brother QL-800 (T-925)
 
 **Scope:** T-925. Genetics vessel labels can now be spooled straight to a
