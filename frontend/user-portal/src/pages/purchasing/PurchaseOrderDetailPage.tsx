@@ -25,10 +25,11 @@ import {
   useRejectPurchaseOrder,
   useSendPurchaseOrder,
   useCancelPurchaseOrder,
+  useDeletePurchaseOrder,
 } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components (mirrors PurchaseRequestDetailPage) ────────────────────
 
@@ -342,6 +343,7 @@ export function PurchaseOrderDetailPage() {
   const rejectMutation = useRejectPurchaseOrder();
   const sendMutation = useSendPurchaseOrder();
   const cancelMutation = useCancelPurchaseOrder();
+  const deleteMutation = useDeletePurchaseOrder();
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
@@ -353,16 +355,34 @@ export function PurchaseOrderDetailPage() {
 
   const isApproverRole = ['procurement_manager', 'admin', 'super_admin'].includes(userRole);
   const isIssuer = po?.issuedBy === userId;
-  const canApprove = isApproverRole && !isIssuer && po?.status === 'Pending Approval';
-  const canSubmit = po?.status === 'Draft';
-  const canSend = po?.status === 'Open';
-  const canCancel = ['Draft', 'Pending Approval', 'Open', 'Sent'].includes(po?.status ?? '');
-  const canEdit = po?.status === 'Draft';
+  // T-811: gating now compares against the stored backend vocabulary
+  // ('draft' | 'pending_approval' | 'open' | ...) — see statusPhase.ts.
+  const canApprove = isApproverRole && !isIssuer && po?.status === 'pending_approval';
+  const canSubmit = po?.status === 'draft';
+  const canSend = po?.status === 'open';
+  // A draft is removed via Delete (wipes the mistake); Cancel is reserved for a
+  // PO that already has a life (voids it into a persistent 'cancelled' record).
+  const canCancel = ['pending_approval', 'open', 'Sent'].includes(po?.status ?? '');
+  const canEdit = po?.status === 'draft';
+  // Draft (never issued) or Cancelled (terminal void) can be removed from the
+  // list; the backend soft-deletes them and rejects any live status.
+  const canDelete = ['draft', 'cancelled'].includes(po?.status ?? '');
 
   const handleAction = async (fn: () => Promise<any>) => {
     setActionError(null);
     try { await fn(); } catch (err: any) {
       setActionError(err?.response?.data?.detail ?? err?.message ?? 'An error occurred');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this Purchase Order? It will be removed from the list.')) return;
+    setActionError(null);
+    try {
+      await deleteMutation.mutateAsync({ docId: docId!, organizationId: orgId });
+      navigate('/purchasing/po');
+    } catch (err: any) {
+      setActionError(err?.response?.data?.detail ?? err?.message ?? 'Failed to delete Purchase Order');
     }
   };
 
@@ -448,6 +468,11 @@ export function PurchaseOrderDetailPage() {
               Cancel
             </DangerButton>
           )}
+          {canDelete && (
+            <DangerButton onClick={handleDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </DangerButton>
+          )}
         </ActionBar>
       </HeaderActionsRow>
 
@@ -459,7 +484,7 @@ export function PurchaseOrderDetailPage() {
         <InfoGrid>
           <InfoItem>
             <InfoLabel>Status</InfoLabel>
-            <InfoValue><StatusBadge $status={po.status}>{po.status}</StatusBadge></InfoValue>
+            <InfoValue><StatusBadge $status={po.status}>{statusDisplayLabel(po.status, 'PO')}</StatusBadge></InfoValue>
           </InfoItem>
           <InfoItem><InfoLabel>Vendor</InfoLabel><InfoValue>{po.vendorName ?? po.vendorCode ?? '—'}</InfoValue></InfoItem>
           {po.baseDocId && (
@@ -543,7 +568,7 @@ export function PurchaseOrderDetailPage() {
           docType="PO"
           docId={docId!}
           organizationId={orgId}
-          readOnly={po.status !== 'Draft'}
+          readOnly={po.status !== 'draft'}
         />
       </Card>
 

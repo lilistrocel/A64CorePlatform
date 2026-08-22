@@ -28,7 +28,7 @@ import { useFinanceEnabled } from '../../hooks/useCapabilities';
 import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import { useAuthStore } from '../../stores/auth.store';
 import type { DocumentLineCreate, UrgencyLevel } from '../../services/purchasingApi';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 // Night Observatory (T-901 Phase 3). Container stays transparent (spec §7 —
@@ -498,7 +498,8 @@ export function PurchaseRequestFormPage() {
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
-  const isReadOnly = isEdit && existingPR && existingPR.status !== 'Draft';
+  // T-811: gating now compares against the stored backend vocabulary ('draft').
+  const isReadOnly = isEdit && existingPR && existingPR.status !== 'draft';
   const pageTitle = isEdit ? 'Edit Purchase Request' : 'New Purchase Request';
 
   return (
@@ -519,7 +520,7 @@ export function PurchaseRequestFormPage() {
       {isReadOnly && existingPR && (
         <ReadOnlyCard $phase={purchasingStatusToPhase(existingPR.status)}>
           <ReadOnlyText>
-            This PR is in <StatusBadge $status={existingPR.status}>{existingPR.status}</StatusBadge> status and cannot be edited.
+            This PR is in <StatusBadge $status={existingPR.status}>{statusDisplayLabel(existingPR.status, 'PR')}</StatusBadge> status and cannot be edited.
           </ReadOnlyText>
         </ReadOnlyCard>
       )}

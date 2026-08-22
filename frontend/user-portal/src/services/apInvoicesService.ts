@@ -19,7 +19,20 @@ import { apiClient } from './api';
 // Types
 // ============================================================================
 
-export type APStatus = 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+// T-811: wave4_purchasing_status_migration.py lowercased AP's stored status;
+// "Approved" collapsed into the shared 'open' value (displays as "Approved"
+// for AP specifically via statusPhase.ts's statusDisplayLabel()). 'Rejected'
+// was never touched by that migration. TitleCase variants are kept as
+// aliases only for documents left over from before the migration ran.
+export type APStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'open'
+  | 'Rejected'
+  // Pre-migration aliases (migration-window safety only)
+  | 'Draft'
+  | 'Pending Approval'
+  | 'Approved';
 
 /** A single AP Invoice line as returned by the backend */
 export interface APLine {

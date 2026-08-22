@@ -33,7 +33,7 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useFinanceEnabled } from '../../hooks/useCapabilities';
 import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import type { GRLineCreate } from '../../services/goodsReceiptsService';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 // Night Observatory (T-901 Phase 3). Container stays transparent (spec §7).
@@ -274,11 +274,14 @@ function POPickerCard({
 }) {
   const navigate = useNavigate();
   const theme = useTheme();
-  // Only show Open/Sent POs (ones that have openQuantity)
+  // Only show Open/Sent POs (ones that have openQuantity).
+  // T-811: 'Open' is a status query param sent to the backend — the Wave 4
+  // migration lowercased the stored value to 'open', so this filter was
+  // silently returning zero POs until fixed. 'Sent' is unchanged.
   const { data, isLoading } = usePurchaseOrders({
     organizationId,
     perPage: 50,
-    status: 'Open',
+    status: 'open',
   });
   const { data: sentData } = usePurchaseOrders({
     organizationId,
@@ -326,7 +329,7 @@ function POPickerCard({
               <Td><DocCode>{po.docNumber}</DocCode></Td>
               <Td>{po.vendorName ?? po.vendorCode ?? '—'}</Td>
               <Td>
-                <StatusBadge $status={po.status}>{po.status}</StatusBadge>
+                <StatusBadge $status={po.status}>{statusDisplayLabel(po.status, 'PO')}</StatusBadge>
               </Td>
               <Td>
                 <AmountValue>

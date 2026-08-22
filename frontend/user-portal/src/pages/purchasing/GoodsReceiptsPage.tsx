@@ -22,7 +22,7 @@ import type { PhaseKey } from '@a64core/shared';
 import { useGoodsReceipts } from '../../hooks/queries/useGoodsReceipts';
 import { useAuthStore } from '../../stores/auth.store';
 import type { GRStatus } from '../../services/goodsReceiptsService';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -206,10 +206,13 @@ const PageIndicator = styled.span`
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// T-811: filter values are sent to the backend as a `status` query param —
+// they must be the stored (lowercase_snake) vocabulary. GR's 'Posted'
+// collapsed into the shared 'open' value under the Wave 4 migration.
 const STATUS_FILTERS: { label: string; value: GRStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
-  { label: 'Draft', value: 'Draft' },
-  { label: 'Posted', value: 'Posted' },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Posted', value: 'open' },
 ];
 
 function formatAmount(amount: number, currency: string): string {
@@ -337,7 +340,7 @@ export function GoodsReceiptsPage() {
                     <Td><Mono>{formatDate(gr.receivedDate)}</Mono></Td>
                     <Td><Mono>{formatAmount(gr.subtotalNet, gr.currencyCode)}</Mono></Td>
                     <Td>
-                      <StatusBadge $status={gr.status}>{gr.status}</StatusBadge>
+                      <StatusBadge $status={gr.status}>{statusDisplayLabel(gr.status, 'GR')}</StatusBadge>
                     </Td>
                     <Td>
                       <MutedMono>{gr.postedAt ? formatDate(gr.postedAt) : '—'}</MutedMono>

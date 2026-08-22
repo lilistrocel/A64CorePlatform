@@ -34,7 +34,7 @@ import { useFinanceEnabled } from '../../hooks/useCapabilities';
 import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import { useAuthStore } from '../../stores/auth.store';
 import type { DocumentLineCreate } from '../../services/purchasingApi';
-import { purchasingStatusToPhase } from './statusPhase';
+import { purchasingStatusToPhase, statusDisplayLabel } from './statusPhase';
 
 // ─── Styled components (same pattern as PurchaseRequestFormPage) ──────────────
 // Night Observatory (T-901 Phase 3). Container stays transparent (spec §7).
@@ -430,7 +430,8 @@ export function PurchaseOrderFormPage() {
   const removeLine = (key: string) =>
     setLines((prev) => prev.filter((l) => l._key !== key));
 
-  const isReadOnly = isEdit && existingPO && existingPO.status !== 'Draft';
+  // T-811: gating now compares against the stored backend vocabulary ('draft').
+  const isReadOnly = isEdit && existingPO && existingPO.status !== 'draft';
 
   const handleSubmit = async () => {
     setError(null);
@@ -533,7 +534,7 @@ export function PurchaseOrderFormPage() {
       {isReadOnly && existingPO && (
         <ReadOnlyCard $phase={purchasingStatusToPhase(existingPO.status)}>
           <ReadOnlyText>
-            This PO is in <StatusBadge $status={existingPO.status}>{existingPO.status}</StatusBadge> status and cannot be edited.
+            This PO is in <StatusBadge $status={existingPO.status}>{statusDisplayLabel(existingPO.status, 'PO')}</StatusBadge> status and cannot be edited.
           </ReadOnlyText>
         </ReadOnlyCard>
       )}

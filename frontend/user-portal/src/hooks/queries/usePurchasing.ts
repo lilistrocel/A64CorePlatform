@@ -579,6 +579,21 @@ export function useCancelPurchaseOrder() {
   });
 }
 
+/** Mutation: delete a Draft PO (T-811 — the client fn already existed in
+ * purchasingApi.ts; this hook was the missing piece for the detail page's
+ * Delete button). Invalidates the PO list + detail queries on success. */
+export function useDeletePurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ docId, organizationId }: { docId: string; organizationId?: string }) =>
+      purchasingApi.deletePurchaseOrder(docId, organizationId),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: purchasingQueryKeys.po.all() });
+      queryClient.invalidateQueries({ queryKey: purchasingQueryKeys.po.detail(variables.docId) });
+    },
+  });
+}
+
 // ============================================================================
 // Phase 1B — Approval Inbox hooks
 // ============================================================================
