@@ -463,12 +463,30 @@ class AccessionService:
     ) -> Dict[str, Dict[str, Any]]:
         """Summarise what is physically held in each room.
 
-        Returns ``{roomId: {vessels, records, byForm: {...}}}`` in one
-        aggregation, so a facility page can annotate every room from a single
-        request rather than one per room.
+        Returns ``{roomId: {vessels, records, byForm, byStatus,
+        colonizedCount, oldestColonizedAt, newestColonizedAt}}`` in one
+        aggregation, so a facility page can annotate every room from a
+        single request rather than one per room.
 
         Only live material is counted — discarded and consumed records would
         otherwise make a long-running lab look permanently full.
+
+        Structure: a single ``$match`` feeds three ``$facet`` branches —
+        one grouped by ``{room, form}`` (unchanged from before), one grouped
+        by ``{room, status}``, and one grouped by ``room`` alone for the
+        colonisation stats. This is still exactly one round trip
+        (``$facet`` always returns one document per ``aggregate()`` call),
+        but keeps each branch's ``$group`` simple and easy to read
+        independently, rather than folding form/status/colonisation into a
+        single dense ``$group`` with ``$push`` + reduce — which is where a
+        vessels/records unit mix-up would hide.
+
+        Units, deliberately kept apart:
+          - ``vessels`` / ``byForm`` / ``byStatus`` all sum ``quantity``
+            (vessel counts).
+          - ``records`` / ``colonizedCount`` both count *documents*, not
+            vessels — a batch of 20 petri dishes colonised together is 1
+            record, not 20.
         """
         db = genetics_db.get_database()
 
@@ -484,25 +502,117 @@ class AccessionService:
         if facility_id:
             match["location.facilityId"] = facility_id
 
+        # Reason: normalise missing vs explicit-null colonizedAt to the same
+        # "not colonised" case, and use $$REMOVE (not a literal) as the
+        # $min/$max else-branch so uncolonised records don't drag those
+        # accumulators down to null/epoch — $min/$max simply skip a value
+        # removed this way, so a room with nothing colonised naturally
+        # yields null for both, not epoch-zero.
+        colonized_present = {"$ne": [{"$ifNull": ["$colonizedAt", None]}, None]}
+
         pipeline = [
             {"$match": match},
             {
-                "$group": {
-                    "_id": {"room": "$location.roomId", "form": "$form"},
-                    "vessels": {"$sum": "$quantity"},
-                    "records": {"$sum": 1},
+                "$facet": {
+                    "byForm": [
+                        {
+                            "$group": {
+                                "_id": {"room": "$location.roomId", "form": "$form"},
+                                "vessels": {"$sum": "$quantity"},
+                                "records": {"$sum": 1},
+                            }
+                        }
+                    ],
+                    "byStatus": [
+                        {
+                            "$group": {
+                                "_id": {
+                                    "room": "$location.roomId",
+                                    "status": "$status",
+                                },
+                                "vessels": {"$sum": "$quantity"},
+                            }
+                        }
+                    ],
+                    "colonization": [
+                        {
+                            "$group": {
+                                "_id": "$location.roomId",
+                                "colonizedCount": {
+                                    "$sum": {"$cond": [colonized_present, 1, 0]}
+                                },
+                                "oldestColonizedAt": {
+                                    "$min": {
+                                        "$cond": [
+                                            colonized_present,
+                                            "$colonizedAt",
+                                            "$$REMOVE",
+                                        ]
+                                    }
+                                },
+                                "newestColonizedAt": {
+                                    "$max": {
+                                        "$cond": [
+                                            colonized_present,
+                                            "$colonizedAt",
+                                            "$$REMOVE",
+                                        ]
+                                    }
+                                },
+                            }
+                        }
+                    ],
                 }
             },
         ]
 
+        def _entry(out: Dict[str, Dict[str, Any]], room_id: str) -> Dict[str, Any]:
+            return out.setdefault(
+                room_id,
+                {
+                    "vessels": 0,
+                    "records": 0,
+                    "byForm": {},
+                    "byStatus": {},
+                    "colonizedCount": 0,
+                    "oldestColonizedAt": None,
+                    "newestColonizedAt": None,
+                },
+            )
+
         out: Dict[str, Dict[str, Any]] = {}
+        facets: Dict[str, List[Dict[str, Any]]] = {
+            "byForm": [],
+            "byStatus": [],
+            "colonization": [],
+        }
         async for row in db[ACCESSIONS].aggregate(pipeline):
+            facets = row
+            break
+
+        for row in facets.get("byForm", []):
             room_id = row["_id"]["room"]
             form = row["_id"]["form"]
-            entry = out.setdefault(room_id, {"vessels": 0, "records": 0, "byForm": {}})
+            entry = _entry(out, room_id)
             entry["vessels"] += row["vessels"]
             entry["records"] += row["records"]
             entry["byForm"][form] = entry["byForm"].get(form, 0) + row["vessels"]
+
+        for row in facets.get("byStatus", []):
+            room_id = row["_id"]["room"]
+            room_status = row["_id"]["status"]
+            entry = _entry(out, room_id)
+            entry["byStatus"][room_status] = (
+                entry["byStatus"].get(room_status, 0) + row["vessels"]
+            )
+
+        for row in facets.get("colonization", []):
+            room_id = row["_id"]
+            entry = _entry(out, room_id)
+            entry["colonizedCount"] = row.get("colonizedCount", 0)
+            entry["oldestColonizedAt"] = row.get("oldestColonizedAt")
+            entry["newestColonizedAt"] = row.get("newestColonizedAt")
+
         return out
 
     # -----------------------------------------------------------------------

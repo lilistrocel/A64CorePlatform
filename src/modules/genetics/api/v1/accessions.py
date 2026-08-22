@@ -6,6 +6,7 @@ code-lookup endpoint used by label scanning.
 """
 
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -53,6 +54,19 @@ class RoomOccupancy(BaseModel):
     records: int = Field(0, description="Number of accession records")
     byForm: Dict[str, int] = Field(
         default_factory=dict, description="Vessel count per form, e.g. petri_dish -> 40"
+    )
+    byStatus: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Vessel count per AccessionStatus, e.g. active -> 40",
+    )
+    colonizedCount: int = Field(
+        0, description="Records (not vessels) with a non-null colonizedAt"
+    )
+    oldestColonizedAt: Optional[datetime] = Field(
+        None, description="Earliest colonizedAt among live records in this room, if any"
+    )
+    newestColonizedAt: Optional[datetime] = Field(
+        None, description="Latest colonizedAt among live records in this room, if any"
     )
 
 

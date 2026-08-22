@@ -257,6 +257,19 @@ export interface RoomOccupancy {
   vessels: number;
   records: number;
   byForm: Record<string, number>;
+  /**
+   * Vessel counts per accession status, e.g. `{ active: 20, contaminated: 3 }`.
+   * Optional: older API responses (pre widened aggregation) omit it, and a
+   * stale process that hasn't been restarted after the backend change will
+   * also drop it silently (`response_model` strips unknown fields).
+   */
+  byStatus?: Record<string, number>;
+  /** Records in this room with a non-null `colonizedAt`. Optional — see byStatus. */
+  colonizedCount?: number;
+  /** ISO datetime of the earliest `colonizedAt` in this room, or null if nothing is colonised. */
+  oldestColonizedAt?: string | null;
+  /** ISO datetime of the most recent `colonizedAt` in this room, or null if nothing is colonised. */
+  newestColonizedAt?: string | null;
 }
 
 export interface GrowingRoom {
